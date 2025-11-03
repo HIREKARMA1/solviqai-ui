@@ -308,7 +308,7 @@ export default function AutoJobApplyPage() {
                                                 onChange={(e) => setFormData({...formData, platform: e.target.value})}
                                             >
                                                 <option value="FOUNDIT">Foundit (Monster India)</option>
-                                                <option value="NAUKRI" disabled>Naukri (Coming Soon)</option>
+                                                <option value="NAUKRI">Naukri</option>
                                                 <option value="LINKEDIN" disabled>LinkedIn (Coming Soon)</option>
                                             </select>
                                         </div>
