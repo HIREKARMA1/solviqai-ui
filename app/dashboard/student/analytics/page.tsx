@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader } from '@/components/ui/loader'
 import { Progress } from '@/components/ui/progress'
 import { apiClient } from '@/lib/api'
-import { Home, User, FileText, Briefcase, Zap, BarChart3, Target, ShieldCheck } from 'lucide-react'
+import { Home, User, FileText, Briefcase, Zap, BarChart3, Target, ShieldCheck, CheckCircle, ClipboardList, Users, MessageCircle, Clock } from 'lucide-react'
 
 // Recharts (SSR-safe)
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false })
@@ -27,6 +27,7 @@ const Pie = dynamic(() => import('recharts').then(m => m.Pie), { ssr: false })
 const Cell = dynamic(() => import('recharts').then(m => m.Cell), { ssr: false })
 const BarChart = dynamic(() => import('recharts').then(m => m.BarChart), { ssr: false })
 const Bar = dynamic(() => import('recharts').then(m => m.Bar), { ssr: false })
+const LabelList = dynamic(() => import('recharts').then(m => m.LabelList), { ssr: false })
 
 const sidebarItems = [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -110,6 +111,15 @@ export default function StudentAnalyticsPage() {
     const readinessIndex = data?.job_readiness?.index || 0
     const topicDistribution = (data?.topic_distribution || []).map((t: any) => ({ name: t.topic, average: t.average }))
     const weeklyActivity = data?.weekly_activity || []
+    const assessmentTotal = data?.assessments?.total || 0
+    const assessmentCompleted = data?.assessments?.completed || 0
+    const completionRate = assessmentTotal > 0 ? Math.round((assessmentCompleted / assessmentTotal) * 100) : 0
+
+    const showAssessment = !!filters.categories.assessment
+    const showInterview = !!filters.categories.interview
+    const showApplication = !!filters.categories.application
+    const showResume = !!filters.categories.resume
+    const showPortfolio = !!filters.categories.portfolio
 
     return (
         <DashboardLayout requiredUserType="student">
@@ -185,6 +195,7 @@ export default function StudentAnalyticsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {showAssessment && (
                         <Card className="col-span-1 lg:col-span-1">
                             <CardHeader>
                                 <CardTitle>Skills Assessment</CardTitle>
@@ -202,7 +213,9 @@ export default function StudentAnalyticsPage() {
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
+                        )}
 
+                        {showInterview && (
                         <Card className="col-span-1 lg:col-span-2">
                             <CardHeader>
                                 <CardTitle>Interview Performance</CardTitle>
@@ -220,10 +233,12 @@ export default function StudentAnalyticsPage() {
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
+                        )}
                     </div>
 
                     {/* Topic Distribution & Weekly Activity */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {showAssessment && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Topic Distribution</CardTitle>
@@ -241,6 +256,7 @@ export default function StudentAnalyticsPage() {
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
+                        )}
 
                         <Card className="lg:col-span-2">
                             <CardHeader>
@@ -248,15 +264,36 @@ export default function StudentAnalyticsPage() {
                                 <CardDescription>Engagement over the last 4 weeks</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-14 gap-1">
-                                    {weeklyActivity.map((d: any, idx: number) => {
-                                        const c = d.count || 0
-                                        const bg = c === 0 ? 'bg-gray-200' : c < 2 ? 'bg-emerald-200' : c < 4 ? 'bg-emerald-400' : 'bg-emerald-600'
-                                        return (
-                                            <div key={idx} className={`w-4 h-4 ${bg} rounded`} title={`${d.date}: ${c} activities`} />
-                                        )
-                                    })}
-                                </div>
+                                {(() => {
+                                    // Build GitHub-style 7xN calendar from weeklyActivity (expects ascending dates)
+                                    const parse = (s: string) => new Date(s + 'T00:00:00')
+                                    const days = weeklyActivity || []
+                                    if (!days.length) {
+                                        return <div className="text-sm text-muted-foreground">No data for this window.</div>
+                                    }
+                                    const start = parse(days[0].date)
+                                    const cols: number[][] = []
+                                    for (let i = 0; i < days.length; i++) {
+                                        const dt = parse(days[i].date)
+                                        const diffDays = Math.round((dt.getTime() - start.getTime()) / 86400000)
+                                        const weekIdx = Math.floor((diffDays + (start.getDay() || 0)) / 7)
+                                        const dayIdx = dt.getDay() // 0=Sun ... 6=Sat
+                                        if (!cols[weekIdx]) cols[weekIdx] = new Array(7).fill(0)
+                                        cols[weekIdx][dayIdx] = days[i].count || 0
+                                    }
+                                    const color = (c: number) => c === 0 ? 'bg-gray-200' : c < 2 ? 'bg-emerald-200' : c < 4 ? 'bg-emerald-400' : 'bg-emerald-600'
+                                    return (
+                                        <div className="flex items-start gap-1 overflow-x-auto">
+                                            {cols.map((col, ci) => (
+                                                <div key={ci} className="flex flex-col gap-1">
+                                                    {col.map((c, ri) => (
+                                                        <div key={`${ci}-${ri}`} className={`w-3 h-3 md:w-4 md:h-4 ${color(c)} rounded`} title={`${c} activities`} />
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                })()}
                             </CardContent>
                         </Card>
                     </div>
@@ -268,71 +305,170 @@ export default function StudentAnalyticsPage() {
                             <CardDescription>Chronological view of your activities</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-3">
-                                {timeline.map((t, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-sm border-b pb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="capitalize font-medium">{t.type}</span>
-                                            <span className="text-muted-foreground">{t.subtype}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {t.score != null && <span>{Math.round(t.score)}</span>}
-                                            <span className="text-muted-foreground">{new Date(t.date).toLocaleString()}</span>
-                                        </div>
+                            {(() => {
+                                const getIcon = (type: string) => {
+                                    const t = String(type || '').toLowerCase()
+                                    if (t === 'assessment') return <ClipboardList className="h-4 w-4" />
+                                    if (t === 'interview') return <Users className="h-4 w-4" />
+                                    if (t === 'resume' || t === 'portfolio') return <FileText className="h-4 w-4" />
+                                    if (t === 'application') return <Briefcase className="h-4 w-4" />
+                                    return <Clock className="h-4 w-4" />
+                                }
+
+                                const dayLabel = (iso: string) => {
+                                    const d = new Date(iso)
+                                    const today = new Date()
+                                    const yday = new Date()
+                                    yday.setDate(today.getDate() - 1)
+                                    const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+                                    if (sameDay(d, today)) return 'Today'
+                                    if (sameDay(d, yday)) return 'Yesterday'
+                                    return d.toLocaleDateString()
+                                }
+
+                                // Group timeline by calendar day
+                                const groups: Record<string, any[]> = {}
+                                for (const item of timeline) {
+                                    const k = dayLabel(item.date)
+                                    if (!groups[k]) groups[k] = []
+                                    groups[k].push(item)
+                                }
+                                const ordered = Object.entries(groups).sort((a, b) => {
+                                    // parse first item date in group for ordering desc
+                                    const da = new Date(a[1][0]?.date || 0).getTime()
+                                    const db = new Date(b[1][0]?.date || 0).getTime()
+                                    return db - da
+                                })
+
+                                if (!timeline.length) {
+                                    return <div className="text-sm text-muted-foreground">No activities found for the selected filters.</div>
+                                }
+
+                                return (
+                                    <div className="space-y-6">
+                                        {ordered.map(([label, items], gi) => (
+                                            <div key={`grp-${gi}`} className="relative">
+                                                <div className="mb-3 text-xs font-medium text-muted-foreground">{label}</div>
+                                                <div className="relative pl-6">
+                                                    <div className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-muted" />
+                                                    <div className="space-y-4">
+                                                        {items.map((t: any, idx: number) => (
+                                                            <div key={`it-${gi}-${idx}`} className="relative">
+                                                                <div className="absolute -left-[2px] top-1 h-2 w-2 rounded-full bg-primary" />
+                                                                <div className="flex items-start justify-between gap-4">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <div className="mt-0.5 text-primary">{getIcon(t.type)}</div>
+                                                                        <div>
+                                                                            <div className="text-sm font-medium capitalize">{t.type}
+                                                                                {t.subtype && <span className="ml-2 text-xs text-muted-foreground lowercase">{t.subtype}</span>}
+                                                                            </div>
+                                                                            {t.score != null && (
+                                                                                <div className="mt-1 text-xs text-muted-foreground">Score: {Math.round(t.score)}</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-xs text-muted-foreground whitespace-nowrap">{new Date(t.date).toLocaleTimeString()}</div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                                {timeline.length === 0 && <div className="text-sm text-muted-foreground">No activities found for the selected filters.</div>}
-                            </div>
+                                )
+                            })()}
                         </CardContent>
                     </Card>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {showInterview && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Interview Stages</CardTitle>
-                                <CardDescription>Screening, Technical, HR split</CardDescription>
+                                <CardDescription>Stage counts with mini progress bars</CardDescription>
                             </CardHeader>
-                            <CardContent className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={interviewStageSplit} dataKey="value" nameKey="name" outerRadius={90} label>
-                                            {interviewStageSplit.map((entry: { name: string; value: number }, idx: number) => (
-                                                <Cell key={idx} fill={["#6366f1", "#f59e0b", "#ef4444", "#10b981"][idx % 4]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                            <CardContent>
+                                {(() => {
+                                    const total = interviewStageSplit.reduce((s: number, x: any) => s + (x.value || 0), 0)
+                                    const rows = interviewStageSplit.length ? interviewStageSplit : [{ name: 'No data', value: 0 }]
+                                    return (
+                                        <div className="space-y-3">
+                                            {rows.map((s: any, idx: number) => {
+                                                const val = s.value || 0
+                                                const pct = total ? Math.round((val / total) * 100) : 0
+                                                const color = ["bg-indigo-500", "bg-amber-500", "bg-rose-500", "bg-emerald-500"][idx % 4]
+                                                return (
+                                                    <div key={`${s.name}-${idx}`} className="space-y-1">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="font-medium truncate pr-2">{s.name}</span>
+                                                            <span className="text-muted-foreground">{val}</span>
+                                                        </div>
+                                                        <div className="h-2 w-full bg-muted rounded">
+                                                            <div className={`h-2 ${color} rounded`} style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                            {total === 0 && (
+                                                <div className="text-sm text-muted-foreground">No interview activity yet.</div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                             </CardContent>
                         </Card>
+                        )}
 
                         <Card className="lg:col-span-2">
                             <CardHeader>
-                                <CardTitle>Application Success Funnel</CardTitle>
-                                <CardDescription>From submissions to offers</CardDescription>
+                                <CardTitle>Assessment Completion</CardTitle>
+                                <CardDescription>From started to completed assessments</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    {funnelData.map((step, idx) => (
-                                        <div key={idx} className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="font-medium">{step.name}</span>
-                                                <span className="text-muted-foreground">{step.value}</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-muted rounded">
-                                                <div
-                                                    className="h-2 bg-primary rounded"
-                                                    style={{ width: `${funnel.submitted ? Math.max(3, Math.round((step.value / Math.max(1, funnel.submitted)) * 100)) : 0}%` }}
-                                                />
-                                            </div>
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="font-medium">Started</span>
+                                            <span className="text-muted-foreground">{assessmentTotal}</span>
                                         </div>
-                                    ))}
+                                        <div className="h-2 w-full bg-muted rounded">
+                                            <div
+                                                className="h-2 bg-primary rounded"
+                                                style={{ width: `${assessmentTotal ? 100 : 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="font-medium">Completed</span>
+                                            <span className="text-muted-foreground">{assessmentCompleted}</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-muted rounded">
+                                            <div
+                                                className="h-2 bg-emerald-500 rounded"
+                                                style={{ width: `${assessmentTotal ? Math.max(3, Math.round((assessmentCompleted / Math.max(1, assessmentTotal)) * 100)) : 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="font-medium">Completion Rate</span>
+                                            <span className="text-muted-foreground">{completionRate}%</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-muted rounded">
+                                            <div className="h-2 bg-indigo-500 rounded" style={{ width: `${completionRate}%` }} />
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {showResume && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Resume Completion</CardTitle>
@@ -350,7 +486,9 @@ export default function StudentAnalyticsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                        )}
 
+                        {showPortfolio && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Portfolio Strength Index</CardTitle>
@@ -368,6 +506,7 @@ export default function StudentAnalyticsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                        )}
                     </div>
                 </div>
             )}
