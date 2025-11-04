@@ -12,7 +12,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: config.api.fullUrl,
-      timeout: 180000, // 3 minutes timeout for long-running operations like job applications
+      timeout: 300000, // 3 minutes timeout for long-running operations like job applications
       headers: {
         'Content-Type': 'application/json',
       },
@@ -348,6 +348,33 @@ class ApiClient {
    */
   async getJobRecommendations(): Promise<any> {
     const response: AxiosResponse = await this.client.get('/students/job-recommendations');  // ✅ /students/
+    return response.data;
+  }
+
+  /**
+   * Get available jobs in the market from multiple platforms (LinkedIn, Unstop)
+   * @param keywords - Optional comma-separated keywords (e.g., "software engineer,data analyst")
+   * @param location - Job location (default: "India")
+   * @param maxJobs - Maximum number of jobs to fetch per source (default: 15, max: 15)
+   * @param includeResumeSkills - Include skills extracted from resume (default: false)
+   * @param sources - Comma-separated platforms to search (e.g., "linkedin,unstop")
+   * @returns Live job listings from selected platforms
+   */
+  async getMarketJobs(keywords?: string, location: string = 'India', maxJobs: number = 15, includeResumeSkills: boolean = false, sources: string = 'linkedin'): Promise<any> {
+    const params: any = { location, max_jobs: maxJobs, include_resume_skills: includeResumeSkills, sources };
+    if (keywords) {
+      params.keywords = keywords;
+    }
+    const response: AxiosResponse = await this.client.get('/students/market-jobs', { params });
+    return response.data;
+  }
+
+  /**
+   * Get skills extracted from student's resume
+   * @returns Extracted skills from ATS analysis
+   */
+  async getResumeSkills(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/students/resume-skills');
     return response.data;
   }
 
