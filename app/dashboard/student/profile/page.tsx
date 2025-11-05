@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Home, User, FileText, Briefcase, ClipboardList, Zap, Sparkles, Save } from 'lucide-react'
+import { Home, User, FileText, Briefcase, ClipboardList, Zap, BarChart3, Sparkles, Save } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-
 export default function StudentProfile() {
     const [profile, setProfile] = useState<any>(null)
     const [loading, setLoading] = useState(true)

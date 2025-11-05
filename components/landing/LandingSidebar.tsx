@@ -159,7 +159,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
-                  isActive = route ? pathname === route || pathname?.startsWith(route + '/') : false;
+                  isActive = Boolean(route && pathname && (pathname === route || pathname.startsWith(route + '/')));
                 } else {
                   // On homepage, use activeFeature prop
                   isActive = activeFeature === item.id;
