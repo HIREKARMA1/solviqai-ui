@@ -28,7 +28,6 @@ import {
 import { motion } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
 import { AxiosError } from 'axios'
-import { AnimatedBackground } from '@/components/ui/animated-background'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -241,22 +240,14 @@ export default function ResumePage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            {/* Background with same style as home page */}
-            <div className="fixed inset-0 -z-10">
-                <div className="absolute inset-0 gradient-bg">
-                    <AnimatedBackground variant="default" />
+            <div className="space-y-6">
+                {/* Header */}
+                <div>
+                    <h1 className="text-3xl font-bold">Resume Management</h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                        Upload your resume and get instant ATS score analysis
+                    </p>
                 </div>
-            </div>
-            
-            {/* Content with margin-top */}
-            <div className="relative z-10 mt-20 space-y-6">
-                    {/* Header */}
-                    <div>
-                        <h1 className="text-3xl font-bold">Resume Management</h1>
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Upload your resume and get instant ATS score analysis
-                        </p>
-                    </div>
 
                 {/* ✅ NEW: Existing Resume Card */}
                 {resumeStatus?.has_resume && !showUploadSection && (
