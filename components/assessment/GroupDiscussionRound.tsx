@@ -280,8 +280,8 @@ export function GroupDiscussionRound({
             // STEP 1: Save full conversation transcript via API
             const submitPayload = [{
                 response_text: JSON.stringify({
-                    turns: gdTurns,  // Complete conversation history
-                    responses: gdResponses  // Legacy format kept for compatibility
+                    turns: gdTurns,
+                    responses: gdResponses
                 }),
                 score: 0,
                 time_taken: 0
@@ -294,26 +294,26 @@ export function GroupDiscussionRound({
                 payloadSize: JSON.stringify(submitPayload[0].response_text).length
             });
 
-            const submitRes = await apiClient.submitRoundResponses(
-                assessmentId,
-                roundId,
-                submitPayload
-            );
-            console.log('GD submit result', submitRes);
+            try {
+                const submitRes = await apiClient.submitRoundResponses(
+                    assessmentId,
+                    roundId,
+                    submitPayload
+                );
+                console.log('GD submit result', submitRes);
+            } catch (saveErr) {
+                console.warn('GD transcript save failed, proceeding to evaluation anyway:', saveErr);
+                // Don't rethrow; evaluation endpoint can work from provided conversation
+            }
             
             // STEP 2: Call evaluate endpoint to complete the round and get score
             try {
                 toast.loading('Evaluating your discussion...', { id: 'evaluating' });
-                
                 const evalResponse = await apiClient.client.post(`/assessments/rounds/${roundId}/evaluate-discussion`, {
-                    conversation: gdTurns  // Send complete conversation to backend
+                    conversation: gdTurns
                 });
-                
                 console.log('Evaluation complete:', evalResponse.data);
-                
-                // Wait a moment to ensure database commit is complete
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                
                 toast.dismiss('submitting');
                 toast.dismiss('evaluating');
                 toast.success('Discussion evaluated successfully!', { duration: 3000 });
@@ -324,7 +324,6 @@ export function GroupDiscussionRound({
             }
             
             // Redirect to assessment page and force a fresh fetch of statuses
-            // Using full navigation avoids stale state when returning to the same route
             setTimeout(() => {
                 window.location.href = `/dashboard/student/assessment?id=${assessmentId}&ts=${Date.now()}`;
             }, 1500);
@@ -383,57 +382,83 @@ export function GroupDiscussionRound({
                 return;
             }
 
-            // Truncate text if too long to prevent speech synthesis errors
-            const MAX_SPEECH_LENGTH = 300; // characters
+            // Rahul's agent: allow longer sentences, chunk if needed
             let speechText = text;
-            if (text.length > MAX_SPEECH_LENGTH) {
-                speechText = text.substring(0, MAX_SPEECH_LENGTH) + '...';
+            const MAX_SPEECH_LENGTH = agentName.includes('Rahul') ? 600 : 300;
+            if (speechText.length > MAX_SPEECH_LENGTH) {
+                // Split into sentences or chunks for Rahul
+                const sentences = speechText.match(/[^.!?]+[.!?]?/g) || [speechText];
+                let idx = 0;
+                const speakNext = () => {
+                    if (idx >= sentences.length) {
+                        setCurrentSpeakingAgent(null);
+                        setIsAISpeaking(false);
+                        resolve();
+                        return;
+                    }
+                    let chunk = sentences[idx].trim();
+                    if (chunk.length > MAX_SPEECH_LENGTH) {
+                        chunk = chunk.substring(0, MAX_SPEECH_LENGTH) + '...';
+                    }
+                    try {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(chunk);
+                        const voice = getVoiceForAgent(agentName);
+                        if (voice) utterance.voice = voice;
+                        utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
+                        utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
+                        utterance.volume = 1.0;
+                        utterance.onstart = () => {
+                            setCurrentSpeakingAgent(agentName);
+                            setIsAISpeaking(true);
+                        };
+                        utterance.onend = () => {
+                            idx++;
+                            speakNext();
+                        };
+                        utterance.onerror = () => {
+                            idx++;
+                            speakNext();
+                        };
+                        setTimeout(() => {
+                            if (window.speechSynthesis.speaking) {
+                                window.speechSynthesis.cancel();
+                                idx++;
+                                speakNext();
+                            }
+                        }, 30000);
+                        window.speechSynthesis.speak(utterance);
+                    } catch (err) {
+                        idx++;
+                        speakNext();
+                    }
+                };
+                speakNext();
+                return;
             }
 
             try {
                 window.speechSynthesis.cancel();
-
                 const utterance = new SpeechSynthesisUtterance(speechText);
                 const voice = getVoiceForAgent(agentName);
-                
-                if (voice) {
-                    utterance.voice = voice;
-                }
-
-                if (agentName.includes('Aarav')) {
-                    utterance.rate = 0.95;
-                    utterance.pitch = 0.9;
-                    utterance.volume = 1.0;
-                } else if (agentName.includes('Meera')) {
-                    utterance.rate = 1.05;
-                    utterance.pitch = 1.2;
-                    utterance.volume = 1.0;
-                } else if (agentName.includes('Rahul')) {
-                    utterance.rate = 1.0;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-                }
-
+                if (voice) utterance.voice = voice;
+                utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
+                utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
+                utterance.volume = 1.0;
                 utterance.onstart = () => {
                     setCurrentSpeakingAgent(agentName);
                     setIsAISpeaking(true);
                 };
-
                 utterance.onend = () => {
                     setCurrentSpeakingAgent(null);
                     setIsAISpeaking(false);
                     resolve();
                 };
-
-                utterance.onerror = (error) => {
-                    // Silently handle speech errors - they're not critical for functionality
-                    // The UI will continue to work even if speech fails
+                utterance.onerror = () => {
                     setCurrentSpeakingAgent(null);
                     setIsAISpeaking(false);
                     resolve();
                 };
-
-                // Add timeout to prevent hanging
                 setTimeout(() => {
                     if (window.speechSynthesis.speaking) {
                         window.speechSynthesis.cancel();
@@ -441,11 +466,9 @@ export function GroupDiscussionRound({
                         setIsAISpeaking(false);
                         resolve();
                     }
-                }, 30000); // 30 second timeout
-
+                }, 30000);
                 window.speechSynthesis.speak(utterance);
             } catch (err) {
-                // Gracefully handle any speech synthesis errors
                 setCurrentSpeakingAgent(null);
                 setIsAISpeaking(false);
                 resolve();

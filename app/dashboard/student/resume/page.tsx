@@ -21,14 +21,24 @@ import {
     Download,
     RefreshCw,
     Zap,
-    Sparkles,
-    Award,
-    Target
+    BarChart3,
+    Home,
+    User,
+    Briefcase
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
 import { AxiosError } from 'axios'
 import { AnimatedBackground } from '@/components/ui/animated-background'
+
+const sidebarItems = [
+    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
+    { name: 'Profile', href: '/dashboard/student/profile', icon: User },
+    { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
+    { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
+    { name: 'Auto Job Apply', href: '/dashboard/student/auto-apply', icon: Zap },
+    { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
+]
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']

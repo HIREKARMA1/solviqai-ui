@@ -459,6 +459,16 @@ class ApiClient {
     const response: AxiosResponse = await this.client.get('/students/analytics');
     return response.data;
   }
+
+  async getStudentAnalyticsWithFilters(params: { start_date?: string; end_date?: string; categories?: string } = {}): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/students/analytics', { params });
+    return response.data;
+  }
+
+  async getStudentTimeline(params: { start_date?: string; end_date?: string; categories?: string } = {}): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/students/analytics/timeline', { params });
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
