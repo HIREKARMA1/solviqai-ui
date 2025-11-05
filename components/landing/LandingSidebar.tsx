@@ -8,6 +8,10 @@ import {
   ClipboardList,
   Zap,
   LayoutGrid,
+  Users,
+  BarChart3,
+  User,
+  Building2,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -29,8 +33,8 @@ interface LandingSidebarProps {
   onFeatureChange?: (featureId: string | null) => void;
 }
 
-// Export features array so it can be reused in mobile nav
-export const sidebarFeatures: SidebarItem[] = [
+// Student sidebar features
+export const studentSidebarFeatures: SidebarItem[] = [
   {
     id: 'dashboard',
     icon: <LayoutGrid className="w-5 h-5" />,
@@ -63,29 +67,139 @@ export const sidebarFeatures: SidebarItem[] = [
   },
 ];
 
+// College sidebar features
+export const collegeSidebarFeatures: SidebarItem[] = [
+  {
+    id: 'dashboard',
+    icon: <LayoutGrid className="w-5 h-5" />,
+    label: 'Dashboard',
+    onClick: undefined,
+  },
+  {
+    id: 'students',
+    icon: <Users className="w-5 h-5" />,
+    label: 'Students',
+    onClick: undefined,
+  },
+  {
+    id: 'analytics',
+    icon: <BarChart3 className="w-5 h-5" />,
+    label: 'Analytics',
+    onClick: undefined,
+  },
+  {
+    id: 'profile',
+    icon: <User className="w-5 h-5" />,
+    label: 'Profile',
+    onClick: undefined,
+  },
+];
+
+// Admin sidebar features
+export const adminSidebarFeatures: SidebarItem[] = [
+  {
+    id: 'dashboard',
+    icon: <LayoutGrid className="w-5 h-5" />,
+    label: 'Dashboard',
+    onClick: undefined,
+  },
+  {
+    id: 'colleges',
+    icon: <Building2 className="w-5 h-5" />,
+    label: 'Colleges',
+    onClick: undefined,
+  },
+  {
+    id: 'students',
+    icon: <Users className="w-5 h-5" />,
+    label: 'Students',
+    onClick: undefined,
+  },
+  {
+    id: 'analytics',
+    icon: <BarChart3 className="w-5 h-5" />,
+    label: 'Analytics',
+    onClick: undefined,
+  },
+  {
+    id: 'profile',
+    icon: <User className="w-5 h-5" />,
+    label: 'Profile',
+    onClick: undefined,
+  },
+];
+
+// Export default features for backward compatibility (student features)
+export const sidebarFeatures = studentSidebarFeatures;
+
 export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatureChange }: LandingSidebarProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Map feature IDs to dashboard routes
+  // Get sidebar features based on user type
+  const getSidebarFeatures = (): SidebarItem[] => {
+    if (!user) return studentSidebarFeatures; // Default to student features when not logged in
+    
+    switch (user.user_type) {
+      case 'college':
+        return collegeSidebarFeatures;
+      case 'admin':
+        return adminSidebarFeatures;
+      case 'student':
+      default:
+        return studentSidebarFeatures;
+    }
+  };
+
+  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    const routeMap: Record<string, string> = {
-      'dashboard': baseRoute,
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-    };
-    return routeMap[featureId] || null;
+    
+    // Student routes
+    if (user.user_type === 'student') {
+      const routeMap: Record<string, string> = {
+        'dashboard': baseRoute,
+        'resume': `${baseRoute}/resume`,
+        'assessment': `${baseRoute}/assessment`,
+        'jobs': `${baseRoute}/jobs`,
+        'auto-apply': `${baseRoute}/auto-apply`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // College routes
+    if (user.user_type === 'college') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/college`,
+        'students': `/dashboard/college/students`,
+        'analytics': `/dashboard/college/analytics`,
+        'profile': `/dashboard/college/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // Admin routes
+    if (user.user_type === 'admin') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/admin`,
+        'colleges': `/dashboard/admin/colleges`,
+        'students': `/dashboard/admin/students`,
+        'analytics': `/dashboard/admin/analytics`,
+        'profile': `/dashboard/admin/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    return null;
   };
 
   // Check if we're in dashboard context
   const isDashboardContext = pathname?.startsWith('/dashboard');
 
+  const sidebarFeatures = getSidebarFeatures();
   const features = sidebarFeatures.map(item => ({
     ...item,
     onClick: () => {
@@ -159,7 +273,14 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
-                  isActive = Boolean(route && pathname && (pathname === route || pathname.startsWith(route + '/')));
+                  if (route) {
+                    // For exact matches or nested routes
+                    isActive = pathname === route || pathname?.startsWith(route + '/');
+                    // Special case: dashboard route should match exactly or be the base dashboard
+                    if (item.id === 'dashboard') {
+                      isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;
+                    }
+                  }
                 } else {
                   // On homepage, use activeFeature prop
                   isActive = activeFeature === item.id;

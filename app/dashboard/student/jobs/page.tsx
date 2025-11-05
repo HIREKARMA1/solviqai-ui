@@ -364,9 +364,9 @@ export default function JobRecommendationsPage() {
                             <h2 className="text-2xl font-bold gradient-text">Top {recommendations.recommendations?.length || 0} Job Matches</h2>
 
                             {recommendations.recommendations && Array.isArray(recommendations.recommendations) ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
                                     {recommendations.recommendations.map((job) => (
-                                        <Card key={job.rank} className="relative overflow-hidden rounded-2xl card-hover p-0">
+                                        <Card key={job.rank} className="relative overflow-hidden rounded-2xl card-hover p-0 flex flex-col h-full">
                                             {/* Accent corner */}
                                             <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rotate-45 bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20" />
 
@@ -387,76 +387,78 @@ export default function JobRecommendationsPage() {
                                                 </div>
                                             </CardHeader>
 
-                                            <CardContent className="space-y-4">
-                                                {/* Match Reasons */}
-                                                <div>
-                                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                                        Why You're a Good Fit
-                                                    </h4>
-                                                    <ul className="space-y-1">
-                                                        {job.match_reasons && Array.isArray(job.match_reasons) ? job.match_reasons.map((reason, idx) => (
-                                                            <li key={idx} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
-                                                                <span className="text-green-600 mt-0.5">✓</span>
-                                                                <span>{typeof reason === 'string' ? reason : JSON.stringify(reason)}</span>
-                                                            </li>
-                                                        )) : <li className="text-sm text-gray-500">No match reasons available</li>}
-                                                    </ul>
-                                                </div>
-
-                                                {/* Skills */}
-                                                <div className="grid md:grid-cols-2 gap-4">
+                                            <CardContent className="flex-1 flex flex-col p-6">
+                                                <div className="space-y-4 flex-1">
+                                                    {/* Match Reasons */}
                                                     <div>
-                                                        <h4 className="text-sm font-semibold mb-2 text-green-700 dark:text-green-500">
-                                                            Your Matching Skills
+                                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                                            Why You're a Good Fit
                                                         </h4>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {job.key_skills_matched && Array.isArray(job.key_skills_matched) ? job.key_skills_matched.map((skill, idx) => (
-                                                                <Badge key={idx} variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                                    {typeof skill === 'string' ? skill : JSON.stringify(skill)}
-                                                                </Badge>
-                                                            )) : <span className="text-sm text-gray-500">No skills matched</span>}
-                                                        </div>
+                                                        <ul className="space-y-1">
+                                                            {job.match_reasons && Array.isArray(job.match_reasons) ? job.match_reasons.map((reason, idx) => (
+                                                                <li key={idx} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                                                    <span className="text-green-600 mt-0.5">✓</span>
+                                                                    <span>{typeof reason === 'string' ? reason : JSON.stringify(reason)}</span>
+                                                                </li>
+                                                            )) : <li className="text-sm text-gray-500">No match reasons available</li>}
+                                                        </ul>
                                                     </div>
 
-                                                    {job.skills_gap && job.skills_gap.length > 0 && (
+                                                    {/* Skills */}
+                                                    <div className="grid md:grid-cols-2 gap-4">
                                                         <div>
-                                                            <h4 className="text-sm font-semibold mb-2 text-red-700 dark:text-red-500">
-                                                                Skills to Develop
+                                                            <h4 className="text-sm font-semibold mb-2 text-green-700 dark:text-green-500">
+                                                                Your Matching Skills
                                                             </h4>
                                                             <div className="flex flex-wrap gap-2">
-                                                                {job.skills_gap && Array.isArray(job.skills_gap) ? job.skills_gap.map((skill, idx) => (
-                                                                    <Badge key={idx} variant="outline" className="border-red-300 text-red-800 dark:border-red-700 dark:text-red-400">
+                                                                {job.key_skills_matched && Array.isArray(job.key_skills_matched) ? job.key_skills_matched.map((skill, idx) => (
+                                                                    <Badge key={idx} variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                                                         {typeof skill === 'string' ? skill : JSON.stringify(skill)}
                                                                     </Badge>
-                                                                )) : <span className="text-sm text-gray-500">No skills gap</span>}
+                                                                )) : <span className="text-sm text-gray-500">No skills matched</span>}
                                                             </div>
                                                         </div>
-                                                    )}
-                                                </div>
 
-                                                {/* Bottom Info */}
-                                                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                                    <div className="flex items-center gap-2">
-                                                        <DollarSign className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{job.typical_salary_range}</span>
+                                                        {job.skills_gap && job.skills_gap.length > 0 && (
+                                                            <div>
+                                                                <h4 className="text-sm font-semibold mb-2 text-red-700 dark:text-red-500">
+                                                                    Skills to Develop
+                                                                </h4>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {job.skills_gap && Array.isArray(job.skills_gap) ? job.skills_gap.map((skill, idx) => (
+                                                                        <Badge key={idx} variant="outline" className="border-red-300 text-red-800 dark:border-red-700 dark:text-red-400">
+                                                                            {typeof skill === 'string' ? skill : JSON.stringify(skill)}
+                                                                        </Badge>
+                                                                    )) : <span className="text-sm text-gray-500">No skills gap</span>}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <Badge className={getGrowthPotentialColor(job.growth_potential)}>
-                                                        <TrendingUp className="h-3 w-3 mr-1" />
-                                                        {job.growth_potential} Growth
-                                                    </Badge>
-                                                    <div className="flex items-center gap-2 ml-auto">
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">Top Hirers:</span>
-                                                        {job.top_companies_hiring && Array.isArray(job.top_companies_hiring) ? job.top_companies_hiring.slice(0, 3).map((company, idx) => (
-                                                            <Badge key={idx} variant="outline" className="text-xs">
-                                                                {typeof company === 'string' ? company : JSON.stringify(company)}
-                                                            </Badge>
-                                                        )) : <span className="text-sm text-gray-500 dark:text-gray-400">No companies listed</span>}
+
+                                                    {/* Bottom Info */}
+                                                    <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                        <div className="flex items-center gap-2">
+                                                            <DollarSign className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{job.typical_salary_range}</span>
+                                                        </div>
+                                                        <Badge className={getGrowthPotentialColor(job.growth_potential)}>
+                                                            <TrendingUp className="h-3 w-3 mr-1" />
+                                                            {job.growth_potential} Growth
+                                                        </Badge>
+                                                        <div className="flex items-center gap-2 ml-auto">
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400">Top Hirers:</span>
+                                                            {job.top_companies_hiring && Array.isArray(job.top_companies_hiring) ? job.top_companies_hiring.slice(0, 3).map((company, idx) => (
+                                                                <Badge key={idx} variant="outline" className="text-xs">
+                                                                    {typeof company === 'string' ? company : JSON.stringify(company)}
+                                                                </Badge>
+                                                            )) : <span className="text-sm text-gray-500 dark:text-gray-400">No companies listed</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Start Assessment Button */}
-                                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
                                                     <Button 
                                                         className="w-full bg-primary-500 hover:bg-primary-600 text-white" 
                                                         size="lg"
