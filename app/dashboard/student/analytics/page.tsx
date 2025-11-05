@@ -208,7 +208,7 @@ export default function StudentAnalyticsPage() {
                                         <PolarAngleAxis dataKey="category" scale="auto" reversed={false} />
                                         <PolarRadiusAxis angle={30} domain={[0, 100]} />
                                         <Radar name="Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                                        <Tooltip />
+                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
                                     </RadarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -227,7 +227,7 @@ export default function StudentAnalyticsPage() {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" />
                                         <YAxis domain={[0, 100]} />
-                                        <Tooltip />
+                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
                                         <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} dot={false} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -250,7 +250,7 @@ export default function StudentAnalyticsPage() {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="name" hide={false} />
                                         <YAxis domain={[0, 100]} />
-                                        <Tooltip />
+                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
                                         <Bar dataKey="average" fill="#6366f1" />
                                     </BarChart>
                                 </ResponsiveContainer>
