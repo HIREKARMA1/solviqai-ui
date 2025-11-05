@@ -352,12 +352,12 @@ class ApiClient {
   }
 
   /**
-   * Get available jobs in the market from multiple platforms (LinkedIn, Unstop)
+   * Get available jobs in the market from multiple platforms (LinkedIn, Unstop, Foundit, Naukri)
    * @param keywords - Optional comma-separated keywords (e.g., "software engineer,data analyst")
    * @param location - Job location (default: "India")
    * @param maxJobs - Maximum number of jobs to fetch per source (default: 15, max: 15)
    * @param includeResumeSkills - Include skills extracted from resume (default: false)
-   * @param sources - Comma-separated platforms to search (e.g., "linkedin,unstop")
+   * @param sources - Comma-separated platforms to search (e.g., "linkedin,unstop,foundit,naukri")
    * @returns Live job listings from selected platforms
    */
   async getMarketJobs(keywords?: string, location: string = 'India', maxJobs: number = 15, includeResumeSkills: boolean = false, sources: string = 'linkedin'): Promise<any> {
