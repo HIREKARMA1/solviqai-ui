@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Home, User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Users, Sparkles } from 'lucide-react'
+import { Home, User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Users, BarChart3, Sparkles } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
@@ -379,6 +379,24 @@ export default function StudentDashboard() {
                                             </motion.div>
                                             <span className="font-semibold text-green-900 dark:text-green-100 group-hover/action:text-green-700 dark:group-hover/action:text-green-200 transition-colors">
                                                 Browse Jobs
+                                            </span>
+                                        </motion.div>
+                                </Link>
+                                
+                                    <Link href="/dashboard/student/market-jobs" className="group/action">
+                                        <motion.div 
+                                            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 border border-teal-200/50 dark:border-teal-800/50 hover:border-teal-300 dark:hover:border-teal-700 hover:shadow-lg transition-all duration-300"
+                                            whileHover={{ scale: 1.02, x: 5 }}
+                                        >
+                                            <motion.div 
+                                                className="p-3 bg-teal-200 dark:bg-teal-800 rounded-lg group-hover/action:bg-gradient-to-br group-hover/action:from-teal-400 group-hover/action:to-teal-500 transition-all duration-300"
+                                                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                                                transition={{ duration: 0.5 }}
+                                            >
+                                                <Zap className="h-5 w-5 text-teal-600 dark:text-teal-300 group-hover/action:text-white transition-colors" />
+                                            </motion.div>
+                                            <span className="font-semibold text-teal-900 dark:text-teal-100 group-hover/action:text-teal-700 dark:group-hover/action:text-teal-200 transition-colors">
+                                                Available Jobs in Market
                                             </span>
                                         </motion.div>
                                 </Link>

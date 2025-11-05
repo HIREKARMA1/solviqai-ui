@@ -25,12 +25,22 @@ import {
     Sparkles,
     Upload,
     PlayCircle,
-    Zap
+    Zap,
+    BarChart3
 } from 'lucide-react'
 import { AxiosError } from 'axios'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { AnimatedBackground } from '@/components/ui/animated-background'
+
+const sidebarItems = [
+    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
+    { name: 'Profile', href: '/dashboard/student/profile', icon: User },
+    { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
+    { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
+    { name: 'Auto Job Apply', href: '/dashboard/student/auto-apply', icon: Zap },
+    { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
+]
 
 interface JobRecommendation {
     rank: number

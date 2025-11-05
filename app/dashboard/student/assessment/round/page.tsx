@@ -436,7 +436,22 @@ export default function AssessmentRoundPage() {
             router.push(`/dashboard/student/assessment?id=${assessmentId}`)
         } catch (error: any) {
             console.error('Error submitting round:', error)
-            toast.error(extractErrorMessage(error))
+            
+            // Check if it's an authentication error
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                toast.error('Session expired. Please login again.')
+                // Clear invalid tokens
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('refresh_token')
+                localStorage.removeItem('token_expiry')
+                // Redirect to login
+                setTimeout(() => {
+                    router.push('/auth/login')
+                }, 2000)
+            } else {
+                toast.error(extractErrorMessage(error))
+            }
+            
             setSubmitting(false)
             hasAutoSubmitted.current = false
         }
@@ -730,9 +745,22 @@ export default function AssessmentRoundPage() {
                             );
                             toast.success('Discussion round completed successfully!');
                             router.push(`/dashboard/student/assessment?id=${assessmentId}`);
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('Error submitting discussion responses:', error);
-                            toast.error('Failed to submit discussion responses');
+                            
+                            // Check if it's an authentication error
+                            if (error.response?.status === 401 || error.response?.status === 403) {
+                                toast.error('Session expired. Please login again.')
+                                localStorage.removeItem('access_token')
+                                localStorage.removeItem('refresh_token')
+                                localStorage.removeItem('token_expiry')
+                                setTimeout(() => {
+                                    router.push('/auth/login')
+                                }, 2000)
+                            } else {
+                                toast.error('Failed to submit discussion responses');
+                            }
+                            
                             setSubmitting(false);
                         }
                     }}

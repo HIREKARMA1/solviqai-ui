@@ -31,6 +31,7 @@ import {
 } from 'recharts'
 import toast from 'react-hot-toast'
 import PlaylistTab from '@/components/assessment/report/PlaylistTab'
+import Playlist from '@/components/assessment/Playlist'
 
 // Map by round_type for correct labeling across tech/non-tech flows
 const roundTypeInfo: Record<string, { name: string; icon: any; color: string; gradient: string }> = {
@@ -1931,8 +1932,6 @@ export default function AssessmentReportPage() {
                     <TabsContent value="playlist" className="space-y-6">
                         <PlaylistTab assessmentId={assessmentId || ''} />
                     </TabsContent>
-
-                    
                 </Tabs>
 
                 {/* Next Steps */}
@@ -1953,6 +1952,7 @@ export default function AssessmentReportPage() {
                                 Update Profile
                             </Button>
                         </div>
+                        <Playlist assessmentId={assessmentId ?? ''} />
                     </CardContent>
                 </Card>
             </div>
