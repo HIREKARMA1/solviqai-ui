@@ -469,6 +469,19 @@ class ApiClient {
     const response: AxiosResponse = await this.client.get('/students/analytics/timeline', { params });
     return response.data;
   }
+
+  // Electrical endpoints
+  async generateElectricalQuestion(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+    return response.data;
+  }
+
+  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
+      timeout: 180000,
+    });
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
