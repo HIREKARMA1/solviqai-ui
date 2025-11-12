@@ -34,11 +34,19 @@ export function useAuth() {
 
   const login = async (email: string, password: string, user_type: string) => {
     try {
+      console.log('🔐 Attempting login:', {
+        baseURL: (apiClient.client as any).defaults?.baseURL,
+        email,
+        user_type
+      });
+      
       const response = await apiClient.login({
         email,
         password,
         user_type,
       })
+      
+      console.log('✅ Login successful');
       
       apiClient.setAuthTokens(response.access_token, response.refresh_token)
       // Store token expiry (30 minutes from now)
@@ -51,7 +59,8 @@ export function useAuth() {
       
       toast.success('Login successful!')
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Login failed'
+      console.error('❌ Login failed:', error);
+      const message = error.response?.data?.detail || error.message || 'Login failed'
       toast.error(message)
       throw error
     }
