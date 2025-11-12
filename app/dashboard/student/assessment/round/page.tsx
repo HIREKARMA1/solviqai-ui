@@ -8,7 +8,7 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { 
     Home, User, FileText, Briefcase, ClipboardList,
-    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3
+    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
@@ -139,6 +139,7 @@ export default function AssessmentRoundPage() {
     const isVoiceRound = roundType === 'technical_interview' || roundType === 'hr_interview'
     const isGroupDiscussionRound = roundType === 'group_discussion'
     const isCodingRound = roundType === 'coding'
+    const isElectricalRound = roundType === 'electrical_circuit'
     const currentQ = roundData?.questions?.[currentQuestion]
     const counts = roundData ? getCounts() : { answered: 0, notAnswered: 0, marked: 0, notVisited: 0 }
     const canSubmit = roundData && !submitting
@@ -691,6 +692,47 @@ export default function AssessmentRoundPage() {
         )
     }
 
+    if (isElectricalRound) {
+        const roundId = roundData?.round_id || roundData?.id
+        const params = new URLSearchParams()
+        if (assessmentId) params.set('assessment_id', assessmentId)
+        if (roundId) params.set('round_id', roundId)
+        params.set('round_number', String(roundNumber))
+        const workspaceUrl = `/dashboard/student/electrical?${params.toString()}`
+
+        return (
+            <DashboardLayout requiredUserType="student">
+                <div className="max-w-3xl mx-auto space-y-6">
+                    <div className="flex items-center gap-3 text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <Zap className="h-5 w-5" />
+                        <div>
+                            <h2 className="text-lg font-semibold">Electrical Circuit Design Round</h2>
+                            <p className="text-sm text-amber-700">
+                                Complete this round by designing the required circuit in the dedicated workspace and submitting it for AI evaluation.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white border rounded-xl shadow-sm p-6 space-y-4">
+                        <h3 className="text-base font-semibold">How this round works</h3>
+                        <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                            <li>Click the button below to open the Electrical Practice workspace.</li>
+                            <li>Generate the provided circuit question and design your circuit using the component library.</li>
+                            <li>Submit your design for AI evaluation. Your feedback and score will be recorded automatically.</li>
+                        </ol>
+                        <div className="flex gap-3">
+                            <Button onClick={() => router.push(workspaceUrl)}>
+                                Open Electrical Workspace
+                            </Button>
+                            <Button variant="outline" onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                                Back to Assessment
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </DashboardLayout>
+        )
+    }
+
     if (isGroupDiscussionRound) {
         // Ensure we have valid roundData with round_id before rendering
         if (!roundData || (!roundData.round_id && !roundData.id)) {
@@ -950,6 +992,7 @@ export default function AssessmentRoundPage() {
                                 group_discussion: 'Group Discussion',
                                 technical_mcq: 'Technical MCQ',
                                 coding: 'Coding Challenge',
+                                electrical_circuit: 'Electrical Circuit Design',
                                 technical_interview: 'Technical Interview',
                                 hr_interview: 'HR Interview',
                             }

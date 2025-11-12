@@ -40,6 +40,7 @@ const roundTypeInfo: Record<string, { name: string; icon: any; color: string; gr
     group_discussion: { name: "Group Discussion", icon: Users, color: "bg-teal-500", gradient: "from-teal-400 to-teal-600" },
     technical_mcq: { name: "Technical MCQ", icon: ClipboardList, color: "bg-purple-500", gradient: "from-purple-400 to-purple-600" },
     coding: { name: "Coding Challenge", icon: BookOpen, color: "bg-indigo-500", gradient: "from-indigo-400 to-indigo-600" },
+    electrical_circuit: { name: "Electrical Circuit Design", icon: Zap, color: "bg-amber-500", gradient: "from-amber-400 to-amber-600" },
     technical_interview: { name: "Technical Interview", icon: Mic, color: "bg-orange-500", gradient: "from-orange-400 to-orange-600" },
     hr_interview: { name: "HR Interview", icon: Target, color: "bg-pink-500", gradient: "from-pink-400 to-pink-600" }
 }

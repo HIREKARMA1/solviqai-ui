@@ -12,7 +12,7 @@ import { apiClient } from '@/lib/api'
 import { 
     Home, User, FileText, Briefcase, 
     Brain, Mic, CheckCircle, Clock, Target, MessageCircle, AlertCircle, TrendingUp,
-    Play, ArrowRight, BarChart3, Award, Calendar
+    Play, ArrowRight, BarChart3, Award, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -68,6 +68,13 @@ const roundDisplay: Record<string, { name: string; description: string; duration
         duration: "20 min",
         icon: Mic,
         color: "bg-orange-500",
+    },
+    electrical_circuit: {
+        name: "Electrical Circuit Design",
+        description: "Design and evaluate a circuit using the interactive workspace",
+        duration: "45 min",
+        icon: Zap,
+        color: "bg-amber-500",
     },
     hr_interview: {
         name: "HR Interview",
@@ -140,9 +147,18 @@ export default function AssessmentPage() {
         }
     }
 
-    const handleStartRound = async (roundNumber: number) => {
+    const handleStartRound = async (round: any) => {
         await requestFullscreen()
-        router.push(`/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${roundNumber}`)
+        const roundType = String(round.round_type || '').toLowerCase()
+        if (roundType === 'electrical_circuit') {
+            const params = new URLSearchParams()
+            if (assessmentId) params.set('assessment_id', assessmentId)
+            if (round.round_id) params.set('round_id', round.round_id)
+            params.set('round_number', String(round.round_number))
+            router.push(`/dashboard/student/electrical?${params.toString()}`)
+            return
+        }
+        router.push(`/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${round.round_number}`)
     }
 
     const getRoundStatus = (round: any): 'completed' | 'in_progress' | 'not_started' => {
@@ -176,6 +192,7 @@ export default function AssessmentPage() {
         group_discussion: 'from-violet-50 to-violet-100/60 dark:from-violet-900/20 dark:to-violet-900/10',
         technical_mcq: 'from-purple-50 to-purple-100/60 dark:from-purple-900/20 dark:to-purple-900/10',
         coding: 'from-emerald-50 to-emerald-100/60 dark:from-emerald-900/20 dark:to-emerald-900/10',
+        electrical_circuit: 'from-amber-50 to-amber-100/60 dark:from-amber-900/20 dark:to-amber-900/10',
         technical_interview: 'from-orange-50 to-orange-100/60 dark:from-orange-900/20 dark:to-orange-900/10',
         hr_interview: 'from-pink-50 to-pink-100/60 dark:from-pink-900/20 dark:to-pink-900/10',
     }
@@ -367,7 +384,7 @@ export default function AssessmentPage() {
                                                 {getStatusIcon(status)}
                                                 <span className="ml-1 capitalize">{status.replace('_', ' ')}</span>
                                             </Badge>
-                                            {status === 'completed' && round.score && (
+                                            {status === 'completed' && round.score != null && (
                                                 <div className="text-right">
                                                     <p className="text-sm font-medium">{round.score} points</p>
                                                     <p className="text-xs text-gray-500">{round.percentage}%</p>
@@ -375,7 +392,7 @@ export default function AssessmentPage() {
                                             )}
                                             {status !== 'completed' && (
                                 <Button 
-                                                    onClick={() => handleStartRound(round.round_number)}
+                                                    onClick={() => handleStartRound(round)}
                                                     disabled={!isRoundEnabled}
                                                 >
                                                     {status === 'in_progress' ? 'Continue' : 'Start'}

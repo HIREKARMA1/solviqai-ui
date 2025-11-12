@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { CircuitComponentsLibrary } from '@/components/electrical/CircuitComponentsLibrary'
@@ -15,11 +16,18 @@ import toast from 'react-hot-toast'
 const Excalidraw = dynamic(async () => (await import('@excalidraw/excalidraw')).Excalidraw, { ssr: false })
 
 export default function ElectricalPracticePage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const assessmentId = searchParams?.get('assessment_id') || undefined
+  const roundId = searchParams?.get('round_id') || undefined
+  const roundNumber = searchParams?.get('round_number') || undefined
   const [busy, setBusy] = useState(false)
   const [question, setQuestion] = useState<string>("")
   const [evaluation, setEvaluation] = useState<any>(null)
   const [scene, setScene] = useState<any>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null)
+  const [roundSubmitted, setRoundSubmitted] = useState(false)
+  const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
 
   const onExcalidrawAPIMount = useCallback((api: any) => {
     setExcalidrawAPI(api)
@@ -52,21 +60,50 @@ export default function ElectricalPracticePage() {
       }
       setBusy(true)
       setEvaluation(null)
+      setRoundSubmitError(null)
+      const startedAt = Date.now()
       const elements = excalidrawAPI.getSceneElements()
       const appState = excalidrawAPI.getAppState()
       const files = excalidrawAPI.getFiles()
 
+      const drawingData = {
+        elements,
+        appState,
+        files,
+      }
+
       const payload = {
         question,
-        drawing: {
-          elements,
-          appState,
-          files,
-        },
+        drawing: drawingData,
       }
       const res = await apiClient.evaluateElectricalDiagram(payload)
       setEvaluation(res)
       toast.success('Evaluation received')
+
+      if (assessmentId && roundId) {
+        try {
+          const timeTaken = Math.max(1, Math.floor((Date.now() - startedAt) / 1000))
+          await apiClient.submitRoundResponses(
+            assessmentId,
+            roundId,
+            [{
+              response_data: {
+                question,
+                evaluation: res,
+                drawing: drawingData,
+              },
+              time_taken: timeTaken,
+            }]
+          )
+          setRoundSubmitted(true)
+          toast.success('Assessment round recorded successfully!')
+        } catch (submitErr: any) {
+          console.error(submitErr)
+          const message = submitErr?.response?.data?.detail || submitErr?.message || 'Failed to record round'
+          setRoundSubmitError(message)
+          toast.error('Failed to record assessment round')
+        }
+      }
     } catch (e) {
       console.error(e)
       toast.error('Failed to evaluate diagram')
@@ -88,6 +125,36 @@ export default function ElectricalPracticePage() {
           <h1 className="text-2xl font-semibold tracking-tight">Electrical Practice</h1>
           <p className="text-sm text-muted-foreground">Generate circuit design questions, draw your circuit, and get instant AI feedback.</p>
         </div>
+
+        {assessmentId && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Linked to Assessment: <span className="font-medium">{assessmentId}</span>
+            {roundNumber && <span className="ml-2">Round {roundNumber}</span>}
+          </div>
+        )}
+
+        {roundSubmitted && (
+          <Card className="border border-emerald-200 bg-emerald-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-emerald-800">Round Submitted</CardTitle>
+              <CardDescription className="text-emerald-700">Your circuit evaluation has been recorded.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center gap-3">
+              <Button onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                Return to Assessment
+              </Button>
+              <Button variant="ghost" onClick={() => setRoundSubmitted(false)}>
+                Stay and iterate
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {roundSubmitError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {roundSubmitError}
+          </div>
+        )}
 
         <Card>
           <CardHeader className="pb-2">
