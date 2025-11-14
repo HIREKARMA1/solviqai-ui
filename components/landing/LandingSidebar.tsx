@@ -67,6 +67,12 @@ export const sidebarFeatures: SidebarItem[] = [
     label: 'Electrical',
     onClick: undefined,
   },
+  {
+    id: 'civil',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Civil Engineering',
+    onClick: undefined,
+  },
 ];
 
 export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatureChange }: LandingSidebarProps) {
@@ -86,6 +92,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       'jobs': `${baseRoute}/jobs`,
       'auto-apply': `${baseRoute}/auto-apply`,
       'electrical': `${baseRoute}/electrical`,
+      'civil': `${baseRoute}/civil`,
     };
     return routeMap[featureId] || null;
   };

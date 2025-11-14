@@ -26,6 +26,8 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
       'assessment': `${baseRoute}/assessment`,
       'jobs': `${baseRoute}/jobs`,
       'auto-apply': `${baseRoute}/auto-apply`,
+      'electrical': `${baseRoute}/electrical`,
+      'civil': `${baseRoute}/civil`,
     };
     return routeMap[featureId] || null;
   };
