@@ -838,7 +838,7 @@ export default function AssessmentRoundPage() {
                         <div className="flex justify-between items-center max-w-7xl mx-auto">
                             <div>
                                 <h1 className="text-2xl font-bold">
-                                    {roundNumber === 4 ? '💻 Technical Interview' : '👔 HR Interview'}
+                                    {roundNumber === 6 ? '💻 Technical Interview' : '👔 HR Interview'}
                                 </h1>
                                 <p className="text-sm text-blue-100 mt-1">
                                     Question {currentQuestion + 1} of {roundData?.questions?.length || 0}
