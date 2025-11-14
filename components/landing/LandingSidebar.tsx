@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Zap,
   LayoutGrid,
+  BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -61,6 +62,12 @@ export const sidebarFeatures: SidebarItem[] = [
     label: 'Auto Job Apply',
     onClick: undefined,
   },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice Assessment',
+    onClick: undefined,
+  },
 ];
 
 export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatureChange }: LandingSidebarProps) {
@@ -79,6 +86,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       'assessment': `${baseRoute}/assessment`,
       'jobs': `${baseRoute}/jobs`,
       'auto-apply': `${baseRoute}/auto-apply`,
+      'practice': `${baseRoute}/practice`,
     };
     return routeMap[featureId] || null;
   };
