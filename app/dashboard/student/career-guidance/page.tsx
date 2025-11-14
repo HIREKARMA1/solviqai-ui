@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import CareerTreeVisualization from '@/components/career-guidance/CareerTreeVisualization';
 import CareerPlaylistTab from '@/components/career-guidance/CareerPlaylistTab';
 import CareerCalendarTab from '@/components/career-guidance/CareerCalendarTab';
+import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModal';
 
 interface Message {
   role: 'ai' | 'user';
@@ -87,6 +88,44 @@ export default function CareerGuidancePage() {
       }
     };
   }, []);
+
+  const [showHistory, setShowHistory] = useState(false);
+
+  const loadSession = async (id: string) => {
+    try {
+      const data = await api.careerGuidance.getSession(id);
+      setSessionId(data.session_id);
+      setMessages(data.conversation_history || []);
+      setNodes(data.flowchart_nodes || []);
+      setEdges(data.flowchart_edges || []);
+      setCompletionPercentage(data.completion_percentage || 0);
+      setCurrentStage(data.current_stage || 'introduction');
+
+      // Reconnect websocket for loaded session
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      const wsUrl = `ws://localhost:8000/api/v1/career-guidance/ws/${data.session_id}`;
+      const ws = new WebSocket(wsUrl);
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'typing') setIsTyping(msg.data.is_typing);
+          if (msg.type === 'message') setMessages(prev => [...prev, { role: 'ai', content: msg.data.content, timestamp: new Date().toISOString() }]);
+          if (msg.type === 'update_flowchart') {
+            setNodes(msg.data.nodes || []);
+            setEdges(msg.data.edges || []);
+          }
+        } catch (e) {
+          console.warn('WS parse error', e);
+        }
+      };
+      wsRef.current = ws;
+    } catch (e) {
+      console.error('Failed to load session', e);
+      toast.error('Failed to load session');
+    }
+  };
 
   const startSession = async () => {
     setIsLoading(true);
@@ -367,6 +406,16 @@ export default function CareerGuidancePage() {
                 ) : (
                   <VolumeX className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowHistory(true)}
+                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 lg:h-10 lg:w-10 ml-2"
+                aria-label="Session history"
+              >
+                {/* simple icon: Workflow */}
+                <Workflow className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </div>
           </div>
@@ -686,6 +735,7 @@ export default function CareerGuidancePage() {
           </motion.div>
         )}
       </div>
+      <SessionHistoryModal open={showHistory} onClose={() => setShowHistory(false)} onLoadSession={loadSession} />
     </div>
   );
 }
