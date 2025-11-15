@@ -106,20 +106,40 @@ export default function InterviewPractice() {
     };
   }, [isLiveTranscribing]);
 
-  const startLiveTranscription = () => {
+  const startLiveTranscription = async () => {
     if (!speechRecognitionRef.current) {
-      alert('Speech recognition not available. Use Chrome or Edge browser.');
+      // Check if browser supports speech recognition
+      if (typeof window === 'undefined' || !((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) {
+        alert('Speech recognition not available. Please use Chrome, Edge, or Safari browser.');
+        return;
+      }
+      alert('Speech recognition not initialized. Please refresh the page.');
       return;
     }
+    
     if (!isLiveTranscribing) {
       try {
+        // Request microphone permission first
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (permError) {
+          alert('Microphone permission denied. Please allow microphone access in your browser settings.');
+          return;
+        }
+        
         setLiveTranscript('');
         setInterimTranscript('');
         speechRecognitionRef.current.start();
         setIsLiveTranscribing(true);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error starting speech recognition:', error);
-        alert('Failed to start recording');
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          alert('Microphone permission denied. Please allow microphone access.');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          alert('No microphone found. Please connect a microphone.');
+        } else {
+          alert('Failed to start recording: ' + (error.message || 'Unknown error'));
+        }
       }
     }
   };
@@ -128,7 +148,9 @@ export default function InterviewPractice() {
     if (speechRecognitionRef.current && isLiveTranscribing) {
       try {
         speechRecognitionRef.current.stop();
-      } catch {}
+      } catch (error) {
+        console.error('Error stopping speech recognition:', error);
+      }
       setIsLiveTranscribing(false);
       const fullTranscript = (liveTranscript + ' ' + interimTranscript).trim();
       if (fullTranscript) {
@@ -296,9 +318,18 @@ export default function InterviewPractice() {
   // Initial form when there are no questions yet
   if (questions.length === 0) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-1">Interview Skills Practice</h2>
-        <p className="text-gray-600 mb-6">Practice mock interviews with AI-generated questions</p>
+      <div className="w-full max-w-4xl mx-auto p-6 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl shadow-xl border border-blue-100/50">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse shadow-lg shadow-blue-500/50"></div>
+            <h2 className="text-3xl font-bold">
+              <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">AI-Powered</span>{' '}
+              <span className="text-blue-400">Interview Practice</span>
+            </h2>
+          </div>
+          <p className="text-gray-600">Practice mock interviews with AI-generated questions</p>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
@@ -306,89 +337,181 @@ export default function InterviewPractice() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          {/* Interview Type with Sliding Indicator */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Interview Type</label>
-            <div className="flex gap-3">
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
+              Interview Type
+            </label>
+            <div className="relative flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
+              {/* Sliding Background Indicator */}
+              <div
+                className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 shadow-lg transition-all duration-500 ease-out z-0"
+                style={{
+                  width: 'calc(50% - 8px)',
+                  left: mode === 'technical' ? '4px' : 'calc(50% + 4px)',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+                }}
+              ></div>
               <button
                 onClick={() => setMode('technical')}
-                className={`px-4 py-2 rounded font-medium transition ${mode === 'technical' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  mode === 'technical'
+                    ? 'text-white scale-105 shadow-md'
+                    : 'text-gray-700 hover:scale-[1.02]'
+                }`}
               >
                 Technical Interview
               </button>
               <button
                 onClick={() => setMode('hr')}
-                className={`px-4 py-2 rounded font-medium transition ${mode === 'hr' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  mode === 'hr'
+                    ? 'text-white scale-105 shadow-md'
+                    : 'text-gray-700 hover:scale-[1.02]'
+                }`}
               >
                 HR Interview
               </button>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Target Job Role</label>
-            <input
-              type="text"
-              value={jobRole}
-              onChange={(e) => setJobRole(e.target.value)}
-              disabled={loading}
-              placeholder="e.g., Software Engineer, Data Analyst"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
+                Target Job Role
+              </label>
+              <input
+                type="text"
+                value={jobRole}
+                onChange={(e) => setJobRole(e.target.value)}
+                disabled={loading}
+                placeholder="e.g., Software Engineer, Data Analyst"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Topic (optional)</label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              disabled={loading}
-              placeholder={mode === 'technical' ? 'e.g., Data Structures, System Design' : 'e.g., Teamwork, Strengths/Weaknesses'}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
-            <div className="flex gap-3">
-              {(['easy', 'medium', 'hard'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setDifficulty(level)}
-                  className={`flex-1 py-2 rounded font-medium transition capitalize ${difficulty === level ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  {level}
-                </button>
-              ))}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
+                Topic (optional)
+              </label>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                disabled={loading}
+                placeholder={mode === 'technical' ? 'e.g., Data Structures, System Design' : 'e.g., Teamwork, Strengths/Weaknesses'}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+              />
             </div>
           </div>
 
+          {/* Difficulty Level with Sliding Indicator */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Questions: <span className="text-blue-600 font-bold">{limit}</span></label>
-            <input
-              type="range"
-              min="3"
-              max="20"
-              value={limit}
-              onChange={(e) => setLimit(parseInt(e.target.value))}
-              className="w-full"
-            />
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
+              Difficulty Level
+            </label>
+            <div className="relative flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
+              {/* Sliding Background Indicator */}
+              <div
+                className="absolute top-1 bottom-1 rounded-lg shadow-lg transition-all duration-500 ease-out z-0"
+                style={{
+                  width: 'calc(33.333% - 8px)',
+                  left: difficulty === 'easy' 
+                    ? '4px' 
+                    : difficulty === 'medium' 
+                        ? 'calc(33.333% + 4px)' 
+                        : 'calc(66.666% + 4px)',
+                  background: difficulty === 'easy'
+                    ? 'linear-gradient(to right, #3b82f6, #2563eb)'
+                    : difficulty === 'medium'
+                        ? 'linear-gradient(to right, #10b981, #059669)'
+                        : 'linear-gradient(to right, #1f2937, #111827)',
+                  boxShadow: difficulty === 'easy'
+                    ? '0 4px 12px rgba(37, 99, 235, 0.4)'
+                    : difficulty === 'medium'
+                        ? '0 4px 12px rgba(16, 185, 129, 0.4)'
+                        : '0 4px 12px rgba(31, 41, 55, 0.4)',
+                }}
+              ></div>
+              {(['easy', 'medium', 'hard'] as const).map((level) => {
+                const isSelected = difficulty === level;
+                const colors = {
+                  easy: isSelected ? 'text-white' : 'text-green-600',
+                  medium: isSelected ? 'text-white' : 'text-orange-600',
+                  hard: isSelected ? 'text-white' : 'text-gray-700',
+                };
+                return (
+                  <button
+                    key={level}
+                    onClick={() => setDifficulty(level)}
+                    className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize ${
+                      isSelected
+                        ? 'scale-105 shadow-md'
+                        : 'hover:scale-[1.02]'
+                    } ${colors[level]}`}
+                  >
+                    {level}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Number of Questions */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
+              Number of Questions
+            </label>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500 font-medium">3 questions</span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                  {limit}
+                </span>
+                <span className="text-xs text-gray-500 font-medium">20 questions</span>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="20"
+                value={limit}
+                onChange={(e) => setLimit(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+                }}
+              />
+            </div>
           </div>
         </div>
 
         <button
           onClick={fetchQuestions}
           disabled={loading}
-          className={`mt-6 w-full py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${
+            loading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+          }`}
         >
           {loading ? (
             <>
               <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-              Loading Questions... (may take 10-20s)
+              <span>Loading Questions... (may take 10-20s)</span>
             </>
           ) : (
-            'Start Practice'
+            <>
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              <span>Start Practice</span>
+            </>
           )}
         </button>
 
@@ -615,7 +738,17 @@ export default function InterviewPractice() {
                 </button>
               )}
               <button
-                onClick={() => setResponses((prev) => ({ ...prev, [currentIndex]: '' }))}
+                onClick={() => {
+                  setResponses((prev) => ({ ...prev, [currentIndex]: '' }));
+                  setLiveTranscript('');
+                  setInterimTranscript('');
+                  if (isLiveTranscribing && speechRecognitionRef.current) {
+                    try {
+                      speechRecognitionRef.current.stop();
+                    } catch {}
+                    setIsLiveTranscribing(false);
+                  }
+                }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               >
                 🧹 Clear Response
@@ -644,36 +777,104 @@ export default function InterviewPractice() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Your response</label>
               <textarea
-                value={answered}
-                onChange={(e) => setResponses((prev) => ({ ...prev, [currentIndex]: e.target.value }))}
+                value={
+                  isLiveTranscribing 
+                    ? (liveTranscript + ' ' + interimTranscript).trim() 
+                    : answered
+                }
+                onChange={(e) => {
+                  setResponses((prev) => ({ ...prev, [currentIndex]: e.target.value }));
+                  // If user types while recording, stop recording
+                  if (isLiveTranscribing && speechRecognitionRef.current) {
+                    try {
+                      speechRecognitionRef.current.stop();
+                    } catch {}
+                    setIsLiveTranscribing(false);
+                  }
+                }}
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all"
                 placeholder="Speak your answer or type here..."
               />
+              {isLiveTranscribing && (
+                <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                  Recording in progress... Your speech will appear here
+                </p>
+              )}
             </div>
 
             {/* AI Feedback Panel */}
             {feedback[currentIndex] && (
-              <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded">
-                <h4 className="text-lg font-semibold text-purple-700 mb-2">AI Feedback</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">Mistakes</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800">
-                      {(feedback[currentIndex].mistakes || []).map((m: string, i: number) => (
-                        <li key={i}>{m}</li>
-                      ))}
+              <div className="mt-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl shadow-lg">
+                <h4 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                  <span>✨</span> AI Feedback
+                </h4>
+                
+                {/* Scores */}
+                {feedback[currentIndex].criteria_scores && (
+                  <div className="mb-4 p-3 bg-white rounded-lg border border-purple-100">
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Score: </span>
+                        <span className="font-bold text-purple-700 text-lg">{feedback[currentIndex].score ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Communication: </span>
+                        <span className="font-semibold text-blue-700">{feedback[currentIndex].criteria_scores.communication ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Relevance: </span>
+                        <span className="font-semibold text-green-700">{feedback[currentIndex].criteria_scores.relevance ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Technical Depth: </span>
+                        <span className="font-semibold text-orange-700">{feedback[currentIndex].criteria_scores.technical_depth ?? 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-red-700 mb-2">Mistakes</p>
+                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                      {(feedback[currentIndex].mistakes || []).length > 0 ? (
+                        feedback[currentIndex].mistakes.map((m: string, i: number) => (
+                          <li key={i}>{m}</li>
+                        ))
+                      ) : (
+                        <li className="text-gray-500 italic">No major mistakes found!</li>
+                      )}
                     </ul>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">How to fix</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800">
-                      {(feedback[currentIndex].fixes || []).map((m: string, i: number) => (
-                        <li key={i}>{m}</li>
-                      ))}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-blue-700 mb-2">How to fix</p>
+                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                      {(feedback[currentIndex].fixes || []).length > 0 ? (
+                        feedback[currentIndex].fixes.map((m: string, i: number) => (
+                          <li key={i}>{m}</li>
+                        ))
+                      ) : (
+                        <li className="text-gray-500 italic">Keep up the good work!</li>
+                      )}
                     </ul>
                   </div>
                 </div>
+                
+                {/* Suggestions - What more to say */}
+                {feedback[currentIndex].suggestions && feedback[currentIndex].suggestions.length > 0 && (
+                  <div className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
+                    <p className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
+                      <span>💡</span> What more you can say:
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                      {feedback[currentIndex].suggestions.map((s: string, i: number) => (
+                        <li key={i} className="font-medium">{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {feedback[currentIndex].solution_steps && feedback[currentIndex].solution_steps.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm font-semibold text-gray-700">Solution steps</p>
@@ -692,18 +893,10 @@ export default function InterviewPractice() {
                     </div>
                   </div>
                 )}
-                {feedback[currentIndex].criteria_scores && (
-                  <div className="mt-3 flex gap-3 text-xs text-gray-700">
-                    <span>Score: <span className="font-bold text-purple-700">{feedback[currentIndex].score ?? 0}</span></span>
-                    <span>Communication: {feedback[currentIndex].criteria_scores.communication ?? 0}</span>
-                    <span>Relevance: {feedback[currentIndex].criteria_scores.relevance ?? 0}</span>
-                    <span>Technical Depth: {feedback[currentIndex].criteria_scores.technical_depth ?? 0}</span>
-                  </div>
-                )}
                 {feedback[currentIndex].tips && feedback[currentIndex].tips.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm font-semibold text-gray-700">Tips</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800">
+                  <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-yellow-800 mb-2">💡 Tips for improvement</p>
+                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
                       {feedback[currentIndex].tips.map((t: string, i: number) => (
                         <li key={i}>{t}</li>
                       ))}
