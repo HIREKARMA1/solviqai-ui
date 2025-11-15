@@ -418,12 +418,12 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
   };
 
   return (
-    <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-gray-900 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'w-full h-full'}`}>
+    <div className={`relative bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-gray-900 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'w-full h-full'}`}>
       {/* Close button for fullscreen */}
       {isFullscreen && (
         <button
           onClick={toggleFullscreen}
-          className="fixed top-4 right-4 z-[10000] p-3 bg-slate-900/90 backdrop-blur-md border border-white/30 rounded-full text-white hover:bg-slate-800 transition-colors shadow-2xl"
+          className="fixed top-4 right-4 z-[10000] p-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200 dark:border-white/30 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors shadow-2xl"
           aria-label="Exit fullscreen"
         >
           <X className="w-6 h-6" />
@@ -437,7 +437,7 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
           {particles.map((p, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 bg-white/20 rounded-full"
+              className="absolute w-1 h-1 bg-gray-400/30 dark:bg-white/20 rounded-full"
               style={{ left: `${p.left}%`, top: `${p.top}%` }}
               animate={{ y: [0, -15, 0], opacity: [0.2, 0.4, 0.2] }}
               transition={{ duration: p.duration, repeat: Infinity, delay: p.delay }}
@@ -492,8 +492,9 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
                 stroke="url(#edge-gradient)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
+                className="dark:opacity-80 opacity-60"
                 initial={shouldReduceMotion ? { opacity: 1 } : { pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.8 }}
+                animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : idx * 0.05 }}
               />
             );
@@ -575,17 +576,17 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
               if (!node) return null;
               
               return (
-                <div className="bg-gray-900/98 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl border border-white/20 max-w-xs">
-                  <div className="text-white text-xs font-semibold">{node.label}</div>
+                <div className="bg-white/98 dark:bg-gray-900/98 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl border border-gray-200 dark:border-white/20 max-w-xs">
+                  <div className="text-gray-900 dark:text-white text-xs font-semibold">{node.label}</div>
                   {node.description && (
-                    <div className="text-gray-300 text-[10px] mt-0.5">{node.description}</div>
+                    <div className="text-gray-600 dark:text-gray-300 text-[10px] mt-0.5">{node.description}</div>
                   )}
-                  <div className="text-gray-400 text-[10px] mt-1">{node.icon} {node.type}</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-[10px] mt-1">{node.icon} {node.type}</div>
                 </div>
               );
             })()}
             {/* Arrow */}
-            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900/98 rotate-45 border-l border-t border-white/20" />
+            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white/98 dark:bg-gray-900/98 rotate-45 border-l border-t border-gray-200 dark:border-white/20" />
           </motion.div>
         </AnimatePresence>,
         document.body
@@ -596,14 +597,14 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/80 backdrop-blur-md border border-white/25 rounded-xl px-4 py-2.5 shadow-lg pointer-events-auto inline-flex items-center gap-2"
+          className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-xl px-4 py-2.5 shadow-lg pointer-events-auto inline-flex items-center gap-2"
         >
-          <div className="p-2 bg-white/15 rounded-lg">
-            <Target className="w-4 h-4 text-white" />
+          <div className="p-2 bg-blue-500/10 dark:bg-white/15 rounded-lg">
+            <Target className="w-4 h-4 text-blue-600 dark:text-white" />
           </div>
           <div>
-            <h3 className="text-white font-semibold text-sm">Career Journey</h3>
-            <p className="text-white/70 text-xs">{treeNodes.length} nodes • {edges.length} paths</p>
+            <h3 className="text-gray-900 dark:text-white font-semibold text-sm">Career Journey</h3>
+            <p className="text-gray-600 dark:text-white/70 text-xs">{treeNodes.length} nodes • {edges.length} paths</p>
           </div>
         </motion.div>
       </div>
@@ -612,21 +613,21 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
       <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 z-20">
         <button 
           onClick={() => setScale(prev => Math.min(prev + 0.2, 2))}
-          className="p-2.5 bg-slate-900/85 backdrop-blur-md border border-white/25 rounded-lg text-white hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
           aria-label="Zoom in"
         >
           +
         </button>
         <button 
           onClick={() => setScale(prev => Math.max(prev - 0.2, 0.3))}
-          className="p-2.5 bg-slate-900/85 backdrop-blur-md border border-white/25 rounded-lg text-white hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
           aria-label="Zoom out"
         >
           −
         </button>
         <button 
           onClick={() => setScale(1)}
-          className="p-2.5 bg-slate-900/85 backdrop-blur-md border border-white/25 rounded-lg text-white hover:bg-slate-800 transition-colors text-sm shadow-lg"
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm shadow-lg"
           aria-label="Reset zoom"
         >
           ⤢
@@ -637,7 +638,7 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
       <div className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-4 right-4 flex flex-col gap-1.5 ${isFullscreen ? 'z-[9999]' : 'z-20'}`}>
         <button 
           onClick={toggleFullscreen}
-          className="p-2.5 bg-slate-900/85 backdrop-blur-md border border-white/25 rounded-lg text-white hover:bg-slate-800 transition-colors shadow-lg group"
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors shadow-lg group"
           aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           title={isFullscreen ? "Exit fullscreen" : "Fullscreen view"}
         >
@@ -645,7 +646,7 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
         </button>
         <button 
           onClick={downloadAsImage}
-          className="p-2.5 bg-slate-900/85 backdrop-blur-md border border-white/25 rounded-lg text-white hover:bg-slate-800 transition-colors shadow-lg group"
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors shadow-lg group"
           aria-label="Download as image"
           title="Download career map"
         >
