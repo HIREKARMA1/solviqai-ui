@@ -213,7 +213,6 @@ export function GroupDiscussionRound({
             };
             
             setTopic(processedTopicData);
-            toast.success('Discussion topic loaded!');
             setFetchAttempt(0);
 
             if (topicData.audio_url) {
@@ -224,15 +223,12 @@ export function GroupDiscussionRound({
             
             if (fetchAttempt < 1) {
                 setFetchAttempt(prev => prev + 1);
-                toast.error('Retrying...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 inFlightRef.current = false;
                 setLoading(false);
                 fetchTopic();
                 return;
             }
-            
-            toast.error('Using default topic.');
             setTopic({
                 title: "The Future of Work in a Digital Age",
                 content: "Discuss how technological advancements are reshaping work environments.",
@@ -345,49 +341,76 @@ export function GroupDiscussionRound({
         const voices = availableVoices.current;
         if (voices.length === 0) return null;
 
+        // Prefer high-quality neural/premium voices
+        const getBestVoice = (filters: ((v: SpeechSynthesisVoice) => boolean)[]): SpeechSynthesisVoice | null => {
+            for (const filter of filters) {
+                const voice = voices.find(filter);
+                if (voice) return voice;
+            }
+            return null;
+        };
+
         if (agentName.includes('Aarav')) {
-            return voices.find(v => 
-                v.lang.includes('en-IN') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                v.lang.includes('en-GB') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                !v.name.toLowerCase().includes('female')
-            ) || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-IN') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en')) || voices[0];
         } 
         else if (agentName.includes('Meera')) {
-            return voices.find(v => 
-                v.lang.includes('en-IN') && v.name.toLowerCase().includes('female')
-            ) || voices.find(v => 
-                v.lang.includes('en-US') && v.name.toLowerCase().includes('female')
-            ) || voices.find(v => 
-                v.name.toLowerCase().includes('female')
-            ) || voices[1] || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-IN') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en') && v !== voices[0]) || voices[1] || voices[0];
         } 
         else if (agentName.includes('Rahul')) {
-            return voices.find(v => 
-                v.lang.includes('en-AU') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                v.lang.includes('en-US') && v.name.toLowerCase().includes('male')
-            ) || voices[2] || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-AU') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en') && v !== voices[0] && v !== voices[1]) || voices[2] || voices[0];
         }
 
-        return voices[0];
+        // Default: prefer neural/premium voices
+        return voices.find(v => v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')) || voices[0];
     };
 
-    // Function to speak agent text
-    const speakAgentText = async (agentName: string, text: string): Promise<void> => {
+    // Function to speak agent text with improved quality and retry mechanism
+    const speakAgentText = async (agentName: string, text: string, retryCount: number = 0): Promise<void> => {
         return new Promise((resolve) => {
-            if (!window.speechSynthesis || !voicesLoaded) {
+            if (!window.speechSynthesis) {
+                console.error('Speech synthesis not available');
                 resolve();
                 return;
             }
 
+            // Wait for voices to load if not ready
+            if (!voicesLoaded && availableVoices.current.length === 0) {
+                console.log('Voices not loaded yet, waiting...');
+                setTimeout(() => {
+                    speakAgentText(agentName, text, retryCount).then(resolve);
+                }, 500);
+                return;
+            }
+
             // Rahul's agent: allow longer sentences, chunk if needed
-            let speechText = text;
+            let speechText = text.trim();
+            if (!speechText) {
+                resolve();
+                return;
+            }
+
             const MAX_SPEECH_LENGTH = agentName.includes('Rahul') ? 600 : 300;
             if (speechText.length > MAX_SPEECH_LENGTH) {
-                // Split into sentences or chunks for Rahul
-                const sentences = speechText.match(/[^.!?]+[.!?]?/g) || [speechText];
+                // Split into sentences or chunks
+                const sentences = speechText.match(/[^.!?]+[.!?]+/g) || [speechText];
                 let idx = 0;
                 const speakNext = () => {
                     if (idx >= sentences.length) {
@@ -400,79 +423,156 @@ export function GroupDiscussionRound({
                     if (chunk.length > MAX_SPEECH_LENGTH) {
                         chunk = chunk.substring(0, MAX_SPEECH_LENGTH) + '...';
                     }
-                    try {
-                        window.speechSynthesis.cancel();
-                        const utterance = new SpeechSynthesisUtterance(chunk);
-                        const voice = getVoiceForAgent(agentName);
-                        if (voice) utterance.voice = voice;
-                        utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
-                        utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
-                        utterance.volume = 1.0;
-                        utterance.onstart = () => {
-                            setCurrentSpeakingAgent(agentName);
-                            setIsAISpeaking(true);
-                        };
-                        utterance.onend = () => {
-                            idx++;
-                            speakNext();
-                        };
-                        utterance.onerror = () => {
-                            idx++;
-                            speakNext();
-                        };
-                        setTimeout(() => {
-                            if (window.speechSynthesis.speaking) {
-                                window.speechSynthesis.cancel();
-                                idx++;
-                                speakNext();
-                            }
-                        }, 30000);
-                        window.speechSynthesis.speak(utterance);
-                    } catch (err) {
+                    if (!chunk) {
                         idx++;
                         speakNext();
+                        return;
                     }
+                    
+                    const speakChunk = (attempt: number = 0) => {
+                        if (attempt >= 3) {
+                            console.error('Failed to speak after 3 attempts');
+                            idx++;
+                            speakNext();
+                            return;
+                        }
+
+                        try {
+                            window.speechSynthesis.cancel();
+                            // Small delay to ensure cancellation
+                            setTimeout(() => {
+                                const utterance = new SpeechSynthesisUtterance(chunk);
+                                const voice = getVoiceForAgent(agentName);
+                                if (voice) {
+                                    utterance.voice = voice;
+                                    utterance.lang = voice.lang;
+                                } else {
+                                    utterance.lang = 'en-US';
+                                }
+                                
+                                // Optimized settings for clarity
+                                utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
+                                utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
+                                utterance.volume = 1.0; // Maximum volume
+                                
+                                let hasStarted = false;
+                                const timeout = setTimeout(() => {
+                                    if (!hasStarted) {
+                                        console.warn('TTS timeout, retrying...');
+                                        window.speechSynthesis.cancel();
+                                        speakChunk(attempt + 1);
+                                    }
+                                }, 2000);
+
+                                utterance.onstart = () => {
+                                    hasStarted = true;
+                                    clearTimeout(timeout);
+                                    setCurrentSpeakingAgent(agentName);
+                                    setIsAISpeaking(true);
+                                };
+                                
+                                utterance.onend = () => {
+                                    clearTimeout(timeout);
+                                    idx++;
+                                    speakNext();
+                                };
+                                
+                                utterance.onerror = (event: any) => {
+                                    clearTimeout(timeout);
+                                    console.error('TTS error:', event.error);
+                                    if (event.error === 'synthesis-failed' || event.error === 'synthesis-unavailable') {
+                                        speakChunk(attempt + 1);
+                                    } else {
+                                        idx++;
+                                        speakNext();
+                                    }
+                                };
+                                
+                                window.speechSynthesis.speak(utterance);
+                            }, 100);
+                        } catch (err) {
+                            console.error('Error creating utterance:', err);
+                            speakChunk(attempt + 1);
+                        }
+                    };
+                    
+                    speakChunk();
                 };
                 speakNext();
                 return;
             }
 
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(speechText);
-                const voice = getVoiceForAgent(agentName);
-                if (voice) utterance.voice = voice;
-                utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
-                utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
-                utterance.volume = 1.0;
-                utterance.onstart = () => {
-                    setCurrentSpeakingAgent(agentName);
-                    setIsAISpeaking(true);
-                };
-                utterance.onend = () => {
+            // Single utterance for shorter text
+            const speakSingle = (attempt: number = 0) => {
+                if (attempt >= 3) {
+                    console.error('Failed to speak after 3 attempts');
                     setCurrentSpeakingAgent(null);
                     setIsAISpeaking(false);
                     resolve();
-                };
-                utterance.onerror = () => {
-                    setCurrentSpeakingAgent(null);
-                    setIsAISpeaking(false);
-                    resolve();
-                };
-                setTimeout(() => {
-                    if (window.speechSynthesis.speaking) {
-                        window.speechSynthesis.cancel();
-                        setCurrentSpeakingAgent(null);
-                        setIsAISpeaking(false);
-                        resolve();
-                    }
-                }, 30000);
-                window.speechSynthesis.speak(utterance);
-            } catch (err) {
-                setCurrentSpeakingAgent(null);
-                setIsAISpeaking(false);
-                resolve();
-            }
+                    return;
+                }
+
+                try {
+                    window.speechSynthesis.cancel();
+                    setTimeout(() => {
+                        const utterance = new SpeechSynthesisUtterance(speechText);
+                        const voice = getVoiceForAgent(agentName);
+                        if (voice) {
+                            utterance.voice = voice;
+                            utterance.lang = voice.lang;
+                        } else {
+                            utterance.lang = 'en-US';
+                        }
+                        
+                        // Optimized settings for clarity
+                        utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
+                        utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
+                        utterance.volume = 1.0; // Maximum volume
+                        
+                        let hasStarted = false;
+                        const timeout = setTimeout(() => {
+                            if (!hasStarted) {
+                                console.warn('TTS timeout, retrying...');
+                                window.speechSynthesis.cancel();
+                                speakSingle(attempt + 1);
+                            }
+                        }, 2000);
+
+                        utterance.onstart = () => {
+                            hasStarted = true;
+                            clearTimeout(timeout);
+                            setCurrentSpeakingAgent(agentName);
+                            setIsAISpeaking(true);
+                        };
+                        
+                        utterance.onend = () => {
+                            clearTimeout(timeout);
+                            setCurrentSpeakingAgent(null);
+                            setIsAISpeaking(false);
+                            resolve();
+                        };
+                        
+                        utterance.onerror = (event: any) => {
+                            clearTimeout(timeout);
+                            console.error('TTS error:', event.error);
+                            if (event.error === 'synthesis-failed' || event.error === 'synthesis-unavailable') {
+                                speakSingle(attempt + 1);
+                            } else {
+                                setCurrentSpeakingAgent(null);
+                                setIsAISpeaking(false);
+                                resolve();
+                            }
+                        };
+                        
+                        window.speechSynthesis.speak(utterance);
+                    }, 100);
+                } catch (err) {
+                    console.error('Error creating utterance:', err);
+                    speakSingle(attempt + 1);
+                }
+            };
+            
+            speakSingle();
         });
     };
 
@@ -517,12 +617,9 @@ export function GroupDiscussionRound({
                     console.error('Speech recognition error:', error);
                     
                     if (transcriptRef.current.trim()) {
-                        toast.success('Processing captured speech...');
                         handleUserResponse(transcriptRef.current);
                     } else {
-                        toast.error(getErrorMessage(error));
                         setIsListening(false);
-                        toast('Please try speaking again or check your microphone.', { icon: '🎤' });
                     }
                 };
 
@@ -533,7 +630,6 @@ export function GroupDiscussionRound({
                         } catch (err) {
                             console.error('Error restarting:', err);
                             setIsListening(false);
-                            toast.error('Speech recognition stopped. Click Start Speaking again.');
                         }
                     }
                 };
@@ -582,7 +678,6 @@ export function GroupDiscussionRound({
                 clearInterval(interval);
                 stream.getTracks().forEach(track => track.stop());
                 setMicTested(true);
-                toast.success('Microphone test complete!');
             }, 6000);
         } catch (error) {
             console.error('Mic test error:', error);
@@ -628,10 +723,8 @@ export function GroupDiscussionRound({
         
         try {
             speechRecognition.current.start();
-            toast.success('🎤 Listening... Speak clearly!');
         } catch (err) {
             console.error('Error starting speech recognition:', err);
-            toast.error('Failed to start. Please try again.');
             setIsListening(false);
             clearInterval(timerId);
         }
@@ -651,13 +744,10 @@ export function GroupDiscussionRound({
                 const finalTranscript = transcriptRef.current.trim();
                 
                 if (finalTranscript && finalTranscript.length > 0) {
-                    toast.success('Processing your response...');
                     handleUserResponse(finalTranscript);
                     setTranscript('');
                     transcriptRef.current = '';
                     setInterimTranscript('');
-                } else {
-                    toast.error('No speech detected. Please try speaking again.');
                 }
             }, 500);
         }
@@ -670,24 +760,20 @@ export function GroupDiscussionRound({
         const trimmedText = text.trim();
         
         if (!trimmedText || trimmedText.length === 0) {
-            toast.error('No text to process.');
             return;
         }
         
         if (discussionComplete) {
-            toast.success('Discussion complete! Click Submit to get evaluation.');
             return;
         }
-
+        
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
-            toast.error('Using fallback response.');
             return;
         }
 
         try {
             setLoading(true);
-            toast.loading('Processing your response...', { id: 'processing' });
             
             let responseData: any;
             try {
@@ -706,15 +792,12 @@ export function GroupDiscussionRound({
                 ]) as any;
                 
                 responseData = response.data;
-                toast.success('Response received!', { id: 'processing' });
             } catch (apiError) {
                 console.error('API failed:', apiError);
-                toast.dismiss('processing');
                 
                 setResponseAttempt(prev => prev + 1);
                 
                 if (responseAttempt < maxResponseRetries) {
-                    toast.error('Retrying...', { duration: 2000 });
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     setLoading(false);
                     handleUserResponse(trimmedText);
@@ -817,9 +900,6 @@ export function GroupDiscussionRound({
 
             if ((gdTurns.length + 1) >= MAX_RESPONSES) {
                 setDiscussionComplete(true);
-                toast.success('Discussion complete! Click Submit for evaluation.');
-            } else {
-                toast.success(`Round ${gdTurns.length + 1} complete! Continue or submit.`, { duration: 6000 });
             }
 
             setTranscript('');
@@ -827,10 +907,8 @@ export function GroupDiscussionRound({
             setInterimTranscript('');
         } catch (error) {
             console.error('Error processing response:', error);
-            toast.error('Failed to process. Try again.');
         } finally {
             setLoading(false);
-            toast.dismiss('processing');
         }
     };
 
@@ -1019,19 +1097,48 @@ export function GroupDiscussionRound({
                                             announcement = announcement.substring(0, MAX_ANNOUNCEMENT_LENGTH) + '...';
                                         }
                                         
-                                        const utterance = new SpeechSynthesisUtterance(announcement);
-                                        utterance.lang = 'en-US';
-                                        utterance.rate = 0.9;
+                                        // Get best voice for announcement
+                                        const voices = window.speechSynthesis.getVoices();
+                                        const bestVoice = voices.find(v => 
+                                            v.lang.startsWith('en') && 
+                                            (v.name.toLowerCase().includes('neural') || 
+                                             v.name.toLowerCase().includes('premium') ||
+                                             v.name.toLowerCase().includes('enhanced'))
+                                        ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
                                         
-                                        utterance.onend = () => {
-                                            setIsTopicAnnounced(true);
-                                            toast.success('You can now start speaking!');
+                                        const utterance = new SpeechSynthesisUtterance(announcement);
+                                        if (bestVoice) {
+                                            utterance.voice = bestVoice;
+                                            utterance.lang = bestVoice.lang;
+                                        } else {
+                                            utterance.lang = 'en-US';
+                                        }
+                                        utterance.rate = 0.9;  // Clear and understandable
+                                        utterance.pitch = 1.0;
+                                        utterance.volume = 1.0;  // Maximum volume
+                                        
+                                        let hasStarted = false;
+                                        const timeout = setTimeout(() => {
+                                            if (!hasStarted) {
+                                                window.speechSynthesis.cancel();
+                                                setIsTopicAnnounced(true);
+                                            }
+                                        }, 10000);
+                                        
+                                        utterance.onstart = () => {
+                                            hasStarted = true;
+                                            clearTimeout(timeout);
                                         };
                                         
-                                        utterance.onerror = (error) => {
-                                            // Silently handle error and let user proceed
+                                        utterance.onend = () => {
+                                            clearTimeout(timeout);
                                             setIsTopicAnnounced(true);
-                                            toast.success('You can now start speaking!');
+                                        };
+                                        
+                                        utterance.onerror = (error: any) => {
+                                            clearTimeout(timeout);
+                                            console.error('TTS error:', error);
+                                            setIsTopicAnnounced(true);
                                         };
                                         
                                         // Timeout fallback in case speech hangs
@@ -1039,16 +1146,13 @@ export function GroupDiscussionRound({
                                             if (!isTopicAnnounced) {
                                                 window.speechSynthesis.cancel();
                                                 setIsTopicAnnounced(true);
-                                                toast.success('You can now start speaking!');
                                             }
                                         }, 20000); // 20 second timeout
                                         
-                                        toast.success('Listen to the introduction...');
                                         window.speechSynthesis.speak(utterance);
                                     } catch (err) {
                                         // If speech fails, just proceed without it
                                         setIsTopicAnnounced(true);
-                                        toast.success('You can now start speaking!');
                                     }
                                 }}
                                 size="lg"
@@ -1128,7 +1232,6 @@ export function GroupDiscussionRound({
                                     <Button
                                         onClick={() => {
                                             setDiscussionComplete(true);
-                                            toast.success('Ready for evaluation!');
                                         }}
                                         disabled={loading}
                                         size="sm"
@@ -1272,7 +1375,6 @@ export function GroupDiscussionRound({
                                                     window.speechSynthesis.cancel();
                                                     setIsAISpeaking(false);
                                                     setCurrentSpeakingAgent(null);
-                                                    toast.success('Skipped AI speech');
                                                 }}
                                                 variant="outline"
                                                 size="sm"
