@@ -11,6 +11,7 @@ import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { getErrorMessage } from '@/lib/utils';
 import { User, Mail, Lock, Phone, ArrowRight, Check } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -74,7 +75,9 @@ export default function RegisterPage() {
       
       router.push('/dashboard/student');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Registration failed. Please try again.');
+      // Extract proper error message
+      const errorMessage = getErrorMessage(err, 'Registration failed. Please try again.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

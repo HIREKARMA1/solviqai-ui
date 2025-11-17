@@ -11,6 +11,7 @@ import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { getErrorMessage } from '@/lib/utils';
 import { Mail, Lock, ArrowRight, MailIcon } from 'lucide-react';
 
 export default function LoginPage() {
@@ -34,25 +35,67 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    const errors: string[] = [];
+
     try {
       // Try student login first (default)
       await login(email, password, 'student');
       router.push('/dashboard/student');
+      return;
     } catch (err: any) {
+      const errorMsg = getErrorMessage(err, '');
+      if (errorMsg) errors.push(errorMsg);
+      
       // If student login fails, try other user types
       try {
         await login(email, password, 'college');
         router.push('/dashboard/college');
+        return;
       } catch (err2: any) {
+        const errorMsg2 = getErrorMessage(err2, '');
+        if (errorMsg2) errors.push(errorMsg2);
+        
         try {
           await login(email, password, 'admin');
           router.push('/dashboard/admin');
+          return;
         } catch (err3: any) {
-          setError(err3?.response?.data?.detail || 'Invalid credentials. Please try again.');
+          const errorMsg3 = getErrorMessage(err3, '');
+          if (errorMsg3) errors.push(errorMsg3);
         }
       }
     } finally {
       setLoading(false);
+    }
+
+    // Determine the most relevant error message
+    // Prioritize password errors over "user not found" errors
+    const passwordError = errors.find(err => 
+      err.toLowerCase().includes('password') || 
+      err.toLowerCase().includes('incorrect password') ||
+      err.toLowerCase().includes('invalid password')
+    );
+    
+    const alreadyLoggedInError = errors.find(err => 
+      err.toLowerCase().includes('already logged in')
+    );
+    
+    const inactiveError = errors.find(err => 
+      err.toLowerCase().includes('inactive')
+    );
+
+    // Show the most relevant error
+    if (alreadyLoggedInError) {
+      setError(alreadyLoggedInError);
+    } else if (inactiveError) {
+      setError(inactiveError);
+    } else if (passwordError) {
+      setError(passwordError);
+    } else if (errors.length > 0) {
+      // Use the first error (most likely to be the correct user type)
+      setError(errors[0]);
+    } else {
+      setError('Invalid credentials. Please try again.');
     }
   };
 
