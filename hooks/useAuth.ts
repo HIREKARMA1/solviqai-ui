@@ -25,8 +25,16 @@ export function useAuth() {
 
       const response = await apiClient.getCurrentUser()
       setUser(response)
-    } catch (error) {
-      apiClient.clearAuthTokens()
+    } catch (error: any) {
+      // Only clear tokens on authentication errors (401, 403), not network errors
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.warn('Authentication failed, clearing tokens')
+        apiClient.clearAuthTokens()
+        setUser(null)
+      } else {
+        // For network errors or other issues, keep tokens but log the error
+        console.error('Error checking auth (non-auth error):', error)
+      }
     } finally {
       setLoading(false)
     }
