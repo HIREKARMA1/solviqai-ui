@@ -60,8 +60,7 @@ export function useAuth() {
       toast.success('Login successful!')
     } catch (error: any) {
       console.error('❌ Login failed:', error);
-      const message = error.response?.data?.detail || error.message || 'Login failed'
-      toast.error(message)
+      // Don't show toast for errors - they're displayed in the form
       throw error
     }
   }
@@ -91,8 +90,7 @@ export function useAuth() {
       
       toast.success('Registration successful! Welcome to Saksham AI!')
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Registration failed'
-      toast.error(message)
+      // Don't show toast for errors - they're displayed in the form
       throw error
     }
   }
