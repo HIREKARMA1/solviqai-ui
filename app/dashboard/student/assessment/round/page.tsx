@@ -234,15 +234,31 @@ export default function AssessmentRoundPage() {
     // Track fullscreen changes
     useEffect(() => {
         if (typeof document === 'undefined') return
-        const handler = () => {
-            const fs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+        
+        // Initial check
+        const checkFullscreen = () => {
+            const fs = Boolean(
+                document.fullscreenElement || 
+                (document as any).webkitFullscreenElement ||
+                (document as any).mozFullScreenElement ||
+                (document as any).msFullscreenElement
+            )
             setIsFullscreen(fs)
         }
-        document.addEventListener('fullscreenchange', handler)
-        document.addEventListener('webkitfullscreenchange', handler as any)
+        
+        // Check immediately
+        checkFullscreen()
+        
+        // Listen for changes
+        const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+        events.forEach(event => {
+            document.addEventListener(event, checkFullscreen)
+        })
+        
         return () => {
-            document.removeEventListener('fullscreenchange', handler)
-            document.removeEventListener('webkitfullscreenchange', handler as any)
+            events.forEach(event => {
+                document.removeEventListener(event, checkFullscreen)
+            })
         }
     }, [])
 
@@ -250,12 +266,36 @@ export default function AssessmentRoundPage() {
         try {
             if (!isFullscreen) {
                 const elem: any = document.documentElement
-                if (elem.requestFullscreen) await elem.requestFullscreen()
-                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen()
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen()
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen()
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen()
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen()
+                }
             } else {
-                if (document.exitFullscreen) await document.exitFullscreen()
-                else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen()
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen()
+                } else if ((document as any).webkitExitFullscreen) {
+                    await (document as any).webkitExitFullscreen()
+                } else if ((document as any).mozCancelFullScreen) {
+                    await (document as any).mozCancelFullScreen()
+                } else if ((document as any).msExitFullscreen) {
+                    await (document as any).msExitFullscreen()
+                }
             }
+            // Force state update after a brief delay to ensure browser has processed
+            setTimeout(() => {
+                const fs = Boolean(
+                    document.fullscreenElement || 
+                    (document as any).webkitFullscreenElement ||
+                    (document as any).mozFullScreenElement ||
+                    (document as any).msFullscreenElement
+                )
+                setIsFullscreen(fs)
+            }, 100)
         } catch (e) {
             console.error('Fullscreen toggle failed', e)
         }
@@ -527,10 +567,8 @@ export default function AssessmentRoundPage() {
         }
     }
 
-    const playDictationAudio = (text: string) => {
-        console.log('🔊 TTS called with text:', text)  // DEBUG
-        console.log('Text length:', text?.length)  // DEBUG
-        console.log('Text type:', typeof text)  // DEBUG
+    const playDictationAudio = (text: string, retryCount: number = 0) => {
+        console.log('🔊 TTS called with text:', text)
         
         if (!text || text.trim() === '') {
             console.error('❌ Empty or undefined text')
@@ -544,39 +582,93 @@ export default function AssessmentRoundPage() {
             return
         }
         
-        console.log('✅ Speech synthesis available')
+        if (retryCount >= 3) {
+            console.error('❌ Max retries reached')
+            toast.error('Unable to play audio. Please try refreshing the page.')
+            return
+        }
         
         // Cancel any ongoing speech first
         window.speechSynthesis.cancel()
         
         // Small delay to ensure cancellation completes
         setTimeout(() => {
-            console.log('🎙️ Creating utterance...')
-            const utterance = new SpeechSynthesisUtterance(text)
-            utterance.lang = 'en-US'
-            utterance.rate = 0.85  // Slower for dictation
-            utterance.pitch = 1.0
-            utterance.volume = 1.0
-            
-            // Event listeners for debugging
-            utterance.onstart = () => {
-                console.log('✅ Speech STARTED')
-                toast.success('🔊 Audio playing...')
+            try {
+                // Get available voices and prefer high-quality ones
+                const voices = window.speechSynthesis.getVoices()
+                const preferredVoice = voices.find(v => 
+                    v.lang.startsWith('en') && 
+                    (v.name.toLowerCase().includes('neural') || 
+                     v.name.toLowerCase().includes('premium') ||
+                     v.name.toLowerCase().includes('enhanced'))
+                ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'))
+                
+                const utterance = new SpeechSynthesisUtterance(text.trim())
+                
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice
+                    utterance.lang = preferredVoice.lang
+                } else {
+                    utterance.lang = 'en-US'
+                }
+                
+                // Optimized settings for clarity
+                utterance.rate = 0.88  // Slightly slower for better comprehension
+                utterance.pitch = 1.0
+                utterance.volume = 1.0  // Maximum volume
+                
+                let hasStarted = false
+                const timeout = setTimeout(() => {
+                    if (!hasStarted && retryCount < 2) {
+                        console.warn('TTS timeout, retrying...')
+                        window.speechSynthesis.cancel()
+                        playDictationAudio(text, retryCount + 1)
+                    }
+                }, 2000)
+                
+                utterance.onstart = () => {
+                    hasStarted = true
+                    clearTimeout(timeout)
+                    console.log('✅ Speech STARTED')
+                    toast.success('🔊 Audio playing...', { duration: 2000 })
+                }
+                
+                utterance.onend = () => {
+                    clearTimeout(timeout)
+                    console.log('✅ Speech ENDED')
+                }
+                
+                utterance.onerror = (event: any) => {
+                    clearTimeout(timeout)
+                    console.error('❌ TTS Error:', event.error, event)
+                    
+                    // Retry on certain errors
+                    if ((event.error === 'synthesis-failed' || 
+                         event.error === 'synthesis-unavailable' ||
+                         event.error === 'audio-busy') && retryCount < 2) {
+                        console.log('Retrying TTS...')
+                        setTimeout(() => {
+                            playDictationAudio(text, retryCount + 1)
+                        }, 500)
+                    } else {
+                        toast.error(`Audio error: ${event.error || 'Unknown error'}`)
+                    }
+                }
+                
+                console.log('📢 Calling speak()...')
+                window.speechSynthesis.speak(utterance)
+                console.log('📢 speak() called successfully')
+            } catch (err) {
+                console.error('Error creating utterance:', err)
+                if (retryCount < 2) {
+                    setTimeout(() => {
+                        playDictationAudio(text, retryCount + 1)
+                    }, 500)
+                } else {
+                    toast.error('Failed to play audio. Please try again.')
+                }
             }
-            
-            utterance.onend = () => {
-                console.log('✅ Speech ENDED')
-            }
-            
-            utterance.onerror = (event) => {
-                console.error('❌ TTS Error:', event.error, event)
-                toast.error(`Audio error: ${event.error}`)
-            }
-            
-            console.log('📢 Calling speak()...')
-            window.speechSynthesis.speak(utterance)
-            console.log('📢 speak() called successfully')
-        }, 100)
+        }, 150)
     }
     
 
@@ -685,7 +777,7 @@ export default function AssessmentRoundPage() {
 
     if (loading) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="flex justify-center items-center min-h-screen">
                     <div className="text-center max-w-lg px-6">
                         <Loader size="lg" />
@@ -710,7 +802,7 @@ export default function AssessmentRoundPage() {
         // Ensure we have valid roundData with round_id before rendering
         if (!roundData || (!roundData.round_id && !roundData.id)) {
             return (
-                <DashboardLayout requiredUserType="student">
+                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                     <div className="flex justify-center items-center min-h-screen">
                         <div className="text-center max-w-lg px-6">
                             <Loader size="lg" />
@@ -727,7 +819,7 @@ export default function AssessmentRoundPage() {
         }
         
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <GroupDiscussionRound
                     roundId={roundData.round_id || roundData.id}
                     assessmentId={assessmentId!}
@@ -772,7 +864,7 @@ export default function AssessmentRoundPage() {
     // Coding Round UI
     if (isCodingRound) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="min-h-screen bg-gray-100">
                     {/* Header */}
                     <div className="bg-indigo-600 text-white p-4">
@@ -805,7 +897,7 @@ export default function AssessmentRoundPage() {
 
     if (!roundData || (!isGroupDiscussionRound && (!roundData.questions || roundData.questions.length === 0))) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="text-center py-12">
                     <h2 className="text-2xl font-bold mb-4">No Questions Available</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -831,7 +923,7 @@ export default function AssessmentRoundPage() {
         const liveBorder = isHR ? 'border-orange-300' : 'border-blue-300'
         const liveText = isHR ? 'text-orange-600' : 'text-blue-600'
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-blue-50 to-purple-50">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
@@ -965,7 +1057,8 @@ export default function AssessmentRoundPage() {
 
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
     return (
-        <div className="min-h-screen bg-gray-100 select-none flex flex-col">
+        <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+            <div className="min-h-screen bg-gray-100 select-none flex flex-col">
             {/* Header */}
             <div className="bg-blue-600 text-white p-4">
                 <div className="flex justify-between items-center w-full px-6">
@@ -1433,5 +1526,6 @@ export default function AssessmentRoundPage() {
                 </div>
             </div>
         </div>
+        </DashboardLayout>
     )
 }

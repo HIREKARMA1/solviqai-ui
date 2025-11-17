@@ -5,6 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { config } from "./config";
+import toast from "react-hot-toast";
 
 // Extend Axios config to include custom properties
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -64,8 +65,10 @@ class ApiClient {
               config.headers.Authorization = `Bearer ${response.access_token}`;
             } catch (error) {
               console.warn(
-                "Token refresh failed, continuing with existing token",
+                "Proactive token refresh failed, continuing with existing token",
+                error
               );
+              // If refresh fails, don't clear tokens - let the response interceptor handle it
             }
           }
         }
@@ -86,21 +89,49 @@ class ApiClient {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
+          // Check if error message indicates session was invalidated (logged in on another device)
+          const errorMessage = error.response?.data?.detail || "";
+          const isSessionInvalidated = 
+            errorMessage.includes("Session expired or invalid") ||
+            errorMessage.includes("Session not found");
+
+          // If session was invalidated, don't try to refresh - just logout
+          if (isSessionInvalidated) {
+            console.warn("Session invalidated - user logged in on another device");
+            this.clearAuthTokens();
+            // Show user-friendly notification
+            toast.error("You have been logged out. You logged in on another device.", {
+              duration: 5000,
+              icon: "🔐",
+            });
+            // Only redirect if we're not already on the login page
+            if (window.location.pathname !== "/auth/login") {
+              window.location.href = "/auth/login";
+            }
+            return Promise.reject(error);
+          }
+
           try {
             const refreshToken = localStorage.getItem("refresh_token");
             if (refreshToken) {
               const response = await this.refreshToken(refreshToken);
               localStorage.setItem("access_token", response.access_token);
               localStorage.setItem("refresh_token", response.refresh_token);
+              localStorage.setItem(
+                "token_expiry",
+                String(Date.now() + 30 * 60 * 1000),
+              );
 
               originalRequest.headers.Authorization = `Bearer ${response.access_token}`;
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // Refresh failed, redirect to login
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
-            window.location.href = "/auth/login";
+            // Refresh failed, clear all auth data and redirect to login
+            this.clearAuthTokens();
+            // Only redirect if we're not already on the login page
+            if (window.location.pathname !== "/auth/login") {
+              window.location.href = "/auth/login";
+            }
           }
         }
 
@@ -155,6 +186,7 @@ class ApiClient {
   clearAuthTokens() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("token_expiry");
   }
 
   isAuthenticated(): boolean {
