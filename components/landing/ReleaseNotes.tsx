@@ -32,7 +32,7 @@ export function ReleaseNotes() {
             <span>•</span>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              <span>December 2024</span>
+              <span>November 2025</span>
             </div>
             <span>•</span>
             <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium">
@@ -52,16 +52,16 @@ export function ReleaseNotes() {
           >
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">1. Release Overview</h2>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-            Version <strong>1.0 marks the first official release</strong> of SolviQ AI, a comprehensive AI-powered platform designed to revolutionize how students and job seekers prepare for interviews, technical assessments, and career development.
+              Version <strong>1.0 marks the first official release</strong> of SolviQ AI, an AI-powered placement simulator platform that replicates real company-style assessments and helps students and job seekers practice job-role-specific tests, interviews, and career journeys.
             </p>
-            
+
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
               This release delivers the core foundation of the platform, enabling end-to-end functionality for early users and partners. It establishes the baseline architecture, workflows, and experience that subsequent versions will build upon.
             </p>
             <div className="bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500 p-4 rounded-r-lg">
               <p className="font-semibold text-gray-900 dark:text-white mb-2">Mission Statement:</p>
               <p className="text-gray-700 dark:text-gray-300">
-                AI Placement Simulator empowers students and professionals to excel in their career journey through intelligent, personalized practice sessions, real-time feedback, and comprehensive skill development tools.
+                SolviQ AI empowers students and professionals to become truly placement-ready through intelligent, job-role-specific simulations, real-time feedback, and actionable analytics that drive continuous improvement.
               </p>
             </div>
             <div className="mt-4">
@@ -1086,7 +1086,7 @@ docker-compose up -d`}
             </h2>
             <div className="space-y-6">
               <div>
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-3">Version 1.0.0 (December 2024) - Initial Release</h3>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-3">Version 1.0.0 (November 2025) - Initial Release</h3>
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Core Features:</h4>

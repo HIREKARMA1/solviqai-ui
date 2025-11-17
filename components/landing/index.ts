@@ -12,4 +12,5 @@ export { Partners } from './Partners';
 export { FAQ } from './FAQ';
 export { Footer } from './Footer';
 export { ReleaseNotes } from './ReleaseNotes';
+export { PrivacyPolicy } from './PrivacyPolicy';
 
