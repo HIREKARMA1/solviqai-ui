@@ -215,7 +215,7 @@ export default function LoginPage() {
                 >
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Need an account?{' '}
-                    <a
+                    {/* <a
                       href="https://www.hirekarma.in/contact"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -223,7 +223,13 @@ export default function LoginPage() {
                     >
                       <MailIcon className="w-3 h-3" />
                       Contact Us
-                    </a>
+                    </a> */}
+                    <Link
+                      href="/auth/register"
+                      className="text-primary-600 dark:text-primary-400 hover:underline font-medium inline-flex items-center gap-1"
+                    >
+                      Signup
+                    </Link>
                   </p>
                 </motion.div>
               </form>
