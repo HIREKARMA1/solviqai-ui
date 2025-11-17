@@ -21,8 +21,12 @@ interface PracticalEvalItem {
   feedback: string;
 }
 
-export default function PracticalSkillsPractice() {
-  const [branch, setBranch] = useState<string>('Mechanical');
+interface PracticalSkillsPracticeProps {
+  branch?: string;
+}
+
+export default function PracticalSkillsPractice({ branch: initialBranch }: PracticalSkillsPracticeProps = {}) {
+  const [branch, setBranch] = useState<string>(initialBranch || 'Mechanical');
   const [topic, setTopic] = useState<string>('');
   const [limit, setLimit] = useState<number>(6);
   const [loading, setLoading] = useState(false);
