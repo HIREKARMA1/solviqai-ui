@@ -20,7 +20,7 @@ import toast from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 
 // Define which pages exist and which are coming soon
-const EXISTING_PAGES = ['/#faq', '/auth/login', '/release-notes'];
+const EXISTING_PAGES = ['/#faq', '/auth/login', '/release-notes', '/privacy'];
 
 export function Footer() {
   const { t } = useTranslation();
