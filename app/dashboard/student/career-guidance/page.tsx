@@ -623,33 +623,33 @@ export default function CareerGuidancePage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 lg:pt-0">
         {/* Header - Simplified */}
         <motion.div 
-          className="relative overflow-hidden rounded-2xl p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
+          className="relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
         >
           {/* Decorative corners */}
           <motion.div 
-            className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
+            className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 sm:w-56 sm:h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
             animate={{ rotate: [45, 50, 45] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div 
-            className="pointer-events-none absolute -bottom-14 -left-14 w-64 h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
+            className="pointer-events-none absolute -bottom-14 -left-14 w-48 h-48 sm:w-64 sm:h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           />
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
               <motion.div 
-                className="p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               >
-                <Sparkles className="h-6 w-6" />
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
               </motion.div>
               <motion.h1 
-                className="text-3xl md:text-4xl font-bold gradient-text"
+                className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold gradient-text"
                 animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                 transition={{ duration: 3, repeat: Infinity }}
                 style={{ backgroundSize: '200% 200%' }}
@@ -657,7 +657,7 @@ export default function CareerGuidancePage() {
                 <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">AI Career Guidance</span>
               </motion.h1>
             </div>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
               Discover your perfect career path with personalized AI-powered guidance
             </p>
           </div>
@@ -668,20 +668,20 @@ export default function CareerGuidancePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
           {/* Stage Info Card */}
           <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Current Stage</div>
-              <div className="flex items-center gap-3 mt-4">
-                <div className={`p-3 rounded-lg bg-gradient-to-br ${stageInfo.bgColor} to-indigo-500 shadow-lg`}>
-                  <StageIcon className="w-6 h-6 text-white" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Current Stage</div>
+              <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+                <div className={`p-2 sm:p-3 rounded-lg bg-gradient-to-br ${stageInfo.bgColor} to-indigo-500 shadow-lg flex-shrink-0`}>
+                  <StageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Stage {stageInfo.number} of 4</div>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{stageInfo.label}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 italic mt-1">{stageInfo.description}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">Stage {stageInfo.number} of 4</div>
+                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">{stageInfo.label}</div>
+                  <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 italic mt-1 line-clamp-1">{stageInfo.description}</div>
                 </div>
               </div>
             </CardContent>
@@ -689,34 +689,34 @@ export default function CareerGuidancePage() {
 
           {/* Progress Card */}
           <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Progress</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{completionPercentage}%</div>
+                <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Progress</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{completionPercentage}%</div>
               </div>
-              <Progress value={completionPercentage} className="h-3 mt-4" />
+              <Progress value={completionPercentage} className="h-2 sm:h-3 mt-3 sm:mt-4" />
               {currentStage === 'exploration' && (
-                <div className="flex items-center gap-2 text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-3">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>Learning about you...</span>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-2 sm:mt-3">
+                  <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">Learning about you...</span>
                 </div>
               )}
               {currentStage === 'recommendations' && (
-                <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium mt-3 animate-pulse">
-                  <Target className="w-4 h-4" />
-                  <span>Generating recommendations...</span>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-green-600 dark:text-green-400 font-medium mt-2 sm:mt-3 animate-pulse">
+                  <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">Generating recommendations...</span>
                 </div>
               )}
               {currentStage === 'roadmap' && (
-                <div className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-3 animate-pulse">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Creating roadmap...</span>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-2 sm:mt-3 animate-pulse">
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">Creating roadmap...</span>
                 </div>
               )}
               {currentStage === 'introduction' && (
-                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-medium mt-3">
-                  <Rocket className="w-4 h-4" />
-                  <span>Getting started...</span>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-medium mt-2 sm:mt-3">
+                  <Rocket className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">Getting started...</span>
                 </div>
               )}
             </CardContent>
@@ -724,46 +724,35 @@ export default function CareerGuidancePage() {
 
           {/* Actions Card */}
           <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Quick Actions</div>
-              <div className="flex items-center gap-3">
+            <CardContent className="p-4 sm:p-6">
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">Quick Actions</div>
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg h-8 w-8 sm:h-10 sm:w-10"
                   title={soundEnabled ? 'Disable sound' : 'Enable sound'}
                 >
                   {soundEnabled ? (
-                    <Volume2 className="w-5 h-5" />
+                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <VolumeX className="w-5 h-5" />
+                    <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowHistory(true)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg h-8 w-8 sm:h-10 sm:w-10"
                   aria-label="Session history"
                   title="View session history"
                 >
-                  <Workflow className="w-5 h-5" />
+                  <Workflow className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
-                {/* {connectionStatus !== 'connected' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRetry}
-                    className="ml-auto text-xs"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Reconnect
-                  </Button>
-                )} */}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                   {soundEnabled ? '🔊 Sound enabled' : '🔇 Sound disabled'}
                 </div>
               </div>
@@ -774,16 +763,16 @@ export default function CareerGuidancePage() {
         {/* Error Alert */}
         {error && (
           <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <AlertDescription className="flex items-center justify-between">
-              <span className="text-red-800 dark:text-red-200">{error}</span>
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <span className="text-sm sm:text-base text-red-800 dark:text-red-200 flex-1">{error}</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRetry}
-                className="ml-4 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/40"
+                className="w-full sm:w-auto border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/40"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                 Retry
               </Button>
             </AlertDescription>
@@ -791,37 +780,37 @@ export default function CareerGuidancePage() {
         )}
 
         {/* Main Content - Two Column Layout */}
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           {/* Chat Interface - Left Column */}
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="lg:col-span-5 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-            style={{ minHeight: '600px', maxHeight: 'calc(100vh - 300px)' }}
+            className="lg:col-span-5 flex flex-col bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+            style={{ minHeight: '500px', maxHeight: 'calc(100vh - 300px)' }}
           >
             {/* Chat Header */}
-            <div className="flex-shrink-0 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg shadow-md">
-                  <MessageCircle className="w-5 h-5 text-white" />
+            <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg shadow-md flex-shrink-0">
+                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">AI Career Counselor</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Ask me anything about your career journey</p>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">AI Career Counselor</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Ask me anything about your career journey</p>
                 </div>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="text-center space-y-4">
-                    <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto" />
+                  <div className="text-center space-y-3 sm:space-y-4 px-4">
+                    <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 dark:text-gray-600 mx-auto" />
                     <div>
-                      <p className="text-gray-600 dark:text-gray-400 font-medium">No messages yet</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Start the conversation below</p>
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">No messages yet</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">Start the conversation below</p>
                     </div>
                   </div>
                 </div>
@@ -838,7 +827,7 @@ export default function CareerGuidancePage() {
                     >
                       <div
                         className={`
-                          max-w-[85%] rounded-2xl px-5 py-3 shadow-md
+                          max-w-[85%] sm:max-w-[80%] rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-2 sm:py-3 shadow-md
                           ${message.role === 'user'
                             ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
                             : 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white'
@@ -846,12 +835,12 @@ export default function CareerGuidancePage() {
                         `}
                       >
                         {message.role === 'ai' && (
-                          <div className="flex items-center gap-2 mb-2">
-                            <Sparkles className="w-4 h-4 text-blue-500" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
                             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300"></span>
                           </div>
                         )}
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -867,27 +856,25 @@ export default function CareerGuidancePage() {
                   className="flex justify-start"
                   onAnimationComplete={() => scrollToBottom(true)}
                 >
-                  <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl px-5 py-3 shadow-md">
-                    <div className="flex items-center gap-2">
+                  <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-2 sm:py-3 shadow-md">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <div className="flex items-center gap-1">
-                        <Sparkles className="w-4 h-4 text-blue-500" />
-                        {/* <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">AI Counselor</span> */}
+                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
                       </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        {/* <span className="text-sm text-gray-600 dark:text-gray-400">typing...</span> */}
-                        <div className="flex gap-1 ml-1">
+                      <div className="flex items-center gap-1 ml-1 sm:ml-2">
+                        <div className="flex gap-1">
                           <motion.span
-                            className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"
+                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
                             animate={{ y: [0, -4, 0] }}
                             transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
                           />
                           <motion.span
-                            className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"
+                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
                             animate={{ y: [0, -4, 0] }}
                             transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
                           />
                           <motion.span
-                            className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"
+                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
                             animate={{ y: [0, -4, 0] }}
                             transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
                           />
@@ -902,14 +889,14 @@ export default function CareerGuidancePage() {
             </div>
 
             {/* Input - Fixed at bottom */}
-            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/50">
-              <div className="flex gap-3 items-end">
+            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50">
+              <div className="flex gap-2 sm:gap-3 items-end">
                 <textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder="Share your thoughts, interests, and goals..."
-                  className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                  className="flex-1 resize-none rounded-lg sm:rounded-xl border border-gray-300 dark:border-gray-600 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   rows={2}
                   disabled={isLoading || connectionStatus !== 'connected'}
                   style={{ maxHeight: '100px' }}
@@ -918,17 +905,17 @@ export default function CareerGuidancePage() {
                 <Button
                   onClick={sendMessage}
                   disabled={!inputMessage.trim() || isLoading || connectionStatus !== 'connected'}
-                  className="self-end bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg h-auto px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="self-end bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg h-auto px-3 sm:px-4 py-2 sm:py-3 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   size="sm"
                   aria-label="Send message"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Press Enter to send, Shift+Enter for new line</p>
+              <div className="flex items-center justify-between mt-1.5 sm:mt-2 flex-wrap gap-1">
+                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">Press Enter to send, Shift+Enter for new line</p>
                 {connectionStatus !== 'connected' && (
-                  <p className="text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
+                  <p className="text-[10px] sm:text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
                 )}
               </div>
             </div>
@@ -939,32 +926,32 @@ export default function CareerGuidancePage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="lg:col-span-7 flex flex-col gap-4"
-            style={{ minHeight: '600px', maxHeight: 'calc(100vh - 300px)' }}
+            className="lg:col-span-7 flex flex-col gap-3 sm:gap-4"
+            style={{ minHeight: '500px', maxHeight: 'calc(100vh - 300px)' }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Tab Navigation */}
-              <div className="flex-shrink-0 mb-4">
-                <TabsList className="grid grid-cols-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full gap-1.5 h-auto">
+              <div className="flex-shrink-0 mb-3 sm:mb-4">
+                <TabsList className="grid grid-cols-3 bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full gap-1 sm:gap-1.5 h-auto">
                   <TabsTrigger 
                     value="playlist" 
-                    className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-3 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
-                    <PlayCircle className="w-4 h-4 shrink-0 relative z-10" />
+                    <PlayCircle className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                     <span className="hidden sm:inline whitespace-nowrap relative z-10">Playlist</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="calendar" 
-                    className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-3 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
-                    <Calendar className="w-4 h-4 shrink-0 relative z-10" />
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                     <span className="hidden sm:inline whitespace-nowrap relative z-10">Calendar</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="flowchart" 
-                    className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-3 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
-                    <Workflow className="w-4 h-4 shrink-0 relative z-10" />
+                    <Workflow className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                     <span className="hidden sm:inline whitespace-nowrap relative z-10">Tree</span>
                   </TabsTrigger>
                 </TabsList>

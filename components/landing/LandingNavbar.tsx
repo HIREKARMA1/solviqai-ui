@@ -59,7 +59,7 @@ export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }
       <motion.nav
         className={cn(
           'fixed top-0 left-0 right-0 z-50 transition-all duration-300 overflow-hidden',
-          'h-20', // Fixed height for navbar
+          'h-16 sm:h-20', // Responsive height for navbar
           scrolled
             ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-lg border-b border-gray-200/50 dark:border-gray-800/50'
             : 'bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg border-b border-gray-200/30 dark:border-gray-800/30',
@@ -71,25 +71,25 @@ export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }
           <AnimatedBackground variant="subtle" showGrid={true} showLines={false} />
         </div>
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
-          <div className="flex items-center justify-between h-20">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
+          <div className="flex items-center justify-between h-16 sm:h-20 gap-2">
             {/* Left section - Logo and Collapse button */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               {/* Logo - Simple and clean */}
-              <Link href="/" className="flex items-center group">
-                <div className="relative w-[130px] h-16 transition-transform group-hover:scale-105">
+              <Link href="/" className="flex items-center group flex-shrink-0">
+                <div className="relative w-[120px] h-12 sm:w-[160px] sm:h-[64px] transition-transform group-hover:scale-105">
                   {theme === 'dark' ? (
                     <Image
-                      src="/images/HKlogowhite.png"
-                      alt="Solviq AI Logo"
+                      src="/images/solviqdark.png"
+                      alt="SolviQ AI Logo"
                       fill
                       className="object-contain"
                       priority
                     />
                   ) : (
                     <Image
-                      src="/images/HKlogoblack.png"
-                      alt="Solviq AI Logo"
+                      src="/images/solviqligt.png"
+                      alt="SolviQ AI Logo"
                       fill
                       className="object-contain"
                       priority
@@ -119,7 +119,7 @@ export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }
             </div>
 
             {/* Right Section - Simple Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {/* Language Selector */}
               {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>

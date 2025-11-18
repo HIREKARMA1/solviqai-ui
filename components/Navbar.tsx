@@ -35,19 +35,19 @@ export function Navbar() {
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="relative h-10 w-32 transition-transform group-hover:scale-105">
+                        <div className="relative h-12 w-40 transition-transform group-hover:scale-105">
                             {mounted ? (
                                 <Image
-                                    src={theme === 'dark' ? '/images/HKlogowhite.png' : '/images/HKlogoblack.png'}
-                                    alt="HireKarma Logo"
+                                    src={theme === 'dark' ? '/images/solviqdark.png' : '/images/solviqligt.png'}
+                                    alt="SolviQ AI Logo"
                                     fill
                                     className="object-contain"
                                     priority
                                 />
                             ) : (
                                 <Image
-                                    src="/images/HKlogoblack.png"
-                                    alt="HireKarma Logo"
+                                    src="/images/solviqligt.png"
+                                    alt="SolviQ AI Logo"
                                     fill
                                     className="object-contain"
                                     priority
