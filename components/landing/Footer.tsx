@@ -121,8 +121,8 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-3 mb-6">
               <div className="relative w-[150px] h-16">
                 <Image
-                  src={mounted && theme === 'dark' ? "/images/HKlogowhite.png" : "/images/HKlogoblack.png"}
-                  alt="Solviq AI Logo"
+                  src={mounted && theme === 'dark' ? "/images/solviqdark.png" : "/images/solviqligt.png"}
+                  alt="SolviQ AI Logo"
                   fill
                   className="object-contain"
                 />

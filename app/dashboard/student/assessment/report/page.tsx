@@ -479,10 +479,10 @@ export default function AssessmentReportPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-6 pb-8">
+            <div className="space-y-6 pt-28 sm:pt-36 lg:pt-0 pb-8">
                 {/* Header - Matching Assessment Journey Style with Hover Animations */}
                 <motion.div 
-                    className="relative overflow-hidden rounded-2xl p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group"
+                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group"
                     whileHover={{ scale: 1.01 }}
                     transition={{ duration: 0.3 }}
                 >
@@ -498,18 +498,18 @@ export default function AssessmentReportPage() {
                         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                     />
                     <div className="relative z-10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <div className="flex items-center gap-3 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
                                     <motion.div 
-                                        className="p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
                                         animate={{ rotate: [0, 360] }}
                                         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                                     >
-                                        <Sparkles className="h-6 w-6" />
+                                        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </motion.div>
                                     <motion.h1 
-                                        className="text-4xl font-bold gradient-text"
+                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
                                         animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                                         transition={{ duration: 3, repeat: Infinity }}
                                         style={{ backgroundSize: '200% 200%' }}
@@ -518,7 +518,7 @@ export default function AssessmentReportPage() {
                                         <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Dashboard</span>
                                     </motion.h1>
                                 </div>
-                                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
                                     Track your progress, analyze performance, and unlock your potential with AI-powered insights
                                 </p>
                             </div>
@@ -527,17 +527,17 @@ export default function AssessmentReportPage() {
                 </motion.div>
 
                 {/* Assessment Stats - Matching Assessment Overview Style */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
                     {/* Overall Score */}
                     <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
                         <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-6 relative z-10">
+                            <CardContent className="p-4 sm:p-6 relative z-10">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <BarChart3 className="w-6 h-6 text-purple-500" />
-                                        <div>
-                                            <p className="text-sm font-medium">Overall Score</p>
-                                            <p className="text-3xl font-bold">{Math.round(report?.overall_score || 0)}</p>
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
+                                        <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-xs sm:text-sm font-medium">Overall Score</p>
+                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.overall_score || 0)}</p>
                             </div>
                                     </div>
                             </div>
@@ -550,13 +550,13 @@ export default function AssessmentReportPage() {
                     {/* Readiness Index */}
                     <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
                         <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-6 relative z-10">
+                            <CardContent className="p-4 sm:p-6 relative z-10">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <Award className="w-6 h-6 text-green-500" />
-                                        <div>
-                                            <p className="text-sm font-medium">Readiness Index</p>
-                                            <p className="text-3xl font-bold">{Math.round(report?.readiness_index || 0)}%</p>
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
+                                        <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-xs sm:text-sm font-medium">Readiness Index</p>
+                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.readiness_index || 0)}%</p>
                             </div>
                                     </div>
                                 </div>
@@ -569,13 +569,13 @@ export default function AssessmentReportPage() {
                     {/* Completed Rounds */}
                     <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
                         <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-6 relative z-10">
+                            <CardContent className="p-4 sm:p-6 relative z-10">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <CheckCircle className="w-6 h-6 text-purple-500" />
-                                        <div>
-                                            <p className="text-sm font-medium">Completed Rounds</p>
-                                            <p className="text-3xl font-bold">
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
+                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-xs sm:text-sm font-medium">Completed Rounds</p>
+                                            <p className="text-2xl sm:text-3xl font-bold">
                                                 {report?.rounds?.filter((r: any) => r.status === 'COMPLETED' || r.percentage != null).length || 0}
                                             </p>
                             </div>
@@ -590,13 +590,13 @@ export default function AssessmentReportPage() {
                     {/* Total Duration */}
                     <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
                         <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-6 relative z-10">
+                            <CardContent className="p-4 sm:p-6 relative z-10">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <Clock className="w-6 h-6 text-orange-500" />
-                                        <div>
-                                            <p className="text-sm font-medium">Total Duration</p>
-                                            <p className="text-3xl font-bold">
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
+                                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-xs sm:text-sm font-medium">Total Duration</p>
+                                            <p className="text-2xl sm:text-3xl font-bold">
                                                 {report?.rounds?.reduce((total: number, round: any) => {
                                                     // Estimate 30 min per completed round
                                                     const isCompleted = round.status === 'COMPLETED' || round.percentage != null
@@ -615,31 +615,31 @@ export default function AssessmentReportPage() {
 
                 {/* Enhanced Tabs with Better Navigation */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="flex items-center justify-between mb-4">
-                        <TabsList className="grid grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-                            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <BarChart3 className="h-4 w-4 mr-2" />
-                                Overview
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+                        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 sm:p-1.5 rounded-xl w-full sm:w-auto gap-1 sm:gap-1.5">
+                            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Overview</span>
                             </TabsTrigger>
-                            <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <Activity className="h-4 w-4 mr-2" />
-                                Analytics
+                            <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Analytics</span>
                             </TabsTrigger>
-                            <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <Eye className="h-4 w-4 mr-2" />
-                                Rounds
+                            <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Rounds</span>
                             </TabsTrigger>
-                            <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <ClipboardList className="h-4 w-4 mr-2" />
-                                Questions
+                            <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Questions</span>
                             </TabsTrigger>
-                            <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <PlayCircle className="h-4 w-4 mr-2" />
-                                Playlist
+                            <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Playlist</span>
                             </TabsTrigger>
-                            <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md">
-                                <Brain className="h-4 w-4 mr-2" />
-                                AI Insights
+                            <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
+                                <Brain className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                                <span className="whitespace-nowrap">AI Insights</span>
                             </TabsTrigger>
                         </TabsList>
                         
@@ -648,10 +648,10 @@ export default function AssessmentReportPage() {
                             variant="outline" 
                             size="sm"
                             onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"
                         >
                             <Filter className="h-4 w-4" />
-                            Filters
+                            <span className="sm:inline">Filters</span>
                             {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -705,8 +705,8 @@ export default function AssessmentReportPage() {
                     )}
 
                     {/* Overview Tab with Enhanced Charts - Matching Theme */}
-                    <TabsContent value="overview" className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
+                    <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             {/* Radar Chart - Skills Assessment */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -715,19 +715,19 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30">
-                                        <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md">
-                                                <Clock className="h-5 w-5 text-white" />
+                                    <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
+                                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                             </div>
-                                        Skills Assessment
+                                        <span className="truncate">Skills Assessment</span>
                                     </CardTitle>
-                                        <CardDescription className="text-gray-600 dark:text-gray-400 mt-2">
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
                                         Multi-dimensional performance analysis
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <ResponsiveContainer width="100%" height={400}>
+                                <CardContent className="relative z-10 p-4 sm:p-6">
+                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
                                         <RadarChart data={prepareRadarData()}>
                                             <PolarGrid stroke="#e5e7eb" />
                                             <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12 }} />
@@ -778,19 +778,19 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-green-900/20 dark:via-gray-900 dark:to-green-900/10 shadow-lg hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/20 rounded-t-lg border-b border-green-200/50 dark:border-green-700/30">
-                                        <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                            <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600 shadow-md">
-                                                <LineChart className="h-5 w-5 text-white" />
+                                    <CardHeader className="relative z-10 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/20 rounded-t-lg border-b border-green-200/50 dark:border-green-700/30 p-4 sm:p-6">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600 shadow-md flex-shrink-0">
+                                                <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                             </div>
-                                        Answer Distribution
+                                        <span className="truncate">Answer Distribution</span>
                                     </CardTitle>
-                                        <CardDescription className="text-gray-600 dark:text-gray-400 mt-2">
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
                                         Correct vs. incorrect responses
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <ResponsiveContainer width="100%" height={400}>
+                                <CardContent className="relative z-10 p-4 sm:p-6">
+                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
                                         <RechartsPieChart>
                                             <Pie
                                                 data={prepareQuestionDistribution()}
@@ -848,19 +848,19 @@ export default function AssessmentReportPage() {
                         >
                             <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
                                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30">
-                                    <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md">
-                                            <BarChart3 className="h-5 w-5 text-white" />
+                                <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
+                                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
+                                            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                         </div>
-                                    Round-wise Performance Comparison
+                                    <span className="truncate">Round-wise Performance Comparison</span>
                                 </CardTitle>
-                                    <CardDescription className="text-gray-600 dark:text-gray-400 mt-2">
+                                    <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
                                     Detailed score breakdown by assessment round
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="relative z-10">
-                                <ResponsiveContainer width="100%" height={400}>
+                            <CardContent className="relative z-10 p-4 sm:p-6">
+                                <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
                                     <BarChart data={prepareRadarData()} margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis 
@@ -913,7 +913,7 @@ export default function AssessmentReportPage() {
                     </TabsContent>
 
                     {/* New Analytics Tab with Advanced Visualizations */}
-                    <TabsContent value="analytics" className="space-y-6">
+                    <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
                         {/* Performance Trend Line Chart */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -922,17 +922,17 @@ export default function AssessmentReportPage() {
                         >
                             <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
                                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-cyan-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700">
-                                    <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                        <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md">
-                                            <LineChart className="h-5 w-5 text-white" />
+                                <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md flex-shrink-0">
+                                            <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                         </div>
-                                    Performance Trend Analysis
+                                    <span className="truncate">Performance Trend Analysis</span>
                                 </CardTitle>
-                                    <CardDescription className="mt-2">Track your progress across rounds</CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Track your progress across rounds</CardDescription>
                             </CardHeader>
-                            <CardContent className="relative z-10">
-                                <ResponsiveContainer width="100%" height={450}>
+                            <CardContent className="relative z-10 p-4 sm:p-6">
+                                <ResponsiveContainer width="100%" height={300} className="sm:h-[450px]">
                                     <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 20, right: 30, bottom: 10, left: 10 }}>
                                         <defs>
                                             <linearGradient id="colorScoreGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1024,7 +1024,7 @@ export default function AssessmentReportPage() {
                         </Card>
                         </motion.div>
 
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             {/* Performance Funnel */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -1033,17 +1033,17 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-orange-200/30 to-orange-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700">
-                                        <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-md">
-                                                <TrendingUp className="h-5 w-5 text-white" />
+                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-md flex-shrink-0">
+                                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                             </div>
-                                        Performance Funnel
+                                        <span className="truncate">Performance Funnel</span>
                                     </CardTitle>
-                                        <CardDescription className="mt-2">Rounds ranked by score</CardDescription>
+                                        <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Rounds ranked by score</CardDescription>
                                 </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <ResponsiveContainer width="100%" height={480}>
+                                <CardContent className="relative z-10 p-4 sm:p-6">
+                                    <ResponsiveContainer width="100%" height={350} className="sm:h-[480px]">
                                         <FunnelChart>
                                             <Tooltip 
                                                 contentStyle={{ 
@@ -1103,17 +1103,17 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-teal-200/30 to-teal-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700">
-                                        <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 shadow-md">
-                                                <Activity className="h-5 w-5 text-white" />
+                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
+                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 shadow-md flex-shrink-0">
+                                                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                             </div>
-                                        Score Distribution
+                                        <span className="truncate">Score Distribution</span>
                                     </CardTitle>
-                                        <CardDescription className="mt-2">Cumulative performance view</CardDescription>
+                                        <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Cumulative performance view</CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <ResponsiveContainer width="100%" height={350}>
+                                <CardContent className="p-4 sm:p-6">
+                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                                         <AreaChart data={prepareTimeSeriesData()}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                             <XAxis dataKey="round" tick={{ fill: '#6b7280' }} />
@@ -1140,7 +1140,7 @@ export default function AssessmentReportPage() {
                         </div>
 
                         {/* Advanced Statistics Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1148,16 +1148,16 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-blue-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-3">
-                                    <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
+                                    <CardTitle className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-400">
                                         Highest Score
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="text-3xl font-bold text-blue-600">
+                                <CardContent className="p-4 sm:p-6 pt-0">
+                                    <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                                         {Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0]))}%
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">
+                                    <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-1">
                                         {(() => {
                                             const best = report?.rounds?.reduce((max: any, r: any) => r.percentage > max.percentage ? r : max, { percentage: -1 })
                                             return best ? getRoundName(best) : undefined
@@ -1174,16 +1174,16 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-3">
-                                    <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">
+                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
+                                    <CardTitle className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-400">
                                         Average Performance
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <div className="text-3xl font-bold text-green-600">
+                                <CardContent className="relative z-10 p-4 sm:p-6 pt-0">
+                                    <div className="text-2xl sm:text-3xl font-bold text-green-600">
                                         {report?.overall_score?.toFixed(1)}%
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">
+                                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                         Across {report?.rounds?.length || 0} rounds
                                     </p>
                                 </CardContent>
@@ -1197,13 +1197,13 @@ export default function AssessmentReportPage() {
                             >
                                 <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-3">
-                                    <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-400">
+                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
+                                    <CardTitle className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400">
                                         Consistency Score
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <div className="text-3xl font-bold text-purple-600">
+                                <CardContent className="relative z-10 p-4 sm:p-6 pt-0">
+                                    <div className="text-2xl sm:text-3xl font-bold text-purple-600">
                                         {(() => {
                                             const scores = report?.rounds?.map((r: any) => r.percentage) || []
                                             const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
@@ -1214,7 +1214,7 @@ export default function AssessmentReportPage() {
                                             return Math.round(consistency)
                                         })()}%
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">
+                                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                         Performance stability
                                     </p>
                                 </CardContent>
@@ -1224,9 +1224,9 @@ export default function AssessmentReportPage() {
                     </TabsContent>
 
                     {/* Detailed Analysis Tab - Keep your existing detailed tab */}
-                    <TabsContent value="detailed" className="space-y-6">
+                    <TabsContent value="detailed" className="space-y-4 sm:space-y-6">
                         {/* Round Cards */}
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {report?.rounds?.map((round: any, index: number) => {
                                 const roundConfig = roundTypeInfo[round.round_type]
                                 const RoundIcon = roundConfig?.icon
@@ -1250,34 +1250,34 @@ export default function AssessmentReportPage() {
                                             <div className={`absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br ${gradientColors} opacity-15 group-hover:opacity-20 blur-2xl transition-all duration-500`} />
                                             <div className={`absolute top-1/2 -right-16 w-16 h-16 rounded-full bg-gradient-to-br ${gradientColors} opacity-10 group-hover:opacity-15 blur-xl transition-all duration-500`} />
                                             
-                                            <CardHeader className="relative z-10 pb-4">
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg flex-shrink-0`}>
-                                                    {RoundIcon && <RoundIcon className="h-5 w-5" />}
+                                            <CardHeader className="relative z-10 pb-3 sm:pb-4 p-4 sm:p-6">
+                                                <div className="flex items-start gap-2 sm:gap-3">
+                                                    <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg flex-shrink-0`}>
+                                                    {RoundIcon && <RoundIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
                                                 </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <CardTitle className="text-base truncate">{getRoundName(round)}</CardTitle>
-                                                        <CardDescription className="text-sm">Round {round.round_number}</CardDescription>
+                                                        <CardTitle className="text-sm sm:text-base truncate">{getRoundName(round)}</CardTitle>
+                                                        <CardDescription className="text-xs sm:text-sm">Round {round.round_number}</CardDescription>
                                                 </div>
                                             </div>
                                         </CardHeader>
-                                            <CardContent className="relative z-10 space-y-3 flex-1 flex flex-col">
+                                            <CardContent className="relative z-10 space-y-2 sm:space-y-3 flex-1 flex flex-col p-4 sm:p-6 pt-0">
                                             <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score</span>
-                                                <span className={`text-2xl font-bold ${getScoreColor(round.percentage || 0)}`}>
+                                                    <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Score</span>
+                                                <span className={`text-xl sm:text-2xl font-bold ${getScoreColor(round.percentage || 0)}`}>
                                                     {round.percentage?.toFixed(1)}%
                                                 </span>
                                             </div>
                                             <Progress value={round.percentage} className="h-2" />
                                                 <div className="flex-1 min-h-[3rem] flex items-start">
                                             {round.ai_feedback && (
-                                                        <div className="text-xs text-gray-600 dark:text-gray-400 p-2 bg-blue-50 dark:bg-blue-900/20 rounded w-full">
+                                                        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 p-2 bg-blue-50 dark:bg-blue-900/20 rounded w-full">
                                                     {typeof round.ai_feedback === 'string' ? (
-                                                        <p className="line-clamp-2">{round.ai_feedback}</p>
+                                                        <p className="line-clamp-2 break-words">{round.ai_feedback}</p>
                                                     ) : round.ai_feedback.strengths && round.ai_feedback.strengths.length > 0 ? (
-                                                        <p className="line-clamp-2 flex items-center gap-1">
-                                                                    <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                                                            {round.ai_feedback.strengths[0]}
+                                                        <p className="line-clamp-2 flex items-center gap-1 break-words">
+                                                                    <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600 flex-shrink-0" />
+                                                            <span className="break-words">{round.ai_feedback.strengths[0]}</span>
                                                         </p>
                                                     ) : (
                                                         <p className="line-clamp-2">Evaluation completed</p>
@@ -1285,7 +1285,7 @@ export default function AssessmentReportPage() {
                                                 </div>
                                             )}
                                                 </div>
-                                                <Button variant="outline" size="sm" className="w-full mt-auto">
+                                                <Button variant="outline" size="sm" className="w-full mt-auto text-xs sm:text-sm">
                                                 View Details →
                                             </Button>
                                         </CardContent>
@@ -1297,14 +1297,14 @@ export default function AssessmentReportPage() {
                     </TabsContent>
 
                     {/* Round Details Tab (your existing round tab) */}
-                    <TabsContent value="round" className="space-y-6">
+                    <TabsContent value="round" className="space-y-4 sm:space-y-6">
                         {selectedRound !== null && qaData?.rounds?.filter((r: any) => r.round_number === selectedRound).map((round: any) => (
                             <Card key={round.round_number} className="overflow-hidden border-0 shadow-md">
-                                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
-                                    <CardTitle>
+                                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 sm:p-6">
+                                    <CardTitle className="text-base sm:text-lg">
                                         Round {round.round_number} - {round.round_type.replace('_', ' ').toUpperCase()}
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm">
                                         {round.round_type === 'group_discussion' ? (
                                             `Score: ${round.percentage?.toFixed(1)}%`
                                         ) : (
@@ -1312,35 +1312,35 @@ export default function AssessmentReportPage() {
                                         )}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="pt-6">
+                                <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                                     {/* Special rendering for Group Discussion */}
                                     {round.round_type === 'group_discussion' ? (
-                                        <div className="space-y-6">
+                                        <div className="space-y-4 sm:space-y-6">
                                             {/* Score strip */}
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
-                                                <div className={`text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600`}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
+                                                <div className={`text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600`}>
                                                     {Math.round(round.percentage || 0)}%
                                                 </div>
-                                                <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="flex-1 h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                                     <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, round.percentage || 0))}%` }} />
                                                 </div>
                                             </div>
 
                                             {/* Criteria */}
                                             {round.ai_feedback?.criteria_scores && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                                                     {[
                                                         { name: 'Communication', value: round.ai_feedback.criteria_scores.communication, color: 'from-sky-500 to-blue-600', emoji: '💬' },
                                                         { name: 'Topic Understanding', value: round.ai_feedback.criteria_scores.topic_understanding, color: 'from-fuchsia-500 to-purple-600', emoji: '🧠' },
                                                         { name: 'Interaction', value: round.ai_feedback.criteria_scores.interaction, color: 'from-emerald-500 to-teal-600', emoji: '🤝' },
                                                     ].map((c) => (
-                                                        <div key={c.name} className="rounded-2xl border bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 hover:shadow-lg transition-shadow">
+                                                        <div key={c.name} className="rounded-xl sm:rounded-2xl border bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4 hover:shadow-lg transition-shadow">
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <div className="flex items-center gap-2 font-semibold">
+                                                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold">
                                                                     <span>{c.emoji}</span>
-                                                                    {c.name}
+                                                                    <span className="truncate">{c.name}</span>
                                                                 </div>
-                                                                <div className="text-xl font-bold">{c.value}%</div>
+                                                                <div className="text-lg sm:text-xl font-bold flex-shrink-0 ml-2">{c.value}%</div>
                                                             </div>
                                                             <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                                                 <div className={`h-full rounded-full bg-gradient-to-r ${c.color} transition-all duration-500`} style={{ width: `${Math.min(100, Math.max(0, c.value || 0))}%` }} />
@@ -1487,14 +1487,14 @@ export default function AssessmentReportPage() {
                     </TabsContent>
 
                     {/* Questions Tab - Keep your existing questions tab with filters applied */}
-                    <TabsContent value="questions" className="space-y-6">
+                    <TabsContent value="questions" className="space-y-4 sm:space-y-6">
                         {qaData?.rounds?.map((round: any) => (
                             <Card key={round.round_number} className="border-2 hover:shadow-xl transition-shadow">
-                                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20">
-                                    <CardTitle>
+                                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 p-4 sm:p-6">
+                                    <CardTitle className="text-base sm:text-lg">
                                         Round {round.round_number} - {round.round_type.replace('_', ' ').toUpperCase()}
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm">
                                         {round.round_type === 'group_discussion' ? (
                                             `Score: ${round.percentage?.toFixed(1)}%`
                                         ) : (
@@ -1502,34 +1502,34 @@ export default function AssessmentReportPage() {
                                         )}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="pt-6">
+                                <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                                     {round.round_type === 'group_discussion' ? (
-                                        <div className="space-y-4">
-                                            <div className="p-6 bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-900/20 dark:to-blue-900/20 rounded-xl border-2 border-teal-200">
-                                                <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
-                                                    <Users className="h-5 w-5" />
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <div className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-900/20 dark:to-blue-900/20 rounded-xl border-2 border-teal-200">
+                                                <h4 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2">
+                                                    <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                                                     Group Discussion Performance
                                                 </h4>
                                                 {round.ai_feedback && typeof round.ai_feedback === 'object' && round.ai_feedback.criteria_scores && (
-                                                    <div className="space-y-4">
-                                                        <div className="grid md:grid-cols-3 gap-4">
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Communication</div>
-                                                                <div className="text-2xl font-bold text-blue-600">
+                                                    <div className="space-y-3 sm:space-y-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                                                            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm">
+                                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Communication</div>
+                                                                <div className="text-xl sm:text-2xl font-bold text-blue-600">
                                                                     {round.ai_feedback.criteria_scores.communication}%
                                                                 </div>
                                                                 <Progress value={round.ai_feedback.criteria_scores.communication} className="h-2 mt-2" />
                                                             </div>
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Topic Understanding</div>
-                                                                <div className="text-2xl font-bold text-purple-600">
+                                                            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm">
+                                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Topic Understanding</div>
+                                                                <div className="text-xl sm:text-2xl font-bold text-purple-600">
                                                                     {round.ai_feedback.criteria_scores.topic_understanding}%
                                                                 </div>
                                                                 <Progress value={round.ai_feedback.criteria_scores.topic_understanding} className="h-2 mt-2" />
                                                             </div>
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Interaction</div>
-                                                                <div className="text-2xl font-bold text-green-600">
+                                                            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm">
+                                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Interaction</div>
+                                                                <div className="text-xl sm:text-2xl font-bold text-green-600">
                                                                     {round.ai_feedback.criteria_scores.interaction}%
                                                                 </div>
                                                                 <Progress value={round.ai_feedback.criteria_scores.interaction} className="h-2 mt-2" />
@@ -1568,52 +1568,52 @@ export default function AssessmentReportPage() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
+                                        <div className="space-y-3 sm:space-y-4">
                                             {getFilteredQuestions(round.questions).map((q: any, idx: number) => (
-                                                <div key={q.id} className="p-4 border-2 rounded-xl space-y-3 hover:shadow-lg transition-all bg-white dark:bg-gray-800">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                                <Badge variant="outline" className="bg-blue-50">Q{idx + 1}</Badge>
-                                                                <Badge variant={q.is_correct ? 'default' : 'destructive'}>
+                                                <div key={q.id} className="p-3 sm:p-4 border-2 rounded-xl space-y-2 sm:space-y-3 hover:shadow-lg transition-all bg-white dark:bg-gray-800">
+                                                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
+                                                                <Badge variant="outline" className="bg-blue-50 text-xs">Q{idx + 1}</Badge>
+                                                                <Badge variant={q.is_correct ? 'default' : 'destructive'} className="text-xs">
                                                                     {q.is_correct ? '✓ Correct' : '✗ Incorrect'}
                                                                 </Badge>
-                                                                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                                    {q.score}/{q.max_score} points
+                                                                <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
+                                                                    {q.score}/{q.max_score} pts
                                                                 </span>
                                                                 {q.difficulty && (
                                                                     <Badge 
                                                                         variant="outline"
-                                                                        className={
+                                                                        className={`text-xs ${
                                                                             q.difficulty === 'easy' ? 'bg-green-50 text-green-700' :
                                                                             q.difficulty === 'hard' ? 'bg-red-50 text-red-700' :
                                                                             'bg-yellow-50 text-yellow-700'
-                                                                        }
+                                                                        }`}
                                                                     >
                                                                         {q.difficulty}
                                                                     </Badge>
                                                                 )}
                                                             </div>
-                                                            <p className="font-medium mb-2">{q.text}</p>
+                                                            <p className="font-medium mb-2 text-sm sm:text-base break-words">{q.text}</p>
                                                             
-                                                            <div className="grid md:grid-cols-2 gap-3 text-sm">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                                                                 <div>
                                                                     <span className="font-medium text-gray-700 dark:text-gray-300">Your Answer:</span>
-                                                                    <p className={q.is_correct ? 'text-green-600' : 'text-red-600'}>
+                                                                    <p className={`break-words ${q.is_correct ? 'text-green-600' : 'text-red-600'}`}>
                                                                         {q.student_response || (q.response_audio_url ? '🎤 Voice Response' : '—')}
                                                                     </p>
                                                                 </div>
                                                                 {q.correct_answer && (
                                                                     <div>
                                                                         <span className="font-medium text-gray-700 dark:text-gray-300">Correct Answer:</span>
-                                                                        <p className="text-green-600">{q.correct_answer}</p>
+                                                                        <p className="text-green-600 break-words">{q.correct_answer}</p>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                             
                                                             {q.ai_feedback && (
-                                                                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-                                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                                <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                                                                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 break-words">
                                                                         <strong>💡 Feedback:</strong> {typeof q.ai_feedback === 'string' ? q.ai_feedback : JSON.stringify(q.ai_feedback)}
                                                                     </p>
                                                                 </div>
@@ -1630,38 +1630,38 @@ export default function AssessmentReportPage() {
                     </TabsContent>
 
                     {/* AI Insights Tab - Keep your existing insights tab */}
-                    <TabsContent value="insights" className="space-y-6">
+                    <TabsContent value="insights" className="space-y-4 sm:space-y-6">
                         {/* Overall AI Summary */}
                         {report?.ai_feedback && (
                             <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-200">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-2xl">
-                                        <Brain className="h-6 w-6 text-purple-600" />
-                                        AI-Powered Performance Analysis
+                                <CardHeader className="p-4 sm:p-6">
+                                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                                        <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0" />
+                                        <span className="truncate">AI-Powered Performance Analysis</span>
                                     </CardTitle>
-                                    <CardDescription className="text-base">
+                                    <CardDescription className="text-sm sm:text-base">
                                         Comprehensive insights powered by advanced AI evaluation
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
                                     {report.ai_feedback.overall_performance && (
-                                        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                                            <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                                                <Target className="h-5 w-5" />
+                                        <div className="p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                            <h4 className="font-semibold text-base sm:text-lg mb-2 flex items-center gap-2">
+                                                <Target className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                                                 Overall Performance
                                             </h4>
-                                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed break-words">
                                                 {report.ai_feedback.overall_performance}
                                             </p>
                                         </div>
                                     )}
                                     
                                     {report.ai_feedback.readiness_level && (
-                                        <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                                            <Award className="h-6 w-6 text-blue-600" />
-                                            <div>
-                                                <div className="text-sm text-gray-600 dark:text-gray-400">Readiness Level</div>
-                                                <div className="text-xl font-bold text-blue-600">
+                                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                            <Award className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+                                            <div className="min-w-0">
+                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Readiness Level</div>
+                                                <div className="text-lg sm:text-xl font-bold text-blue-600 truncate">
                                                     {report.ai_feedback.readiness_level}
                                                 </div>
                                             </div>
@@ -1685,43 +1685,43 @@ export default function AssessmentReportPage() {
                                 
                                 return (
                                     <Card key={round.round_number} className="overflow-hidden border-2">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg`}>
-                                                    {RoundIcon && <RoundIcon className="h-6 w-6" />}
+                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                                                <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg flex-shrink-0`}>
+                                                    {RoundIcon && <RoundIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
                                                 </div>
-                                                <div className="flex-1">
-                                                    <CardTitle className="text-xl">
+                                                <div className="flex-1 min-w-0">
+                                                    <CardTitle className="text-lg sm:text-xl truncate">
                                                         {getRoundName(round)}
                                                     </CardTitle>
-                                                    <CardDescription className="text-base">
+                                                    <CardDescription className="text-sm sm:text-base">
                                                         AI-Generated Feedback & Analysis
                                                     </CardDescription>
                                                 </div>
                                                 <Badge 
                                                     variant={round.percentage >= 80 ? 'default' : round.percentage >= 60 ? 'secondary' : 'destructive'}
-                                                    className="text-lg px-3 py-1"
+                                                    className="text-sm sm:text-lg px-2 sm:px-3 py-1 flex-shrink-0"
                                                 >
                                                     {round.percentage?.toFixed(1)}%
                                                 </Badge>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="pt-6 space-y-4">
+                                        <CardContent className="pt-4 sm:pt-6 space-y-3 sm:space-y-4 p-4 sm:p-6">
                                             {/* Criteria Scores for GD */}
                                             {round.ai_feedback?.criteria_scores && (
-                                                <div className="mb-4">
-                                                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                                        <BarChart3 className="h-5 w-5" />
+                                                <div className="mb-3 sm:mb-4">
+                                                    <h4 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                                                        <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                                                         Performance Metrics
                                                     </h4>
-                                                    <div className="grid md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                                                         {Object.entries(round.ai_feedback.criteria_scores).map(([key, value]: [string, any]) => (
-                                                            <div key={key} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400 capitalize mb-1">
+                                                            <div key={key} className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 capitalize mb-1 truncate">
                                                                     {key.replace(/_/g, ' ')}
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className={`text-2xl font-bold ${
+                                                                    <div className={`text-xl sm:text-2xl font-bold ${
                                                                         value >= 80 ? 'text-green-600' :
                                                                         value >= 60 ? 'text-yellow-600' :
                                                                         'text-red-600'

@@ -50,7 +50,7 @@ export default function MarketJobsPage() {
     const [location, setLocation] = useState('India')
     const [maxJobs, setMaxJobs] = useState<number | string>(15)
     const [includeResumeSkills, setIncludeResumeSkills] = useState(false)
-    const [selectedSources, setSelectedSources] = useState<string[]>(['linkedin'])
+    const [selectedSources, setSelectedSources] = useState<string[]>(['unstop'])
     const [error, setError] = useState<string | null>(null)
     const [keywordsUsed, setKeywordsUsed] = useState<string[]>([])
     const [resumeSkills, setResumeSkills] = useState<string[]>([])
@@ -207,6 +207,10 @@ export default function MarketJobsPage() {
     }
     
     const toggleSource = (source: string) => {
+        // Prevent selecting coming soon platforms
+        if (source === 'linkedin' || source === 'foundit') {
+            return
+        }
         setSelectedSources(prev => 
             prev.includes(source) 
                 ? prev.filter(s => s !== source)
@@ -215,7 +219,7 @@ export default function MarketJobsPage() {
     }
     
     const selectAllSources = () => {
-        setSelectedSources(['linkedin', 'unstop', 'foundit', 'naukri'])
+        setSelectedSources(['unstop', 'naukri'])
     }
     
     const deselectAllSources = () => {
@@ -346,16 +350,15 @@ export default function MarketJobsPage() {
                                     <button
                                         type="button"
                                         onClick={() => toggleSource('linkedin')}
-                                        disabled={loading}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                            selectedSources.includes('linkedin')
-                                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                        }`}
+                                        disabled={true}
+                                        className="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60 relative"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Briefcase className="h-4 w-4" />
                                             LinkedIn
+                                            <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-semibold">
+                                                Coming Soon
+                                            </span>
                                         </div>
                                     </button>
                                     <button
@@ -376,16 +379,15 @@ export default function MarketJobsPage() {
                                     <button
                                         type="button"
                                         onClick={() => toggleSource('foundit')}
-                                        disabled={loading}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                            selectedSources.includes('foundit')
-                                                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                        }`}
+                                        disabled={true}
+                                        className="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60 relative"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Building className="h-4 w-4" />
-                                            Foundit
+                                            FoundIt
+                                            <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-semibold">
+                                                Coming Soon
+                                            </span>
                                         </div>
                                     </button>
                                     <button
@@ -695,9 +697,9 @@ export default function MarketJobsPage() {
                                                     className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                                                 >
                                                     <option value="all">All Platforms</option>
-                                                    <option value="linkedin">LinkedIn</option>
+                                                    <option value="linkedin" disabled>LinkedIn (Coming Soon)</option>
                                                     <option value="unstop">Unstop</option>
-                                                    <option value="foundit">Foundit</option>
+                                                    <option value="foundit" disabled>FoundIt (Coming Soon)</option>
                                                     <option value="naukri">Naukri</option>
                                                 </select>
                                             </div>
