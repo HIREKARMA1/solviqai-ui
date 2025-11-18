@@ -17,7 +17,7 @@ interface Branch {
     hoverBorder: string;
     textColor: string;
     iconGradient: string;
-    component: React.ComponentType<{ branch: string }>;
+    component: React.ComponentType<{ branch: string; onBack?: () => void }>;
 }
 
 export default function PracticalSkillsBranchSelection() {
@@ -97,19 +97,28 @@ export default function PracticalSkillsBranchSelection() {
         
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8">
-                <button
-                    onClick={() => {
-                        setSelectedBranch(null);
-                        // Reset any state in child components if needed
-                    }}
-                    className="group mb-6 flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:bg-blue-50 font-medium"
-                >
-                    <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Back to Branches
-                </button>
-                <SelectedComponent branch={branchName} />
+                {/* Navigation - Single Line */}
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                    <button
+                        onClick={() => setSelectedBranch(null)}
+                        className="group flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:bg-blue-50 font-medium"
+                    >
+                        <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Categories
+                    </button>
+                    <button
+                        onClick={() => setSelectedBranch(null)}
+                        className="group flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-700 transition-colors duration-300"
+                    >
+                        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Branches
+                    </button>
+                </div>
+                <SelectedComponent branch={branchName} onBack={() => setSelectedBranch(null)} />
             </div>
         );
     }

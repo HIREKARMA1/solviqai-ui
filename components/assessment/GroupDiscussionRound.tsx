@@ -117,6 +117,7 @@ export function GroupDiscussionRound({
     const [discussionComplete, setDiscussionComplete] = useState(false);
     const [finalEvaluation, setFinalEvaluation] = useState<any | null>(null);
     const [micTested, setMicTested] = useState(false);
+    const [gdCompleted, setGdCompleted] = useState(false); // Track if GD was properly completed
     const [audioLevel, setAudioLevel] = useState(0);
     const [confidenceScore, setConfidenceScore] = useState(100);
     const [speechRate, setSpeechRate] = useState(0);
@@ -308,10 +309,18 @@ export function GroupDiscussionRound({
             toast.loading('Submitting your discussion...', { id: 'submitting' });
             
             if (mode === 'practice') {
+                // Only evaluate if GD was completed (not exited early)
+                if (!gdCompleted) {
+                    toast.error('Please complete the discussion to get evaluation.');
+                    setLoading(false);
+                    return;
+                }
+                
                 toast.loading('Evaluating your discussion...', { id: 'evaluating' });
                 try {
                     const evalResponse = await apiClient.client.post(`/practice/gd/evaluate`, {
                         room_id: roundId,
+                        conversation: gdTurns
                     });
 
                     const rawEval = evalResponse.data || {};
@@ -905,6 +914,7 @@ export function GroupDiscussionRound({
 
             if ((gdTurns.length + 1) >= MAX_RESPONSES) {
                 setDiscussionComplete(true);
+                setGdCompleted(true); // Mark as completed
                 toast.success('Discussion complete! Click Submit for evaluation.');
             } else {
                 toast.success(`Round ${gdTurns.length + 1} complete! Continue or submit.`, { duration: 6000 });
@@ -1216,6 +1226,7 @@ export function GroupDiscussionRound({
                                     <Button
                                         onClick={() => {
                                             setDiscussionComplete(true);
+                                            setGdCompleted(true); // Mark as completed
                                             toast.success('Ready for evaluation!');
                                         }}
                                         disabled={loading}
@@ -1504,6 +1515,7 @@ export function GroupDiscussionRound({
                                                 </p>
                                                 <Button
                                                     onClick={() => {
+                                                        setGdCompleted(true); // Mark as completed before evaluation
                                                         setEvaluationInitiated(true);
                                                         getFinalEvaluation();
                                                     }}
