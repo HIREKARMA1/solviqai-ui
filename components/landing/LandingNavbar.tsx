@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Moon, Sun, Globe, PanelLeftClose, PanelLeft, LogOut } from 'lucide-react';
+import { User, Moon, Sun, Globe, PanelLeftClose, PanelLeft, LogOut, Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { Language } from '@/lib/i18n';
@@ -24,9 +24,11 @@ interface LandingNavbarProps {
   className?: string;
   onToggleSidebar?: () => void;
   isSidebarCollapsed?: boolean;
+  onToggleMobileSidebar?: () => void;
+  isMobileSidebarOpen?: boolean;
 }
 
-export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }: LandingNavbarProps) {
+export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed, onToggleMobileSidebar, isMobileSidebarOpen }: LandingNavbarProps) {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -120,6 +122,24 @@ export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }
 
             {/* Right Section - Simple Actions */}
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Mobile Sidebar Toggle Button - Only visible on small screens */}
+              {onToggleMobileSidebar && (
+                <button
+                  onClick={onToggleMobileSidebar}
+                  className={cn(
+                    'lg:hidden p-2 rounded-lg transition-colors',
+                    'hover:bg-gray-100 dark:hover:bg-gray-800',
+                    'text-gray-700 dark:text-gray-300'
+                  )}
+                  aria-label={isMobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                >
+                  {isMobileSidebarOpen ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Menu className="w-5 h-5" />
+                  )}
+                </button>
+              )}
               {/* Language Selector */}
               {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>
