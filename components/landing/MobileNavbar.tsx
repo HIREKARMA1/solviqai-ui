@@ -109,7 +109,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
 
   return (
     <motion.nav
-      className="lg:hidden fixed top-20 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-md"
+      className="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-md"
     >
       <div 
         className="overflow-x-auto scrollbar-hide"

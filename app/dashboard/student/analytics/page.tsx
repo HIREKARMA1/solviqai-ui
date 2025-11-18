@@ -79,34 +79,34 @@ function StatCard({
                     animate={isHovered ? { scale: 1 } : { scale: 0.9 }}
                 />
                 
-                <CardContent className="p-6 relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                        <div className={`p-3 rounded-xl ${bgColor} shadow-md`}>
-                            <Icon className={`w-6 h-6 ${color}`} />
+                <CardContent className="p-4 sm:p-6 relative z-10">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                        <div className={`p-2 sm:p-3 rounded-xl ${bgColor} shadow-md flex-shrink-0`}>
+                            <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
                         </div>
                         {trend && trend !== 'neutral' && (
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                            <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex-shrink-0 ${
                                 trend === 'up' 
                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                     : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                             }`}>
-                                {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                                {trendValue}
+                                {trend === 'up' ? <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                <span className="whitespace-nowrap">{trendValue}</span>
                             </div>
                         )}
                     </div>
                     
                     <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</p>
                         <motion.p 
                             animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
                             transition={{ duration: 0.2 }}
-                            className="text-3xl font-bold text-gray-900 dark:text-white mb-1"
+                            className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1"
                         >
                             {value}
                         </motion.p>
                         {subtitle && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{subtitle}</p>
                         )}
                     </div>
                 </CardContent>
@@ -227,10 +227,10 @@ export default function StudentAnalyticsPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-                <div className="space-y-6">
+                <div className="space-y-6 pt-28 sm:pt-36 lg:pt-0">
                 {/* Header - Matching Dashboard Style */}
                 <motion.div 
-                    className="relative overflow-hidden rounded-2xl p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
+                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
@@ -247,18 +247,18 @@ export default function StudentAnalyticsPage() {
                         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                     />
                     <div className="relative z-10">
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                                <div className="flex items-center gap-3 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
                                     <motion.div 
-                                        className="p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
                                         animate={{ rotate: [0, 360] }}
                                         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                                     >
-                                        <BarChart3 className="h-6 w-6" />
+                                        <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </motion.div>
                                     <motion.h1 
-                                        className="text-3xl md:text-4xl font-bold gradient-text"
+                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
                                         animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                                         transition={{ duration: 3, repeat: Infinity }}
                                         style={{ backgroundSize: '200% 200%' }}
@@ -266,17 +266,17 @@ export default function StudentAnalyticsPage() {
                                         <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Analytics Dashboard</span>
                                     </motion.h1>
                                 </div>
-                                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
                                     Track your performance, skills, and job readiness metrics
                                 </p>
                             </div>
                             <Button
                                 onClick={() => setShowFilters(!showFilters)}
                                 variant="outline"
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"
                             >
                                 <Filter className="w-4 h-4" />
-                                Filters
+                                <span className="sm:inline">Filters</span>
                             </Button>
                         </div>
                     </div>
@@ -406,33 +406,33 @@ export default function StudentAnalyticsPage() {
 
                 {/* Tabs for different views */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-4 w-full lg:w-auto bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-auto gap-1.5">
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-auto gap-1 sm:gap-1.5">
                         <TabsTrigger 
                             value="overview"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-4 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                         >
-                            <Activity className="w-4 h-4 shrink-0 relative z-10" />
+                            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                             <span className="whitespace-nowrap relative z-10">Overview</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="skills"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-4 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                         >
-                            <Brain className="w-4 h-4 shrink-0 relative z-10" />
+                            <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                             <span className="whitespace-nowrap relative z-10">Skills</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="performance"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-4 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                         >
-                            <TrendingUp className="w-4 h-4 shrink-0 relative z-10" />
+                            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                             <span className="whitespace-nowrap relative z-10">Performance</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="timeline"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-2 h-full min-h-[2.5rem] px-4 py-2 transition-all font-semibold text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                         >
-                            <Calendar className="w-4 h-4 shrink-0 relative z-10" />
+                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                             <span className="whitespace-nowrap relative z-10">Timeline</span>
                         </TabsTrigger>
                     </TabsList>
