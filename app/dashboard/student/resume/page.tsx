@@ -609,9 +609,6 @@ export default function ResumePage() {
                                                 {atsScore.ats_score}
                                                 <span className="text-xl sm:text-2xl text-gray-500">/100</span>
                                             </p>
-                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
-                                                Powered by Cohere Command-A
-                                            </p>
                                         </div>
 
                                         {/* ... rest of your existing ATS display code ... */}
