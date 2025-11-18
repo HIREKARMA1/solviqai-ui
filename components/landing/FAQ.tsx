@@ -64,20 +64,20 @@ export function FAQ() {
     {
       id: '8',
       category: 'features',
-      question: 'Does Saksham support multiple languages?',
-      answer: 'Currently, Saksham supports English, Hindi, and Odia languages. We\'re continuously working to add more languages to make the platform accessible to job seekers across India and beyond.',
+      question: 'Does SolviQ AI support multiple languages?',
+      answer: 'Currently, SolviQ AI supports English, Hindi, and Odia languages. We\'re continuously working to add more languages to make the platform accessible to job seekers across India and beyond.',
     },
     {
       id: '9',
       category: 'general',
-      question: 'How effective is Saksham in helping land a job?',
-      answer: 'Over 10,000 users have successfully landed jobs using Saksham, with a 95% success rate among active users. The combination of AI-powered practice, real-time feedback, and automated job applications significantly increases your chances.',
+      question: 'How effective is SolviQ AI in helping land a job?',
+      answer: 'Over 10,000 users have successfully landed jobs using SolviQ AI, with a 95% success rate among active users. The combination of AI-powered practice, real-time feedback, and automated job applications significantly increases your chances.',
     },
     {
       id: '10',
       category: 'technical',
-      question: 'What devices can I use Saksham on?',
-      answer: 'Saksham is a web-based platform that works on all modern browsers. You can access it from your desktop, laptop, tablet, or smartphone. For the best experience, we recommend using a desktop or laptop with a webcam for mock interviews.',
+      question: 'What devices can I use SolviQ AI on?',
+      answer: 'SolviQ AI is a web-based platform that works on all modern browsers. You can access it from your desktop, laptop, tablet, or smartphone. For the best experience, we recommend using a desktop or laptop with a webcam for mock interviews.',
     },
   ];
 

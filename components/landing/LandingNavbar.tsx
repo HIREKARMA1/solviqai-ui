@@ -77,19 +77,19 @@ export function LandingNavbar({ className, onToggleSidebar, isSidebarCollapsed }
             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               {/* Logo - Simple and clean */}
               <Link href="/" className="flex items-center group flex-shrink-0">
-                <div className="relative w-[100px] h-12 sm:w-[130px] sm:h-16 transition-transform group-hover:scale-105">
+                <div className="relative w-[120px] h-12 sm:w-[160px] sm:h-[64px] transition-transform group-hover:scale-105">
                   {theme === 'dark' ? (
                     <Image
-                      src="/images/HKlogowhite.png"
-                      alt="Solviq AI Logo"
+                      src="/images/solviqdark.png"
+                      alt="SolviQ AI Logo"
                       fill
                       className="object-contain"
                       priority
                     />
                   ) : (
                     <Image
-                      src="/images/HKlogoblack.png"
-                      alt="Solviq AI Logo"
+                      src="/images/solviqligt.png"
+                      alt="SolviQ AI Logo"
                       fill
                       className="object-contain"
                       priority

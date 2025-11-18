@@ -684,7 +684,7 @@ export function ReleaseNotes() {
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Backend Setup:</h4>
                     <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm text-gray-800 dark:text-gray-200">
 {`# Navigate to backend directory
-cd saksham-server
+cd solviqai-server
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate # On Windows: venv\\Scripts\\activate
@@ -703,7 +703,7 @@ uvicorn main:app --reload`}
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Frontend Setup:</h4>
                     <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm text-gray-800 dark:text-gray-200">
 {`# Navigate to frontend directory
-cd saksham-ui
+cd solviqai-ui
 # Install dependencies
 npm install
 # Set up environment variables
@@ -721,7 +721,7 @@ npm run dev`}
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Backend (.env):</h4>
                     <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm text-gray-800 dark:text-gray-200">
-{`DATABASE_URL=postgresql://user:password@localhost:5432/saksham_db
+{`DATABASE_URL=postgresql://user:password@localhost:5432/solviqai_db
 SECRET_KEY=your-secret-key-here
 COHERE_API_KEY=your-cohere-api-key
 OPENAI_API_KEY=your-openai-api-key
@@ -1046,10 +1046,10 @@ docker-compose up -d`}
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Product Team</h3>
                 <ul className="space-y-2 text-gray-700 dark:text-gray-300">
-                  <li>• <strong>Product Manager:</strong> [Name]</li>
-                  <li>• <strong>Technical Lead:</strong> [Name]</li>
-                  <li>• <strong>Design Lead:</strong> [Name]</li>
-                  <li>• <strong>AI/ML Lead:</strong> [Name]</li>
+                  <li>• <strong>Product Manager:</strong> Swapnajit Mohanty</li>
+                  <li>• <strong>Technical Lead:</strong> Lokanath Panda</li>
+                  <li>• <strong>Design Lead:</strong> Lokanath Panda</li>
+                  <li>• <strong>AI/ML Lead:</strong> Lokanath Panda</li>
                 </ul>
               </div>
               <div>
@@ -1063,14 +1063,14 @@ docker-compose up -d`}
                 </ul>
               </div>
             </div>
-            <div className="mt-6">
+            {/* <div className="mt-6">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Social Media</h3>
               <ul className="space-y-2 text-gray-700 dark:text-gray-300 ml-4">
                 <li>• <strong>LinkedIn:</strong> [Link]</li>
                 <li>• <strong>Twitter:</strong> [Link]</li>
                 <li>• <strong>GitHub:</strong> [Link]</li>
               </ul>
-            </div>
+            </div> */}
           </motion.section>
 
           {/* Changelog Summary */}
@@ -1141,7 +1141,7 @@ docker-compose up -d`}
           </motion.section>
 
           {/* Upgrade Instructions */}
-          <motion.section
+          {/* <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
@@ -1157,7 +1157,7 @@ docker-compose up -d`}
                 <li>
                   <strong>1. Backup Database:</strong>
                   <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg mt-2 text-sm text-gray-800 dark:text-gray-200">
-{`pg_dump -U postgres saksham_db > backup.sql`}
+{`pg_dump -U postgres solviqai_db > backup.sql`}
                   </pre>
                 </li>
                 <li>
@@ -1192,10 +1192,10 @@ docker-compose up -d`}
                 </li>
               </ol>
             </div>
-          </motion.section>
+          </motion.section> */}
 
           {/* License & Legal */}
-          <motion.section
+          {/* <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.85 }}
@@ -1225,7 +1225,7 @@ docker-compose up -d`}
                 Thank you for using AI Placement Simulator!
               </p>
             </div>
-          </motion.section>
+          </motion.section> */}
         </div>
       </div>
     </div>

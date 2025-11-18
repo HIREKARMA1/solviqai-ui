@@ -366,7 +366,7 @@ export default function StudentDashboard() {
                                         </motion.div>
                                 </Link>
 
-                                    <Link href="/dashboard/student/jobs" className="group/action">
+                                    {/* <Link href="/dashboard/student/jobs" className="group/action">
                                         <motion.div 
                                             className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 p-2.5 sm:p-3 md:p-4 lg:p-5 min-h-[80px] sm:min-h-[100px] md:min-h-[120px] rounded-lg sm:rounded-xl md:rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border sm:border-2 border-green-200/50 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all duration-300"
                                             whileHover={{ scale: 1.02, x: 5 }}
@@ -382,7 +382,7 @@ export default function StudentDashboard() {
                                                 Browse Jobs
                                             </span>
                                         </motion.div>
-                                </Link>
+                                </Link> */}
                                 
                                     <Link href="/dashboard/student/market-jobs" className="group/action">
                                         <motion.div 

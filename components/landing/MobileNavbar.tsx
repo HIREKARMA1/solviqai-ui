@@ -41,10 +41,12 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
         'dashboard': baseRoute,
+        'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
-        'jobs': `${baseRoute}/jobs`,
-        'auto-apply': `${baseRoute}/auto-apply`,
+        // 'jobs': `${baseRoute}/jobs`,
+        // 'auto-apply': `${baseRoute}/auto-apply`,
+        'analytics': `${baseRoute}/analytics`,
       };
       return routeMap[featureId] || null;
     }
