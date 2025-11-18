@@ -63,6 +63,12 @@ const getRoundName = (round: any) => {
 
 const COLORS = ['#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#3b82f6', '#ec4899', '#06b6d4']
 
+// Helper function to format percentage values consistently
+const formatPercentage = (value: number | undefined | null, decimals: number = 2): string => {
+    if (value === undefined || value === null || isNaN(value)) return '0.00'
+    return value.toFixed(decimals)
+}
+
 // Custom animated counter component
 const AnimatedCounter = ({ value, duration = 1000 }: { value: number, duration?: number }) => {
     const [count, setCount] = useState(0)
@@ -188,7 +194,7 @@ export default function AssessmentReportPage() {
         
         return report.rounds.map((round: any) => ({
             subject: getRoundName(round),
-            score: round.percentage || 0,
+            score: parseFloat(formatPercentage(round.percentage || 0)),
             fullMark: 100,
             roundNumber: round.round_number
         }))
@@ -198,12 +204,15 @@ export default function AssessmentReportPage() {
     const prepareTimeSeriesData = () => {
         if (!report?.rounds) return []
         
-        return report.rounds.map((round: any, index: number) => ({
-            round: getRoundName(round),
-            score: round.percentage || 0,
-            cumulative: report.rounds.slice(0, index + 1).reduce((acc: number, r: any) => acc + (r.percentage || 0), 0) / (index + 1),
-            target: 75
-        }))
+        return report.rounds.map((round: any, index: number) => {
+            const cumulativeAvg = report.rounds.slice(0, index + 1).reduce((acc: number, r: any) => acc + (r.percentage || 0), 0) / (index + 1)
+            return {
+                round: getRoundName(round),
+                score: parseFloat(formatPercentage(round.percentage || 0)),
+                cumulative: parseFloat(formatPercentage(cumulativeAvg)),
+                target: 75
+            }
+        })
     }
 
     // Prepare question difficulty breakdown
@@ -223,9 +232,9 @@ export default function AssessmentReportPage() {
         
         const sortedRounds = [...report.rounds].sort((a: any, b: any) => b.percentage - a.percentage)
         return sortedRounds.map((round: any) => ({
-            value: round.percentage,
+            value: parseFloat(formatPercentage(round.percentage)),
             name: getRoundName(round),
-            label: `${getRoundName(round)}: ${round.percentage}%`,
+            label: `${getRoundName(round)}: ${formatPercentage(round.percentage)}%`,
             fill: COLORS[round.round_number % COLORS.length]
         }))
     }
@@ -538,7 +547,7 @@ export default function AssessmentReportPage() {
                                         <BarChart3 className="w-6 h-6 text-purple-500" />
                                         <div>
                                             <p className="text-sm font-medium">Overall Score</p>
-                                            <p className="text-3xl font-bold">{Math.round(report?.overall_score || 0)}</p>
+                                            <p className="text-3xl font-bold">{formatPercentage(report?.overall_score || 0)}%</p>
                             </div>
                                     </div>
                             </div>
@@ -1119,7 +1128,15 @@ export default function AssessmentReportPage() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                             <XAxis dataKey="round" tick={{ fill: '#6b7280' }} />
                                             <YAxis domain={[0, 100]} tick={{ fill: '#6b7280' }} />
-                                            <Tooltip />
+                                            <Tooltip 
+                                                formatter={(value: any) => `${value}%`}
+                                                contentStyle={{ 
+                                                    backgroundColor: '#fff', 
+                                                    border: '1px solid #e5e7eb',
+                                                    borderRadius: '8px',
+                                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                                }}
+                                            />
                                             <Area 
                                                 type="monotone" 
                                                 dataKey="score" 
@@ -1156,7 +1173,7 @@ export default function AssessmentReportPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-bold text-blue-600">
-                                        {Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0]))}%
+                                        {formatPercentage(Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0])))}%
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
                                         {(() => {
@@ -1182,7 +1199,7 @@ export default function AssessmentReportPage() {
                                 </CardHeader>
                                 <CardContent className="relative z-10">
                                     <div className="text-3xl font-bold text-green-600">
-                                        {report?.overall_score?.toFixed(1)}%
+                                        {formatPercentage(report?.overall_score)}%
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
                                         Across {report?.rounds?.length || 0} rounds
@@ -1266,7 +1283,7 @@ export default function AssessmentReportPage() {
                                             <div className="flex justify-between items-center">
                                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score</span>
                                                 <span className={`text-2xl font-bold ${getScoreColor(round.percentage || 0)}`}>
-                                                    {round.percentage?.toFixed(1)}%
+                                                    {formatPercentage(round.percentage)}%
                                                 </span>
                                             </div>
                                             <Progress value={round.percentage} className="h-2" />
@@ -1307,9 +1324,9 @@ export default function AssessmentReportPage() {
                                     </CardTitle>
                                     <CardDescription>
                                         {round.round_type === 'group_discussion' ? (
-                                            `Score: ${round.percentage?.toFixed(1)}%`
+                                            `Score: ${formatPercentage(round.percentage)}%`
                                         ) : (
-                                            `Score: ${round.percentage?.toFixed(1)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points)`
+                                            `Score: ${formatPercentage(round.percentage)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points)`
                                         )}
                                     </CardDescription>
                                 </CardHeader>
@@ -1320,7 +1337,7 @@ export default function AssessmentReportPage() {
                                             {/* Score strip */}
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
                                                 <div className={`text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600`}>
-                                                    {Math.round(round.percentage || 0)}%
+                                                    {formatPercentage(round.percentage)}%
                                                 </div>
                                                 <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                                     <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, round.percentage || 0))}%` }} />
@@ -1497,9 +1514,9 @@ export default function AssessmentReportPage() {
                                     </CardTitle>
                                     <CardDescription>
                                         {round.round_type === 'group_discussion' ? (
-                                            `Score: ${round.percentage?.toFixed(1)}%`
+                                            `Score: ${formatPercentage(round.percentage)}%`
                                         ) : (
-                                            `Score: ${round.percentage?.toFixed(1)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points) • ${getFilteredQuestions(round.questions).length} questions`
+                                            `Score: ${formatPercentage(round.percentage)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points) • ${getFilteredQuestions(round.questions).length} questions`
                                         )}
                                     </CardDescription>
                                 </CardHeader>
@@ -1703,7 +1720,7 @@ export default function AssessmentReportPage() {
                                                     variant={round.percentage >= 80 ? 'default' : round.percentage >= 60 ? 'secondary' : 'destructive'}
                                                     className="text-lg px-3 py-1"
                                                 >
-                                                    {round.percentage?.toFixed(1)}%
+                                                    {formatPercentage(round.percentage)}%
                                                 </Badge>
                                             </div>
                                         </CardHeader>
@@ -1942,17 +1959,6 @@ export default function AssessmentReportPage() {
                         <CardDescription>Continue your preparation journey</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-wrap gap-3">
-                            <Button onClick={() => router.push('/dashboard/student/assessment')}>
-                                Take Another Assessment
-                            </Button>
-                            <Button variant="outline" onClick={() => router.push('/dashboard/student/jobs')}>
-                                Browse Jobs
-                            </Button>
-                            <Button variant="outline" onClick={() => router.push('/dashboard/student/profile')}>
-                                Update Profile
-                            </Button>
-                        </div>
                         <Playlist assessmentId={assessmentId ?? ''} />
                     </CardContent>
                 </Card>

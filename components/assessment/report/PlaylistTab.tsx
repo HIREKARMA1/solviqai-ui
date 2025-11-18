@@ -48,7 +48,7 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [activeTopic, setActiveTopic] = useState<string | null>(null)
-    const [platformFilter, setPlatformFilter] = useState<string>('all')
+    const [platformFilter, setPlatformFilter] = useState<string>('youtube')
 
     // Fetch playlist on mount
     React.useEffect(() => {
@@ -105,7 +105,7 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
 
     const filteredPlaylist = playlist.map(item => ({
         ...item,
-        videos: item.videos.filter(v => platformFilter === 'all' || v.platform === platformFilter)
+        videos: item.videos.filter(v => v.platform === platformFilter)
     })).filter(item => item.videos.length > 0)
 
     if (loading) {
@@ -247,30 +247,12 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Platform:</span>
                             <div className="flex gap-2">
                                 <Button
-                                    variant={platformFilter === 'all' ? 'default' : 'outline'}
+                                    variant="default"
                                     size="sm"
-                                    onClick={() => setPlatformFilter('all')}
-                                    className={platformFilter === 'all' ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-md' : ''}
-                                >
-                                    All
-                                </Button>
-                                <Button
-                                    variant={platformFilter === 'youtube' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setPlatformFilter('youtube')}
-                                    className={`flex items-center gap-1 ${platformFilter === 'youtube' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md' : ''}`}
+                                    className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md"
                                 >
                                     <Youtube className="h-3 w-3" />
                                     YouTube
-                                </Button>
-                                <Button
-                                    variant={platformFilter === 'udemy' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setPlatformFilter('udemy')}
-                                    className={`flex items-center gap-1 ${platformFilter === 'udemy' ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-md' : ''}`}
-                                >
-                                    <GraduationCap className="h-3 w-3" />
-                                    Udemy
                                 </Button>
                             </div>
                         </div>
