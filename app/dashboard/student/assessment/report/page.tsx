@@ -40,6 +40,7 @@ const roundTypeInfo: Record<string, { name: string; icon: any; color: string; gr
     group_discussion: { name: "Group Discussion", icon: Users, color: "bg-teal-500", gradient: "from-teal-400 to-teal-600" },
     technical_mcq: { name: "Technical MCQ", icon: ClipboardList, color: "bg-purple-500", gradient: "from-purple-400 to-purple-600" },
     coding: { name: "Coding Challenge", icon: BookOpen, color: "bg-indigo-500", gradient: "from-indigo-400 to-indigo-600" },
+    electrical_circuit: { name: "Electrical Circuit Design", icon: Zap, color: "bg-amber-500", gradient: "from-amber-400 to-amber-600" },
     technical_interview: { name: "Technical Interview", icon: Mic, color: "bg-orange-500", gradient: "from-orange-400 to-orange-600" },
     hr_interview: { name: "HR Interview", icon: Target, color: "bg-pink-500", gradient: "from-pink-400 to-pink-600" }
 }
@@ -61,6 +62,12 @@ const getRoundName = (round: any) => {
 }
 
 const COLORS = ['#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#3b82f6', '#ec4899', '#06b6d4']
+
+// Utility function to format percentage values consistently
+const formatPercentage = (value: number | null | undefined, decimals: number = 2): string => {
+    if (value === null || value === undefined || isNaN(value)) return '0.00'
+    return Number(value).toFixed(decimals)
+}
 
 // Custom animated counter component
 const AnimatedCounter = ({ value, duration = 1000 }: { value: number, duration?: number }) => {
@@ -187,7 +194,7 @@ export default function AssessmentReportPage() {
         
         return report.rounds.map((round: any) => ({
             subject: getRoundName(round),
-            score: round.percentage || 0,
+            score: parseFloat(formatPercentage(round.percentage, 2)),
             fullMark: 100,
             roundNumber: round.round_number
         }))
@@ -199,8 +206,8 @@ export default function AssessmentReportPage() {
         
         return report.rounds.map((round: any, index: number) => ({
             round: getRoundName(round),
-            score: round.percentage || 0,
-            cumulative: report.rounds.slice(0, index + 1).reduce((acc: number, r: any) => acc + (r.percentage || 0), 0) / (index + 1),
+            score: parseFloat(formatPercentage(round.percentage, 2)),
+            cumulative: parseFloat(formatPercentage(report.rounds.slice(0, index + 1).reduce((acc: number, r: any) => acc + (r.percentage || 0), 0) / (index + 1), 2)),
             target: 75
         }))
     }
@@ -222,9 +229,9 @@ export default function AssessmentReportPage() {
         
         const sortedRounds = [...report.rounds].sort((a: any, b: any) => b.percentage - a.percentage)
         return sortedRounds.map((round: any) => ({
-            value: round.percentage,
+            value: parseFloat(formatPercentage(round.percentage, 2)),
             name: getRoundName(round),
-            label: `${getRoundName(round)}: ${round.percentage}%`,
+            label: `${getRoundName(round)}: ${formatPercentage(round.percentage, 2)}%`,
             fill: COLORS[round.round_number % COLORS.length]
         }))
     }
@@ -1155,7 +1162,7 @@ export default function AssessmentReportPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-bold text-blue-600">
-                                        {Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0]))}%
+                                        {formatPercentage(Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0])), 2)}%
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
                                         {(() => {
@@ -1181,7 +1188,7 @@ export default function AssessmentReportPage() {
                                 </CardHeader>
                                 <CardContent className="relative z-10">
                                     <div className="text-3xl font-bold text-green-600">
-                                        {report?.overall_score?.toFixed(1)}%
+                                        {formatPercentage(report?.overall_score, 2)}%
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
                                         Across {report?.rounds?.length || 0} rounds
@@ -1211,7 +1218,7 @@ export default function AssessmentReportPage() {
                                                 sum + Math.pow(score - avg, 2), 0) / scores.length
                                             const stdDev = Math.sqrt(variance)
                                             const consistency = Math.max(0, 100 - stdDev * 2)
-                                            return Math.round(consistency)
+                                            return formatPercentage(consistency, 2)
                                         })()}%
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
@@ -1265,10 +1272,10 @@ export default function AssessmentReportPage() {
                                             <div className="flex justify-between items-center">
                                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score</span>
                                                 <span className={`text-2xl font-bold ${getScoreColor(round.percentage || 0)}`}>
-                                                    {round.percentage?.toFixed(1)}%
+                                                    {formatPercentage(round.percentage, 2)}%
                                                 </span>
                                             </div>
-                                            <Progress value={round.percentage} className="h-2" />
+                                            <Progress value={parseFloat(formatPercentage(round.percentage, 2))} className="h-2" />
                                                 <div className="flex-1 min-h-[3rem] flex items-start">
                                             {round.ai_feedback && (
                                                         <div className="text-xs text-gray-600 dark:text-gray-400 p-2 bg-blue-50 dark:bg-blue-900/20 rounded w-full">
@@ -1306,9 +1313,9 @@ export default function AssessmentReportPage() {
                                     </CardTitle>
                                     <CardDescription>
                                         {round.round_type === 'group_discussion' ? (
-                                            `Score: ${round.percentage?.toFixed(1)}%`
+                                            `Score: ${formatPercentage(round.percentage, 2)}%`
                                         ) : (
-                                            `Score: ${round.percentage?.toFixed(1)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points)`
+                                            `Score: ${formatPercentage(round.percentage, 2)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points)`
                                         )}
                                     </CardDescription>
                                 </CardHeader>
@@ -1319,7 +1326,7 @@ export default function AssessmentReportPage() {
                                             {/* Score strip */}
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
                                                 <div className={`text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600`}>
-                                                    {Math.round(round.percentage || 0)}%
+                                                    {formatPercentage(round.percentage, 2)}%
                                                 </div>
                                                 <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                                     <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, round.percentage || 0))}%` }} />
@@ -1340,7 +1347,7 @@ export default function AssessmentReportPage() {
                                                                     <span>{c.emoji}</span>
                                                                     {c.name}
                                                                 </div>
-                                                                <div className="text-xl font-bold">{c.value}%</div>
+                                                                <div className="text-xl font-bold">{formatPercentage(c.value, 2)}%</div>
                                                             </div>
                                                             <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                                                 <div className={`h-full rounded-full bg-gradient-to-r ${c.color} transition-all duration-500`} style={{ width: `${Math.min(100, Math.max(0, c.value || 0))}%` }} />
@@ -1496,9 +1503,9 @@ export default function AssessmentReportPage() {
                                     </CardTitle>
                                     <CardDescription>
                                         {round.round_type === 'group_discussion' ? (
-                                            `Score: ${round.percentage?.toFixed(1)}%`
+                                            `Score: ${formatPercentage(round.percentage, 2)}%`
                                         ) : (
-                                            `Score: ${round.percentage?.toFixed(1)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points) • ${getFilteredQuestions(round.questions).length} questions`
+                                            `Score: ${formatPercentage(round.percentage, 2)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points) • ${getFilteredQuestions(round.questions).length} questions`
                                         )}
                                     </CardDescription>
                                 </CardHeader>
@@ -1516,23 +1523,23 @@ export default function AssessmentReportPage() {
                                                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                                                                 <div className="text-sm text-gray-600 dark:text-gray-400">Communication</div>
                                                                 <div className="text-2xl font-bold text-blue-600">
-                                                                    {round.ai_feedback.criteria_scores.communication}%
+                                                                    {formatPercentage(round.ai_feedback.criteria_scores.communication, 2)}%
                                                                 </div>
-                                                                <Progress value={round.ai_feedback.criteria_scores.communication} className="h-2 mt-2" />
+                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.communication, 2))} className="h-2 mt-2" />
                                                             </div>
                                                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                                                                 <div className="text-sm text-gray-600 dark:text-gray-400">Topic Understanding</div>
                                                                 <div className="text-2xl font-bold text-purple-600">
-                                                                    {round.ai_feedback.criteria_scores.topic_understanding}%
+                                                                    {formatPercentage(round.ai_feedback.criteria_scores.topic_understanding, 2)}%
                                                                 </div>
-                                                                <Progress value={round.ai_feedback.criteria_scores.topic_understanding} className="h-2 mt-2" />
+                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.topic_understanding, 2))} className="h-2 mt-2" />
                                                             </div>
                                                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                                                                 <div className="text-sm text-gray-600 dark:text-gray-400">Interaction</div>
                                                                 <div className="text-2xl font-bold text-green-600">
-                                                                    {round.ai_feedback.criteria_scores.interaction}%
+                                                                    {formatPercentage(round.ai_feedback.criteria_scores.interaction, 2)}%
                                                                 </div>
-                                                                <Progress value={round.ai_feedback.criteria_scores.interaction} className="h-2 mt-2" />
+                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.interaction, 2))} className="h-2 mt-2" />
                                                             </div>
                                                         </div>
                                                         
@@ -1702,7 +1709,7 @@ export default function AssessmentReportPage() {
                                                     variant={round.percentage >= 80 ? 'default' : round.percentage >= 60 ? 'secondary' : 'destructive'}
                                                     className="text-lg px-3 py-1"
                                                 >
-                                                    {round.percentage?.toFixed(1)}%
+                                                    {formatPercentage(round.percentage, 2)}%
                                                 </Badge>
                                             </div>
                                         </CardHeader>
@@ -1726,10 +1733,10 @@ export default function AssessmentReportPage() {
                                                                         value >= 60 ? 'text-yellow-600' :
                                                                         'text-red-600'
                                                                     }`}>
-                                                                        {value}%
+                                                                        {formatPercentage(value, 2)}%
                                                                     </div>
                                                                 </div>
-                                                                <Progress value={value} className="h-2 mt-2" />
+                                                                <Progress value={parseFloat(formatPercentage(value, 2))} className="h-2 mt-2" />
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1941,17 +1948,6 @@ export default function AssessmentReportPage() {
                         <CardDescription>Continue your preparation journey</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-wrap gap-3">
-                            <Button onClick={() => router.push('/dashboard/student/assessment')}>
-                                Take Another Assessment
-                            </Button>
-                            <Button variant="outline" onClick={() => router.push('/dashboard/student/jobs')}>
-                                Browse Jobs
-                            </Button>
-                            <Button variant="outline" onClick={() => router.push('/dashboard/student/profile')}>
-                                Update Profile
-                            </Button>
-                        </div>
                         <Playlist assessmentId={assessmentId ?? ''} />
                     </CardContent>
                 </Card>
