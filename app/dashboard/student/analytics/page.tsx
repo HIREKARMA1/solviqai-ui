@@ -227,7 +227,7 @@ export default function StudentAnalyticsPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-                <div className="space-y-6 pt-28 sm:pt-36 lg:pt-0">
+                <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0">
                 {/* Header - Matching Dashboard Style */}
                 <motion.div 
                     className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
