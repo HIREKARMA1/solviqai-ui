@@ -79,7 +79,7 @@ export default function PracticeQuestions() {
             id: 'practical',
             number: '4',
             title: 'Practical Skills',
-            description: 'Mechanical, Civil, Electrical situation-based tests',
+            description: 'Branchwise practical skill test',
             icon: <Wrench className="w-6 h-6 sm:w-7 sm:h-7" />,
             gradient: 'from-sky-500 to-blue-500',
             iconGradient: 'from-sky-500 to-blue-500',

@@ -449,11 +449,11 @@ export default function TechnicalSkillsPractice() {
                                 setError(null);
                             }}
                             disabled={loading}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
                         >
                             {branches.map((b) => (
-                                <option key={b.value} value={b.value}>
-                                    {b.label}
+                                <option key={b.value} value={b.value} className="text-gray-900">
+                                    {b.label || b.value}
                                 </option>
                             ))}
                         </select>
@@ -467,14 +467,14 @@ export default function TechnicalSkillsPractice() {
                         </label>
                         <input
                             type="text"
-                            value={topic}
+                            value={topic || ''}
                             onChange={(e) => {
                                 setTopic(e.target.value);
                                 setError(null);
                             }}
                             disabled={loading}
                             placeholder={branchTopics[branch]?.[0] ? `e.g., ${branchTopics[branch][0]} — leave empty for AI-curated mix` : 'Enter a topic or leave empty for mixed questions'}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
                         />
                         {branchTopics[branch] && branchTopics[branch].length > 0 && (
                             <div className="mt-3">
@@ -484,12 +484,18 @@ export default function TechnicalSkillsPractice() {
                                         <button
                                             key={suggestedTopic}
                                             type="button"
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
                                                 setTopic(suggestedTopic);
                                                 setError(null);
                                             }}
                                             disabled={loading}
-                                            className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 rounded-full hover:from-blue-100 hover:to-cyan-100 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed border border-blue-200"
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed border ${
+                                                topic === suggestedTopic
+                                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-600 shadow-md'
+                                                    : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-cyan-100'
+                                            }`}
                                         >
                                             {suggestedTopic}
                                         </button>
@@ -588,12 +594,12 @@ export default function TechnicalSkillsPractice() {
                                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                                     {numQuestions}
                                 </span>
-                                <span className="text-xs text-gray-500 font-medium">50 questions</span>
+                                <span className="text-xs text-gray-500 font-medium">25 questions</span>
                             </div>
                             <input
                                 type="range"
                                 min="5"
-                                max="50"
+                                max="25"
                                 step="5"
                                 value={numQuestions}
                                 onChange={(e) => {
@@ -603,7 +609,7 @@ export default function TechnicalSkillsPractice() {
                                 disabled={loading}
                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider disabled:cursor-not-allowed"
                                 style={{
-                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((numQuestions - 5) / 45) * 100}%, #e5e7eb ${((numQuestions - 5) / 45) * 100}%, #e5e7eb 100%)`,
+                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((numQuestions - 5) / 20) * 100}%, #e5e7eb ${((numQuestions - 5) / 20) * 100}%, #e5e7eb 100%)`,
                                 }}
                             />
                         </div>
