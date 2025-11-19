@@ -222,7 +222,7 @@ export default function JobRecommendationsPage() {
             </div>
             
             {/* Content with margin-top */}
-            <div className="relative z-10 mt-20 sm:mt-28 md:mt-36 lg:mt-20 space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8">
+            <div className="relative z-10 mt-1 sm:mt-6 lg:mt-3 space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8">
                     {/* Header */}
                     <div className="px-1 sm:px-0">
                         <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">Job Recommendations</h1>
