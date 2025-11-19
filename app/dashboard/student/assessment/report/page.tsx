@@ -486,7 +486,7 @@ export default function AssessmentReportPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-6 pt-28 sm:pt-36 lg:pt-0 pb-8">
+            <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0 pb-8">
                 {/* Header - Matching Assessment Journey Style with Hover Animations */}
                 <motion.div 
                     className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group"
@@ -621,46 +621,47 @@ export default function AssessmentReportPage() {
                 </div>
 
                 {/* Enhanced Tabs with Better Navigation */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-                        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 sm:p-1.5 rounded-xl w-full sm:w-auto gap-1 sm:gap-1.5">
-                            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">Overview</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">Analytics</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">Rounds</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">Questions</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">Playlist</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm">
-                                <Brain className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                <span className="whitespace-nowrap">AI Insights</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        
-                        {/* Filter Toggle Button */}
-                        <Button 
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-10">
+                    {/* Tabs Navigation */}
+                    <TabsList className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 sm:p-5 rounded-xl w-full gap-1 sm:gap-1.5">
+                        <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Overview</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Analytics</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Rounds</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Questions</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Playlist</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
+                            <Brain className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="whitespace-nowrap">AI Insights</span>
+                        </TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Filter Toggle Button - Separate Row Below Tabs with Clear Spacing */}
+                    <div className="mt-4 sm:mt-4 mb-12 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        {/* <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"
+                            className="flex items-center gap-2 w-full sm:w-auto"
                         >
                             <Filter className="h-4 w-4" />
                             <span className="sm:inline">Filters</span>
                             {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
+                        </Button> */}
                     </div>
 
                     {/* Advanced Filters Panel */}

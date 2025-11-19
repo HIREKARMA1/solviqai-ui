@@ -229,7 +229,7 @@ export default function StudentDashboard() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 lg:pt-0">
+            <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-1 sm:pt-6 lg:pt-0">
                 {/* Header - Matching Assessment Overview Style with Hover Animations */}
                 <motion.div 
                     className="relative overflow-hidden rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-10 lg:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group min-h-[140px] sm:min-h-[160px] md:min-h-[160px] lg:min-h-[140px]"

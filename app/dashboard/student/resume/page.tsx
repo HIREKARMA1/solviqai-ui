@@ -287,7 +287,7 @@ export default function ResumePage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 lg:pt-0">
+            <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-1 sm:pt-6 lg:pt-0">
                 {/* Header */}
                 <div>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Resume Management</h1>
