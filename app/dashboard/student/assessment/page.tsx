@@ -427,7 +427,7 @@ export default function AssessmentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {assessment.rounds?.map((round: any, index: number) => {
                 const roundInfo = roundDisplay[round.round_type] || {
                   name: `Round ${round.round_number}`,
@@ -468,7 +468,7 @@ export default function AssessmentPage() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.35, delay: index * 0.05 }}
                     whileHover={{ y: -2 }}
-                    className={`group relative overflow-hidden flex items-center justify-between p-5 border rounded-2xl card-hover`}
+                    className={`group relative overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 sm:p-5 border rounded-xl sm:rounded-2xl card-hover`}
                     style={{ opacity: isDisabled ? 0.5 : 1 }}
                   >
                     <div
@@ -477,37 +477,37 @@ export default function AssessmentPage() {
                     <div
                       className={`absolute -top-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${roundHoverBg[round.round_type] || "from-primary-100/40 to-secondary-100/20"}`}
                     />
-                    <div className="flex items-center space-x-4 relative z-10">
+                    <div className="flex items-center space-x-3 sm:space-x-4 relative z-10 flex-1 min-w-0">
                       <div
-                        className={`p-3 rounded-xl text-white shadow-sm ${roundInfo.color}`}
+                        className={`p-2 sm:p-3 rounded-xl text-white shadow-sm flex-shrink-0 ${roundInfo.color}`}
                       >
-                        <IconComponent className="w-5 h-5" />
+                        <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{roundInfo.name}</h3>
-                        <p className="text-sm text-gray-600">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{roundInfo.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 sm:line-clamp-none">
                           {roundInfo.description}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
                           {roundInfo.duration}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4 relative z-10">
+                    <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-4 relative z-10 flex-shrink-0">
                       <Badge
-                        className={`${getStatusColor(status)} ${status === "in_progress" ? "animate-pulse" : ""}`}
+                        className={`${getStatusColor(status)} ${status === "in_progress" ? "animate-pulse" : ""} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}
                       >
                         {getStatusIcon(status)}
-                        <span className="ml-1 capitalize">
+                        <span className="ml-1 capitalize whitespace-nowrap">
                           {status.replace("_", " ")}
                         </span>
                       </Badge>
                       {status === "completed" && round.score && (
                         <div className="text-right">
-                          <p className="text-sm font-medium">
+                          <p className="text-xs sm:text-sm font-medium">
                             {round.score} points
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-[10px] sm:text-xs text-gray-500">
                             {round.percentage}%
                           </p>
                         </div>
@@ -516,9 +516,11 @@ export default function AssessmentPage() {
                         <Button
                           onClick={() => handleStartRound(round.round_number)}
                           disabled={!isRoundEnabled}
+                          size="sm"
+                          className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-10 whitespace-nowrap"
                         >
                           {status === "in_progress" ? "Continue" : "Start"}
-                          <ArrowRight className="w-4 h-4 ml-2" />
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
                         </Button>
                       )}
                     </div>

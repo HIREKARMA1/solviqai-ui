@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { LandingNavbar } from '@/components/landing/LandingNavbar'
 import { LandingSidebar } from '@/components/landing/LandingSidebar'
-import { MobileNavbar } from '@/components/landing/MobileNavbar'
+import { MobileTopNavbar } from '@/components/landing/MobileTopNavbar'
+import { MobileSidebar } from '@/components/landing/MobileSidebar'
 import { Loader } from '@/components/ui/loader'
 import { DropdownMenuProvider } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
     const { user, loading } = useAuth()
     const router = useRouter()
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
     useEffect(() => {
         if (!loading && !user) {
@@ -45,24 +47,47 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
 
     return (
         <div className={cn("min-h-screen flex flex-col", hideNavigation && "fixed inset-0 w-full h-full")}>
-            {/* Landing Page Navbar - Hidden when hideNavigation is true */}
+            {/* Landing Page Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
+            {!hideNavigation && (
+                <div className="hidden lg:block">
+                    <LandingNavbar
+                        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        isSidebarCollapsed={isSidebarCollapsed}
+                        onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                        isMobileSidebarOpen={isMobileSidebarOpen}
+                    />
+                </div>
+            )}
+
+            {/* Mobile Top Navbar - Only visible on small screens and when not hidden */}
             <div 
                 className={cn(hideNavigation && "hidden")}
                 style={hideNavigation ? { display: 'none' } : undefined}
             >
-                <LandingNavbar
-                    onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    isSidebarCollapsed={isSidebarCollapsed}
+                <MobileTopNavbar
+                    onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                    isSidebarOpen={isMobileSidebarOpen}
                 />
             </div>
 
-            {/* Mobile Navigation Bar - Only visible on mobile and when not hidden */}
+            {/* Mobile Sidebar - Slides from right on small screens */}
             <div 
+                className={cn(hideNavigation && "hidden")}
+                style={hideNavigation ? { display: 'none' } : undefined}
+            >
+                <MobileSidebar
+                    isOpen={isMobileSidebarOpen}
+                    onClose={() => setIsMobileSidebarOpen(false)}
+                />
+            </div>
+
+            {/* Mobile Navigation Bar - Hidden on small screens (replaced by sidebar) */}
+            {/* <div 
                 className={cn(hideNavigation && "hidden")}
                 style={hideNavigation ? { display: 'none' } : undefined}
             >
                 <MobileNavbar />
-            </div>
+            </div> */}
 
             {/* Main Content Area with Sidebar */}
             <div className="flex flex-1 flex-col">
@@ -82,7 +107,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                         "flex-1 transition-all duration-300 overflow-y-auto",
                         hideNavigation 
                             ? "p-0" // No padding in fullscreen
-                            : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile navbar
+                            : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile top navbar
                         hideNavigation 
                             ? "" // No margin in fullscreen
                             : isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"

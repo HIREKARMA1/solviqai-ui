@@ -42,12 +42,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Dashboard',
     onClick: undefined, // Will be set by component
   },
-  {
-    id: 'career-guidance',
-    icon: <Sparkles className="w-5 h-5" />,
-    label: 'AI Career Guidance',
-    onClick: undefined,
-  },
+  // {
+  //   id: 'career-guidance',
+  //   icon: <Sparkles className="w-5 h-5" />,
+  //   label: 'AI Career Guidance',
+  //   onClick: undefined,
+  // },
   {
     id: 'resume',
     icon: <FileText className="w-5 h-5" />,
@@ -60,18 +60,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Mock Assessment',
     onClick: undefined,
   },
-  {
-    id: 'jobs',
-    icon: <Briefcase className="w-5 h-5" />,
-    label: 'Job Recommendations',
-    onClick: undefined,
-  },
-  {
-    id: 'auto-apply',
-    icon: <Zap className="w-5 h-5" />,
-    label: 'Auto Job Apply',
-    onClick: undefined,
-  },
+  // {
+  //   id: 'jobs',
+  //   icon: <Briefcase className="w-5 h-5" />,
+  //   label: 'Job Recommendations',
+  //   onClick: undefined,
+  // },
+  // {
+  //   id: 'auto-apply',
+  //   icon: <Zap className="w-5 h-5" />,
+  //   label: 'Auto Job Apply',
+  //   onClick: undefined,
+  // },
   {
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
@@ -175,11 +175,11 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
         'dashboard': baseRoute,
-        'career-guidance': `${baseRoute}/career-guidance`,
+        // 'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
-        'jobs': `${baseRoute}/jobs`,
-        'auto-apply': `${baseRoute}/auto-apply`,
+        // 'jobs': `${baseRoute}/jobs`,
+        // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
       };
       return routeMap[featureId] || null;

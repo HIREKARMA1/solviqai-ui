@@ -61,7 +61,7 @@ export function Footer() {
   ];
 
   const companyLinks = [
-    { label: 'About Us', href: '/about' },
+    { label: 'About Us', href: 'https://www.hirekarma.in/about-us/our-story' },
     { label: 'Careers', href: '/careers' },
     { label: 'Blog', href: '/blog' },
     { label: 'Press', href: '/press' },
@@ -121,8 +121,8 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-3 mb-6">
               <div className="relative w-[150px] h-16">
                 <Image
-                  src={mounted && theme === 'dark' ? "/images/HKlogowhite.png" : "/images/HKlogoblack.png"}
-                  alt="Solviq AI Logo"
+                  src={mounted && theme === 'dark' ? "/images/solviqdark.png" : "/images/solviqligt.png"}
+                  alt="SolviQ AI Logo"
                   fill
                   className="object-contain"
                 />
@@ -190,13 +190,24 @@ export function Footer() {
             <ul className="space-y-3">
               {companyLinks.map((link) => (
                 <li key={link.href}>
-                  <Link 
-                    href={link.href}
-                    onClick={(e) => handleLinkClick(link.href, e)}
-                    className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  {link.href.startsWith('http') ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link 
+                      href={link.href}
+                      onClick={(e) => handleLinkClick(link.href, e)}
+                      className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
