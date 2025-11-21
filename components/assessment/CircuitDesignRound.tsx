@@ -24,6 +24,7 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
   const [circuitStates, setCircuitStates] = useState<Record<string, any>>({})
   const [measurements, setMeasurements] = useState<Record<string, any>>({})
   const [manualExportText, setManualExportText] = useState<Record<string, string>>({})
+  const [circuitUrlInput, setCircuitUrlInput] = useState<Record<string, string>>({})
   const [showManualInput, setShowManualInput] = useState<Record<string, boolean>>({})
   const postMessageListeners = useRef<Record<string, ((event: MessageEvent) => void) | null>>({})
   const urlPollIntervals = useRef<Record<string, NodeJS.Timeout | null>>({})
@@ -34,13 +35,31 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
   const [validating, setValidating] = useState<Record<string, boolean>>({})
   const [validationResults, setValidationResults] = useState<Record<string, any>>({})
 
-  // Initialize circuit states (only first question)
-  const initialStates = useMemo(() => {
+  // Initialize circuit states and load from localStorage backup
+  useEffect(() => {
+    if (!roundData?.questions) return
+    
     const states: Record<string, any> = {}
     for (const q of (roundData?.questions || []).slice(0, 1)) {
-      states[q.id] = null // Will be captured from CircuitJS
+      const qid = q.id
+      // Try to load from localStorage backup
+      try {
+        const stored = localStorage.getItem(`circuit_state_${qid}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          // Only use if less than 1 hour old
+          if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp) < 3600000) {
+            states[qid] = parsed
+            console.log('Loaded circuit state from localStorage backup')
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
     }
-    return states
+    if (Object.keys(states).length > 0) {
+      setCircuitStates(prev => ({ ...prev, ...states }))
+    }
   }, [roundData])
 
   const [activeTab, setActiveTab] = useState<Record<string, 'problem' | 'simulation' | 'submission'>>({})
@@ -147,29 +166,68 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
         }
 
         // Handle different message types from CircuitJS
-        if (event.data && typeof event.data === 'object') {
-          // CircuitJS might send state updates
-          if (event.data.type === 'circuitState' || event.data.circuitState) {
-            const state = event.data.circuitState || event.data.state
-            
-            setCircuitStates(prev => ({
-              ...prev,
-              [qid]: {
-                circuit_state: state,
-                circuit_url: event.data.circuitUrl || null,
+        if (event.data) {
+          // Handle string messages (CircuitJS might send URL as string)
+          if (typeof event.data === 'string') {
+            // Check if it's a CircuitJS URL with ctz parameter
+            if (event.data.includes('ctz=') && event.data.includes('falstad.com')) {
+              try {
+                const urlObj = new URL(event.data)
+                const ctzParam = urlObj.searchParams.get('ctz')
+                if (ctzParam && ctzParam.trim().length > 0) {
+                  const state = {
+                    circuit_url: event.data,
+                    circuit_state: ctzParam,
+                    method: 'postMessage_url',
+                    timestamp: Date.now()
+                  }
+                  setCircuitStates(prev => ({ ...prev, [qid]: state }))
+                  // Save to localStorage backup
+                  try {
+                    localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(state))
+                  } catch (e) {
+                    // Ignore localStorage errors
+                  }
+                }
+              } catch (e) {
+                // Invalid URL, ignore
+              }
+            }
+          }
+          
+          // Handle object messages
+          if (typeof event.data === 'object') {
+            // CircuitJS might send state updates
+            if (event.data.type === 'circuitState' || event.data.circuitState || event.data.state) {
+              const state = event.data.circuitState || event.data.state || event.data
+              const stateObj = {
+                circuit_state: typeof state === 'string' ? state : JSON.stringify(state),
+                circuit_url: event.data.circuitUrl || event.data.url || null,
                 method: 'postMessage',
                 timestamp: Date.now()
               }
-            }))
-          }
+              
+              setCircuitStates(prev => ({
+                ...prev,
+                [qid]: stateObj
+              }))
+              
+              // Save to localStorage backup
+              try {
+                localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(stateObj))
+              } catch (e) {
+                // Ignore localStorage errors
+              }
+            }
 
-          // CircuitJS might send measurements
-          if (event.data.type === 'measurements' || event.data.measurements) {
-            const meas = event.data.measurements || event.data
-            setMeasurements(prev => ({
-              ...prev,
-              [qid]: meas
-            }))
+            // CircuitJS might send measurements
+            if (event.data.type === 'measurements' || event.data.measurements) {
+              const meas = event.data.measurements || event.data
+              setMeasurements(prev => ({
+                ...prev,
+                [qid]: meas
+              }))
+            }
           }
         }
       }
@@ -195,25 +253,25 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
     if (!iframe || !iframe.contentWindow) return
 
     try {
-      // Request state from CircuitJS
-      iframe.contentWindow.postMessage(
-        { 
-          type: 'requestState',
-          source: 'solviqai'
-        },
-        'https://falstad.com'
-      )
-
-      // Also try alternative message formats
-      iframe.contentWindow.postMessage(
-        { 
-          action: 'getCircuitState',
-          source: 'solviqai'
-        },
-        'https://falstad.com'
-      )
+      // Try multiple message formats that CircuitJS might support
+      const messages = [
+        { type: 'requestState', source: 'solviqai' },
+        { action: 'getCircuitState', source: 'solviqai' },
+        { command: 'export', source: 'solviqai' },
+        { method: 'getState', source: 'solviqai' },
+        'getState', // Some APIs accept string commands
+        'export'
+      ]
+      
+      messages.forEach(msg => {
+        try {
+          iframe.contentWindow?.postMessage(msg, 'https://falstad.com')
+        } catch (e) {
+          // Ignore individual message failures
+        }
+      })
     } catch (e) {
-      console.warn(`Failed to send postMessage to CircuitJS for question ${qid}:`, e)
+      // Ignore postMessage errors
     }
   }
 
@@ -226,56 +284,126 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
     }
 
     // Store manual export as circuit state
+    const state = {
+      circuit_state: exportText.trim(),
+      circuit_url: null,
+      method: 'manual_export',
+      timestamp: Date.now()
+    }
+    
     setCircuitStates(prev => ({
       ...prev,
-      [qid]: {
-        circuit_state: exportText.trim(),
-        circuit_url: null,
-        method: 'manual_export',
-        timestamp: Date.now()
-      }
+      [qid]: state
     }))
+    
+    // Save to localStorage backup
+    try {
+      localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(state))
+    } catch (e) {
+      // Ignore localStorage errors
+    }
 
     setShowManualInput(prev => ({ ...prev, [qid]: false }))
     toast.success('Circuit state captured from manual export!')
+  }
+  
+  // Handle circuit URL input (user can paste CircuitJS share URL)
+  const handleCircuitUrlInput = (qid: string, url: string) => {
+    if (!url || url.trim().length === 0) {
+      toast.error('Please paste the CircuitJS share URL')
+      return
+    }
+
+    try {
+      // Extract ctz parameter from URL
+      const urlObj = new URL(url.trim())
+      const ctzParam = urlObj.searchParams.get('ctz')
+      
+      if (!ctzParam || ctzParam.trim().length === 0) {
+        toast.error('Invalid CircuitJS URL. Please ensure it contains circuit data (ctz parameter)')
+        return
+      }
+
+      const state = {
+        circuit_url: url.trim(),
+        circuit_state: ctzParam,
+        method: 'url_input',
+        timestamp: Date.now()
+      }
+      
+      setCircuitStates(prev => ({
+        ...prev,
+        [qid]: state
+      }))
+      
+      // Save to localStorage backup
+      try {
+        localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(state))
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      
+      setCircuitUrlInput(prev => ({ ...prev, [qid]: '' }))
+      toast.success('Circuit state captured from URL!')
+    } catch (e) {
+      toast.error('Invalid URL format. Please paste a valid CircuitJS share URL')
+    }
   }
 
   // Get circuit state from CircuitJS iframe (tries URL first, then postMessage, then manual)
   const getCircuitStateFromIframe = (qid: string): any => {
     const iframe = iframeRefs.current[qid]
-    if (!iframe) {
-      // If iframe not available, check for manual export
-      const manualState = circuitStates[qid]
-      if (manualState && manualState.method === 'manual_export') {
-        return manualState
+    let currentState = circuitStates[qid]
+    
+    // Priority 1: Manual export (most reliable)
+    if (currentState && currentState.method === 'manual_export' && currentState.circuit_state) {
+      return currentState
+    }
+    
+    // Priority 2: URL input (user pasted CircuitJS share URL)
+    if (currentState && currentState.method === 'url_input' && currentState.circuit_state) {
+      return currentState
+    }
+
+    // Priority 3: PostMessage URL (CircuitJS sent URL via postMessage)
+    if (currentState && currentState.method === 'postMessage_url' && currentState.circuit_state) {
+      return currentState
+    }
+
+    // Priority 4: URL-based capture (from polling - if it worked)
+    if (currentState && currentState.method === 'url' && currentState.circuit_state) {
+      return currentState
+    }
+
+    // Priority 5: PostMessage-based capture (fallback)
+    if (currentState && currentState.method === 'postMessage' && currentState.circuit_state) {
+      return currentState
+    }
+    
+    // Priority 6: Try localStorage backup
+    if (!currentState || !currentState.circuit_state) {
+      try {
+        const stored = localStorage.getItem(`circuit_state_${qid}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed && parsed.circuit_state && parsed.circuit_state.trim().length > 0) {
+            // Restore to state
+            setCircuitStates(prev => ({ ...prev, [qid]: parsed }))
+            return parsed
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage errors
       }
-      return null
     }
 
-    // Method 1: Try URL-based capture (primary)
-    const urlBasedState = circuitStates[qid]
-    if (urlBasedState && urlBasedState.method === 'url' && urlBasedState.circuit_state) {
-      return urlBasedState
-    }
-
-    // Method 2: Try postMessage-based capture (fallback)
-    const postMessageState = circuitStates[qid]
-    if (postMessageState && postMessageState.method === 'postMessage' && postMessageState.circuit_state) {
-      return postMessageState
-    }
-
-    // Method 3: Try manual export (last resort)
-    if (postMessageState && postMessageState.method === 'manual_export' && postMessageState.circuit_state) {
-      return postMessageState
-    }
-
-    // If no state found, try requesting via postMessage
-    if (!postMessageState || !postMessageState.circuit_state) {
+    // If no state found and iframe exists, try requesting via postMessage
+    if (iframe && (!currentState || !currentState.circuit_state)) {
       requestCircuitStateViaPostMessage(qid)
     }
 
     // Return whatever state we have (might be empty)
-    return circuitStates[qid] || null
+    return currentState || null
   }
 
   // Get CircuitJS shareable URL
@@ -364,28 +492,146 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
   }
 
   // Capture circuit state with loading indicator
-  const captureCircuitStateWithLoading = async (qid: string) => {
+  // Attempts to get fresh circuit state, especially important at submission time
+  const captureCircuitStateWithLoading = async (qid: string, forceFresh: boolean = false) => {
     setCapturingState(prev => ({...prev, [qid]: true}))
     try {
-      let circuitState = getCircuitStateFromIframe(qid)
+      const iframe = iframeRefs.current[qid]
+      let circuitState: any = null
       
-      if (!circuitState || !circuitState.circuit_state) {
+      // Always check cached state first - if it exists and is valid, use it
+      // This handles the case where user submits without making changes
+      const cachedState = getCircuitStateFromIframe(qid)
+      circuitState = cachedState
+      
+      // If we have valid cached state and not forcing fresh, return it immediately
+      if (circuitState && circuitState.circuit_state && !forceFresh) {
+        return circuitState
+      }
+      
+      // If forcing fresh, try to get fresh state but keep cached state as fallback
+      // If no cached state, we must try to get fresh state
+      if (forceFresh || !circuitState || !circuitState.circuit_state) {
+        // Try direct iframe URL access first (most reliable if CORS allows)
+        if (iframe) {
+          try {
+            const iframeUrl = iframe.contentWindow?.location.href
+            if (iframeUrl && iframeUrl.includes('ctz=')) {
+              const urlObj = new URL(iframeUrl)
+              const ctzParam = urlObj.searchParams.get('ctz')
+              // Accept any non-empty ctz parameter (even if short, it might be valid)
+              if (ctzParam && ctzParam.trim().length > 0) {
+              const freshState = {
+                circuit_url: iframeUrl,
+                circuit_state: ctzParam,
+                method: forceFresh ? 'url_direct' : 'url',
+                timestamp: Date.now()
+              }
+              setCircuitStates(prev => ({ ...prev, [qid]: freshState }))
+              // Save to localStorage backup
+              try {
+                localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(freshState))
+              } catch (e) {
+                // Ignore localStorage errors
+              }
+              return freshState
+              }
+            }
+          } catch (e) {
+            // CORS error expected - continue to other methods
+            console.log('Direct URL access blocked (CORS), trying other methods...')
+          }
+        }
+        
+        // Request via postMessage
         requestCircuitStateViaPostMessage(qid)
-        const MAX_RETRIES = 5
+        
+        // Retry with exponential backoff
+        const MAX_RETRIES = 6
         const INITIAL_DELAY_MS = 200
         let retryCount = 0
         
         while (retryCount < MAX_RETRIES) {
           const delay = INITIAL_DELAY_MS * Math.pow(2, retryCount)
           await new Promise(resolve => setTimeout(resolve, delay))
+          
+          // Try getting state from cache (updated by polling or postMessage)
           circuitState = getCircuitStateFromIframe(qid)
-          if (circuitState?.circuit_state) break
+          
+          // Also try URL capture again in each retry
+          if (iframe && (!circuitState || !circuitState.circuit_state)) {
+            try {
+              const iframeUrl = iframe.contentWindow?.location.href
+              if (iframeUrl && iframeUrl.includes('ctz=')) {
+                const urlObj = new URL(iframeUrl)
+                const ctzParam = urlObj.searchParams.get('ctz')
+                if (ctzParam && ctzParam.trim().length > 0) {
+                const urlState = {
+                  circuit_url: iframeUrl,
+                  circuit_state: ctzParam,
+                  method: 'url',
+                  timestamp: Date.now()
+                }
+                setCircuitStates(prev => ({ ...prev, [qid]: urlState }))
+                // Save to localStorage backup
+                try {
+                  localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(urlState))
+                } catch (e) {
+                  // Ignore localStorage errors
+                }
+                circuitState = urlState
+                  break
+                }
+              }
+            } catch (e) {
+              // Continue to next retry
+            }
+          }
+          
+          // If we got valid state, break
+          if (circuitState && circuitState.circuit_state) break
+          
           retryCount++
           if (retryCount < MAX_RETRIES) {
             requestCircuitStateViaPostMessage(qid)
           }
         }
       }
+      
+      // If we still don't have state but have cached state, use cached state as fallback
+      // This ensures we submit whatever was last captured, even if fresh capture failed
+      if ((!circuitState || !circuitState.circuit_state) && circuitStates[qid] && circuitStates[qid].circuit_state) {
+        console.log('Using cached circuit state as fallback')
+        const cached = circuitStates[qid]
+        // Save to localStorage
+        try {
+          localStorage.setItem(`circuit_state_${qid}`, JSON.stringify(cached))
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        return cached
+      }
+      
+      // Final fallback: Try localStorage
+      if ((!circuitState || !circuitState.circuit_state)) {
+        try {
+          const stored = localStorage.getItem(`circuit_state_${qid}`)
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            if (parsed && parsed.circuit_state) {
+              // Accept even if empty string - let backend handle validation
+              console.log('Using localStorage backup as final fallback')
+              // Restore to state
+              setCircuitStates(prev => ({ ...prev, [qid]: parsed }))
+              return parsed
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to read from localStorage:', e)
+        }
+      }
+      
+      // Return whatever we have, even if empty - let submission handler deal with it
       return circuitState
     } finally {
       setCapturingState(prev => ({...prev, [qid]: false}))
@@ -460,16 +706,129 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
     try {
       setBusy(true)
       
+      // Pre-check: Warn if no state is available before attempting capture
+      const q = roundData?.questions?.[0]
+      if (q) {
+        const hasState = circuitStates[q.id]?.circuit_state || 
+          (() => {
+            try {
+              const stored = localStorage.getItem(`circuit_state_${q.id}`)
+              return stored ? JSON.parse(stored)?.circuit_state : null
+            } catch { return null }
+          })()
+        
+        if (!hasState) {
+          // Show warning but don't block - let capture attempt proceed
+          console.warn('No circuit state found before submission attempt')
+        }
+      }
+      
       const responses = await Promise.all(
         (roundData?.questions || []).slice(0, 1).map(async (q: any) => {
-          const circuitState = await captureCircuitStateWithLoading(q.id)
+          // Try to capture circuit state (will use cached if available, or attempt fresh capture)
+          const circuitState = await captureCircuitStateWithLoading(q.id, true)
           const circuitMeasurements = getMeasurementsFromCircuit(q.id)
           const circuitUrl = getCircuitUrl(q.id)
           
-          if (!circuitState || !circuitState.circuit_state) {
-            const errorMsg = `Circuit appears to be empty. Please design a circuit before submitting.`
-            toast.error(errorMsg)
-            throw new Error(errorMsg)
+          // Check if circuit state is valid - accept any non-empty state
+          if (!circuitState || !circuitState.circuit_state || circuitState.circuit_state.trim().length === 0) {
+            // Fallback 1: Check cached state in memory
+            let finalState = circuitStates[q.id]
+            
+            // Fallback 2: Check localStorage directly (most reliable backup)
+            if (!finalState || !finalState.circuit_state || finalState.circuit_state.trim().length === 0) {
+              try {
+                const stored = localStorage.getItem(`circuit_state_${q.id}`)
+                if (stored) {
+                  const parsed = JSON.parse(stored)
+                  if (parsed && parsed.circuit_state && parsed.circuit_state.trim().length > 0) {
+                    console.log('Using localStorage backup for submission')
+                    finalState = parsed
+                    // Restore to state for consistency
+                    setCircuitStates(prev => ({ ...prev, [q.id]: parsed }))
+                  }
+                }
+              } catch (e) {
+                console.warn('Failed to read from localStorage:', e)
+              }
+            }
+            
+            // If we found a valid fallback state, use it
+            if (finalState && finalState.circuit_state && finalState.circuit_state.trim().length > 0) {
+              console.log('Using fallback state for submission:', finalState.method || 'unknown')
+              // Save to localStorage before submitting (update timestamp)
+              try {
+                finalState.timestamp = Date.now()
+                localStorage.setItem(`circuit_state_${q.id}`, JSON.stringify(finalState))
+              } catch (e) {
+                // Ignore localStorage errors
+              }
+              return {
+                question_id: q.id,
+                response_text: JSON.stringify({
+                  circuit_state: finalState.circuit_state,
+                  circuit_url: finalState.circuit_url || circuitUrl,
+                  measurements: circuitMeasurements,
+                  capture_method: finalState?.method || 'fallback'
+                }),
+                response_data: {
+                  circuit_state: finalState.circuit_state,
+                  circuit_url: finalState.circuit_url || circuitUrl,
+                  measurements: circuitMeasurements,
+                  capture_method: finalState?.method || 'fallback'
+                },
+                time_taken: 0,
+              }
+            }
+            
+            // Final fallback: Check if user has ANY circuit state stored anywhere
+            // This is a last resort - accept even minimal state
+            const allPossibleStates = [
+              circuitState,
+              circuitStates[q.id],
+              (() => {
+                try {
+                  const stored = localStorage.getItem(`circuit_state_${q.id}`)
+                  return stored ? JSON.parse(stored) : null
+                } catch { return null }
+              })()
+            ].filter(s => s && s.circuit_state)
+            
+            if (allPossibleStates.length > 0) {
+              const anyState = allPossibleStates[0]
+              console.log('Using any available state as last resort:', anyState.method || 'unknown')
+              return {
+                question_id: q.id,
+                response_text: JSON.stringify({
+                  circuit_state: anyState.circuit_state || '',
+                  circuit_url: anyState.circuit_url || circuitUrl,
+                  measurements: circuitMeasurements,
+                  capture_method: anyState?.method || 'last_resort'
+                }),
+                response_data: {
+                  circuit_state: anyState.circuit_state || '',
+                  circuit_url: anyState.circuit_url || circuitUrl,
+                  measurements: circuitMeasurements,
+                  capture_method: anyState?.method || 'last_resort'
+                },
+                time_taken: 0,
+              }
+            }
+            
+            // If we get here, truly no state available
+            // Auto-open manual export section to help user
+            setShowManualInput(prev => ({ ...prev, [q.id]: true }))
+            
+            const errorMsg = `Unable to capture circuit state automatically. Please use the "Manual Export" option below:\n\n1. In CircuitJS, right-click → "File" → "Export"\n2. Copy the exported text\n3. Paste it in the "Manual Export" section below\n4. Click "Import Circuit Text"\n5. Then submit again.`
+            toast.error(errorMsg, { duration: 10000 })
+            throw new Error('Circuit state capture failed - no state available')
+          }
+          
+          // Save successful capture to localStorage before submitting
+          try {
+            localStorage.setItem(`circuit_state_${q.id}`, JSON.stringify(circuitState))
+          } catch (e) {
+            // Ignore localStorage errors
           }
           
           return {
@@ -949,31 +1308,81 @@ export function CircuitDesignRound({ assessmentId, roundData, onSubmitted, timeL
                         Last captured: {new Date(circuitStates[q.id].timestamp).toLocaleTimeString()}
                       </div>
                     )}
-                    {/* Manual Export Input (Fallback) */}
-                    <button
-                      onClick={() => setShowManualInput(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
-                      className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-colors mt-2"
-                    >
-                      {showManualInput[q.id] ? '▼ Hide' : '▶ Show'} Manual Export
-                    </button>
+                    {/* Manual Export Input (Fallback) - Make it more prominent */}
+                    <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+                      <button
+                        onClick={() => setShowManualInput(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
+                        className="w-full flex items-center justify-between text-sm font-semibold text-amber-900 dark:text-amber-200 hover:text-amber-950 dark:hover:text-amber-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          {showManualInput[q.id] ? '▼ Hide' : '▶ Show'} Manual Export (If automatic capture fails)
+                        </span>
+                      </button>
+                      {!circuitStates[q.id]?.circuit_state && (
+                        <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
+                          ⚠️ No circuit state captured. Use manual export to ensure your circuit is saved.
+                        </p>
+                      )}
+                    </div>
                     {showManualInput[q.id] && (
-                      <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border-2 border-slate-200 dark:border-slate-700 mt-3">
-                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block uppercase tracking-wide">
-                          Paste Exported Circuit Text
-                        </label>
-                        <textarea
-                          value={manualExportText[q.id] || ''}
-                          onChange={(e) => setManualExportText(prev => ({ ...prev, [q.id]: e.target.value }))}
-                          placeholder="Paste exported circuit text from CircuitJS (File → Export)..."
-                          className="w-full h-28 p-3 text-xs border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent"
-                        />
-                        <Button
-                          onClick={() => handleManualExport(q.id, manualExportText[q.id] || '')}
-                          disabled={!manualExportText[q.id] || manualExportText[q.id].trim().length === 0}
-                          className="w-full text-xs py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Import Circuit State
-                        </Button>
+                      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border-2 border-slate-200 dark:border-slate-700 mt-3">
+                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-2">
+                          Manual Capture Options
+                        </div>
+                        
+                        {/* Option 1: Circuit URL Input */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">
+                            Option 1: Paste CircuitJS Share URL
+                          </label>
+                          <div className="text-xs text-slate-500 dark:text-slate-500 mb-1.5">
+                            In CircuitJS, click "File" → "Share" and copy the URL, then paste it here:
+                          </div>
+                          <input
+                            type="text"
+                            value={circuitUrlInput[q.id] || ''}
+                            onChange={(e) => setCircuitUrlInput(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            placeholder="https://falstad.com/circuit/circuitjs.html?ctz=..."
+                            className="w-full p-2.5 text-xs border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent"
+                          />
+                          <Button
+                            onClick={() => handleCircuitUrlInput(q.id, circuitUrlInput[q.id] || '')}
+                            disabled={!circuitUrlInput[q.id] || circuitUrlInput[q.id].trim().length === 0}
+                            className="w-full text-xs py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Import from URL
+                          </Button>
+                        </div>
+                        
+                        <div className="border-t border-slate-300 dark:border-slate-600 pt-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-500 mb-2 text-center">OR</div>
+                        </div>
+                        
+                        {/* Option 2: Manual Export Text */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">
+                            Option 2: Paste Exported Circuit Text
+                          </label>
+                          <div className="text-xs text-slate-500 dark:text-slate-500 mb-1.5">
+                            In CircuitJS, click "File" → "Export" and copy the text, then paste it here:
+                          </div>
+                          <textarea
+                            value={manualExportText[q.id] || ''}
+                            onChange={(e) => setManualExportText(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            placeholder="Paste exported circuit text from CircuitJS (File → Export)..."
+                            className="w-full h-28 p-3 text-xs border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent"
+                          />
+                          <Button
+                            onClick={() => handleManualExport(q.id, manualExportText[q.id] || '')}
+                            disabled={!manualExportText[q.id] || manualExportText[q.id].trim().length === 0}
+                            className="w-full text-xs py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Import Circuit Text
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
