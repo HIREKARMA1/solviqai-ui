@@ -604,6 +604,78 @@ class ApiClient {
     return response.data;
   }
 
+  // Circuit Design API Methods (Reusable for Practice & Assessments)
+  async getCircuitConfig(params: {
+    circuit_type?: string;
+    difficulty?: string;
+    question_id?: string;
+    practice_id?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/circuit-design/config`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async simulateCircuit(payload: {
+    circuit_state: Record<string, any>;
+    circuit_url?: string;
+    question_id?: string;
+    practice_id?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/circuit-design/simulate`,
+      payload
+    );
+    return response.data;
+  }
+
+  async validateCircuit(payload: {
+    circuit_state: Record<string, any>;
+    expected_config: Record<string, any>;
+    circuit_url?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/circuit-design/validate`,
+      payload
+    );
+    return response.data;
+  }
+
+  async submitCircuitDesign(payload: {
+    circuit_state: Record<string, any>;
+    circuit_url?: string;
+    measurements?: Record<string, any>;
+    notes?: string;
+    question_id?: string;
+    practice_id?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/circuit-design/submit`,
+      payload
+    );
+    return response.data;
+  }
+
+  async getCircuitTemplates(params: {
+    category?: string;
+    difficulty?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/circuit-design/templates`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async getCircuitTemplate(templateId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/circuit-design/templates/${templateId}`
+    );
+    return response.data;
+  }
+
   async submitVoiceResponse(
     assessmentId: string,
     roundId: string,

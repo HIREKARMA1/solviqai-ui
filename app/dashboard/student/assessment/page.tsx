@@ -33,6 +33,7 @@ import {
   BarChart3,
   Award,
   Calendar,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -90,6 +91,13 @@ const roundDisplay: Record<
     duration: "60 min",
     icon: Target,
     color: "bg-emerald-600",
+  },
+  circuit_design: {
+    name: "Circuit Design",
+    description: "Design and simulate electronic circuits",
+    duration: "45 min",
+    icon: Zap,
+    color: "bg-amber-500",
   },
   technical_interview: {
     name: "Technical Interview",
@@ -245,6 +253,7 @@ export default function AssessmentPage() {
 
   // Light hover/tint background per round type to match landing theme
   const roundHoverBg: Record<string, string> = {
+    circuit_design: "from-[rgb(30_58_138/0.1)] to-[rgb(30_58_138/0.05)] dark:from-[rgb(30_58_138/0.2)] dark:to-[rgb(30_58_138/0.1)]",
     aptitude:
       "from-blue-50 to-blue-100/60 dark:from-blue-900/20 dark:to-blue-900/10",
     soft_skills:
