@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -10,6 +11,7 @@ import { Loader } from '@/components/ui/loader'
 import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
 import { AlertCircle, CheckCircle2, Clock, Calculator, TrendingUp, Award } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Problem {
   id: string
@@ -48,12 +50,20 @@ interface Evaluation {
 }
 
 export default function CivilPracticePage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const assessmentId = searchParams?.get('assessment_id') || undefined
+  const roundId = searchParams?.get('round_id') || undefined
+  const roundNumber = searchParams?.get('round_number') || undefined
+  
   const [problem, setProblem] = useState<Problem | null>(null)
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [loading, setLoading] = useState(false)
   const [startTime, setStartTime] = useState<number | null>(null)
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [roundSubmitted, setRoundSubmitted] = useState(false)
+  const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
 
   // Scroll to top of page
   const scrollToTop = () => {
@@ -98,6 +108,7 @@ export default function CivilPracticePage() {
     setElapsedTime(elapsed)
     
     setLoading(true)
+    setRoundSubmitError(null)
     
     try {
       // Send complete problem object for AI evaluation
@@ -108,10 +119,36 @@ export default function CivilPracticePage() {
       
       if (response.success && response.evaluation) {
         setEvaluation(response.evaluation)
+        toast.success('Evaluation received')
+        
+        // If this is part of an assessment, submit the round
+        if (assessmentId && roundId) {
+          try {
+            await apiClient.submitRoundResponses(
+              assessmentId,
+              roundId,
+              [{
+                response_data: {
+                  problem,
+                  student_answers: answers,
+                  evaluation: response.evaluation,
+                },
+                time_taken: elapsed,
+              }]
+            )
+            setRoundSubmitted(true)
+            toast.success('Assessment round recorded successfully!')
+          } catch (submitErr: any) {
+            console.error(submitErr)
+            const message = submitErr?.response?.data?.detail || submitErr?.message || 'Failed to record round'
+            setRoundSubmitError(message)
+            toast.error('Failed to record assessment round')
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to evaluate answers:', error)
-      alert('Failed to evaluate answers. Please try again.')
+      toast.error('Failed to evaluate answers. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -133,8 +170,16 @@ export default function CivilPracticePage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  // Auto-generate problem on mount if in assessment mode
+  useEffect(() => {
+    if (assessmentId && !problem) {
+      generateProblem()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
-    <DashboardLayout>
+    <DashboardLayout requiredUserType="student">
       <div className="space-y-6 p-6">
         {/* Header */}
         <div className="space-y-2">
@@ -144,8 +189,49 @@ export default function CivilPracticePage() {
           </p>
         </div>
 
+        {/* Assessment Context Banner */}
+        {assessmentId && (
+          <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
+            Linked to Assessment: <span className="font-medium">{assessmentId}</span>
+            {roundNumber && <span className="ml-2">Round {roundNumber}</span>}
+          </div>
+        )}
+
+        {/* Round Submitted Success */}
+        {roundSubmitted && (
+          <Card className="border border-emerald-200 bg-emerald-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-emerald-800">Round Submitted</CardTitle>
+              <CardDescription className="text-emerald-700">Your civil quantity estimation has been recorded.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center gap-3">
+              <Button onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                Return to Assessment
+              </Button>
+              <Button variant="ghost" onClick={() => setRoundSubmitted(false)}>
+                Stay and practice more
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Round Submit Error */}
+        {roundSubmitError && (
+          <Card className="border border-red-200 bg-red-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-red-800">Submission Error</CardTitle>
+              <CardDescription className="text-red-700">{roundSubmitError}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => setRoundSubmitError(null)} variant="outline">
+                Dismiss
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Generate Problem Button */}
-        {!problem && !evaluation && (
+        {!problem && !evaluation && !loading && (
           <Card className="border-2 border-dashed">
             <CardContent className="pt-6 pb-8">
               <div className="text-center space-y-4">
@@ -153,9 +239,14 @@ export default function CivilPracticePage() {
                   <Calculator className="w-10 h-10 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold mb-2">Ready to Practice?</h2>
+                  <h2 className="text-2xl font-semibold mb-2">
+                    {assessmentId ? 'Assessment Round Ready' : 'Ready to Practice?'}
+                  </h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Generate a quantity estimation problem and calculate material quantities for real-world civil engineering scenarios
+                    {assessmentId 
+                      ? 'Click below to generate your quantity estimation problem for this assessment round'
+                      : 'Generate a quantity estimation problem and calculate material quantities for real-world civil engineering scenarios'
+                    }
                   </p>
                 </div>
                 <Button 
@@ -164,18 +255,21 @@ export default function CivilPracticePage() {
                   size="lg"
                   className="mt-4"
                 >
-                  {loading ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="mr-2 h-4 w-4" />
-                      Generate New Problem
-                    </>
-                  )}
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Generate New Problem
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {loading && !problem && (
+          <Card>
+            <CardContent className="pt-6 pb-8">
+              <div className="text-center space-y-4">
+                <Loader className="mx-auto h-12 w-12" />
+                <p className="text-muted-foreground">Generating your civil engineering problem...</p>
               </div>
             </CardContent>
           </Card>
@@ -464,31 +558,65 @@ export default function CivilPracticePage() {
             <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
               <CardContent className="pt-6">
                 <div className="text-center space-y-4">
-                  <h3 className="text-lg font-semibold">Ready for the Next Challenge?</h3>
+                  <h3 className="text-lg font-semibold">
+                    {assessmentId && roundSubmitted ? 'Round Complete!' : 'Ready for the Next Challenge?'}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Practice more problems to improve your quantity estimation skills
+                    {assessmentId && roundSubmitted 
+                      ? 'Your assessment has been recorded. You can practice more or return to the assessment.'
+                      : 'Practice more problems to improve your quantity estimation skills'
+                    }
                   </p>
                   <div className="flex gap-3 justify-center">
-                    <Button 
-                      onClick={() => {
-                        setEvaluation(null)
-                        setProblem(null)
-                        setAnswers({})
-                        scrollToTop()
-                      }} 
-                      size="lg"
-                      className="min-w-[200px]"
-                    >
-                      <Calculator className="mr-2 h-5 w-5" />
-                      Try Another One
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      onClick={() => window.print()}
-                    >
-                      Print Results
-                    </Button>
+                    {assessmentId && roundSubmitted ? (
+                      <>
+                        <Button 
+                          onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}
+                          size="lg"
+                          className="min-w-[200px]"
+                        >
+                          Return to Assessment
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="lg"
+                          onClick={() => {
+                            setEvaluation(null)
+                            setProblem(null)
+                            setAnswers({})
+                            setRoundSubmitted(false)
+                            generateProblem()
+                          }}
+                        >
+                          <Calculator className="mr-2 h-5 w-5" />
+                          Practice More
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button 
+                          onClick={() => {
+                            setEvaluation(null)
+                            setProblem(null)
+                            setAnswers({})
+                            scrollToTop()
+                            if (assessmentId) generateProblem()
+                          }} 
+                          size="lg"
+                          className="min-w-[200px]"
+                        >
+                          <Calculator className="mr-2 h-5 w-5" />
+                          Try Another One
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="lg" 
+                          onClick={() => window.print()}
+                        >
+                          Print Results
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
