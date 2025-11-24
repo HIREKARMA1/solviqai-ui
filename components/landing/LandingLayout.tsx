@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { LandingNavbar } from './LandingNavbar';
 import { LandingSidebar } from './LandingSidebar';
 import { MobileNavbar } from './MobileNavbar';
+import { MobileTopNavbar } from './MobileTopNavbar';
+import { MobileSidebar } from './MobileSidebar';
 import { Footer } from './Footer';
 import { cn } from '@/lib/utils';
 
@@ -15,20 +17,37 @@ interface LandingLayoutProps {
 
 export function LandingLayout({ children, activeFeature, onFeatureChange }: LandingLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navbar */}
-      <LandingNavbar
-        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        isSidebarCollapsed={isSidebarCollapsed}
+      {/* Landing Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
+      <div className="hidden lg:block">
+        <LandingNavbar
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      </div>
+
+      {/* Mobile Top Navbar - Only visible on small screens */}
+      <MobileTopNavbar
+        onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        isSidebarOpen={isMobileSidebarOpen}
       />
 
-      {/* Mobile Navigation Bar - Only visible on mobile */}
-      <MobileNavbar
+      {/* Mobile Sidebar - Slides from right on small screens */}
+      <MobileSidebar
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
         activeFeature={activeFeature}
         onFeatureChange={onFeatureChange}
       />
+
+      {/* Mobile Navigation Bar - Hidden on small screens (replaced by sidebar) */}
+      {/* <MobileNavbar
+        activeFeature={activeFeature}
+        onFeatureChange={onFeatureChange}
+      /> */}
 
       {/* Main Content Area with Sidebar */}
       <div className="flex flex-1 flex-col">
@@ -45,7 +64,6 @@ export function LandingLayout({ children, activeFeature, onFeatureChange }: Land
         <main
           className={cn(
             "flex-1 transition-all duration-300",
-            "pt-20 lg:pt-0", // Add top padding on mobile for mobile navbar (navbar h-20 + mobile nav height)
             isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
           )}
         >

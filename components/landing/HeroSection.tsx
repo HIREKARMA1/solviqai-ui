@@ -51,14 +51,14 @@ export function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-12"
     >
       {/* Animated Background */}
       <div className="absolute inset-0 gradient-bg -z-10">
         <AnimatedBackground variant="default" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-20">
         <div className="text-center max-w-5xl mx-auto">
           {/* Stats Badges */}
           <motion.div
