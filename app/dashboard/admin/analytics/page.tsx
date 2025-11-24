@@ -20,7 +20,10 @@ import {
   AlertCircle,
   Download,
   Calendar,
-  Filter
+  Filter,
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { 
   MetricCard, 
@@ -28,12 +31,19 @@ import {
   PieChartCard,
   DataTableCard
 } from '@/components/analytics'
+import toast from 'react-hot-toast'
 
 export default function AdminAnalytics() {
     const [analytics, setAnalytics] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('overview')
     const [dateRange, setDateRange] = useState('30') // days
+    const [expandedStudent, setExpandedStudent] = useState<string | null>(null)
+    const [studentAssessments, setStudentAssessments] = useState<Record<string, any>>({})
+    const [loadingAssessments, setLoadingAssessments] = useState<string | null>(null)
+    const [selectedReport, setSelectedReport] = useState<any>(null)
+    const [showReportModal, setShowReportModal] = useState(false)
+    const [loadingReport, setLoadingReport] = useState(false)
 
     useEffect(() => {
         fetchAnalytics()
@@ -61,6 +71,46 @@ export default function AdminAnalytics() {
             console.error('Error fetching analytics:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const toggleStudentExpansion = async (studentId: string) => {
+        if (expandedStudent === studentId) {
+            setExpandedStudent(null)
+        } else {
+            setExpandedStudent(studentId)
+            
+            // Load assessments if not already loaded
+            if (!studentAssessments[studentId]) {
+                setLoadingAssessments(studentId)
+                try {
+                    const data = await apiClient.getStudentAssessmentsAdmin(studentId)
+                    setStudentAssessments(prev => ({
+                        ...prev,
+                        [studentId]: data.assessments || []
+                    }))
+                } catch (error: any) {
+                    console.error('Error loading assessments:', error)
+                    toast.error('Failed to load student assessments')
+                } finally {
+                    setLoadingAssessments(null)
+                }
+            }
+        }
+    }
+
+    const handleViewReport = async (studentId: string, assessmentId: string) => {
+        setLoadingReport(true)
+        setShowReportModal(true)
+        try {
+            const data = await apiClient.getStudentAssessmentReportAdmin(studentId, assessmentId, true)
+            setSelectedReport(data)
+        } catch (error: any) {
+            console.error('Error loading report:', error)
+            toast.error('Failed to load assessment report')
+            setShowReportModal(false)
+        } finally {
+            setLoadingReport(false)
         }
     }
 
@@ -356,60 +406,265 @@ export default function AdminAnalytics() {
                             xAxisKey="round"
                         />
 
-                        {/* Top Students Leaderboard */}
-                        <DataTableCard
-                            title="Top Performers by Score"
-                            description="Top 10 students with highest scores"
-                            data={leaderboards.top_students?.by_score || []}
-                            columns={[
-                                { key: 'name', label: 'Student Name' },
-                                { key: 'email', label: 'Email' },
-                                { key: 'college', label: 'College' },
-                                { 
-                                    key: 'score', 
-                                    label: 'Score',
-                                    render: (value: any) => value ? `${value}%` : '0%'
-                                }
-                            ]}
-                        />
+                        {/* Top Students Leaderboard with Reports */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Top Performers by Score</CardTitle>
+                                <CardDescription>Top students with highest scores - Click to view reports</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {leaderboards.top_students?.by_score && leaderboards.top_students.by_score.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {leaderboards.top_students.by_score.map((student: any, index: number) => (
+                                            <div key={student.id || index} className="border rounded-lg overflow-hidden">
+                                                {/* Student Header */}
+                                                <div className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <div className="flex items-center gap-4 flex-1">
+                                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                                                            #{index + 1}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium">{student.name}</h4>
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400">{student.email}</p>
+                                                            {student.college && (
+                                                                <Badge variant="outline" className="text-xs mt-1">
+                                                                    <Building2 className="h-3 w-3 mr-1" />
+                                                                    {student.college}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-2xl font-bold text-primary">
+                                                                {student.score ? `${student.score}%` : '0%'}
+                                                            </div>
+                                                            {student.readiness && (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    Readiness: {student.readiness}%
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => toggleStudentExpansion(student.id)}
+                                                        className="ml-4"
+                                                    >
+                                                        <FileText className="h-4 w-4 mr-1" />
+                                                        Reports
+                                                        {expandedStudent === student.id ? (
+                                                            <ChevronUp className="h-4 w-4 ml-1" />
+                                                        ) : (
+                                                            <ChevronDown className="h-4 w-4 ml-1" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+
+                                                {/* Expanded Assessments Section */}
+                                                {expandedStudent === student.id && (
+                                                    <div className="border-t bg-gray-50 dark:bg-gray-900 p-4">
+                                                        {loadingAssessments === student.id ? (
+                                                            <div className="flex justify-center py-4">
+                                                                <Loader size="sm" />
+                                                            </div>
+                                                        ) : studentAssessments[student.id]?.length > 0 ? (
+                                                            <div className="space-y-3">
+                                                                <h5 className="font-medium text-sm">Assessment History</h5>
+                                                                {studentAssessments[student.id].map((assessment: any) => (
+                                                                    <div
+                                                                        key={assessment.id}
+                                                                        className="bg-white dark:bg-gray-800 p-3 rounded border"
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="flex-1">
+                                                                                <p className="font-medium text-sm">
+                                                                                    {assessment.job_role.title}
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                                    {assessment.job_role.category}
+                                                                                </p>
+                                                                                <div className="flex gap-3 mt-2">
+                                                                                    <Badge variant={assessment.status === 'COMPLETED' ? 'success' : 'secondary'} className="text-xs">
+                                                                                        {assessment.status}
+                                                                                    </Badge>
+                                                                                    {assessment.overall_score !== null && (
+                                                                                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                                            Score: {assessment.overall_score?.toFixed(1)}%
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {assessment.readiness_index !== null && (
+                                                                                        <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                                                                                            Readiness: {assessment.readiness_index?.toFixed(1)}%
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                                    {assessment.completed_at 
+                                                                                        ? `Completed: ${new Date(assessment.completed_at).toLocaleDateString()}`
+                                                                                        : `Started: ${new Date(assessment.created_at).toLocaleDateString()}`
+                                                                                    }
+                                                                                </p>
+                                                                            </div>
+                                                                            {assessment.status === 'COMPLETED' && (
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    onClick={() => handleViewReport(student.id, assessment.id)}
+                                                                                    className="ml-3"
+                                                                                >
+                                                                                    <Eye className="h-4 w-4 mr-1" />
+                                                                                    View Report
+                                                                                </Button>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center py-4 text-gray-500 text-sm">
+                                                                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                                <p>No assessments found for this student</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                        <p>No student data available</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     {/* Colleges Tab */}
                     <TabsContent value="colleges" className="space-y-6">
-                        {/* College Performance Metrics */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* College Enrollment Overview */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <MetricCard
-                                title="Total Capacity"
-                                value={collegeAnalytics.capacity_metrics?.total_capacity || 0}
+                                title="Total Colleges Enrolled"
+                                value={collegeAnalytics.college_performance?.all_colleges?.length || 0}
                                 icon={<Building2 className="h-5 w-5" />}
-                                description="Combined college capacity"
+                                description="Registered colleges"
                             />
                             <MetricCard
-                                title="Total Enrolled"
+                                title="Total Students"
                                 value={collegeAnalytics.capacity_metrics?.total_enrolled || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                description="Students enrolled"
-                            />
-                            <MetricCard
-                                title="Utilization Rate"
-                                value={`${collegeAnalytics.capacity_metrics?.overall_utilization || 0}%`}
-                                icon={<TrendingUp className="h-5 w-5" />}
-                                description="Capacity utilization"
+                                description="All enrolled students"
                             />
                         </div>
 
+                        {/* All Colleges with Student Counts */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>All Colleges - Student Enrollment</CardTitle>
+                                <CardDescription>
+                                    Complete list of {collegeAnalytics.college_performance?.all_colleges?.length || 0} enrolled colleges 
+                                    with individual student counts
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {collegeAnalytics.college_performance?.all_colleges && collegeAnalytics.college_performance.all_colleges.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {collegeAnalytics.college_performance.all_colleges.map((college: any, index: number) => (
+                                            <div 
+                                                key={college.id || index} 
+                                                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-base">{college.name}</h4>
+                                                        <div className="flex gap-4 mt-1">
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                                                                Capacity: {college.capacity}
+                                                            </span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                                                                Utilization: {college.utilization}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    <div className="text-center">
+                                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                                            {college.student_count || college.total_students || 0}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">Students</div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                                            {college.assessments_count || 0}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">Assessments</div>
+                                                    </div>
+                                                    {college.avg_score !== undefined && college.avg_score > 0 && (
+                                                        <div className="text-center">
+                                                            <Badge variant={
+                                                                college.avg_score >= 75 ? 'success' : 
+                                                                college.avg_score >= 60 ? 'default' : 
+                                                                'secondary'
+                                                            }>
+                                                                {college.avg_score}% avg
+                                                            </Badge>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 text-gray-500">
+                                        <Building2 className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                                        <p className="text-lg font-medium">No Colleges Enrolled</p>
+                                        <p className="text-sm mt-2">Colleges will appear here once they are registered</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
                         {/* Top Performing Colleges */}
-                        <DataTableCard
-                            title="Top Performing Colleges"
-                            description="Colleges ranked by average student performance"
-                            data={collegeAnalytics.college_performance?.top_performing || []}
-                            columns={[
-                                { key: 'name', label: 'College Name' },
-                                { key: 'avg_score', label: 'Avg Score' },
-                                { key: 'total_students', label: 'Students' },
-                                { key: 'assessments_count', label: 'Assessments' }
-                            ]}
-                        />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Top Performing Colleges</CardTitle>
+                                <CardDescription>Colleges ranked by average student performance</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {collegeAnalytics.college_performance?.top_performing && collegeAnalytics.college_performance.top_performing.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {collegeAnalytics.college_performance.top_performing.slice(0, 5).map((college: any, index: number) => (
+                                            <div key={college.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 font-bold text-sm">
+                                                        #{index + 1}
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-medium">{college.name}</h5>
+                                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                            {college.total_students} students • {college.assessments_count} assessments
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="success" className="text-lg px-4 py-1">
+                                                    {college.avg_score}%
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                        <p>No performance data available</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         {/* Most Active Colleges */}
                         <BarChartCard
@@ -550,6 +805,206 @@ export default function AdminAnalytics() {
                         )}
                     </TabsContent>
                 </Tabs>
+
+                {/* Report Modal */}
+                {showReportModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Student Assessment Report</CardTitle>
+                                        {selectedReport?.student_info && (
+                                            <CardDescription>
+                                                {selectedReport.student_info.name} ({selectedReport.student_info.email})
+                                            </CardDescription>
+                                        )}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setShowReportModal(false)
+                                            setSelectedReport(null)
+                                        }}
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingReport ? (
+                                    <div className="flex justify-center py-12">
+                                        <Loader size="lg" />
+                                    </div>
+                                ) : selectedReport ? (
+                                    <div className="space-y-6">
+                                        {/* Student Info */}
+                                        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                                            <h3 className="font-semibold mb-2">Student Information</h3>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <span className="text-gray-600 dark:text-gray-400">Name:</span>{' '}
+                                                    <span className="font-medium">{selectedReport.student_info.name}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-600 dark:text-gray-400">Email:</span>{' '}
+                                                    <span className="font-medium">{selectedReport.student_info.email}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-600 dark:text-gray-400">Degree:</span>{' '}
+                                                    <span className="font-medium">{selectedReport.student_info.degree}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-600 dark:text-gray-400">Branch:</span>{' '}
+                                                    <span className="font-medium">{selectedReport.student_info.branch}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Job Role */}
+                                        <div>
+                                            <h3 className="font-semibold mb-2">Job Role</h3>
+                                            <Badge variant="outline" className="text-sm">
+                                                {selectedReport.job_role.title} - {selectedReport.job_role.category}
+                                            </Badge>
+                                        </div>
+
+                                        {/* Overall Performance */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Card>
+                                                <CardHeader className="pb-3">
+                                                    <CardTitle className="text-sm">Overall Score</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                                                        {selectedReport.overall_score?.toFixed(1) || 0}%
+                                                    </p>
+                                                </CardContent>
+                                            </Card>
+                                            <Card>
+                                                <CardHeader className="pb-3">
+                                                    <CardTitle className="text-sm">Readiness Index</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                                                        {selectedReport.readiness_index?.toFixed(1) || 0}%
+                                                    </p>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+
+                                        {/* Round Performance */}
+                                        <div>
+                                            <h3 className="font-semibold mb-3">Round-wise Performance</h3>
+                                            <div className="space-y-2">
+                                                {selectedReport.rounds?.map((round: any, index: number) => (
+                                                    <div key={index} className="border rounded-lg p-3">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="font-medium text-sm">
+                                                                Round {round.round_number}: {round.round_type}
+                                                            </span>
+                                                            <Badge variant={round.percentage >= 70 ? 'success' : round.percentage >= 50 ? 'default' : 'secondary'}>
+                                                                {round.percentage?.toFixed(1)}%
+                                                            </Badge>
+                                                        </div>
+                                                        {round.ai_feedback && (
+                                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                {typeof round.ai_feedback === 'string' 
+                                                                    ? round.ai_feedback 
+                                                                    : JSON.stringify(round.ai_feedback)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* AI Feedback */}
+                                        {selectedReport.ai_feedback && (
+                                            <div>
+                                                <h3 className="font-semibold mb-2">AI Analysis</h3>
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-sm">
+                                                    {typeof selectedReport.ai_feedback === 'string' ? (
+                                                        <p className="whitespace-pre-wrap">{selectedReport.ai_feedback}</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {selectedReport.ai_feedback.overall_performance && (
+                                                                <div>
+                                                                    <p className="font-medium mb-1">Overall Performance:</p>
+                                                                    <p>{selectedReport.ai_feedback.overall_performance}</p>
+                                                                </div>
+                                                            )}
+                                                            {selectedReport.ai_feedback.readiness_level && (
+                                                                <div>
+                                                                    <p className="font-medium mb-1">Readiness Level:</p>
+                                                                    <p>{selectedReport.ai_feedback.readiness_level}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Detailed Analysis */}
+                                        {selectedReport.detailed_analysis && (
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {selectedReport.detailed_analysis.strengths && (
+                                                    <Card>
+                                                        <CardHeader className="pb-3">
+                                                            <CardTitle className="text-sm text-green-600 dark:text-green-400">Strengths</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <p className="text-xs text-gray-700 dark:text-gray-300">
+                                                                {selectedReport.detailed_analysis.strengths}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )}
+                                                {selectedReport.detailed_analysis.weaknesses && (
+                                                    <Card>
+                                                        <CardHeader className="pb-3">
+                                                            <CardTitle className="text-sm text-orange-600 dark:text-orange-400">Areas for Improvement</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <p className="text-xs text-gray-700 dark:text-gray-300">
+                                                                {selectedReport.detailed_analysis.weaknesses}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )}
+                                                {selectedReport.detailed_analysis.recommendations && (
+                                                    <Card>
+                                                        <CardHeader className="pb-3">
+                                                            <CardTitle className="text-sm text-blue-600 dark:text-blue-400">Recommendations</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <p className="text-xs text-gray-700 dark:text-gray-300">
+                                                                {selectedReport.detailed_analysis.recommendations}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Completion Date */}
+                                        {selectedReport.completed_at && (
+                                            <p className="text-sm text-gray-500 text-center">
+                                                Completed on {new Date(selectedReport.completed_at).toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 text-gray-500">
+                                        <p>No report data available</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     )
