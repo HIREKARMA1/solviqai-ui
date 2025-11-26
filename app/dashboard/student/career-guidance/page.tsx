@@ -51,27 +51,19 @@ export default function CareerGuidancePage() {
   const [nodes, setNodes] = useState<any[]>([]);
   const [edges, setEdges] = useState<any[]>([]);
   
-  // WebSocket
-  const wsRef = useRef<WebSocket | null>(null);
+  // SSE (Server-Sent Events)
+  const eventSourceRef = useRef<EventSource | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPongTimeRef = useRef<number>(Date.now());
-  const isManualCloseRef = useRef(false);
-  const isConnectingRef = useRef(false);
   
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Get WebSocket URL from config
-  const getWebSocketUrl = useCallback((sessionId: string) => {
-    const baseUrl = config.api.baseUrl.replace(/^http/, 'ws');
+  // Get SSE URL from config
+  const getSSEUrl = useCallback((sessionId: string) => {
+    const baseUrl = config.api.baseUrl;
     const token = localStorage.getItem('access_token');
     // Add token as query parameter for authentication
-    const url = `${baseUrl}/api/v1/career-guidance/ws/${sessionId}`;
+    const url = `${baseUrl}/api/v1/career-guidance/sse/${sessionId}`;
     return token ? `${url}?token=${encodeURIComponent(token)}` : url;
   }, []);
 
@@ -101,22 +93,9 @@ export default function CareerGuidancePage() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      isManualCloseRef.current = true; // Mark as manual close to prevent reconnection
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-      if (heartbeatTimeoutRef.current) {
-        clearTimeout(heartbeatTimeoutRef.current);
-        heartbeatTimeoutRef.current = null;
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounting');
-        wsRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);
@@ -135,12 +114,11 @@ export default function CareerGuidancePage() {
       setCompletionPercentage(data.completion_percentage || 0);
       setCurrentStage(data.current_stage || 'introduction');
 
-      if (wsRef.current) {
-        isManualCloseRef.current = true;
-        wsRef.current.close(1000, 'Loading new session');
-        isManualCloseRef.current = false;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
-      connectWebSocket(data.session_id);
+      connectSSE(data.session_id);
       toast.success('Session loaded successfully!');
     } catch (e: any) {
       console.error('Failed to load session', e);
@@ -188,7 +166,7 @@ export default function CareerGuidancePage() {
         setEdges(response.initial_edges);
       }
 
-      connectWebSocket(response.session_id);
+      connectSSE(response.session_id);
       
       // Complete to 100% when session starts
       clearInterval(initProgressInterval);
@@ -213,109 +191,31 @@ export default function CareerGuidancePage() {
     }
   };
 
-  // Start heartbeat mechanism
-  const startHeartbeat = useCallback((ws: WebSocket) => {
-    // Clear any existing heartbeat
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-    }
-
-    // Update last pong time
-    lastPongTimeRef.current = Date.now();
-
-    // Send ping every 30 seconds (less aggressive)
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN && !isManualCloseRef.current) {
-        try {
-          ws.send(JSON.stringify({ type: 'ping' }));
-          console.log('Sent ping');
-          
-          // Set timeout to detect if pong doesn't arrive within 15 seconds
-          // But don't auto-close - just log a warning
-          if (heartbeatTimeoutRef.current) {
-            clearTimeout(heartbeatTimeoutRef.current);
-          }
-          
-          heartbeatTimeoutRef.current = setTimeout(() => {
-            const timeSinceLastPong = Date.now() - lastPongTimeRef.current;
-            if (timeSinceLastPong > 20000 && ws.readyState === WebSocket.OPEN) {
-              console.warn('No pong received, but keeping connection alive');
-              // Don't close automatically - let the connection stay alive
-              // The server will close it if needed
-            }
-          }, 15000);
-        } catch (error) {
-          console.error('Error sending ping:', error);
-        }
-      }
-    }, 30000); // Increased to 30 seconds
-  }, []);
-
-  // Stop heartbeat mechanism
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-      heartbeatTimeoutRef.current = null;
-    }
-  }, []);
-
-  const connectWebSocket = useCallback((sessionId: string) => {
-    // Prevent multiple simultaneous connection attempts
-    if (isConnectingRef.current) {
-      console.log('Connection already in progress, skipping...');
-      return;
-    }
-
+  const connectSSE = useCallback((sessionId: string) => {
     // Close existing connection
-    if (wsRef.current) {
-      isManualCloseRef.current = true; // Mark as manual close
-      stopHeartbeat();
-      wsRef.current.close(1000, 'Reconnecting'); // Normal closure
-      wsRef.current = null;
-      isManualCloseRef.current = false; // Reset after closing
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
-    // Clear any pending reconnection
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    isConnectingRef.current = true;
     setConnectionStatus('connecting');
     
     try {
-      const wsUrl = getWebSocketUrl(sessionId);
-      const ws = new WebSocket(wsUrl);
+      const sseUrl = getSSEUrl(sessionId);
+      const eventSource = new EventSource(sseUrl);
 
-      ws.onopen = () => {
-        isConnectingRef.current = false;
+      eventSource.onopen = () => {
         setConnectionStatus('connected');
-        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
-        console.log('WebSocket connected');
-        
-        // Start heartbeat mechanism
-        startHeartbeat(ws);
+        console.log('SSE connected');
       };
 
-      ws.onmessage = (event) => {
+      eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
-          // Handle pong response
-          if (data.type === 'pong') {
-            lastPongTimeRef.current = Date.now();
-            console.log('Received pong');
-            if (heartbeatTimeoutRef.current) {
-              clearTimeout(heartbeatTimeoutRef.current);
-            }
+          // Handle connection confirmation
+          if (data.type === 'connected') {
+            console.log('SSE connection confirmed');
             return;
           }
           
@@ -336,64 +236,28 @@ export default function CareerGuidancePage() {
             setError(data.message || 'An error occurred');
           }
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          console.error('Error parsing SSE message:', e);
         }
       };
 
-      ws.onerror = (error) => {
-        isConnectingRef.current = false;
-        console.error('WebSocket error:', error);
+      eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
         setConnectionStatus('disconnected');
-        stopHeartbeat();
-      };
-
-      ws.onclose = (event) => {
-        isConnectingRef.current = false;
-        setConnectionStatus('disconnected');
-        stopHeartbeat();
-        console.log('WebSocket closed:', event.code, event.reason);
-        
-        // Only reconnect if:
-        // 1. Not a manual close (code 1000)
-        // 2. Not already at max attempts
-        // 3. Not currently connecting
-        // 4. We have a valid sessionId
-        if (
-          event.code !== 1000 && 
-          !isManualCloseRef.current &&
-          reconnectAttemptsRef.current < maxReconnectAttempts &&
-          !isConnectingRef.current &&
-          sessionId
-        ) {
-          reconnectAttemptsRef.current += 1;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // Exponential backoff, max 30s
-          
-          console.log(`Scheduling reconnection attempt ${reconnectAttemptsRef.current} in ${delay}ms...`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (!isConnectingRef.current && sessionId) {
-              console.log(`Reconnecting attempt ${reconnectAttemptsRef.current}...`);
-              connectWebSocket(sessionId);
-            }
-          }, delay);
-        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-          console.log('Max reconnection attempts reached');
-          toast.error('Connection lost. Please refresh the page.');
-          setError('Connection lost. Please refresh the page to reconnect.');
-        } else if (event.code === 1000 || isManualCloseRef.current) {
-          console.log('Connection closed normally, not reconnecting');
+        // EventSource automatically reconnects, but we'll handle errors
+        if (eventSource.readyState === EventSource.CLOSED) {
+          toast.error('Connection lost. EventSource will attempt to reconnect.');
+          setError('Connection lost. EventSource will attempt to reconnect.');
         }
       };
 
-      wsRef.current = ws;
+      eventSourceRef.current = eventSource;
     } catch (error) {
-      isConnectingRef.current = false;
-      console.error('Failed to create WebSocket:', error);
+      console.error('Failed to create EventSource:', error);
       setConnectionStatus('disconnected');
-      stopHeartbeat();
       toast.error('Failed to establish connection. Please refresh the page.');
       setError('Failed to establish connection. Please refresh the page.');
     }
-  }, [getWebSocketUrl, scrollToBottom, startHeartbeat, stopHeartbeat]);
+  }, [getSSEUrl, scrollToBottom]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || !sessionId || isLoading) return;
@@ -563,7 +427,7 @@ export default function CareerGuidancePage() {
 
   const handleRetry = () => {
     if (sessionId) {
-      connectWebSocket(sessionId);
+      connectSSE(sessionId);
     } else {
       startSession();
     }

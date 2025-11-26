@@ -57,6 +57,7 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentMonth, setCurrentMonth] = useState(new Date())
+    const [sessionStartDate, setSessionStartDate] = useState<Date | null>(null)
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
     const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
 
@@ -71,11 +72,38 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
             const { apiClient } = await import('@/lib/api')
             const data = await apiClient.getCareerGuidancePlaylist(sessionId)
             setPlaylist(data.playlist || [])
+            
+            if (data.session_created_at) {
+                const startDate = new Date(data.session_created_at)
+                setSessionStartDate(startDate)
+                setCurrentMonth(new Date(startDate.getFullYear(), startDate.getMonth(), 1))
+            } else {
+                setSessionStartDate(null)
+                setCurrentMonth(new Date())
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load playlist')
         } finally {
             setLoading(false)
         }
+    }
+
+    // Helper function to determine if a step should be active
+    const getStepStatus = (step: number, eventDate: Date) => {
+        const today = new Date()
+        const stepStartDate = new Date(eventDate)
+        
+        // Step is active if we're in its timeframe or it's the current step
+        if (step === 1 && today >= stepStartDate) {
+            return true
+        }
+        
+        // For subsequent steps, check if previous steps are completed
+        // and we're within the timeframe
+        const allPreviousCompleted = Array.from({length: step - 1}, (_, i) => i + 1)
+            .every(prevStep => completedSteps.has(prevStep))
+            
+        return allPreviousCompleted && today >= stepStartDate
     }
 
     // Parse timeline and create calendar events
@@ -84,13 +112,19 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
         
         const events: CalendarEvent[] = []
         const today = new Date()
-        const startDate = new Date(today.getFullYear(), today.getMonth(), 1) // First day of current month
+        const baseDate = sessionStartDate || today
+        const baseDayOfMonth = baseDate.getDate()
+        
+        const setSafeDay = (date: Date) => {
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+            date.setDate(Math.min(baseDayOfMonth, lastDay))
+        }
         
         playlist.forEach((step) => {
             // Parse timeline (e.g., "Months 1-2", "Months 3-4", "Month 1", "1-2 months")
             const timelineLower = step.timeline.toLowerCase()
-            let startMonth = 0
-            let endMonth = 0
+            let startMonthOffset = 0
+            let durationMonths = 1 // Default to 1 month
             
             // Try different patterns
             const patterns = [
@@ -103,8 +137,8 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
             for (const pattern of patterns) {
                 const match = step.timeline.match(pattern)
                 if (match) {
-                    startMonth = parseInt(match[1]) - 1 // Convert to 0-indexed
-                    endMonth = match[2] ? parseInt(match[2]) - 1 : startMonth
+                    startMonthOffset = parseInt(match[1]) - 1 // Convert to 0-indexed month offset
+                    durationMonths = match[2] ? (parseInt(match[2]) - startMonthOffset) : 1
                     matched = true
                     break
                 }
@@ -112,44 +146,64 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
             
             if (!matched) {
                 // Fallback: use step number as month offset
-                startMonth = (step.step - 1) * 2 // Assume 2 months per step
-                endMonth = startMonth + 1
+                startMonthOffset = (step.step - 1) * 2 // Assume 2 months per step
+                durationMonths = 2
             }
             
-            // Calculate actual dates
-            const eventStartDate = new Date(startDate)
-            eventStartDate.setMonth(startDate.getMonth() + startMonth)
+            // Calculate actual dates relative to today
+            const eventStartDate = new Date(baseDate)
+            eventStartDate.setMonth(baseDate.getMonth() + startMonthOffset)
+            setSafeDay(eventStartDate)
             
-            // Create event for the 1st day of the start month
+            const eventEndDate = new Date(eventStartDate)
+            eventEndDate.setMonth(eventStartDate.getMonth() + durationMonths - 1)
+            setSafeDay(eventEndDate)
+
+            // Create event for the start month
             events.push({
                 date: new Date(eventStartDate),
                 step: step.step,
                 topic: step.topic,
                 timeline: step.timeline,
                 videos: step.videos,
-                isActive: step.step === 1,
+                isActive: getStepStatus(step.step, eventStartDate),
                 isCompleted: completedSteps.has(step.step)
             })
             
             // If it spans multiple months, also add an event for the end month
-            if (endMonth > startMonth) {
-                const eventEndDate = new Date(startDate)
-                eventEndDate.setMonth(startDate.getMonth() + endMonth)
-                
+            if (durationMonths > 1) {
                 events.push({
                     date: new Date(eventEndDate),
                     step: step.step,
                     topic: step.topic,
                     timeline: step.timeline,
                     videos: step.videos,
-                    isActive: false,
+                    isActive: getStepStatus(step.step, eventEndDate),
+                    isCompleted: completedSteps.has(step.step)
+                })
+            }
+
+            // Add milestone in the middle of the duration for better visibility
+            if (durationMonths > 2) {
+                const midMonthOffset = Math.floor(durationMonths / 2)
+                const midDate = new Date(eventStartDate)
+                midDate.setMonth(eventStartDate.getMonth() + midMonthOffset)
+                setSafeDay(midDate)
+                
+                events.push({
+                    date: new Date(midDate),
+                    step: step.step,
+                    topic: step.topic,
+                    timeline: step.timeline,
+                    videos: step.videos,
+                    isActive: getStepStatus(step.step, midDate),
                     isCompleted: completedSteps.has(step.step)
                 })
             }
         })
         
         return events.sort((a, b) => a.date.getTime() - b.date.getTime())
-    }, [playlist, completedSteps])
+    }, [playlist, completedSteps, sessionStartDate])
 
     // Get calendar days for current month
     const calendarDays = useMemo(() => {
@@ -201,7 +255,8 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
     }
 
     const goToToday = () => {
-        setCurrentMonth(new Date())
+        const today = new Date()
+        setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))
     }
 
     if (loading) {
@@ -587,4 +642,3 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
         </div>
     )
 }
-

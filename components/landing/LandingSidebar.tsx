@@ -42,12 +42,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Dashboard',
     onClick: undefined, // Will be set by component
   },
-  // {
-  //   id: 'career-guidance',
-  //   icon: <Sparkles className="w-5 h-5" />,
-  //   label: 'AI Career Guidance',
-  //   onClick: undefined,
-  // },
+  {
+    id: 'career-guidance',
+    icon: <Sparkles className="w-5 h-5" />,
+    label: 'AI Career Guidance',
+    onClick: undefined,
+  },
   {
     id: 'resume',
     icon: <FileText className="w-5 h-5" />,
@@ -175,7 +175,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
         'dashboard': baseRoute,
-        // 'career-guidance': `${baseRoute}/career-guidance`,
+        'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
         // 'jobs': `${baseRoute}/jobs`,
