@@ -4,8 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { CircuitComponentsLibrary } from '@/components/electrical/CircuitComponentsLibrary'
-import { circuitComponents } from '@/lib/electrical/components'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
@@ -28,21 +26,52 @@ export default function ElectricalPracticePage() {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null)
   const [roundSubmitted, setRoundSubmitted] = useState(false)
   const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
+  const [isRestored, setIsRestored] = useState(false)
+
+  // Auto-save key for localStorage
+  const storageKey = `electrical-circuit-${assessmentId || 'practice'}-${roundId || 'draft'}`
 
   const onExcalidrawAPIMount = useCallback((api: any) => {
     setExcalidrawAPI(api)
   }, [])
 
+  // Auto-save to localStorage on scene changes
   const handleSceneChange = useCallback((elements: any, appState: any, files: any) => {
     setScene({ elements, appState, files })
-  }, [])
+    
+    // Auto-save to localStorage (debounced via state change)
+    try {
+      const saveData = {
+        elements,
+        appState: {
+          viewBackgroundColor: appState.viewBackgroundColor,
+          gridSize: appState.gridSize,
+        },
+        files,
+        question,
+        timestamp: Date.now(),
+      }
+      localStorage.setItem(storageKey, JSON.stringify(saveData))
+    } catch (error) {
+      console.error('Failed to auto-save:', error)
+    }
+  }, [storageKey, question])
 
   const handleGenerate = async () => {
     setBusy(true)
     setEvaluation(null)
     try {
       const res = await apiClient.generateElectricalQuestion()
-      setQuestion(res?.question || "Design a full-wave bridge rectifier with labeled components and proper input/output connections.")
+      const newQuestion = res?.question || "Design a full-wave bridge rectifier with labeled components and proper input/output connections."
+      setQuestion(newQuestion)
+      
+      // Clear localStorage when generating new question
+      try {
+        localStorage.removeItem(storageKey)
+      } catch (error) {
+        console.error('Failed to clear auto-save:', error)
+      }
+      
       toast.success('Question generated')
     } catch (e) {
       console.error(e)
@@ -58,11 +87,26 @@ export default function ElectricalPracticePage() {
         toast.error('Canvas not ready')
         return
       }
+      
+      const elements = excalidrawAPI.getSceneElements()
+      
+      // Validate that canvas is not empty
+      if (!elements || elements.length === 0) {
+        toast.error('Please draw your circuit before submitting')
+        return
+      }
+      
+      // Filter out deleted elements and check if there are any valid elements
+      const validElements = elements.filter((el: any) => !el.isDeleted)
+      if (validElements.length === 0) {
+        toast.error('Your canvas is empty. Please draw your circuit before submitting')
+        return
+      }
+      
       setBusy(true)
       setEvaluation(null)
       setRoundSubmitError(null)
       const startedAt = Date.now()
-      const elements = excalidrawAPI.getSceneElements()
       const appState = excalidrawAPI.getAppState()
       const files = excalidrawAPI.getFiles()
 
@@ -97,6 +141,13 @@ export default function ElectricalPracticePage() {
           )
           setRoundSubmitted(true)
           toast.success('Assessment round recorded successfully!')
+          
+          // Clear auto-save after successful submission
+          try {
+            localStorage.removeItem(storageKey)
+          } catch (error) {
+            console.error('Failed to clear auto-save:', error)
+          }
         } catch (submitErr: any) {
           console.error(submitErr)
           const message = submitErr?.response?.data?.detail || submitErr?.message || 'Failed to record round'
@@ -112,18 +163,87 @@ export default function ElectricalPracticePage() {
     }
   }
 
+  // Restore saved work from localStorage on mount
   useEffect(() => {
-    // Auto-generate a question on first load
-    handleGenerate()
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const data = JSON.parse(saved)
+        const age = Date.now() - (data.timestamp || 0)
+        
+        // Restore if saved within last 24 hours
+        if (age < 24 * 60 * 60 * 1000) {
+          setQuestion(data.question || "")
+          setIsRestored(true)
+          
+          // Restore canvas after API is ready
+          if (excalidrawAPI && data.elements) {
+            setTimeout(() => {
+              excalidrawAPI.updateScene({
+                elements: data.elements,
+                appState: data.appState || {},
+              })
+              toast.success('Previous work restored', { duration: 3000 })
+            }, 100)
+          }
+          return
+        } else {
+          // Clear old data
+          localStorage.removeItem(storageKey)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore saved work:', error)
+    }
+    
+    // Only generate new question if no saved work was restored
+    if (!isRestored) {
+      handleGenerate()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excalidrawAPI])
+
+  // Separate effect to handle initial load without excalidrawAPI
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const data = JSON.parse(saved)
+        const age = Date.now() - (data.timestamp || 0)
+        
+        if (age < 24 * 60 * 60 * 1000 && data.question) {
+          setQuestion(data.question)
+          setIsRestored(true)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore question:', error)
+    }
   }, [])
+
+  const handleClearCanvas = () => {
+    if (excalidrawAPI) {
+      excalidrawAPI.updateScene({ elements: [] })
+      try {
+        localStorage.removeItem(storageKey)
+      } catch (error) {
+        console.error('Failed to clear auto-save:', error)
+      }
+      toast.success('Canvas cleared')
+    }
+  }
 
   return (
     <DashboardLayout requiredUserType="student">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Electrical Practice</h1>
-          <p className="text-sm text-muted-foreground">Generate circuit design questions, draw your circuit, and get instant AI feedback.</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Electrical Practice</h1>
+            <p className="text-sm text-muted-foreground">Generate circuit design questions, draw your circuit, and get instant AI feedback.</p>
+          </div>
+          <div className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-md">
+            ✓ Auto-save enabled
+          </div>
         </div>
 
         {assessmentId && (
@@ -162,12 +282,7 @@ export default function ElectricalPracticePage() {
             <CardDescription>LLM-generated circuit design prompt</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-start gap-3">
-              <div className="flex-1 p-3 border rounded bg-muted/30 text-sm min-h-[60px] whitespace-pre-wrap">{question || '...'}</div>
-              <Button onClick={handleGenerate} disabled={busy}>
-                {busy ? <Loader size="sm" /> : 'Regenerate'}
-              </Button>
-            </div>
+            <div className="p-3 border rounded bg-muted/30 text-sm min-h-[60px] whitespace-pre-wrap">{question || '...'}</div>
           </CardContent>
         </Card>
 
@@ -177,38 +292,7 @@ export default function ElectricalPracticePage() {
             <CardDescription>Use shapes, connectors, and labels to represent components and wiring</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
-              <div className="w-48 flex-shrink-0">
-                <CircuitComponentsLibrary />
-              </div>
-              <div 
-                className="flex-1 h-[600px] border rounded overflow-hidden"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  const componentName = e.dataTransfer.getData('application/circuit-component')
-                  const component = circuitComponents[componentName]
-                  if (component && excalidrawAPI) {
-                    // Get drop position relative to canvas
-                    const bounds = e.currentTarget.getBoundingClientRect()
-                    const x = e.clientX - bounds.left
-                    const y = e.clientY - bounds.top
-                    
-                    // Add component to canvas at drop position
-                    const elements = JSON.parse(JSON.stringify(component.elements))
-                    elements.forEach((el: any) => {
-                      el.x += x
-                      el.y += y
-                    })
-                    
-                    // Get current elements and append new ones
-                    const currentElements = excalidrawAPI.getSceneElements()
-                    excalidrawAPI.updateScene({
-                      elements: [...currentElements, ...elements]
-                    })
-                  }
-                }}
-              >
+            <div className="h-[600px] border rounded overflow-hidden">
                 {/* @ts-ignore */}
                 <Excalidraw
                   excalidrawAPI={onExcalidrawAPIMount}
@@ -216,9 +300,15 @@ export default function ElectricalPracticePage() {
                   gridModeEnabled={true}
                   theme="light"
                 />
-              </div>
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-between items-center mt-4">
+              <Button 
+                variant="outline" 
+                onClick={handleClearCanvas}
+                disabled={busy}
+              >
+                Clear Canvas
+              </Button>
               <Button onClick={handleSubmit} disabled={busy || !question}>
                 {busy ? <Loader size="sm" /> : 'Submit for Evaluation'}
               </Button>
@@ -230,18 +320,24 @@ export default function ElectricalPracticePage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Evaluation</CardTitle>
-              <CardDescription>AI feedback and correctness</CardDescription>
+              <CardDescription>AI feedback on your circuit design</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
                 {evaluation.correct != null && (
-                  <div><span className="font-semibold">Correct:</span> {evaluation.correct ? 'Yes' : 'No'}</div>
+                  <div><span className="font-semibold">Correct:</span> {evaluation.correct ? '✓ Yes' : '✗ No'}</div>
                 )}
                 {evaluation.score != null && (
-                  <div><span className="font-semibold">Score:</span> {Math.round((evaluation.score as number) * 100) / 100} / 10</div>
+                  <div>
+                    <span className="font-semibold">Score:</span> {Math.round((evaluation.score as number) * 100) / 100} / 10
+                    {assessmentId && <span className="text-muted-foreground ml-2">(scaled to 0-100 for assessment)</span>}
+                  </div>
                 )}
                 {evaluation.feedback && (
-                  <div className="whitespace-pre-wrap"><span className="font-semibold">Feedback:</span> {evaluation.feedback}</div>
+                  <div className="mt-3 pt-3 border-t">
+                    <span className="font-semibold">Feedback:</span>
+                    <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{evaluation.feedback}</p>
+                  </div>
                 )}
               </div>
             </CardContent>

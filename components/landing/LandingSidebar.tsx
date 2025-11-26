@@ -176,17 +176,6 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-<<<<<<< HEAD
-    const routeMap: Record<string, string> = {
-      'dashboard': baseRoute,
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-      'electrical': `${baseRoute}/electrical`,
-    };
-    return routeMap[featureId] || null;
-=======
     
     // Student routes
     if (user.user_type === 'student') {
@@ -198,6 +187,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
+        'electrical': `${baseRoute}/electrical`,
       };
       return routeMap[featureId] || null;
     }
@@ -226,7 +216,6 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     }
     
     return null;
->>>>>>> 36f4a78a5fbf8258cd2b8c84f7001a38cf7b9764
   };
 
   // Check if we're in dashboard context
