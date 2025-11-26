@@ -48,7 +48,7 @@ export default function ExcelAssessmentList() {
     setCreating(true)
     try {
       const newAssessment = await apiClient.excelAssessment.createAssessment({
-        title: 'Accounting Excel Assessment',
+        title: 'Accountant Assessment',
         description: 'Test your Excel skills with practical accounting scenarios',
         num_questions: 1,
         difficulty_level: 'intermediate'
@@ -109,7 +109,7 @@ export default function ExcelAssessmentList() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <FileSpreadsheet className="w-8 h-8 text-green-600" />
-            Excel Assessments
+            Accountant Assessments
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Test your Excel skills with AI-generated accounting scenarios
@@ -141,7 +141,7 @@ export default function ExcelAssessmentList() {
           <FileSpreadsheet className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold mb-2">No Assessments Yet</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Start your first Excel assessment to test your accounting skills
+            Start your first Accountant assessment to test your accounting skills
           </p>
           <Button onClick={createNewAssessment} disabled={creating} className="bg-green-600 hover:bg-green-700">
             Create Your First Assessment
@@ -164,7 +164,7 @@ export default function ExcelAssessmentList() {
                   </div>
                   <CardTitle className="text-xl">{assessment.title}</CardTitle>
                   <CardDescription className="line-clamp-2">
-                    {assessment.description || 'Excel assessment for accounting professionals'}
+                    {assessment.description || 'Accountant assessment for accounting professionals'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

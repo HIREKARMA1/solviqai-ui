@@ -60,7 +60,7 @@ const studentSidebarFeatures: SidebarItem[] = [
   {
     id: 'excel-assessment',
     icon: <FileSpreadsheet className="w-5 h-5" />,
-    label: 'Excel Assessment',
+    label: 'Accountant Assessment',
     onClick: undefined,
   },
   {

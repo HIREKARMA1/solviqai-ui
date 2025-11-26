@@ -765,7 +765,7 @@ class ApiClient {
     return response.data;
   }
 
-  // Excel Assessment API
+  // Accountant Assessment API
   excelAssessment = {
     // Create a new assessment
     createAssessment: async (data: {

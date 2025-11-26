@@ -1,5 +1,5 @@
 /**
- * Excel Assessment Components - Index
+ * Accountant Assessment Components - Index
  * Export all components for easy importing
  */
 

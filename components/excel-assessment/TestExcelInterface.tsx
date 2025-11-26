@@ -68,7 +68,7 @@ export default function TestExcelInterface() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl">
-                    Excel Assessment - Handsontable Test
+                    Accountant Assessment - Handsontable Test
                   </CardTitle>
                   <p className="text-gray-600 dark:text-gray-400 mt-2">
                     Testing the new Handsontable implementation with P&L Statement scenario
