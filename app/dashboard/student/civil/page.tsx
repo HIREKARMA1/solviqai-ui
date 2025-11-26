@@ -103,6 +103,14 @@ export default function CivilPracticePage() {
   const submitAnswers = async () => {
     if (!problem) return
     
+    // Validate no negative values before submission
+    const negativeValues = Object.entries(answers).filter(([_, value]) => value < 0)
+    if (negativeValues.length > 0) {
+      const negativeList = negativeValues.map(([key, value]) => `${key}=${value}`).join(', ')
+      toast.error(`Physical quantities cannot be negative. Invalid values: ${negativeList}`)
+      return
+    }
+    
     // Calculate elapsed time
     const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
     setElapsedTime(elapsed)
@@ -157,6 +165,13 @@ export default function CivilPracticePage() {
   // Handle input change
   const handleAnswerChange = (item: string, value: string) => {
     const numValue = parseFloat(value) || 0
+    
+    // Prevent negative values - physical quantities cannot be negative
+    if (numValue < 0) {
+      toast.error('Physical quantities cannot be negative. Please enter a positive value.')
+      return
+    }
+    
     setAnswers(prev => ({
       ...prev,
       [item]: numValue
@@ -343,6 +358,7 @@ export default function CivilPracticePage() {
                         id={calc.item}
                         type="number"
                         step="0.01"
+                        min="0"
                         placeholder="0.00"
                         value={answers[calc.item] || ''}
                         onChange={(e) => handleAnswerChange(calc.item, e.target.value)}
@@ -352,12 +368,12 @@ export default function CivilPracticePage() {
                   ))}
                 </div>
 
-                <div className="flex gap-3 mt-8">
+                <div className="mt-8">
                   <Button 
                     onClick={submitAnswers} 
                     disabled={loading || Object.values(answers).every(v => v === 0)}
                     size="lg"
-                    className="flex-1"
+                    className="w-full"
                   >
                     {loading ? (
                       <>
@@ -370,13 +386,6 @@ export default function CivilPracticePage() {
                         Submit for Evaluation
                       </>
                     )}
-                  </Button>
-                  <Button 
-                    onClick={generateProblem} 
-                    variant="outline"
-                    size="lg"
-                  >
-                    New Problem
                   </Button>
                 </div>
               </CardContent>
