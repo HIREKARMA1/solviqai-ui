@@ -23,7 +23,8 @@ import {
   Filter,
   Eye,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MapPin
 } from 'lucide-react'
 import { 
   MetricCard, 
@@ -60,15 +61,22 @@ export default function AdminAnalytics() {
                 startDate.toISOString(),
                 endDate.toISOString()
             )
-            console.log('Analytics Data Received:', data)
-            console.log('Student Performance:', data?.student_performance)
-            console.log('Readiness Distribution:', data?.student_performance?.readiness_distribution)
-            console.log('Round-wise Performance:', data?.student_performance?.round_wise_performance)
-            console.log('Leaderboards:', data?.leaderboards)
-            console.log('Top Students by Score:', data?.leaderboards?.top_students?.by_score)
+            console.log('✅ Analytics Data Received:', data)
+            console.log('📊 Platform Overview:', data?.platform_overview)
+            console.log('🏫 College Analytics:', data?.college_analytics)
+            console.log('📈 Capacity Metrics:', data?.college_analytics?.capacity_metrics)
+            
+            if (!data) {
+                console.error('❌ No data received from API')
+                toast.error('Failed to load analytics data')
+                return
+            }
+            
             setAnalytics(data)
-        } catch (error) {
-            console.error('Error fetching analytics:', error)
+        } catch (error: any) {
+            console.error('❌ Error fetching analytics:', error)
+            console.error('Error details:', error?.response?.data || error.message)
+            toast.error(`Failed to fetch analytics: ${error?.response?.data?.detail || error.message}`)
         } finally {
             setLoading(false)
         }
@@ -276,21 +284,18 @@ export default function AdminAnalytics() {
                                 title="Total Students"
                                 value={platformOverview.total_metrics?.students || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                trend={{ value: 5.2, label: "vs last month" }}
                                 description="Registered students"
                             />
                             <MetricCard
                                 title="Total Colleges"
                                 value={platformOverview.total_metrics?.colleges || 0}
                                 icon={<Building2 className="h-5 w-5" />}
-                                trend={{ value: 2.1, label: "vs last month" }}
                                 description="Partner institutions"
                             />
                             <MetricCard
                                 title="Total Assessments"
                                 value={platformOverview.total_metrics?.assessments || 0}
                                 icon={<FileText className="h-5 w-5" />}
-                                trend={{ value: -1.5, label: "vs last month" }}
                                 description="Completed assessments"
                             />
                             {(platformOverview.total_metrics?.job_applications || 0) > 0 && (
@@ -298,7 +303,6 @@ export default function AdminAnalytics() {
                                     title="Job Applications"
                                     value={platformOverview.total_metrics?.job_applications || 0}
                                     icon={<Briefcase className="h-5 w-5" />}
-                                    trend={{ value: 8.3, label: "vs last month" }}
                                     description="Total applications"
                                 />
                             )}
@@ -310,21 +314,18 @@ export default function AdminAnalytics() {
                                 title="Daily Active Users"
                                 value={userEngagement.activity_metrics?.dau || 0}
                                 icon={<Activity className="h-5 w-5" />}
-                                trend={{ value: 3.2, label: "vs yesterday" }}
                                 description="Users active today"
                             />
                             <MetricCard
                                 title="Weekly Active Users"
                                 value={userEngagement.activity_metrics?.wau || 0}
                                 icon={<TrendingUp className="h-5 w-5" />}
-                                trend={{ value: 1.8, label: "vs last week" }}
                                 description="Users active this week"
                             />
                             <MetricCard
                                 title="Monthly Active Users"
                                 value={userEngagement.activity_metrics?.mau || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                trend={{ value: 4.5, label: "vs last month" }}
                                 description="Users active this month"
                             />
                         </div>
@@ -364,14 +365,12 @@ export default function AdminAnalytics() {
                                 title="Average Overall Score"
                                 value={`${studentPerformance.academic_performance?.avg_overall_score || 0}%`}
                                 icon={<Award className="h-5 w-5" />}
-                                trend={{ value: 2.3, label: "vs last month" }}
                                 description="Platform average"
                             />
                             <MetricCard
                                 title="Average Readiness Index"
                                 value={`${studentPerformance.academic_performance?.avg_readiness_index || 0}%`}
                                 icon={<TrendingUp className="h-5 w-5" />}
-                                trend={{ value: 1.8, label: "vs last month" }}
                                 description="Job readiness score"
                             />
                         </div>
@@ -542,138 +541,115 @@ export default function AdminAnalytics() {
 
                     {/* Colleges Tab */}
                     <TabsContent value="colleges" className="space-y-6">
-                        {/* College Enrollment Overview */}
+                        {/* College Overview */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <MetricCard
-                                title="Total Colleges Enrolled"
+                                title="Total Colleges"
                                 value={collegeAnalytics.college_performance?.all_colleges?.length || 0}
                                 icon={<Building2 className="h-5 w-5" />}
                                 description="Registered colleges"
                             />
                             <MetricCard
-                                title="Total Students"
-                                value={collegeAnalytics.capacity_metrics?.total_enrolled || 0}
+                                title="Students Enrolled"
+                                value={collegeAnalytics.capacity_metrics?.students_in_colleges || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                description="All enrolled students"
+                                description="Students assigned to colleges"
                             />
                         </div>
 
-                        {/* All Colleges with Student Counts */}
+                        {/* Registered Colleges */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>All Colleges - Student Enrollment</CardTitle>
+                                <CardTitle>Registered Colleges</CardTitle>
                                 <CardDescription>
-                                    Complete list of {collegeAnalytics.college_performance?.all_colleges?.length || 0} enrolled colleges 
-                                    with individual student counts
+                                    {collegeAnalytics.college_performance?.all_colleges?.length || 0} college(s) registered in the system
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {collegeAnalytics.college_performance?.all_colleges && collegeAnalytics.college_performance.all_colleges.length > 0 ? (
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
                                         {collegeAnalytics.college_performance.all_colleges.map((college: any, index: number) => (
-                                            <div 
-                                                key={college.id || index} 
-                                                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            >
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">
-                                                        {index + 1}
+                                            <Card key={college.id || index} className="border-2">
+                                                <CardHeader>
+                                                    <div className="flex items-start justify-between">
+                                                        <div>
+                                                            <CardTitle className="text-xl">{college.name}</CardTitle>
+                                                            <CardDescription className="mt-2">
+                                                                {college.email || 'No email provided'}
+                                                            </CardDescription>
+                                                        </div>
+                                                        <Badge variant={college.verified ? "success" : "secondary"}>
+                                                            {college.verified ? "Verified" : "Unverified"}
+                                                        </Badge>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-base">{college.name}</h4>
-                                                        <div className="flex gap-4 mt-1">
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                                                                Capacity: {college.capacity}
-                                                            </span>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                                                                Utilization: {college.utilization}%
-                                                            </span>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        {/* Students */}
+                                                        <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Students</span>
+                                                            </div>
+                                                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                                                {college.student_count || 0}
+                                                            </p>
+                                                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                                                Enrolled
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Capacity */}
+                                                        <div className="p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                                                <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Capacity</span>
+                                                            </div>
+                                                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                                                {college.capacity || 100}
+                                                            </p>
+                                                            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                                                                Total seats
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Assessments */}
+                                                        <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                                <span className="text-sm font-medium text-green-900 dark:text-green-100">Assessments</span>
+                                                            </div>
+                                                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                                {college.assessments_count || 0}
+                                                            </p>
+                                                            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                                                Completed
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-6">
-                                                    <div className="text-center">
-                                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                                            {college.student_count || college.total_students || 0}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">Students</div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                                            {college.assessments_count || 0}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">Assessments</div>
-                                                    </div>
-                                                    {college.avg_score !== undefined && college.avg_score > 0 && (
-                                                        <div className="text-center">
-                                                            <Badge variant={
-                                                                college.avg_score >= 75 ? 'success' : 
-                                                                college.avg_score >= 60 ? 'default' : 
-                                                                'secondary'
-                                                            }>
-                                                                {college.avg_score}% avg
-                                                            </Badge>
+
+                                                    {/* College Details */}
+                                                    {college.contact_person_name && (
+                                                        <div className="mt-4 pt-4 border-t">
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <Users className="h-4 w-4" />
+                                                                <span>Contact: {college.contact_person_name}</span>
+                                                            </div>
                                                         </div>
                                                     )}
-                                                </div>
-                                            </div>
+                                                </CardContent>
+                                            </Card>
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="text-center py-12 text-gray-500">
                                         <Building2 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                                        <p className="text-lg font-medium">No Colleges Enrolled</p>
-                                        <p className="text-sm mt-2">Colleges will appear here once they are registered</p>
+                                        <p className="text-lg font-medium">No Colleges Registered</p>
+                                        <p className="text-sm mt-2">Colleges will appear here once they register</p>
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
-
-                        {/* Top Performing Colleges */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Top Performing Colleges</CardTitle>
-                                <CardDescription>Colleges ranked by average student performance</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {collegeAnalytics.college_performance?.top_performing && collegeAnalytics.college_performance.top_performing.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {collegeAnalytics.college_performance.top_performing.slice(0, 5).map((college: any, index: number) => (
-                                            <div key={college.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 font-bold text-sm">
-                                                        #{index + 1}
-                                                    </div>
-                                                    <div>
-                                                        <h5 className="font-medium">{college.name}</h5>
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                            {college.total_students} students • {college.assessments_count} assessments
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <Badge variant="success" className="text-lg px-4 py-1">
-                                                    {college.avg_score}%
-                                                </Badge>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                        <p>No performance data available</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Most Active Colleges */}
-                        <BarChartCard
-                            title="Most Active Colleges"
-                            description="Colleges by assessment activity"
-                            data={collegeAnalytics.college_performance?.most_active?.slice(0, 10) || []}
-                            dataKey="assessments_count"
-                            xAxisKey="name"
-                        />
                     </TabsContent>
 
                     {/* Assessments Tab */}
@@ -729,7 +705,7 @@ export default function AdminAnalytics() {
                         {(jobApplications.application_metrics?.total || 0) > 0 ? (
                             <>
                                 {/* Job Application Overview */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <MetricCard
                                         title="Total Applications"
                                         value={jobApplications.application_metrics?.total || 0}
@@ -737,54 +713,165 @@ export default function AdminAnalytics() {
                                         description="All job applications"
                                     />
                                     <MetricCard
-                                        title="Success Rate"
-                                        value={`${jobApplications.application_metrics?.success_rate || 0}%`}
+                                        title="Applied"
+                                        value={jobApplications.application_metrics?.by_status?.APPLIED || 0}
                                         icon={<Award className="h-5 w-5" />}
-                                        trend={{ value: 3.2, label: "vs last month" }}
-                                        description="Successful applications"
+                                        description="Successfully applied"
                                     />
                                     <MetricCard
-                                        title="Avg Applications/Student"
-                                        value={jobApplications.application_metrics?.avg_per_student || 0}
+                                        title="Avg per Student"
+                                        value={jobApplications.application_metrics?.avg_per_student?.toFixed(1) || 0}
                                         icon={<TrendingUp className="h-5 w-5" />}
                                         description="Applications per student"
                                     />
-                                    <MetricCard
-                                        title="Active Applications"
-                                        value={jobApplications.application_metrics?.by_status?.PENDING || 0}
-                                        icon={<Activity className="h-5 w-5" />}
-                                        description="Currently active"
-                                    />
                                 </div>
 
-                                {/* Applications by Platform */}
-                                {jobApplications.application_metrics?.by_platform && Object.keys(jobApplications.application_metrics.by_platform).length > 0 && (
-                                    <PieChartCard
-                                        title="Applications by Platform"
-                                        description="Distribution across job platforms"
-                                        data={Object.entries(jobApplications.application_metrics.by_platform).map(([platform, count]) => ({
-                                            platform,
-                                            count
-                                        }))}
-                                        dataKey="count"
-                                        nameKey="platform"
-                                        colors={['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']}
-                                    />
-                                )}
+                                {/* Job Applications List */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Recent Job Applications</CardTitle>
+                                        <CardDescription>
+                                            Latest applications from students ({jobApplications.application_metrics?.total || 0} total)
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {jobApplications.trends?.top_job_titles && jobApplications.trends.top_job_titles.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {jobApplications.trends.top_job_titles.slice(0, 10).map((job: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-semibold text-sm">
+                                                                {index + 1}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">{job.title}</p>
+                                                                <p className="text-xs text-muted-foreground">Job Position</p>
+                                                            </div>
+                                                        </div>
+                                                        <Badge variant="secondary" className="text-sm px-3 py-1">
+                                                            {job.count} {job.count === 1 ? 'application' : 'applications'}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                                <p>No job applications found</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
 
-                                {/* Application Trends */}
-                                {jobApplications.trends?.top_job_titles && jobApplications.trends.top_job_titles.length > 0 && (
+                                {/* Top Companies */}
+                                {jobApplications.trends?.top_companies && jobApplications.trends.top_companies.length > 0 && (
                                     <Card>
                                         <CardHeader>
-                                            <CardTitle>Top Job Titles</CardTitle>
-                                            <CardDescription>Most applied job positions</CardDescription>
+                                            <CardTitle>Top Companies</CardTitle>
+                                            <CardDescription>Most applied companies</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {jobApplications.trends.top_companies.slice(0, 6).map((company: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                                                        <div className="flex items-center gap-2">
+                                                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                            <span className="font-medium text-sm">{company.company}</span>
+                                                        </div>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {company.count}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {/* Top Locations */}
+                                {jobApplications.trends?.top_locations && jobApplications.trends.top_locations.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Top Locations</CardTitle>
+                                            <CardDescription>Most popular job locations</CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="space-y-2">
-                                                {jobApplications.trends.top_job_titles.slice(0, 10).map((job: any, index: number) => (
-                                                    <div key={index} className="flex justify-between items-center">
-                                                        <span className="text-sm">{job.title}</span>
-                                                        <Badge variant="secondary">{job.count}</Badge>
+                                                {jobApplications.trends.top_locations.slice(0, 8).map((location: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between p-2 hover:bg-accent rounded transition-colors">
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                                                            <span className="text-sm">{location.location}</span>
+                                                        </div>
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            {location.count}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {/* Student Applications Detail */}
+                                {jobApplications.student_applications && jobApplications.student_applications.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Student Job Applications</CardTitle>
+                                            <CardDescription>
+                                                Detailed view of student applications ({jobApplications.student_applications.length} total)
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-3">
+                                                {jobApplications.student_applications.map((app: any, index: number) => (
+                                                    <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                                                                    {app.student_name?.charAt(0).toUpperCase() || 'S'}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-semibold">{app.student_name}</h4>
+                                                                    <p className="text-xs text-muted-foreground">{app.student_email}</p>
+                                                                </div>
+                                                            </div>
+                                                            <Badge variant={app.status === 'APPLIED' ? 'success' : 'secondary'}>
+                                                                {app.status}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 pt-3 border-t">
+                                                            <div className="flex items-start gap-2">
+                                                                <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-xs text-muted-foreground">Job Title</p>
+                                                                    <p className="text-sm font-medium">{app.job_title}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-2">
+                                                                <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-xs text-muted-foreground">Company</p>
+                                                                    <p className="text-sm font-medium">{app.company_name}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-2">
+                                                                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-xs text-muted-foreground">Location</p>
+                                                                    <p className="text-sm font-medium">{app.job_location}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-2">
+                                                                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-xs text-muted-foreground">Applied On</p>
+                                                                    <p className="text-sm font-medium">
+                                                                        {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'N/A'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
