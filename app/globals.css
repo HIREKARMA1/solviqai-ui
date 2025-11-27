@@ -191,7 +191,7 @@
   
   /* Section container */
   .section-container {
-    @apply w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-24;
+    @apply w-full px-4 sm:px-6 lg:px-8 py-8 lg:py-16;
   }
   
   /* Smooth reveal on scroll */
@@ -263,6 +263,34 @@
 html, body {
   overflow-x: hidden;
   position: relative;
+}
+
+/* React Flow edge animations */
+@keyframes dash {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.react-flow__edge-path {
+  animation: dash 20s linear infinite;
+}
+
+/* Flowchart node pulse effect */
+@keyframes nodePulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+  }
+}
+
+.react-flow__node {
+  animation: nodePulse 3s ease-in-out infinite;
 }
 
 /* Ensure bottom navbar is always visible */

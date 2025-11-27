@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { sidebarFeatures, SidebarItem } from './LandingSidebar';
+import { sidebarFeatures, SidebarItem, studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures } from './LandingSidebar';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,22 +17,70 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Map feature IDs to dashboard routes
+  // Get sidebar features based on user type
+  const getSidebarFeatures = (): SidebarItem[] => {
+    if (!user) return studentSidebarFeatures; // Default to student features when not logged in
+    
+    switch (user.user_type) {
+      case 'college':
+        return collegeSidebarFeatures;
+      case 'admin':
+        return adminSidebarFeatures;
+      case 'student':
+      default:
+        return studentSidebarFeatures;
+    }
+  };
+
+  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    const routeMap: Record<string, string> = {
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-    };
-    return routeMap[featureId] || null;
+    
+    // Student routes
+    if (user.user_type === 'student') {
+      const routeMap: Record<string, string> = {
+        'dashboard': baseRoute,
+        'career-guidance': `${baseRoute}/career-guidance`,
+        'resume': `${baseRoute}/resume`,
+        'assessment': `${baseRoute}/assessment`,
+        // 'jobs': `${baseRoute}/jobs`,
+        // 'auto-apply': `${baseRoute}/auto-apply`,
+        'analytics': `${baseRoute}/analytics`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // College routes
+    if (user.user_type === 'college') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/college`,
+        'students': `/dashboard/college/students`,
+        'analytics': `/dashboard/college/analytics`,
+        'profile': `/dashboard/college/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // Admin routes
+    if (user.user_type === 'admin') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/admin`,
+        'colleges': `/dashboard/admin/colleges`,
+        'students': `/dashboard/admin/students`,
+        'analytics': `/dashboard/admin/analytics`,
+        'profile': `/dashboard/admin/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    return null;
   };
 
   // Check if we're in dashboard context
   const isDashboardContext = pathname?.startsWith('/dashboard');
 
+  const sidebarFeatures = getSidebarFeatures();
   const features = sidebarFeatures.map(item => ({
     ...item,
     onClick: () => {
@@ -63,7 +111,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
 
   return (
     <motion.nav
-      className="lg:hidden fixed top-20 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-md"
+      className="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-md"
     >
       <div 
         className="overflow-x-auto scrollbar-hide"
@@ -76,7 +124,14 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
             if (isDashboardContext) {
               // In dashboard, check if current path matches the feature route
               const route = getFeatureRoute(item.id);
-              isActive = Boolean(route && pathname && (pathname === route || pathname.startsWith(route + '/')));
+              if (route) {
+                // For exact matches or nested routes
+                isActive = pathname === route || pathname?.startsWith(route + '/');
+                // Special case: dashboard route should match exactly or be the base dashboard
+                if (item.id === 'dashboard') {
+                  isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;
+                }
+              }
             } else {
               // On homepage, use activeFeature prop
               isActive = activeFeature === item.id;

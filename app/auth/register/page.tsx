@@ -11,7 +11,8 @@ import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { User, Mail, Lock, Phone, ArrowRight, Check } from 'lucide-react';
+import { getErrorMessage } from '@/lib/utils';
+import { User, Mail, Lock, Phone, ArrowRight, Check, X } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ export default function RegisterPage() {
     phone: '',
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { register, user, loading: authLoading } = useAuth();
@@ -74,7 +76,9 @@ export default function RegisterPage() {
       
       router.push('/dashboard/student');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Registration failed. Please try again.');
+      // Extract proper error message
+      const errorMessage = getErrorMessage(err, 'Registration failed. Please try again.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -306,21 +310,19 @@ export default function RegisterPage() {
                     type="checkbox"
                     id="terms"
                     checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    onChange={() => setShowTermsModal(true)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     disabled={loading}
                   />
                   <label
                     htmlFor="terms"
-                    className="text-sm text-gray-600 dark:text-gray-400"
+                    className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer"
+                    onClick={() => setShowTermsModal(true)}
                   >
                     {t('auth.register.agreeTerms')}{' '}
-                    <Link
-                      href="/terms"
-                      className="text-primary-600 dark:text-primary-400 hover:underline"
-                    >
+                    <span className="text-primary-600 dark:text-primary-400 hover:underline">
                       Terms & Conditions
-                    </Link>
+                    </span>
                   </label>
                 </motion.div>
 
@@ -369,6 +371,160 @@ export default function RegisterPage() {
           </div>
         </motion.div>
       </main>
+
+      {/* Terms & Conditions Modal */}
+      {showTermsModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30"
+          onClick={() => setShowTermsModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-purple-50 dark:from-gray-800 dark:to-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-primary-600 to-purple-600 rounded-lg">
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Terms & Conditions
+                  </h2>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    Please read and accept to continue
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+              <div className="space-y-5 text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                <div className="space-y-4">
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      1. Account Responsibility
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      You are responsible for keeping your account secure and all activities under your account.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      2. Service Usage
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      Use our services only for lawful purposes. Do not misuse or harm the platform.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      3. Data Privacy
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      We collect and use your data as described in our Privacy Policy to provide better services.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      4. Content Accuracy
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      You must provide accurate information. False information may result in account termination.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      5. Intellectual Property
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      All content on this platform is protected by copyright. Do not copy or distribute without permission.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      6. Service Changes
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      We may modify or discontinue services at any time without prior notice.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      7. Limitation of Liability
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      We are not liable for any indirect damages arising from use of our services.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      8. Account Termination
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      We reserve the right to suspend or terminate accounts that violate these terms.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      9. Changes to Terms
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      We may update these terms. Continued use means acceptance of changes.
+                    </p>
+                  </div>
+                  
+                  <div className="pb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      10. Contact
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      For questions about these terms, contact us at{' '}
+                      <a href="mailto:support@hirekarma.in" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                        support@hirekarma.in
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with Accept Button */}
+            <div className="px-8 py-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <Button
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Check className="w-5 h-5 mr-2" />
+                Accept Terms & Conditions
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

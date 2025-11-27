@@ -25,8 +25,16 @@ export function useAuth() {
 
       const response = await apiClient.getCurrentUser()
       setUser(response)
-    } catch (error) {
-      apiClient.clearAuthTokens()
+    } catch (error: any) {
+      // Only clear tokens on authentication errors (401, 403), not network errors
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.warn('Authentication failed, clearing tokens')
+        apiClient.clearAuthTokens()
+        setUser(null)
+      } else {
+        // For network errors or other issues, keep tokens but log the error
+        console.error('Error checking auth (non-auth error):', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -34,11 +42,19 @@ export function useAuth() {
 
   const login = async (email: string, password: string, user_type: string) => {
     try {
+      console.log('🔐 Attempting login:', {
+        baseURL: (apiClient.client as any).defaults?.baseURL,
+        email,
+        user_type
+      });
+      
       const response = await apiClient.login({
         email,
         password,
         user_type,
       })
+      
+      console.log('✅ Login successful');
       
       apiClient.setAuthTokens(response.access_token, response.refresh_token)
       // Store token expiry (30 minutes from now)
@@ -51,8 +67,8 @@ export function useAuth() {
       
       toast.success('Login successful!')
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Login failed'
-      toast.error(message)
+      console.error('❌ Login failed:', error);
+      // Don't show toast for errors - they're displayed in the form
       throw error
     }
   }
@@ -82,8 +98,7 @@ export function useAuth() {
       
       toast.success('Registration successful! Welcome to Saksham AI!')
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Registration failed'
-      toast.error(message)
+      // Don't show toast for errors - they're displayed in the form
       throw error
     }
   }
