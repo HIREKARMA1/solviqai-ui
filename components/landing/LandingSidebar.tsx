@@ -13,6 +13,7 @@ import {
   User,
   Building2,
   Sparkles,
+  BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -58,6 +59,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'assessment',
     icon: <ClipboardList className="w-5 h-5" />,
     label: 'Mock Assessment',
+    onClick: undefined,
+  },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice',
     onClick: undefined,
   },
   // {
@@ -180,6 +187,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       'dashboard': baseRoute,
       'resume': `${baseRoute}/resume`,
       'assessment': `${baseRoute}/assessment`,
+      'practice': `${baseRoute}/practice`,
       'jobs': `${baseRoute}/jobs`,
       'auto-apply': `${baseRoute}/auto-apply`,
     };
