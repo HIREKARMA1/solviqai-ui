@@ -8,6 +8,11 @@ import {
   ClipboardList,
   Zap,
   LayoutGrid,
+  BarChart3,
+  Users,
+  User,
+  Building2,
+  BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -155,7 +160,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   // Get sidebar features based on user type
   const getSidebarFeatures = (): SidebarItem[] => {
     if (!user) return studentSidebarFeatures; // Default to student features when not logged in
-    
+
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
