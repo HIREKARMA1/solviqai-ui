@@ -1,0 +1,138 @@
+/* Handsontable custom styles for accounting */
+.handsontable-container {
+  background: white;
+  padding: 1rem;
+  overflow: auto;
+  min-height: 600px;
+}
+
+/* Main table wrapper */
+.handsontable {
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+}
+
+/* Header cells styling */
+.header-cell {
+  background-color: #f3f4f6 !important;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Currency cell styling */
+.htNumeric {
+  text-align: right !important;
+}
+
+/* Formula cells */
+.htFormula {
+  background-color: #f0f9ff !important;
+}
+
+/* Selected cell highlight */
+.handsontable .ht_master .htCore .currentRow {
+  background-color: #dbeafe;
+}
+
+.handsontable .ht_master .htCore .currentCol {
+  background-color: #dbeafe;
+}
+
+/* Context menu styling */
+.htContextMenu {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+/* Better borders */
+.handsontable td {
+  border-color: #e5e7eb !important;
+  padding: 6px 8px !important;
+}
+
+/* Column headers */
+.handsontable thead th {
+  background: linear-gradient(to bottom, #3b82f6, #2563eb) !important;
+  color: white !important;
+  font-weight: 600;
+  padding: 8px !important;
+  border-color: #2563eb !important;
+}
+
+/* Row headers */
+.handsontable tbody th {
+  background: linear-gradient(to right, #3b82f6, #2563eb) !important;
+  color: white !important;
+  font-weight: 600;
+  padding: 6px 10px !important;
+  border-color: #2563eb !important;
+}
+
+/* Corner header */
+.handsontable .ht_clone_top_left_corner thead th {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: white !important;
+}
+
+/* Scrollbars */
+.handsontable .wtHolder::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.handsontable .wtHolder::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 6px;
+}
+
+.handsontable .wtHolder::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 6px;
+  border: 2px solid #f3f4f6;
+}
+
+.handsontable .wtHolder::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Cell focus */
+.handsontable .ht_master .wtBorder.current {
+  border: 2px solid #3b82f6 !important;
+}
+
+.handsontable .ht_master .wtBorder.area {
+  border: 2px solid #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Dark mode support */
+.dark .handsontable-container {
+  background: #1f2937;
+}
+
+.dark .handsontable td {
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
+}
+
+.dark .handsontable thead th,
+.dark .handsontable tbody th {
+  background: linear-gradient(to bottom, #1e40af, #1e3a8a) !important;
+  border-color: #1e3a8a !important;
+}
+
+.dark .header-cell {
+  background-color: #4b5563 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Hover effects */
+.handsontable tbody tr:hover td {
+  background-color: #f9fafb !important;
+}
+
+.dark .handsontable tbody tr:hover td {
+  background-color: #4b5563 !important;
+}
