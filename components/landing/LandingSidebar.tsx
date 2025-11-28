@@ -78,6 +78,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Analytics',
     onClick: undefined,
   },
+  {
+    id: 'electrical',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
 ];
 
 // College sidebar features
@@ -181,6 +187,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
+        'electrical': `${baseRoute}/electrical`,
       };
       return routeMap[featureId] || null;
     }
@@ -284,13 +291,13 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
             <nav className="space-y-1">
               {features.map((item) => {
                 // Determine active state based on context
-                let isActive = false;
+                let isActive: boolean = false;
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
                   if (route) {
                     // For exact matches or nested routes
-                    isActive = pathname === route || pathname?.startsWith(route + '/');
+                    isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                     // Special case: dashboard route should match exactly or be the base dashboard
                     if (item.id === 'dashboard') {
                       isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;

@@ -764,6 +764,91 @@ class ApiClient {
     );
     return response.data;
   }
+
+  // Admin Analytics API
+  async getAdminAnalytics(
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.get("/admin/analytics", { params });
+    return response.data;
+  }
+
+  async exportAnalytics(
+    format: string = 'json',
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = { format };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.post("/admin/analytics/export", null, { params });
+    return response.data;
+  }
+
+  // Admin - Student Assessment Reports
+  async getStudentAssessmentsAdmin(studentId: string): Promise<any> {
+    const response = await this.client.get(`/admin/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportAdmin(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/admin/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // College - Student Assessment Reports
+  async getStudentAssessmentsCollege(studentId: string): Promise<any> {
+    const response = await this.client.get(`/college/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportCollege(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/college/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // Electrical endpoints
+  async generateElectricalQuestion(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+    return response.data;
+  }
+
+  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
+      timeout: 180000,
+    });
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
