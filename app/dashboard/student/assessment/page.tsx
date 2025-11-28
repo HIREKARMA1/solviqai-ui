@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -161,11 +161,11 @@ export default function AssessmentPage() {
     try {
       setLoading(true);
       const data = await apiClient.getAssessmentStatus(assessmentId!);
-      console.log("📊 Assessment data received:", data);
-      console.log("📊 Rounds data:", data.rounds);
+      console.log("ðŸ“Š Assessment data received:", data);
+      console.log("ðŸ“Š Rounds data:", data.rounds);
       setAssessment(data);
 
-      // ✅ Auto-complete assessment if all rounds are done (triggers playlist generation)
+      // âœ… Auto-complete assessment if all rounds are done (triggers playlist generation)
       if (data.rounds && data.rounds.length > 0) {
         const allRoundsCompleted = data.rounds.every(
           (round: any) => String(round.status).toLowerCase() === "completed",
@@ -175,7 +175,7 @@ export default function AssessmentPage() {
 
         if (allRoundsCompleted && assessmentNotCompleted) {
           console.log(
-            "🎉 All rounds completed! Finalizing assessment and generating playlist...",
+            "ðŸŽ‰ All rounds completed! Finalizing assessment and generating playlist...",
           );
           try {
             await apiClient.completeAssessment(assessmentId!);
@@ -243,7 +243,7 @@ export default function AssessmentPage() {
     round: any,
   ): "completed" | "in_progress" | "not_started" => {
     console.log(
-      "🔍 Checking round status:",
+      "ðŸ” Checking round status:",
       round.round_type,
       "status:",
       round.status,
@@ -552,189 +552,6 @@ export default function AssessmentPage() {
                       {status !== "completed" && (
                         <Button
                           onClick={() => handleStartRound(round)}
-                          disabled={!isRoundEnabled}
-                          size="sm"
-                          className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-10 whitespace-nowrap"
-                        >
-                          {status === "in_progress" ? "Continue" : "Start"}
-                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
-                        </Button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Actions */}
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/dashboard/student/jobs")}
-          >
-            Back to Job Recommendations
-          </Button>
-          {assessment.status === "completed" && (
-            <Button
-              onClick={() =>
-                router.push(
-                  `/dashboard/student/assessment/report?id=${assessmentId}`,
-                )
-              }
-            >
-              View Report
-            </Button>
-          )}
-        </div>
-      </div>
-    </DashboardLayout>
-  );
-}
-                      <p className="text-3xl font-bold">
-                        {assessment.rounds?.filter(
-                          (r: any) => r.status === "COMPLETED",
-                        ).length || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-200/50 to-purple-100/20 dark:from-purple-900/30 dark:to-purple-800/10" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-900/10" />
-            </Card>
-          </motion.div>
-          <motion.div
-            whileHover={{ y: -3, scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          >
-            <Card className="relative overflow-hidden card-hover min-h-[120px]">
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Clock className="w-6 h-6 text-orange-500" />
-                    <div>
-                      <p className="text-sm font-medium">Total Duration</p>
-                      <p className="text-3xl font-bold">
-                        {assessment.rounds?.reduce(
-                          (total: number, round: any) => {
-                            const duration =
-                              roundDisplay[round.round_type]?.duration ||
-                              "0 min";
-                            return total + parseInt(duration);
-                          },
-                          0,
-                        ) || 0}{" "}
-                        min
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-200/50 to-orange-100/20 dark:from-orange-900/30 dark:to-orange-800/10" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-orange-50 to-orange-100/70 dark:from-orange-900/20 dark:to-orange-900/10" />
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Rounds */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Assessment Rounds</CardTitle>
-            <CardDescription>
-              Complete each round to progress through your assessment
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              {assessment.rounds?.map((round: any, index: number) => {
-                const roundInfo = roundDisplay[round.round_type] || {
-                  name: `Round ${round.round_number}`,
-                  description: "Assessment round",
-                  duration: "30 min",
-                  icon: Target,
-                  color: "bg-gray-500",
-                };
-                const status: "completed" | "in_progress" | "not_started" =
-                  getRoundStatus(round);
-                const IconComponent = roundInfo.icon;
-
-                // Check if previous round is completed (for step-by-step progression)
-                const previousRound =
-                  index > 0 ? assessment.rounds[index - 1] : null;
-                const previousRoundStatus:
-                  | "completed"
-                  | "in_progress"
-                  | "not_started" = previousRound
-                  ? getRoundStatus(previousRound)
-                  : "completed";
-                const previousRoundCompleted =
-                  previousRoundStatus === "completed";
-                const isRoundEnabled =
-                  status === "completed" ||
-                  previousRoundCompleted ||
-                  index === 0;
-
-                // Type guard to check if status is 'completed'
-                const isCompleted = status === "completed";
-                const isDisabled = !isRoundEnabled && !isCompleted;
-
-                return (
-                  <motion.div
-                    key={round.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.35, delay: index * 0.05 }}
-                    whileHover={{ y: -2 }}
-                    className={`group relative overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 sm:p-5 border rounded-xl sm:rounded-2xl card-hover`}
-                    style={{ opacity: isDisabled ? 0.5 : 1 }}
-                  >
-                    <div
-                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${roundHoverBg[round.round_type] || "from-primary-50 to-secondary-50"}`}
-                    />
-                    <div
-                      className={`absolute -top-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${roundHoverBg[round.round_type] || "from-primary-100/40 to-secondary-100/20"}`}
-                    />
-                    <div className="flex items-center space-x-3 sm:space-x-4 relative z-10 flex-1 min-w-0">
-                      <div
-                        className={`p-2 sm:p-3 rounded-xl text-white shadow-sm flex-shrink-0 ${roundInfo.color}`}
-                      >
-                        <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm sm:text-base truncate">{roundInfo.name}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 sm:line-clamp-none">
-                          {roundInfo.description}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
-                          {roundInfo.duration}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-4 relative z-10 flex-shrink-0">
-                      <Badge
-                        className={`${getStatusColor(status)} ${status === "in_progress" ? "animate-pulse" : ""} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}
-                      >
-                        {getStatusIcon(status)}
-                        <span className="ml-1 capitalize whitespace-nowrap">
-                          {status.replace("_", " ")}
-                        </span>
-                      </Badge>
-                      {status === "completed" && round.score && (
-                        <div className="text-right">
-                          <p className="text-xs sm:text-sm font-medium">
-                            {round.score} points
-                          </p>
-                          <p className="text-[10px] sm:text-xs text-gray-500">
-                            {round.percentage}%
-                          </p>
-                        </div>
-                      )}
-                      {status !== "completed" && (
-                        <Button
-                          onClick={() => handleStartRound(round.round_number)}
                           disabled={!isRoundEnabled}
                           size="sm"
                           className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-10 whitespace-nowrap"
