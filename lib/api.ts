@@ -780,7 +780,7 @@ class ApiClient {
 
   // Civil Engineering endpoints
   async generateCivilProblem(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/generate');
+    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
     return response.data;
   }
 
