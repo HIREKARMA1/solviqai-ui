@@ -71,6 +71,45 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
+/**
+ * Extract error message from API error response
+ * Handles various error response formats from the backend
+ */
+export function getErrorMessage(error: any, defaultMessage: string = 'An error occurred'): string {
+  // Check if error has a response with data
+  if (error?.response?.data) {
+    const data = error.response.data;
+    
+    // Check for detail field (FastAPI standard)
+    if (data.detail) {
+      return data.detail;
+    }
+    
+    // Check for message field
+    if (data.message) {
+      return data.message;
+    }
+    
+    // Check for error field
+    if (data.error) {
+      return data.error;
+    }
+    
+    // If data is a string, return it
+    if (typeof data === 'string') {
+      return data;
+    }
+  }
+  
+  // Check if error has a message property
+  if (error?.message) {
+    return error.message;
+  }
+  
+  // Return default message
+  return defaultMessage;
+}
+
 
 
 

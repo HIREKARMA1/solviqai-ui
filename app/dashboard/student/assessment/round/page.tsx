@@ -235,15 +235,31 @@ export default function AssessmentRoundPage() {
     // Track fullscreen changes
     useEffect(() => {
         if (typeof document === 'undefined') return
-        const handler = () => {
-            const fs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+        
+        // Initial check
+        const checkFullscreen = () => {
+            const fs = Boolean(
+                document.fullscreenElement || 
+                (document as any).webkitFullscreenElement ||
+                (document as any).mozFullScreenElement ||
+                (document as any).msFullscreenElement
+            )
             setIsFullscreen(fs)
         }
-        document.addEventListener('fullscreenchange', handler)
-        document.addEventListener('webkitfullscreenchange', handler as any)
+        
+        // Check immediately
+        checkFullscreen()
+        
+        // Listen for changes
+        const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+        events.forEach(event => {
+            document.addEventListener(event, checkFullscreen)
+        })
+        
         return () => {
-            document.removeEventListener('fullscreenchange', handler)
-            document.removeEventListener('webkitfullscreenchange', handler as any)
+            events.forEach(event => {
+                document.removeEventListener(event, checkFullscreen)
+            })
         }
     }, [])
 
@@ -251,12 +267,36 @@ export default function AssessmentRoundPage() {
         try {
             if (!isFullscreen) {
                 const elem: any = document.documentElement
-                if (elem.requestFullscreen) await elem.requestFullscreen()
-                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen()
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen()
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen()
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen()
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen()
+                }
             } else {
-                if (document.exitFullscreen) await document.exitFullscreen()
-                else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen()
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen()
+                } else if ((document as any).webkitExitFullscreen) {
+                    await (document as any).webkitExitFullscreen()
+                } else if ((document as any).mozCancelFullScreen) {
+                    await (document as any).mozCancelFullScreen()
+                } else if ((document as any).msExitFullscreen) {
+                    await (document as any).msExitFullscreen()
+                }
             }
+            // Force state update after a brief delay to ensure browser has processed
+            setTimeout(() => {
+                const fs = Boolean(
+                    document.fullscreenElement || 
+                    (document as any).webkitFullscreenElement ||
+                    (document as any).mozFullScreenElement ||
+                    (document as any).msFullscreenElement
+                )
+                setIsFullscreen(fs)
+            }, 100)
         } catch (e) {
             console.error('Fullscreen toggle failed', e)
         }
@@ -437,7 +477,22 @@ export default function AssessmentRoundPage() {
             router.push(`/dashboard/student/assessment?id=${assessmentId}`)
         } catch (error: any) {
             console.error('Error submitting round:', error)
-            toast.error(extractErrorMessage(error))
+            
+            // Check if it's an authentication error
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                toast.error('Session expired. Please login again.')
+                // Clear invalid tokens
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('refresh_token')
+                localStorage.removeItem('token_expiry')
+                // Redirect to login
+                setTimeout(() => {
+                    router.push('/auth/login')
+                }, 2000)
+            } else {
+                toast.error(extractErrorMessage(error))
+            }
+            
             setSubmitting(false)
             hasAutoSubmitted.current = false
         }
@@ -513,10 +568,8 @@ export default function AssessmentRoundPage() {
         }
     }
 
-    const playDictationAudio = (text: string) => {
-        console.log('🔊 TTS called with text:', text)  // DEBUG
-        console.log('Text length:', text?.length)  // DEBUG
-        console.log('Text type:', typeof text)  // DEBUG
+    const playDictationAudio = (text: string, retryCount: number = 0) => {
+        console.log('🔊 TTS called with text:', text)
         
         if (!text || text.trim() === '') {
             console.error('❌ Empty or undefined text')
@@ -530,39 +583,93 @@ export default function AssessmentRoundPage() {
             return
         }
         
-        console.log('✅ Speech synthesis available')
+        if (retryCount >= 3) {
+            console.error('❌ Max retries reached')
+            toast.error('Unable to play audio. Please try refreshing the page.')
+            return
+        }
         
         // Cancel any ongoing speech first
         window.speechSynthesis.cancel()
         
         // Small delay to ensure cancellation completes
         setTimeout(() => {
-            console.log('🎙️ Creating utterance...')
-            const utterance = new SpeechSynthesisUtterance(text)
-            utterance.lang = 'en-US'
-            utterance.rate = 0.85  // Slower for dictation
-            utterance.pitch = 1.0
-            utterance.volume = 1.0
-            
-            // Event listeners for debugging
-            utterance.onstart = () => {
-                console.log('✅ Speech STARTED')
-                toast.success('🔊 Audio playing...')
+            try {
+                // Get available voices and prefer high-quality ones
+                const voices = window.speechSynthesis.getVoices()
+                const preferredVoice = voices.find(v => 
+                    v.lang.startsWith('en') && 
+                    (v.name.toLowerCase().includes('neural') || 
+                     v.name.toLowerCase().includes('premium') ||
+                     v.name.toLowerCase().includes('enhanced'))
+                ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'))
+                
+                const utterance = new SpeechSynthesisUtterance(text.trim())
+                
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice
+                    utterance.lang = preferredVoice.lang
+                } else {
+                    utterance.lang = 'en-US'
+                }
+                
+                // Optimized settings for clarity
+                utterance.rate = 0.88  // Slightly slower for better comprehension
+                utterance.pitch = 1.0
+                utterance.volume = 1.0  // Maximum volume
+                
+                let hasStarted = false
+                const timeout = setTimeout(() => {
+                    if (!hasStarted && retryCount < 2) {
+                        console.warn('TTS timeout, retrying...')
+                        window.speechSynthesis.cancel()
+                        playDictationAudio(text, retryCount + 1)
+                    }
+                }, 2000)
+                
+                utterance.onstart = () => {
+                    hasStarted = true
+                    clearTimeout(timeout)
+                    console.log('✅ Speech STARTED')
+                    toast.success('🔊 Audio playing...', { duration: 2000 })
+                }
+                
+                utterance.onend = () => {
+                    clearTimeout(timeout)
+                    console.log('✅ Speech ENDED')
+                }
+                
+                utterance.onerror = (event: any) => {
+                    clearTimeout(timeout)
+                    console.error('❌ TTS Error:', event.error, event)
+                    
+                    // Retry on certain errors
+                    if ((event.error === 'synthesis-failed' || 
+                         event.error === 'synthesis-unavailable' ||
+                         event.error === 'audio-busy') && retryCount < 2) {
+                        console.log('Retrying TTS...')
+                        setTimeout(() => {
+                            playDictationAudio(text, retryCount + 1)
+                        }, 500)
+                    } else {
+                        toast.error(`Audio error: ${event.error || 'Unknown error'}`)
+                    }
+                }
+                
+                console.log('📢 Calling speak()...')
+                window.speechSynthesis.speak(utterance)
+                console.log('📢 speak() called successfully')
+            } catch (err) {
+                console.error('Error creating utterance:', err)
+                if (retryCount < 2) {
+                    setTimeout(() => {
+                        playDictationAudio(text, retryCount + 1)
+                    }, 500)
+                } else {
+                    toast.error('Failed to play audio. Please try again.')
+                }
             }
-            
-            utterance.onend = () => {
-                console.log('✅ Speech ENDED')
-            }
-            
-            utterance.onerror = (event) => {
-                console.error('❌ TTS Error:', event.error, event)
-                toast.error(`Audio error: ${event.error}`)
-            }
-            
-            console.log('📢 Calling speak()...')
-            window.speechSynthesis.speak(utterance)
-            console.log('📢 speak() called successfully')
-        }, 100)
+        }, 150)
     }
     
 
@@ -671,7 +778,7 @@ export default function AssessmentRoundPage() {
 
     if (loading) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="flex justify-center items-center min-h-screen">
                     <div className="text-center max-w-lg px-6">
                         <Loader size="lg" />
@@ -737,7 +844,7 @@ export default function AssessmentRoundPage() {
         // Ensure we have valid roundData with round_id before rendering
         if (!roundData || (!roundData.round_id && !roundData.id)) {
             return (
-                <DashboardLayout requiredUserType="student">
+                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                     <div className="flex justify-center items-center min-h-screen">
                         <div className="text-center max-w-lg px-6">
                             <Loader size="lg" />
@@ -754,7 +861,7 @@ export default function AssessmentRoundPage() {
         }
         
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <GroupDiscussionRound
                     roundId={roundData.round_id || roundData.id}
                     assessmentId={assessmentId!}
@@ -772,9 +879,22 @@ export default function AssessmentRoundPage() {
                             );
                             toast.success('Discussion round completed successfully!');
                             router.push(`/dashboard/student/assessment?id=${assessmentId}`);
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('Error submitting discussion responses:', error);
-                            toast.error('Failed to submit discussion responses');
+                            
+                            // Check if it's an authentication error
+                            if (error.response?.status === 401 || error.response?.status === 403) {
+                                toast.error('Session expired. Please login again.')
+                                localStorage.removeItem('access_token')
+                                localStorage.removeItem('refresh_token')
+                                localStorage.removeItem('token_expiry')
+                                setTimeout(() => {
+                                    router.push('/auth/login')
+                                }, 2000)
+                            } else {
+                                toast.error('Failed to submit discussion responses');
+                            }
+                            
                             setSubmitting(false);
                         }
                     }}
@@ -786,13 +906,13 @@ export default function AssessmentRoundPage() {
     // Coding Round UI
     if (isCodingRound) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="min-h-screen bg-gray-100">
                     {/* Header */}
-                    <div className="bg-indigo-600 text-white p-4">
-                        <div className="flex justify-between items-center max-w-7xl mx-auto">
-                            <h1 className="text-xl font-semibold">Round {roundNumber}: Coding Challenge</h1>
-                            <div className="text-sm">Time Left: {formatTime(timeLeft)}</div>
+                    <div className="bg-indigo-600 text-white p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-2 sm:gap-0">
+                            <h1 className="text-base sm:text-lg md:text-xl font-semibold">Round {roundNumber}: Coding Challenge</h1>
+                            <div className="text-xs sm:text-sm">Time Left: {formatTime(timeLeft)}</div>
                         </div>
                     </div>
 
@@ -819,7 +939,7 @@ export default function AssessmentRoundPage() {
 
     if (!roundData || (!isGroupDiscussionRound && (!roundData.questions || roundData.questions.length === 0))) {
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="text-center py-12">
                     <h2 className="text-2xl font-bold mb-4">No Questions Available</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -845,25 +965,25 @@ export default function AssessmentRoundPage() {
         const liveBorder = isHR ? 'border-orange-300' : 'border-blue-300'
         const liveText = isHR ? 'text-orange-600' : 'text-blue-600'
         return (
-            <DashboardLayout requiredUserType="student">
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-blue-50 to-purple-50">
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
-                        <div className="flex justify-between items-center max-w-7xl mx-auto">
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 sm:p-4 shadow-lg">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-3 sm:gap-0">
                             <div>
-                                <h1 className="text-2xl font-bold">
-                                    {roundNumber === 4 ? '💻 Technical Interview' : '👔 HR Interview'}
+                                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+                                    {roundNumber === 6 ? '💻 Technical Interview' : '👔 HR Interview'}
                                 </h1>
-                                <p className="text-sm text-blue-100 mt-1">
+                                <p className="text-xs sm:text-sm text-blue-100 mt-1">
                                     Question {currentQuestion + 1} of {roundData?.questions?.length || 0}
                                 </p>
                             </div>
-                            <div className="text-right">
-                                <div className="text-lg font-semibold">
+                            <div className="text-left sm:text-right w-full sm:w-auto">
+                                <div className="text-base sm:text-lg font-semibold">
                                     ⏱️ {formatTime(timeLeft)}
                                 </div>
                                 {timeLeft !== null && timeLeft <= 60 && timeLeft > 0 && (
-                                    <span className="text-yellow-300 font-bold animate-pulse text-sm">
+                                    <span className="text-yellow-300 font-bold animate-pulse text-xs sm:text-sm">
                                         Last minute!
                                     </span>
                                 )}
@@ -872,40 +992,40 @@ export default function AssessmentRoundPage() {
                     </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                    <div className="max-w-4xl mx-auto space-y-6">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+                    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
                         {currentQ && (
-                            <div className={`bg-white rounded-2xl shadow-md p-6 border ${cardBorder}`}>
-                                <div className="flex items-start gap-4">
-                                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${aiBadgeGrad} flex items-center justify-center text-white font-bold`}>AI</div>
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-500 mb-2">Interviewer</p>
-                                        <p className="text-gray-800 text-lg leading-relaxed">{currentQ.question_text}</p>
+                            <div className={`bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border ${cardBorder}`}>
+                                <div className="flex items-start gap-3 sm:gap-4">
+                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${aiBadgeGrad} flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0`}>AI</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm text-gray-500 mb-2">Interviewer</p>
+                                        <p className="text-gray-800 text-sm sm:text-base md:text-lg leading-relaxed break-words">{currentQ.question_text}</p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {responses[currentQ?.id]?.response_text && (
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-md p-6 border border-emerald-100">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">You</div>
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-500 mb-2">Your Answer</p>
-                                        <p className="text-gray-800 leading-relaxed">{responses[currentQ.id].response_text}</p>
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border border-emerald-100">
+                                <div className="flex items-start gap-3 sm:gap-4">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0">You</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm text-gray-500 mb-2">Your Answer</p>
+                                        <p className="text-gray-800 text-sm sm:text-base leading-relaxed break-words">{responses[currentQ.id].response_text}</p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {isLiveTranscribing && (liveTranscript || interimTranscript) && (
-                            <div className="bg-white rounded-2xl shadow-md p-6 border-2 border-dashed" style={{ borderColor: 'transparent' }}>
-                                <div className={`border-2 ${liveBorder} rounded-xl p-4 bg-opacity-50 bg-blue-50`}>
-                                    <div className="flex items-start gap-4">
-                                        <Mic className={`h-6 w-6 ${liveText} animate-pulse`} />
-                                        <div className="flex-1">
-                                            <p className={`text-sm ${liveText} font-semibold mb-2`}>Speaking... (Live)</p>
-                                        <p className="text-gray-800">
+                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border-2 border-dashed" style={{ borderColor: 'transparent' }}>
+                                <div className={`border-2 ${liveBorder} rounded-xl p-3 sm:p-4 bg-opacity-50 bg-blue-50`}>
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        <Mic className={`h-5 w-5 sm:h-6 sm:w-6 ${liveText} animate-pulse flex-shrink-0`} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-xs sm:text-sm ${liveText} font-semibold mb-2`}>Speaking... (Live)</p>
+                                        <p className="text-sm sm:text-base text-gray-800 break-words">
                                             {liveTranscript}
                                             {interimTranscript && (
                                                 <span className="text-gray-500 italic"> {interimTranscript}</span>
@@ -922,23 +1042,24 @@ export default function AssessmentRoundPage() {
                 </div>
 
                 {/* Bottom Controls */}
-                <div className="bg-white/90 backdrop-blur border-t shadow-lg p-4">
-                    <div className="max-w-4xl mx-auto space-y-4">
-                        <div className="flex gap-3">
+                <div className="bg-white/90 backdrop-blur border-t shadow-lg p-3 sm:p-4">
+                    <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+                        <div className="flex gap-2 sm:gap-3">
                             {!isLiveTranscribing ? (
-                                <button onClick={startLiveTranscription} className={`flex-1 bg-gradient-to-r ${primaryGrad} hover:opacity-95 text-white px-6 py-4 rounded-xl font-semibold text-lg shadow-lg transition-all flex items-center justify-center gap-3`}>
-                                    <Mic className="h-6 w-6" />
+                                <button onClick={startLiveTranscription} className={`flex-1 bg-gradient-to-r ${primaryGrad} hover:opacity-95 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all flex items-center justify-center gap-2 sm:gap-3`}>
+                                    <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
                                     <span>Start Speaking</span>
                                 </button>
                             ) : (
-                                <button onClick={stopLiveTranscription} className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-6 py-4 rounded-xl font-semibold text-lg shadow-lg transition-all animate-pulse flex items-center justify-center gap-3">
-                                    <Square className="h-6 w-6" />
-                                    <span>Stop & Save Answer</span>
+                                <button onClick={stopLiveTranscription} className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all animate-pulse flex items-center justify-center gap-2 sm:gap-3">
+                                    <Square className="h-5 w-5 sm:h-6 sm:w-6" />
+                                    <span className="hidden sm:inline">Stop & Save Answer</span>
+                                    <span className="sm:hidden">Stop & Save</span>
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <button
                                 onClick={() => {
                                     if (currentQuestion < roundData.questions.length - 1) {
@@ -946,12 +1067,13 @@ export default function AssessmentRoundPage() {
                                     }
                                 }}
                                 disabled={currentQuestion >= roundData.questions.length - 1}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 px-6 py-3 rounded-xl font-medium transition-all"
+                                className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all"
                             >
-                                Next Question →
+                                <span className="hidden sm:inline">Next Question →</span>
+                                <span className="sm:hidden">Next →</span>
                             </button>
 
-                            <button onClick={handleSubmitWithConfirmation} disabled={submitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg">
+                            <button onClick={handleSubmitWithConfirmation} disabled={submitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg">
                                 {submitting ? (
                                     <div className="flex items-center justify-center gap-2">
                                         <Loader size="sm" />
@@ -963,7 +1085,7 @@ export default function AssessmentRoundPage() {
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between text-sm text-gray-600">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 text-xs sm:text-sm text-gray-600">
                             <span>Progress: {currentQuestion + 1} / {roundData?.questions?.length || 0}</span>
                             {counts.notVisited + counts.notAnswered + counts.marked > 0 && (
                                 <span className="text-orange-600">⚠️ {counts.notVisited + counts.notAnswered + counts.marked} unanswered</span>
@@ -979,11 +1101,12 @@ export default function AssessmentRoundPage() {
 
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
     return (
-        <div className="min-h-screen bg-gray-100 select-none flex flex-col">
+        <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+            <div className="min-h-screen bg-gray-100 select-none flex flex-col">
             {/* Header */}
-            <div className="bg-blue-600 text-white p-4">
-                <div className="flex justify-between items-center w-full px-6">
-                    <h1 className="text-xl font-semibold">
+            <div className="bg-blue-600 text-white p-3 sm:p-4">
+                <div className="flex justify-between items-center w-full px-3 sm:px-6 gap-2 sm:gap-3">
+                    <h1 className="text-base sm:text-lg md:text-xl font-semibold truncate">
                         {/* Use the backend type for correct naming in non-tech vs tech flows */}
                         {(() => {
                             const typeDisplayMap: Record<string, string> = {
@@ -1000,36 +1123,37 @@ export default function AssessmentRoundPage() {
                             return <>Round {roundNumber}: {title}</>
                         })()}
                     </h1>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                         <button
                             onClick={toggleFullscreen}
-                            className="bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded text-sm"
+                            className="bg-white/15 hover:bg-white/25 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm whitespace-nowrap"
                             title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                         >
-                            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                            <span className="hidden sm:inline">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+                            <span className="sm:hidden">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 w-full flex">
+            <div className="flex-1 w-full flex flex-col lg:flex-row">
 
                 {/* Main Content - Question Display with All Types */}
-                <div className="flex-1 bg-white p-6 flex flex-col">
+                <div className="flex-1 bg-white p-3 sm:p-4 md:p-6 flex flex-col">
                     <div className="max-w-none">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold mb-4">
+                        <div className="mb-4 sm:mb-6">
+                            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
                                 Question No {currentQuestion + 1}
                             </h2>
 
-                            <div className="bg-gray-50 p-4 border rounded mb-6">
+                            <div className="bg-gray-50 p-3 sm:p-4 border rounded mb-4 sm:mb-6">
                                 {/* Hide question text for DICTATION - it's the answer! */}
                                 {currentQ.question_type !== 'dictation' ? (
-                                    <p className="font-medium text-gray-800 mb-4 select-none" onCopy={(e) => e.preventDefault()}>
+                                    <p className="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4 select-none" onCopy={(e) => e.preventDefault()}>
                                         {currentQ.question_text}
                                     </p>
                                 ) : (
-                                    <p className="font-medium text-gray-800 mb-4 select-none">
+                                    <p className="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4 select-none">
                                         🎧 Listening Exercise - Type What You Hear
                                     </p>
                                 )}
@@ -1051,7 +1175,7 @@ export default function AssessmentRoundPage() {
                                                     return (
                                                         <label 
                                                             key={index}
-                                                            className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                                            className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
                                                         >
                                                             <input
                                                                 type="radio"
@@ -1059,9 +1183,9 @@ export default function AssessmentRoundPage() {
                                                                 value={optionLetter}
                                                                 checked={responses[currentQ.id]?.response_text === optionLetter}
                                                                 onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                                                                className="w-4 h-4 text-blue-600"
+                                                                className="w-4 h-4 text-blue-600 flex-shrink-0"
                                                             />
-                                                            <span className="flex-1 select-none text-gray-800" onCopy={(e) => e.preventDefault()}>
+                                                            <span className="flex-1 select-none text-sm sm:text-base text-gray-800" onCopy={(e) => e.preventDefault()}>
                                                                 {optionLetter}) {optionText}
                                                             </span>
                                                         </label>
@@ -1074,15 +1198,15 @@ export default function AssessmentRoundPage() {
 
                                 {/* ========== TEXT QUESTION - Short Writing ========== */}
                                 {currentQ.question_type === 'text' && (
-                                    <div className="space-y-3">
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                            <p className="text-sm text-blue-800 flex items-center gap-2">
-                                                <Edit3 className="h-4 w-4" />
+                                    <div className="space-y-2 sm:space-y-3">
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                                            <p className="text-xs sm:text-sm text-blue-800 flex items-center gap-2">
+                                                <Edit3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                                                 Write your answer below (2-3 sentences):
                                             </p>
                                         </div>
                                         <textarea
-                                            className="w-full h-32 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full h-24 sm:h-32 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="Type your answer here..."
                                             value={responses[currentQ.id]?.response_text || ''}
                                             onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
@@ -1095,12 +1219,12 @@ export default function AssessmentRoundPage() {
 
                                 {/* ========== DICTATION QUESTION - Listen and Type ========== */}
                                 {currentQ.question_type === 'dictation' && (
-                                    <div className="space-y-4">
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                            <p className="text-sm text-blue-800 mb-3 flex items-center gap-2">
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                                            <p className="text-xs sm:text-sm text-blue-800 mb-2 sm:mb-3 flex items-center gap-2">
                                                 🎧 Click the button below to hear a sentence. Listen carefully and type exactly what you hear.
                                             </p>
-                                            <p className="text-xs text-blue-700 mb-3">
+                                            <p className="text-xs text-blue-700 mb-2 sm:mb-3">
                                                 You can play the audio multiple times. Type every word correctly, including punctuation.
                                             </p>
                                             
@@ -1113,15 +1237,15 @@ export default function AssessmentRoundPage() {
                                                     console.log('Playing dictation:', textToSpeak)
                                                     playDictationAudio(textToSpeak)
                                                 }}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+                                                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
                                             >
-                                                <Volume2 className="h-5 w-5" />
+                                                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 <span>Play Audio</span>
                                             </button>
                                         </div>
                                         
                                         <textarea
-                                            className="w-full h-24 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                                            className="w-full h-20 sm:h-24 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
                                             placeholder="Type the sentence you heard here..."
                                             value={responses[currentQ.id]?.response_text || ''}
                                             onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
@@ -1137,9 +1261,9 @@ export default function AssessmentRoundPage() {
 
                                 {/* ========== VOICE_READING QUESTION - Read Aloud ========== */}
                                 {currentQ.question_type === 'voice_reading' && (
-                                    <div className="space-y-4">
-                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                            <p className="text-sm text-purple-800 mb-3">
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
+                                            <p className="text-xs sm:text-sm text-purple-800 mb-2 sm:mb-3">
                                                 📖 Read the text above aloud clearly. Click "Start Recording" when ready.
                                             </p>
                                         </div>
@@ -1147,25 +1271,25 @@ export default function AssessmentRoundPage() {
                                         {!isLiveTranscribing ? (
                                             <button
                                                 onClick={startLiveTranscription}
-                                                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-4 rounded-lg font-medium transition-all shadow-md flex items-center justify-center gap-3"
+                                                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
                                             >
-                                                <Mic className="h-5 w-5" />
+                                                <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 <span>Start Recording</span>
                                             </button>
                                         ) : (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2 sm:space-y-3">
                                                 <button
                                                     onClick={stopLiveTranscription}
-                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-4 rounded-lg font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-3"
+                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
                                                 >
-                                                    <Square className="h-5 w-5" />
+                                                    <Square className="h-4 w-4 sm:h-5 sm:w-5" />
                                                     <span>Stop Recording</span>
                                                 </button>
                                                 
                                                 {/* Live Transcription Display */}
-                                                <div className="bg-gray-50 border rounded-lg p-4 min-h-[60px]">
-                                                    <p className="text-sm text-gray-600 mb-2">Recording... (Live transcription):</p>
-                                                    <p className="text-gray-800">
+                                                <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[60px]">
+                                                    <p className="text-xs sm:text-sm text-gray-600 mb-2">Recording... (Live transcription):</p>
+                                                    <p className="text-sm sm:text-base text-gray-800">
                                                         {liveTranscript}
                                                         {interimTranscript && (
                                                             <span className="text-gray-500 italic"> {interimTranscript}</span>
@@ -1176,12 +1300,12 @@ export default function AssessmentRoundPage() {
                                         )}
                                         
                                         {responses[currentQ.id]?.response_text && (
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                                <p className="text-sm text-green-800 mb-2 flex items-center gap-2">
-                                                    <CheckCircle2 className="h-4 w-4" />
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                                                <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
+                                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                                                     Your recorded response:
                                                 </p>
-                                                <p className="text-gray-800">{responses[currentQ.id].response_text}</p>
+                                                <p className="text-sm sm:text-base text-gray-800">{responses[currentQ.id].response_text}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1189,9 +1313,9 @@ export default function AssessmentRoundPage() {
 
                                 {/* ========== VOICE_SPEAKING QUESTION - Spontaneous Speech ========== */}
                                 {currentQ.question_type === 'voice_speaking' && (
-                                    <div className="space-y-4">
-                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                                            <p className="text-sm text-orange-800 mb-2">
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+                                            <p className="text-xs sm:text-sm text-orange-800 mb-2">
                                                 🎤 Speak for 45-60 seconds on the topic above. Click "Start Speaking" when ready.
                                             </p>
                                             <p className="text-xs text-orange-700">
@@ -1202,25 +1326,25 @@ export default function AssessmentRoundPage() {
                                         {!isLiveTranscribing ? (
                                             <button
                                                 onClick={startLiveTranscription}
-                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-4 rounded-lg font-medium transition-all shadow-md flex items-center justify-center gap-3"
+                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
                                             >
-                                                <Mic className="h-5 w-5" />
+                                                <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 <span>Start Speaking</span>
                                             </button>
                                         ) : (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2 sm:space-y-3">
                                                 <button
                                                     onClick={stopLiveTranscription}
-                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-4 rounded-lg font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-3"
+                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
                                                 >
-                                                    <Square className="h-5 w-5" />
+                                                    <Square className="h-4 w-4 sm:h-5 sm:w-5" />
                                                     <span>Stop & Save</span>
                                                 </button>
                                                 
                                                 {/* Live Transcription Display */}
-                                                <div className="bg-gray-50 border rounded-lg p-4 min-h-[100px]">
-                                                    <p className="text-sm text-gray-600 mb-2">Speaking... (Live transcription):</p>
-                                                    <p className="text-gray-800">
+                                                <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[80px] sm:min-h-[100px]">
+                                                    <p className="text-xs sm:text-sm text-gray-600 mb-2">Speaking... (Live transcription):</p>
+                                                    <p className="text-sm sm:text-base text-gray-800">
                                                         {liveTranscript}
                                                         {interimTranscript && (
                                                             <span className="text-gray-500 italic"> {interimTranscript}</span>
@@ -1231,12 +1355,12 @@ export default function AssessmentRoundPage() {
                                         )}
                                         
                                         {responses[currentQ.id]?.response_text && (
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                                <p className="text-sm text-green-800 mb-2 flex items-center gap-2">
-                                                    <CheckCircle2 className="h-4 w-4" />
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                                                <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
+                                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                                                     Your recorded response:
                                                 </p>
-                                                <p className="text-gray-800">{responses[currentQ.id].response_text}</p>
+                                                <p className="text-sm sm:text-base text-gray-800">{responses[currentQ.id].response_text}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1250,25 +1374,25 @@ export default function AssessmentRoundPage() {
                 </div>
 
                 {/* Right Sidebar - Question Palette (Keep existing code with optional icon additions) */}
-                <div className="w-80 bg-white border-l p-4">
-                    <div className="mb-6">
+                <div className="w-full lg:w-80 bg-white border-l border-t lg:border-t-0 p-3 sm:p-4 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-64px)]">
+                    <div className="mb-4 sm:mb-6">
                         <div className="mt-1">
                             <div className="text-xs font-semibold text-gray-600 text-center mb-2">Time Left</div>
                             {(() => {
                                 const t = splitTime(timeLeft)
                                 return (
-                                    <div className="flex justify-center gap-6">
+                                    <div className="flex justify-center gap-3 sm:gap-6">
                                         <div className="text-center">
-                                            <div className="text-3xl font-bold text-gray-900">{t.hours}</div>
-                                            <div className="text-[11px] text-gray-500">hours</div>
+                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.hours}</div>
+                                            <div className="text-[10px] sm:text-[11px] text-gray-500">hours</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-3xl font-bold text-gray-900">{t.minutes}</div>
-                                            <div className="text-[11px] text-gray-500">minutes</div>
+                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.minutes}</div>
+                                            <div className="text-[10px] sm:text-[11px] text-gray-500">minutes</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-3xl font-bold text-gray-900">{t.seconds}</div>
-                                            <div className="text-[11px] text-gray-500">seconds</div>
+                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.seconds}</div>
+                                            <div className="text-[10px] sm:text-[11px] text-gray-500">seconds</div>
                                         </div>
                                     </div>
                                 )
@@ -1277,37 +1401,37 @@ export default function AssessmentRoundPage() {
                                 <div className="text-center text-yellow-600 font-semibold text-xs mt-1">Last minute!</div>
                             )}
                         </div>
-                        <div className="flex items-left justify-left gap-2 mt-6 text-left">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <div className="flex items-left justify-left gap-2 mt-4 sm:mt-6 text-left">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                                 <span className="text-xs font-medium">👤</span>
                             </div>
-                            <span className="text-sm text-gray-600 font-bold">Test Profile</span>
+                            <span className="text-xs sm:text-sm text-gray-600 font-bold">Test Profile</span>
                         </div>
                     </div>
 
-                    <div className="mb-6">
-                        <h3 className="font-semibold text-gray-800 mb-3">Legend</h3>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-7 h-7 bg-green-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                    <div className="mb-4 sm:mb-6">
+                        <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2 sm:mb-3">Legend</h3>
+                        <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-green-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
                                     {counts.answered}
                                 </div>
                                 <span className="text-gray-700 font-medium">Answered</span>
                             </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="w-7 h-7 bg-red-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-red-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
                                     {counts.notAnswered}
                                 </div>
                                 <span className="text-gray-700 font-medium">Not Answered</span>
                             </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="w-7 h-7 bg-purple-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-purple-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
                                     {counts.marked}
                                 </div>
                                 <span className="text-gray-700 font-medium">Marked</span>
                             </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="w-7 h-7 bg-gray-400 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gray-400 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
                                     {counts.notVisited}
                                 </div>
                                 <span className="text-gray-700 font-medium">Not Visited</span>
@@ -1315,10 +1439,10 @@ export default function AssessmentRoundPage() {
                         </div>
                     </div>
 
-                    <div className="mb-6">
-                        <p className="text-sm text-gray-600 mb-4">Question Palette:</p>
+                    <div className="mb-4 sm:mb-6">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Question Palette:</p>
 
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2">
                             {roundData.questions.map((_: any, index: number) => {
                                 const status = getQuestionStatus(index)
                                 const isCurrent = index === currentQuestion
@@ -1341,22 +1465,22 @@ export default function AssessmentRoundPage() {
                                     <button
                                         key={index}
                                         onClick={() => navigateToQuestion(index)}
-                                        className={`w-8 h-8 text-xs font-medium rounded relative ${bgColor}`}
+                                        className={`w-7 h-7 sm:w-8 sm:h-8 text-[10px] sm:text-xs font-medium rounded relative ${bgColor}`}
                                         title={`Q${index + 1} - ${questionType}`}
                                     >
                                         {index + 1}
                                         {/* Optional: Add type indicator icons */}
                                         {questionType === 'text' && (
-                                            <span className="absolute -top-1 -right-1 text-[8px]">✍️</span>
+                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">✍️</span>
                                         )}
                                         {questionType === 'dictation' && (
-                                            <span className="absolute -top-1 -right-1 text-[8px]">🎧</span>
+                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">🎧</span>
                                         )}
                                         {questionType === 'voice_reading' && (
-                                            <span className="absolute -top-1 -right-1 text-[8px]">📖</span>
+                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">📖</span>
                                         )}
                                         {questionType === 'voice_speaking' && (
-                                            <span className="absolute -top-1 -right-1 text-[8px]">🎤</span>
+                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">🎤</span>
                                         )}
                                     </button>
                                 )
@@ -1368,7 +1492,7 @@ export default function AssessmentRoundPage() {
                         <button
                             onClick={handleSubmitWithConfirmation}  // ✅ Use new handler
                             disabled={submitting}
-                            className={`w-full py-2 px-4 rounded text-sm font-medium transition-all ${
+                            className={`w-full py-2 px-3 sm:px-4 rounded text-xs sm:text-sm font-medium transition-all ${
                                 !submitting
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -1397,56 +1521,61 @@ export default function AssessmentRoundPage() {
             </div>
 
             {/* Full-width Bottom Action Bar */}
-            <div className="w-full border-t bg-gray-50 sticky bottom-0">
-                <div className="w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <button
-                            onClick={handleMarkForReview}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                        >
-                            Mark for review
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (currentQuestion > 0) {
-                                    navigateToQuestion(currentQuestion - 1)
-                                }
-                            }}
-                            disabled={currentQuestion <= 0}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (currentQuestion < roundData.questions.length - 1) {
-                                    navigateToQuestion(currentQuestion + 1)
-                                }
-                            }}
-                            disabled={currentQuestion >= roundData.questions.length - 1}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded"
-                        >
-                            Next
-                        </button>
-                    </div>
+            <div className="w-full border-t bg-gray-50 sticky bottom-0 z-10">
+                <div className="w-full px-2 sm:px-4 md:px-6 py-2 sm:py-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            <button
+                                onClick={handleMarkForReview}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
+                            >
+                                <span className="hidden sm:inline">Mark for review</span>
+                                <span className="sm:hidden">Mark</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (currentQuestion > 0) {
+                                        navigateToQuestion(currentQuestion - 1)
+                                    }
+                                }}
+                                disabled={currentQuestion <= 0}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (currentQuestion < roundData.questions.length - 1) {
+                                        navigateToQuestion(currentQuestion + 1)
+                                    }
+                                }}
+                                disabled={currentQuestion >= roundData.questions.length - 1}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
+                            >
+                                Next
+                            </button>
+                        </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleClearResponse}
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded border"
-                        >
-                            Clear Response
-                        </button>
-                        <button
-                            onClick={handleSubmitWithConfirmation}
-                            disabled={submitting}
-                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded"
-                        >
-                            {submitting ? 'Submitting...' : 'Submit Section'}
-                        </button>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <button
+                                onClick={handleClearResponse}
+                                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded border text-xs sm:text-sm"
+                            >
+                                <span className="hidden sm:inline">Clear Response</span>
+                                <span className="sm:hidden">Clear</span>
+                            </button>
+                            <button
+                                onClick={handleSubmitWithConfirmation}
+                                disabled={submitting}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium"
+                            >
+                                {submitting ? 'Submitting...' : 'Submit Section'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        </DashboardLayout>
     )
 }

@@ -213,7 +213,6 @@ export function GroupDiscussionRound({
             };
             
             setTopic(processedTopicData);
-            toast.success('Discussion topic loaded!');
             setFetchAttempt(0);
 
             if (topicData.audio_url) {
@@ -224,15 +223,12 @@ export function GroupDiscussionRound({
             
             if (fetchAttempt < 1) {
                 setFetchAttempt(prev => prev + 1);
-                toast.error('Retrying...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 inFlightRef.current = false;
                 setLoading(false);
                 fetchTopic();
                 return;
             }
-            
-            toast.error('Using default topic.');
             setTopic({
                 title: "The Future of Work in a Digital Age",
                 content: "Discuss how technological advancements are reshaping work environments.",
@@ -345,49 +341,76 @@ export function GroupDiscussionRound({
         const voices = availableVoices.current;
         if (voices.length === 0) return null;
 
+        // Prefer high-quality neural/premium voices
+        const getBestVoice = (filters: ((v: SpeechSynthesisVoice) => boolean)[]): SpeechSynthesisVoice | null => {
+            for (const filter of filters) {
+                const voice = voices.find(filter);
+                if (voice) return voice;
+            }
+            return null;
+        };
+
         if (agentName.includes('Aarav')) {
-            return voices.find(v => 
-                v.lang.includes('en-IN') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                v.lang.includes('en-GB') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                !v.name.toLowerCase().includes('female')
-            ) || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-IN') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en')) || voices[0];
         } 
         else if (agentName.includes('Meera')) {
-            return voices.find(v => 
-                v.lang.includes('en-IN') && v.name.toLowerCase().includes('female')
-            ) || voices.find(v => 
-                v.lang.includes('en-US') && v.name.toLowerCase().includes('female')
-            ) || voices.find(v => 
-                v.name.toLowerCase().includes('female')
-            ) || voices[1] || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-IN') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en') && v !== voices[0]) || voices[1] || voices[0];
         } 
         else if (agentName.includes('Rahul')) {
-            return voices.find(v => 
-                v.lang.includes('en-AU') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => 
-                v.lang.includes('en-US') && v.name.toLowerCase().includes('male')
-            ) || voices[2] || voices[0];
+            return getBestVoice([
+                v => v.lang.includes('en-AU') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-US') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en-GB') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
+                v => v.lang.includes('en') && !v.name.toLowerCase().includes('female'),
+            ]) || voices.find(v => v.lang.startsWith('en') && v !== voices[0] && v !== voices[1]) || voices[2] || voices[0];
         }
 
-        return voices[0];
+        // Default: prefer neural/premium voices
+        return voices.find(v => v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')) || voices[0];
     };
 
-    // Function to speak agent text
-    const speakAgentText = async (agentName: string, text: string): Promise<void> => {
+    // Function to speak agent text with improved quality and retry mechanism
+    const speakAgentText = async (agentName: string, text: string, retryCount: number = 0): Promise<void> => {
         return new Promise((resolve) => {
-            if (!window.speechSynthesis || !voicesLoaded) {
+            if (!window.speechSynthesis) {
+                console.error('Speech synthesis not available');
                 resolve();
                 return;
             }
 
+            // Wait for voices to load if not ready
+            if (!voicesLoaded && availableVoices.current.length === 0) {
+                console.log('Voices not loaded yet, waiting...');
+                setTimeout(() => {
+                    speakAgentText(agentName, text, retryCount).then(resolve);
+                }, 500);
+                return;
+            }
+
             // Rahul's agent: allow longer sentences, chunk if needed
-            let speechText = text;
+            let speechText = text.trim();
+            if (!speechText) {
+                resolve();
+                return;
+            }
+
             const MAX_SPEECH_LENGTH = agentName.includes('Rahul') ? 600 : 300;
             if (speechText.length > MAX_SPEECH_LENGTH) {
-                // Split into sentences or chunks for Rahul
-                const sentences = speechText.match(/[^.!?]+[.!?]?/g) || [speechText];
+                // Split into sentences or chunks
+                const sentences = speechText.match(/[^.!?]+[.!?]+/g) || [speechText];
                 let idx = 0;
                 const speakNext = () => {
                     if (idx >= sentences.length) {
@@ -400,79 +423,156 @@ export function GroupDiscussionRound({
                     if (chunk.length > MAX_SPEECH_LENGTH) {
                         chunk = chunk.substring(0, MAX_SPEECH_LENGTH) + '...';
                     }
-                    try {
-                        window.speechSynthesis.cancel();
-                        const utterance = new SpeechSynthesisUtterance(chunk);
-                        const voice = getVoiceForAgent(agentName);
-                        if (voice) utterance.voice = voice;
-                        utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
-                        utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
-                        utterance.volume = 1.0;
-                        utterance.onstart = () => {
-                            setCurrentSpeakingAgent(agentName);
-                            setIsAISpeaking(true);
-                        };
-                        utterance.onend = () => {
-                            idx++;
-                            speakNext();
-                        };
-                        utterance.onerror = () => {
-                            idx++;
-                            speakNext();
-                        };
-                        setTimeout(() => {
-                            if (window.speechSynthesis.speaking) {
-                                window.speechSynthesis.cancel();
-                                idx++;
-                                speakNext();
-                            }
-                        }, 30000);
-                        window.speechSynthesis.speak(utterance);
-                    } catch (err) {
+                    if (!chunk) {
                         idx++;
                         speakNext();
+                        return;
                     }
+                    
+                    const speakChunk = (attempt: number = 0) => {
+                        if (attempt >= 3) {
+                            console.error('Failed to speak after 3 attempts');
+                            idx++;
+                            speakNext();
+                            return;
+                        }
+
+                        try {
+                            window.speechSynthesis.cancel();
+                            // Small delay to ensure cancellation
+                            setTimeout(() => {
+                                const utterance = new SpeechSynthesisUtterance(chunk);
+                                const voice = getVoiceForAgent(agentName);
+                                if (voice) {
+                                    utterance.voice = voice;
+                                    utterance.lang = voice.lang;
+                                } else {
+                                    utterance.lang = 'en-US';
+                                }
+                                
+                                // Optimized settings for clarity
+                                utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
+                                utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
+                                utterance.volume = 1.0; // Maximum volume
+                                
+                                let hasStarted = false;
+                                const timeout = setTimeout(() => {
+                                    if (!hasStarted) {
+                                        console.warn('TTS timeout, retrying...');
+                                        window.speechSynthesis.cancel();
+                                        speakChunk(attempt + 1);
+                                    }
+                                }, 2000);
+
+                                utterance.onstart = () => {
+                                    hasStarted = true;
+                                    clearTimeout(timeout);
+                                    setCurrentSpeakingAgent(agentName);
+                                    setIsAISpeaking(true);
+                                };
+                                
+                                utterance.onend = () => {
+                                    clearTimeout(timeout);
+                                    idx++;
+                                    speakNext();
+                                };
+                                
+                                utterance.onerror = (event: any) => {
+                                    clearTimeout(timeout);
+                                    console.error('TTS error:', event.error);
+                                    if (event.error === 'synthesis-failed' || event.error === 'synthesis-unavailable') {
+                                        speakChunk(attempt + 1);
+                                    } else {
+                                        idx++;
+                                        speakNext();
+                                    }
+                                };
+                                
+                                window.speechSynthesis.speak(utterance);
+                            }, 100);
+                        } catch (err) {
+                            console.error('Error creating utterance:', err);
+                            speakChunk(attempt + 1);
+                        }
+                    };
+                    
+                    speakChunk();
                 };
                 speakNext();
                 return;
             }
 
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(speechText);
-                const voice = getVoiceForAgent(agentName);
-                if (voice) utterance.voice = voice;
-                utterance.rate = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.05 : 1.0;
-                utterance.pitch = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.2 : 1.0;
-                utterance.volume = 1.0;
-                utterance.onstart = () => {
-                    setCurrentSpeakingAgent(agentName);
-                    setIsAISpeaking(true);
-                };
-                utterance.onend = () => {
+            // Single utterance for shorter text
+            const speakSingle = (attempt: number = 0) => {
+                if (attempt >= 3) {
+                    console.error('Failed to speak after 3 attempts');
                     setCurrentSpeakingAgent(null);
                     setIsAISpeaking(false);
                     resolve();
-                };
-                utterance.onerror = () => {
-                    setCurrentSpeakingAgent(null);
-                    setIsAISpeaking(false);
-                    resolve();
-                };
-                setTimeout(() => {
-                    if (window.speechSynthesis.speaking) {
-                        window.speechSynthesis.cancel();
-                        setCurrentSpeakingAgent(null);
-                        setIsAISpeaking(false);
-                        resolve();
-                    }
-                }, 30000);
-                window.speechSynthesis.speak(utterance);
-            } catch (err) {
-                setCurrentSpeakingAgent(null);
-                setIsAISpeaking(false);
-                resolve();
-            }
+                    return;
+                }
+
+                try {
+                    window.speechSynthesis.cancel();
+                    setTimeout(() => {
+                        const utterance = new SpeechSynthesisUtterance(speechText);
+                        const voice = getVoiceForAgent(agentName);
+                        if (voice) {
+                            utterance.voice = voice;
+                            utterance.lang = voice.lang;
+                        } else {
+                            utterance.lang = 'en-US';
+                        }
+                        
+                        // Optimized settings for clarity
+                        utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
+                        utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
+                        utterance.volume = 1.0; // Maximum volume
+                        
+                        let hasStarted = false;
+                        const timeout = setTimeout(() => {
+                            if (!hasStarted) {
+                                console.warn('TTS timeout, retrying...');
+                                window.speechSynthesis.cancel();
+                                speakSingle(attempt + 1);
+                            }
+                        }, 2000);
+
+                        utterance.onstart = () => {
+                            hasStarted = true;
+                            clearTimeout(timeout);
+                            setCurrentSpeakingAgent(agentName);
+                            setIsAISpeaking(true);
+                        };
+                        
+                        utterance.onend = () => {
+                            clearTimeout(timeout);
+                            setCurrentSpeakingAgent(null);
+                            setIsAISpeaking(false);
+                            resolve();
+                        };
+                        
+                        utterance.onerror = (event: any) => {
+                            clearTimeout(timeout);
+                            console.error('TTS error:', event.error);
+                            if (event.error === 'synthesis-failed' || event.error === 'synthesis-unavailable') {
+                                speakSingle(attempt + 1);
+                            } else {
+                                setCurrentSpeakingAgent(null);
+                                setIsAISpeaking(false);
+                                resolve();
+                            }
+                        };
+                        
+                        window.speechSynthesis.speak(utterance);
+                    }, 100);
+                } catch (err) {
+                    console.error('Error creating utterance:', err);
+                    speakSingle(attempt + 1);
+                }
+            };
+            
+            speakSingle();
         });
     };
 
@@ -517,12 +617,9 @@ export function GroupDiscussionRound({
                     console.error('Speech recognition error:', error);
                     
                     if (transcriptRef.current.trim()) {
-                        toast.success('Processing captured speech...');
                         handleUserResponse(transcriptRef.current);
                     } else {
-                        toast.error(getErrorMessage(error));
                         setIsListening(false);
-                        toast('Please try speaking again or check your microphone.', { icon: '🎤' });
                     }
                 };
 
@@ -533,7 +630,6 @@ export function GroupDiscussionRound({
                         } catch (err) {
                             console.error('Error restarting:', err);
                             setIsListening(false);
-                            toast.error('Speech recognition stopped. Click Start Speaking again.');
                         }
                     }
                 };
@@ -582,7 +678,6 @@ export function GroupDiscussionRound({
                 clearInterval(interval);
                 stream.getTracks().forEach(track => track.stop());
                 setMicTested(true);
-                toast.success('Microphone test complete!');
             }, 6000);
         } catch (error) {
             console.error('Mic test error:', error);
@@ -628,10 +723,8 @@ export function GroupDiscussionRound({
         
         try {
             speechRecognition.current.start();
-            toast.success('🎤 Listening... Speak clearly!');
         } catch (err) {
             console.error('Error starting speech recognition:', err);
-            toast.error('Failed to start. Please try again.');
             setIsListening(false);
             clearInterval(timerId);
         }
@@ -651,13 +744,10 @@ export function GroupDiscussionRound({
                 const finalTranscript = transcriptRef.current.trim();
                 
                 if (finalTranscript && finalTranscript.length > 0) {
-                    toast.success('Processing your response...');
                     handleUserResponse(finalTranscript);
                     setTranscript('');
                     transcriptRef.current = '';
                     setInterimTranscript('');
-                } else {
-                    toast.error('No speech detected. Please try speaking again.');
                 }
             }, 500);
         }
@@ -670,24 +760,20 @@ export function GroupDiscussionRound({
         const trimmedText = text.trim();
         
         if (!trimmedText || trimmedText.length === 0) {
-            toast.error('No text to process.');
             return;
         }
         
         if (discussionComplete) {
-            toast.success('Discussion complete! Click Submit to get evaluation.');
             return;
         }
-
+        
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
-            toast.error('Using fallback response.');
             return;
         }
 
         try {
             setLoading(true);
-            toast.loading('Processing your response...', { id: 'processing' });
             
             let responseData: any;
             try {
@@ -706,15 +792,12 @@ export function GroupDiscussionRound({
                 ]) as any;
                 
                 responseData = response.data;
-                toast.success('Response received!', { id: 'processing' });
             } catch (apiError) {
                 console.error('API failed:', apiError);
-                toast.dismiss('processing');
                 
                 setResponseAttempt(prev => prev + 1);
                 
                 if (responseAttempt < maxResponseRetries) {
-                    toast.error('Retrying...', { duration: 2000 });
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     setLoading(false);
                     handleUserResponse(trimmedText);
@@ -817,9 +900,6 @@ export function GroupDiscussionRound({
 
             if ((gdTurns.length + 1) >= MAX_RESPONSES) {
                 setDiscussionComplete(true);
-                toast.success('Discussion complete! Click Submit for evaluation.');
-            } else {
-                toast.success(`Round ${gdTurns.length + 1} complete! Continue or submit.`, { duration: 6000 });
             }
 
             setTranscript('');
@@ -827,10 +907,8 @@ export function GroupDiscussionRound({
             setInterimTranscript('');
         } catch (error) {
             console.error('Error processing response:', error);
-            toast.error('Failed to process. Try again.');
         } finally {
             setLoading(false);
-            toast.dismiss('processing');
         }
     };
 
@@ -871,27 +949,27 @@ export function GroupDiscussionRound({
     }, [currentStep, isTopicAnnounced, isListening, discussionComplete]);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-8">
+        <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8 px-3 sm:px-4 md:px-6">
             {/* Progress Stepper */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
                     {['Topic', 'Discussion', 'Evaluation'].map((step, idx) => (
-                        <div key={step} className="flex items-center flex-1">
-                            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all
+                        <div key={step} className="flex items-center flex-1 w-full sm:w-auto">
+                            <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold transition-all text-sm sm:text-base
                                 ${idx === 0 && currentStep === 'topic' ? 'bg-blue-600 text-white scale-110' :
                                   idx === 1 && currentStep === 'discussion' ? 'bg-blue-600 text-white scale-110' :
                                   idx === 2 && currentStep === 'evaluation' ? 'bg-blue-600 text-white scale-110' :
                                   'bg-gray-200 text-gray-600'}`}>
                                 {idx + 1}
                             </div>
-                            <span className={`ml-2 font-medium transition-all ${
+                            <span className={`ml-2 font-medium transition-all text-xs sm:text-sm ${
                                 (idx === 0 && currentStep === 'topic') ||
                                 (idx === 1 && currentStep === 'discussion') ||
                                 (idx === 2 && currentStep === 'evaluation')
                                 ? 'text-blue-600' : 'text-gray-500'
                             }`}>{step}</span>
                             {idx < 2 && (
-                                <div className={`flex-1 h-1 mx-4 rounded transition-all ${
+                                <div className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition-all hidden sm:block ${
                                     idx === 0 && (currentStep === 'discussion' || currentStep === 'evaluation')
                                     ? 'bg-blue-600'
                                     : idx === 1 && currentStep === 'evaluation'
@@ -905,29 +983,30 @@ export function GroupDiscussionRound({
             </div>
 
             {currentStep === 'topic' && (
-                <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
-                    <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Discussion Topic</h2>
+                <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900 dark:text-white">Discussion Topic</h2>
                     {topic ? (
-                        <div className="space-y-6">
-                            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-                                <h3 className="text-2xl font-bold mb-4 text-blue-700 dark:text-blue-400">{topic.title}</h3>
-                                <div className="border-l-4 border-blue-500 pl-6 mb-6">
-                                    <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">{topic.content}</p>
+                        <div className="space-y-4 sm:space-y-6">
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md">
+                                <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-blue-700 dark:text-blue-400">{topic.title}</h3>
+                                <div className="border-l-4 border-blue-500 pl-3 sm:pl-6 mb-4 sm:mb-6">
+                                    <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">{topic.content}</p>
                                 </div>
                             </div>
                             
                             {!micTested && (
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl border-2 border-yellow-400">
-                                    <h4 className="font-bold mb-3 text-yellow-800 dark:text-yellow-400 flex items-center">
-                                        <Mic className="w-5 h-5 mr-2" />
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 sm:p-6 rounded-xl border-2 border-yellow-400">
+                                    <h4 className="font-bold mb-2 sm:mb-3 text-yellow-800 dark:text-yellow-400 flex items-center text-sm sm:text-base">
+                                        <Mic className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                                         Test Your Microphone
                                     </h4>
-                                    <p className="text-sm mb-4 text-gray-700 dark:text-gray-300">
+                                    <p className="text-xs sm:text-sm mb-3 sm:mb-4 text-gray-700 dark:text-gray-300">
                                         Before starting, let's make sure your microphone works properly.
                                     </p>
                                     <Button
                                         onClick={startMicTest}
-                                        className="bg-yellow-600 hover:bg-yellow-700"
+                                        className="bg-yellow-600 hover:bg-yellow-700 text-xs sm:text-sm w-full sm:w-auto"
+                                        size="sm"
                                     >
                                         Test Microphone (3 seconds)
                                     </Button>
@@ -948,15 +1027,15 @@ export function GroupDiscussionRound({
                                 </div>
                             )}
                             
-                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-xl border-2 border-indigo-400">
-                                <h4 className="font-bold mb-3 text-indigo-800 dark:text-indigo-400">📋 Instructions</h4>
-                                <p className="text-gray-800 dark:text-gray-200">{topic.instructions}</p>
+                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 sm:p-6 rounded-xl border-2 border-indigo-400">
+                                <h4 className="font-bold mb-2 sm:mb-3 text-indigo-800 dark:text-indigo-400 text-sm sm:text-base">📋 Instructions</h4>
+                                <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200">{topic.instructions}</p>
                             </div>
                             
                             {topic.followUpQuestions && topic.followUpQuestions.length > 0 && (
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                                    <h4 className="font-bold mb-4 text-blue-800 dark:text-blue-400 flex items-center">
-                                        <MessageCircle className="w-5 h-5 mr-2" />
+                                <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
+                                    <h4 className="font-bold mb-3 sm:mb-4 text-blue-800 dark:text-blue-400 flex items-center text-sm sm:text-base">
+                                        <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                                         Key Points to Consider
                                     </h4>
                                     <ul className="space-y-3">
@@ -972,9 +1051,9 @@ export function GroupDiscussionRound({
                                 </div>
                             )}
                             
-                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-6 rounded-xl border-2 border-blue-300">
-                                <h4 className="font-bold mb-4 text-blue-900 dark:text-blue-300">🎯 Discussion Flow</h4>
-                                <ol className="space-y-3">
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 sm:p-6 rounded-xl border-2 border-blue-300">
+                                <h4 className="font-bold mb-3 sm:mb-4 text-blue-900 dark:text-blue-300 text-sm sm:text-base">🎯 Discussion Flow</h4>
+                                <ol className="space-y-2 sm:space-y-3">
                                     {[
                                         'Listen to the topic introduction',
                                         'Click "Start Speaking" and share your thoughts',
@@ -985,10 +1064,10 @@ export function GroupDiscussionRound({
                                         'View detailed feedback on your performance'
                                     ].map((step, idx) => (
                                         <li key={idx} className="flex items-start">
-                                            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold mr-3 shadow-md">
+                                            <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-xs sm:text-sm font-bold mr-2 sm:mr-3 shadow-md">
                                                 {idx + 1}
                                             </span>
-                                            <span className="text-gray-800 dark:text-gray-200 pt-1">{step}</span>
+                                            <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 pt-0.5 sm:pt-1">{step}</span>
                                         </li>
                                     ))}
                                 </ol>
@@ -1019,19 +1098,48 @@ export function GroupDiscussionRound({
                                             announcement = announcement.substring(0, MAX_ANNOUNCEMENT_LENGTH) + '...';
                                         }
                                         
-                                        const utterance = new SpeechSynthesisUtterance(announcement);
-                                        utterance.lang = 'en-US';
-                                        utterance.rate = 0.9;
+                                        // Get best voice for announcement
+                                        const voices = window.speechSynthesis.getVoices();
+                                        const bestVoice = voices.find(v => 
+                                            v.lang.startsWith('en') && 
+                                            (v.name.toLowerCase().includes('neural') || 
+                                             v.name.toLowerCase().includes('premium') ||
+                                             v.name.toLowerCase().includes('enhanced'))
+                                        ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
                                         
-                                        utterance.onend = () => {
-                                            setIsTopicAnnounced(true);
-                                            toast.success('You can now start speaking!');
+                                        const utterance = new SpeechSynthesisUtterance(announcement);
+                                        if (bestVoice) {
+                                            utterance.voice = bestVoice;
+                                            utterance.lang = bestVoice.lang;
+                                        } else {
+                                            utterance.lang = 'en-US';
+                                        }
+                                        utterance.rate = 0.9;  // Clear and understandable
+                                        utterance.pitch = 1.0;
+                                        utterance.volume = 1.0;  // Maximum volume
+                                        
+                                        let hasStarted = false;
+                                        const timeout = setTimeout(() => {
+                                            if (!hasStarted) {
+                                                window.speechSynthesis.cancel();
+                                                setIsTopicAnnounced(true);
+                                            }
+                                        }, 10000);
+                                        
+                                        utterance.onstart = () => {
+                                            hasStarted = true;
+                                            clearTimeout(timeout);
                                         };
                                         
-                                        utterance.onerror = (error) => {
-                                            // Silently handle error and let user proceed
+                                        utterance.onend = () => {
+                                            clearTimeout(timeout);
                                             setIsTopicAnnounced(true);
-                                            toast.success('You can now start speaking!');
+                                        };
+                                        
+                                        utterance.onerror = (error: any) => {
+                                            clearTimeout(timeout);
+                                            console.error('TTS error:', error);
+                                            setIsTopicAnnounced(true);
                                         };
                                         
                                         // Timeout fallback in case speech hangs
@@ -1039,21 +1147,18 @@ export function GroupDiscussionRound({
                                             if (!isTopicAnnounced) {
                                                 window.speechSynthesis.cancel();
                                                 setIsTopicAnnounced(true);
-                                                toast.success('You can now start speaking!');
                                             }
                                         }, 20000); // 20 second timeout
                                         
-                                        toast.success('Listen to the introduction...');
                                         window.speechSynthesis.speak(utterance);
                                     } catch (err) {
                                         // If speech fails, just proceed without it
                                         setIsTopicAnnounced(true);
-                                        toast.success('You can now start speaking!');
                                     }
                                 }}
                                 size="lg"
                                 disabled={!micTested}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 text-lg shadow-lg transform hover:scale-[1.02] transition-all"
+                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 sm:py-4 text-sm sm:text-lg shadow-lg transform hover:scale-[1.02] transition-all"
                             >
                                 🎙️ Begin Topic Introduction
                             </Button>
@@ -1074,41 +1179,41 @@ export function GroupDiscussionRound({
             )}
 
             {currentStep === 'discussion' && (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
                         {/* Sidebar */}
-                        <Card className="p-6 lg:sticky lg:top-6 h-fit bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 shadow-lg">
-                            <h3 className="text-lg font-bold mb-3 text-blue-900 dark:text-blue-300">{topic?.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{topic?.content}</p>
+                        <Card className="p-4 sm:p-6 lg:sticky lg:top-6 h-fit bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 shadow-lg">
+                            <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-blue-900 dark:text-blue-300 line-clamp-2">{topic?.title}</h3>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 line-clamp-3">{topic?.content}</p>
                             
                             {/* Round Progress */}
-                            <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-lg">
                                 <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Discussion Rounds</span>
-                                    <span className="text-sm font-bold text-blue-600">{gdTurns.length}/{MAX_RESPONSES}</span>
+                                    <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Discussion Rounds</span>
+                                    <span className="text-xs sm:text-sm font-bold text-blue-600">{gdTurns.length}/{MAX_RESPONSES}</span>
                                 </div>
                                 <Progress value={(gdTurns.length / MAX_RESPONSES) * 100} className="h-2" />
                             </div>
                             
                             {/* Participants */}
-                            <div className="mb-4">
-                                <h4 className="text-sm font-semibold mb-2 flex items-center text-gray-700 dark:text-gray-300">
-                                    <Users className="w-4 h-4 mr-2" />
+                            <div className="mb-3 sm:mb-4">
+                                <h4 className="text-xs sm:text-sm font-semibold mb-2 flex items-center text-gray-700 dark:text-gray-300">
+                                    <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                                     Participants
                                 </h4>
-                                <div className="space-y-2">
-                                    <div className="flex items-center space-x-2 p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                <div className="space-y-1.5 sm:space-y-2">
+                                    <div className="flex items-center space-x-2 p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md">
                                             Y
                                         </div>
-                                        <span className="text-sm font-medium">You</span>
+                                        <span className="text-xs sm:text-sm font-medium">You</span>
                                     </div>
                                     {personas.map((p, idx) => (
-                                        <div key={idx} className="flex items-center space-x-2 p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                        <div key={idx} className="flex items-center space-x-2 p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md">
                                                 {p.name.charAt(0)}
                                             </div>
-                                            <span className="text-sm">{p.name.split(' ')[0]}</span>
+                                            <span className="text-xs sm:text-sm">{p.name.split(' ')[0]}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1128,7 +1233,6 @@ export function GroupDiscussionRound({
                                     <Button
                                         onClick={() => {
                                             setDiscussionComplete(true);
-                                            toast.success('Ready for evaluation!');
                                         }}
                                         disabled={loading}
                                         size="sm"
@@ -1153,11 +1257,11 @@ export function GroupDiscussionRound({
                             ) : (
                                 <>
                                     {/* Discussion History */}
-                                    <Card className="p-6 bg-white dark:bg-gray-800">
-                                        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Discussion History</h3>
+                                    <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800">
+                                        <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 dark:text-white">Discussion History</h3>
                                         <div 
                                             ref={chatContainerRef}
-                                            className="space-y-6 min-h-[300px] max-h-[500px] overflow-y-auto pr-2 scroll-smooth"
+                                            className="space-y-4 sm:space-y-6 min-h-[250px] sm:min-h-[300px] max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-2 scroll-smooth"
                                         >
                                             {gdTurns.length === 0 && !typingAgent && (
                                                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -1169,16 +1273,16 @@ export function GroupDiscussionRound({
                                             {gdTurns.map((turn, tIdx) => (
                                                 <div key={tIdx} className="space-y-4 animate-in slide-in-from-bottom duration-300">
                                                     {/* User Message */}
-                                                    <div className="flex items-start space-x-3">
-                                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                                                            <span className="text-white font-bold text-sm">Y</span>
+                                                    <div className="flex items-start space-x-2 sm:space-x-3">
+                                                        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                                                            <span className="text-white font-bold text-xs sm:text-sm">Y</span>
                                                         </div>
-                                                        <div className="flex-1 max-w-3xl">
-                                                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-2xl rounded-tl-none shadow-md">
-                                                                <div className="text-xs font-semibold mb-2 opacity-90">You</div>
-                                                                <p className="leading-relaxed">{turn.user}</p>
+                                                        <div className="flex-1 max-w-3xl min-w-0">
+                                                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-md">
+                                                                <div className="text-[10px] sm:text-xs font-semibold mb-1 sm:mb-2 opacity-90">You</div>
+                                                                <p className="text-sm sm:text-base leading-relaxed break-words">{turn.user}</p>
                                                             </div>
-                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-2">
+                                                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 ml-2">
                                                                 {new Date(turn.timestamp).toLocaleTimeString()}
                                                             </div>
                                                         </div>
@@ -1186,33 +1290,33 @@ export function GroupDiscussionRound({
                                                     
                                                     {/* AI Messages with speaking indicator */}
                                                     {turn.agents.map((a, aIdx) => (
-                                                        <div key={aIdx} className="flex items-start space-x-3 ml-6">
-                                                            <div className={`flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md ${
-                                                                currentSpeakingAgent === a.name ? 'animate-pulse ring-4 ring-purple-400' : ''
+                                                        <div key={aIdx} className="flex items-start space-x-2 sm:space-x-3 ml-4 sm:ml-6">
+                                                            <div className={`flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md ${
+                                                                currentSpeakingAgent === a.name ? 'animate-pulse ring-2 sm:ring-4 ring-purple-400' : ''
                                                             }`}>
-                                                                <span className="text-white font-bold text-xs">{a.name.charAt(0)}</span>
+                                                                <span className="text-white font-bold text-[10px] sm:text-xs">{a.name.charAt(0)}</span>
                                                             </div>
-                                                            <div className="flex-1 max-w-2xl">
-                                                                <div className={`bg-gray-100 dark:bg-gray-700 p-4 rounded-2xl rounded-tl-none shadow-sm transition-all ${
+                                                            <div className="flex-1 max-w-2xl min-w-0">
+                                                                <div className={`bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-sm transition-all ${
                                                                     currentSpeakingAgent === a.name ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20' : ''
                                                                 }`}>
-                                                                    <div className="flex items-center justify-between mb-2">
-                                                                        <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">
+                                                                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                                                                        <div className="text-[10px] sm:text-xs font-semibold text-purple-700 dark:text-purple-400">
                                                                             {a.name}
                                                                         </div>
                                                                         {currentSpeakingAgent === a.name && (
-                                                                            <div className="flex space-x-1">
+                                                                            <div className="flex space-x-0.5 sm:space-x-1">
                                                                                 {[...Array(3)].map((_, i) => (
                                                                                     <div
                                                                                         key={i}
-                                                                                        className="w-1 h-3 bg-purple-600 rounded-full animate-pulse"
+                                                                                        className="w-0.5 sm:w-1 h-2 sm:h-3 bg-purple-600 rounded-full animate-pulse"
                                                                                         style={{ animationDelay: `${i * 0.1}s` }}
                                                                                     />
                                                                                 ))}
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{a.text}</p>
+                                                                    <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed break-words">{a.text}</p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1272,7 +1376,6 @@ export function GroupDiscussionRound({
                                                     window.speechSynthesis.cancel();
                                                     setIsAISpeaking(false);
                                                     setCurrentSpeakingAgent(null);
-                                                    toast.success('Skipped AI speech');
                                                 }}
                                                 variant="outline"
                                                 size="sm"
@@ -1323,13 +1426,13 @@ export function GroupDiscussionRound({
                                                 </button>
                                                 
                                                 {!statsCollapsed && (
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                                        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center shadow-sm">
-                                                            <Clock className={`w-5 h-5 mx-auto mb-1 ${getTimerColor()}`} />
-                                                            <div className={`text-xl font-bold ${getTimerColor()}`}>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                                                        <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
+                                                            <Clock className={`w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 ${getTimerColor()}`} />
+                                                            <div className={`text-lg sm:text-xl font-bold ${getTimerColor()}`}>
                                                                 {formatTime(speakingTime)}
                                                             </div>
-                                                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                                                            <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
                                                                 {speakingTime < 60 ? "Keep going" : 
                                                                  speakingTime < 120 ? "Good!" : 
                                                                  "Wrap up"}
@@ -1337,18 +1440,18 @@ export function GroupDiscussionRound({
                                                         </div>
                                                         
                                                         {wordCount > 0 && (
-                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center shadow-sm">
-                                                                <MessageCircle className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                                                                <div className="text-xl font-bold text-green-600">{wordCount}</div>
-                                                                <div className="text-xs text-gray-600 dark:text-gray-400">words</div>
+                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
+                                                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mx-auto mb-1" />
+                                                                <div className="text-lg sm:text-xl font-bold text-green-600">{wordCount}</div>
+                                                                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">words</div>
                                                             </div>
                                                         )}
                                                         
                                                         {speechRate > 0 && isListening && (
-                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center shadow-sm">
-                                                                <Volume2 className="w-5 h-5 text-purple-600 mx-auto mb-1" />
-                                                                <div className="text-xl font-bold text-purple-600">{speechRate}</div>
-                                                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
+                                                                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 mx-auto mb-1" />
+                                                                <div className="text-lg sm:text-xl font-bold text-purple-600">{speechRate}</div>
+                                                                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
                                                                     {speechRate < 100 ? "Faster" :
                                                                      speechRate > 160 ? "Slower" :
                                                                      "Good!"} wpm
@@ -1357,9 +1460,9 @@ export function GroupDiscussionRound({
                                                         )}
                                                         
                                                         {isListening && (
-                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center shadow-sm">
-                                                                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Clarity</div>
-                                                                <div className={`text-xl font-bold ${
+                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
+                                                                <div className="text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Clarity</div>
+                                                                <div className={`text-lg sm:text-xl font-bold ${
                                                                     confidenceScore >= 80 ? 'text-green-600' :
                                                                     confidenceScore >= 60 ? 'text-yellow-600' :
                                                                     'text-red-600'
@@ -1369,12 +1472,12 @@ export function GroupDiscussionRound({
                                                     </div>
                                                 )}
                                                 
-                                                <div className="flex space-x-3">
+                                                <div className="flex space-x-2 sm:space-x-3">
                                                     <Button
                                                         onClick={isListening ? stopListening : startListening}
                                                         disabled={loading || isAISpeaking || typingAgent !== null}
                                                         size="lg"
-                                                        className={`w-full font-bold py-4 shadow-lg transform hover:scale-[1.02] transition-all ${
+                                                        className={`w-full font-bold py-3 sm:py-4 text-sm sm:text-base shadow-lg transform hover:scale-[1.02] transition-all ${
                                                             isListening 
                                                             ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' 
                                                             : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
@@ -1382,20 +1485,20 @@ export function GroupDiscussionRound({
                                                     >
                                                         {isListening ? (
                                                             <span className="flex items-center justify-center space-x-2">
-                                                                <MicOff className="w-5 h-5 animate-pulse" />
+                                                                <MicOff className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                                                                 <span>Stop Speaking</span>
                                                             </span>
                                                         ) : (
                                                             <span className="flex items-center justify-center space-x-2">
-                                                                <Mic className="w-5 h-5" />
+                                                                <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
                                                                 <span>Start Speaking</span>
                                                             </span>
                                                         )}
                                                     </Button>
                                                 </div>
                                                 
-                                                <div className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                                                    💡 Press <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Space</kbd> to start/stop • <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Esc</kbd> to cancel
+                                                <div className="mt-2 sm:mt-3 text-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                                                    💡 Press <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Space</kbd> to start/stop • <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Esc</kbd> to cancel
                                                 </div>
                                             </Card>
                                         </div>

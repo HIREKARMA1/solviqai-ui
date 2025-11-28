@@ -247,14 +247,6 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Platform:</span>
                             <div className="flex gap-2">
                                 <Button
-                                    variant={platformFilter === 'all' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setPlatformFilter('all')}
-                                    className={platformFilter === 'all' ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-md' : ''}
-                                >
-                                    All
-                                </Button>
-                                <Button
                                     variant={platformFilter === 'youtube' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setPlatformFilter('youtube')}
@@ -262,15 +254,6 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                                 >
                                     <Youtube className="h-3 w-3" />
                                     YouTube
-                                </Button>
-                                <Button
-                                    variant={platformFilter === 'udemy' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setPlatformFilter('udemy')}
-                                    className={`flex items-center gap-1 ${platformFilter === 'udemy' ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-md' : ''}`}
-                                >
-                                    <GraduationCap className="h-3 w-3" />
-                                    Udemy
                                 </Button>
                             </div>
                         </div>

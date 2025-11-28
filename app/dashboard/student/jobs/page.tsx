@@ -202,9 +202,9 @@ export default function JobRecommendationsPage() {
     if (loading) {
         return (
             <DashboardLayout requiredUserType="student">
-                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <div className="flex flex-col items-center justify-center py-12 px-4 space-y-3 sm:space-y-4">
                     <Loader size="lg" />
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 text-center max-w-md">
                         Analyzing your resume and generating personalized job recommendations...
                     </p>
                 </div>
@@ -222,43 +222,44 @@ export default function JobRecommendationsPage() {
             </div>
             
             {/* Content with margin-top */}
-            <div className="relative z-10 mt-20 space-y-6">
+            <div className="relative z-10 mt-1 sm:mt-6 lg:mt-3 space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8">
                     {/* Header */}
-                    <div>
-                        <h1 className="text-3xl font-bold">Job Recommendations</h1>
-                        <p className="text-gray-600 dark:text-gray-400">
+                    <div className="px-1 sm:px-0">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">Job Recommendations</h1>
+                        <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
                             AI-powered job suggestions based on your resume analysis
                         </p>
                     </div>
 
                 {/* Active Assessment Banner */}
                 {activeAssessment && (
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 p-[2px]">
-                        <div className="relative rounded-xl bg-white dark:bg-gray-900 p-6">
-                            <div className="grid md:grid-cols-[auto,1fr,auto] items-center gap-5">
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 p-[2px] mx-1 sm:mx-0">
+                        <div className="relative rounded-lg sm:rounded-xl bg-white dark:bg-gray-900 p-3 sm:p-4 md:p-6">
+                            <div className="flex flex-col md:grid md:grid-cols-[auto,1fr,auto] items-start md:items-center gap-3 sm:gap-4 md:gap-5">
                                 {/* icon */}
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-lg">
-                                    <AlertCircle className="h-6 w-6" />
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-lg flex-shrink-0 self-start md:self-center">
+                                    <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
                                 {/* text */}
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-3 mb-1">
-                                        <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Complete Your Active Assessment First!</h3>
-                                        <Badge className="badge-primary border-0">Action Required</Badge>
+                                <div className="min-w-0 flex-1 w-full md:w-auto">
+                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                        <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 dark:text-white break-words">Complete Your Active Assessment First!</h3>
+                                        <Badge className="badge-primary border-0 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">Action Required</Badge>
                                     </div>
-                                    <p className="text-gray-600 dark:text-gray-300">
+                                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 break-words">
                                         You have an incomplete assessment for <span className="font-semibold text-primary-600 dark:text-primary-400">{activeAssessment.job_role?.title}</span>. Please complete it before starting a new assessment.
                                     </p>
                                 </div>
                                 {/* cta */}
-                                <div className="w-full md:w-auto">
+                                <div className="w-full md:w-auto flex-shrink-0 self-stretch md:self-center">
                                     <Button 
                                         onClick={() => router.push(`/dashboard/student/assessment?id=${activeAssessment.assessment_id}`)}
-                                        className="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white shadow-lg hover:shadow-xl"
+                                        className="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white shadow-lg hover:shadow-xl text-xs sm:text-sm md:text-base h-10 sm:h-11 md:h-12"
                                         size="lg"
                                     >
-                                        <ClipboardList className="mr-2 h-5 w-5" />
-                                        Go to Active Assessment
+                                        <ClipboardList className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                        <span className="hidden sm:inline">Go to Active Assessment</span>
+                                        <span className="sm:hidden">Go to Assessment</span>
                                     </Button>
                                 </div>
                             </div>
@@ -268,19 +269,19 @@ export default function JobRecommendationsPage() {
 
                 {/* Error State - No Resume */}
                 {!hasResume && error && (
-                    <Card className="border-yellow-200 dark:border-yellow-800">
-                        <CardContent className="pt-6">
-                            <div className="flex flex-col items-center text-center space-y-4">
-                                <Upload className="h-16 w-16 text-yellow-600 dark:text-yellow-500" />
-                                <div className="space-y-2">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No Resume Uploaded</h3>
-                                    <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                    <Card className="border-yellow-200 dark:border-yellow-800 mx-1 sm:mx-0">
+                        <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+                            <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
+                                <Upload className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 text-yellow-600 dark:text-yellow-500" />
+                                <div className="space-y-1 sm:space-y-2">
+                                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">No Resume Uploaded</h3>
+                                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400 max-w-md px-2 break-words">
                                         Upload your resume to get personalized job recommendations powered by AI.
                                     </p>
                                 </div>
-                                <Link href="/dashboard/student/resume">
-                                    <Button size="lg">
-                                        <Upload className="mr-2 h-4 w-4" />
+                                <Link href="/dashboard/student/resume" className="w-full sm:w-auto max-w-xs sm:max-w-none">
+                                    <Button size="lg" className="w-full sm:w-auto text-xs sm:text-sm md:text-base h-10 sm:h-11 md:h-12">
+                                        <Upload className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                                         Upload Resume
                                     </Button>
                                 </Link>
@@ -291,9 +292,9 @@ export default function JobRecommendationsPage() {
 
                 {/* Error State - Other Errors */}
                 {hasResume && error && (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{error}</AlertDescription>
+                    <Alert variant="destructive" className="text-xs sm:text-sm mx-1 sm:mx-0">
+                        <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <AlertDescription className="text-xs sm:text-sm break-words">{error}</AlertDescription>
                     </Alert>
                 )}
 
@@ -302,9 +303,9 @@ export default function JobRecommendationsPage() {
                     <>
                         {/* Cached Message */}
                         {isCached && (
-                            <div className="flex items-start gap-3 rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50/60 dark:bg-primary-900/20 p-4">
-                                <div className="mt-0.5 text-primary-600"><AlertCircle className="h-5 w-5" /></div>
-                                <div className="text-sm text-primary-900 dark:text-primary-300">
+                            <div className="flex items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50/60 dark:bg-primary-900/20 p-3 sm:p-4 mx-1 sm:mx-0">
+                                <div className="mt-0.5 text-primary-600 flex-shrink-0"><AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" /></div>
+                                <div className="text-xs sm:text-sm md:text-base text-primary-900 dark:text-primary-300 break-words">
                                     These job recommendations were generated from your current resume
                                     {generatedAt && ` on ${new Date(generatedAt).toLocaleString()}`}.
                                     Upload a new resume to get updated recommendations.
@@ -313,46 +314,46 @@ export default function JobRecommendationsPage() {
                         )}
                         
                         {/* Profile Summary Card */}
-                        <Card className="border-primary-200 dark:border-primary-800 overflow-hidden">
+                        <Card className="border-primary-200 dark:border-primary-800 overflow-hidden mx-1 sm:mx-0">
                             <div className="relative">
-                                <div className="absolute -top-8 -right-8 w-40 h-40 rotate-45 bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20" />
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Sparkles className="h-5 w-5 text-primary-600" />
+                                <div className="absolute -top-6 -right-6 sm:-top-8 sm:-right-8 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rotate-45 bg-gradient-to-br from-primary-50/30 to-secondary-50/20 dark:from-primary-900/10 dark:to-secondary-900/10 opacity-30" />
+                                <CardHeader className="p-3 sm:p-4 md:p-6 relative z-10">
+                                    <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg md:text-xl">
+                                        <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary-600 flex-shrink-0" />
                                         Your Profile Summary
                                     </CardTitle>
                                 </CardHeader>
                             </div>
-                            <CardContent className="space-y-6">
-                                <p className="text-gray-700 dark:text-gray-300">
+                            <CardContent className="space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6 relative z-10">
+                                <p className="text-xs sm:text-sm md:text-base text-gray-700 dark:text-gray-300 break-words leading-relaxed">
                                     {recommendations.overall_profile_summary}
                                 </p>
 
-                                <div className="grid md:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                                     <div>
-                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                            <Target className="h-4 w-4" />
+                                        <h4 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                                            <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                                             Primary Career Tracks
                                         </h4>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                             {recommendations.primary_career_tracks && Array.isArray(recommendations.primary_career_tracks) ? recommendations.primary_career_tracks.map((track, idx) => (
-                                                <Badge key={idx} variant="default" className="bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                                                <Badge key={idx} variant="default" className="bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300 text-[10px] sm:text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] sm:max-w-[200px] md:max-w-none">
                                                     {typeof track === 'string' ? track : JSON.stringify(track)}
                                                 </Badge>
-                                            )) : <span className="text-sm text-gray-500">No career tracks available</span>}
+                                            )) : <span className="text-xs sm:text-sm text-gray-500">No career tracks available</span>}
                                         </div>
                                     </div>
 
                                     <div className="md:col-span-2">
-                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                            <Award className="h-4 w-4" />
+                                        <h4 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                                            <Award className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                                             Job Market Readiness
                                         </h4>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-3xl font-bold text-primary-600 dark:text-primary-500">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4">
+                                            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-primary-600 dark:text-primary-500">
                                                 {recommendations.overall_job_market_readiness}
                                             </div>
-                                            <Badge className="badge-secondary">AI Profile Score</Badge>
+                                            <Badge className="badge-secondary text-[10px] sm:text-xs md:text-sm">AI Profile Score</Badge>
                                         </div>
                                     </div>
                                 </div>
@@ -360,123 +361,130 @@ export default function JobRecommendationsPage() {
                         </Card>
 
                         {/* Job Recommendations Grid */}
-                        <div className="space-y-4">
-                            <h2 className="text-2xl font-bold gradient-text">Top {recommendations.recommendations?.length || 0} Job Matches</h2>
+                        <div className="space-y-3 sm:space-y-4 md:space-y-5">
+                            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold gradient-text px-1 sm:px-0">Top {recommendations.recommendations?.length || 0} Job Matches</h2>
 
                             {recommendations.recommendations && Array.isArray(recommendations.recommendations) ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 items-stretch">
                                     {recommendations.recommendations.map((job) => (
-                                        <Card key={job.rank} className="relative overflow-hidden rounded-2xl card-hover p-0">
+                                        <Card key={job.rank} className="relative rounded-xl sm:rounded-2xl card-hover p-0 flex flex-col h-full border border-gray-200 dark:border-gray-700 overflow-hidden mx-1 sm:mx-0">
                                             {/* Accent corner */}
-                                            <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rotate-45 bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20" />
+                                            <div className="pointer-events-none absolute -top-6 -right-6 sm:-top-8 sm:-right-8 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rotate-45 bg-gradient-to-br from-primary-50/30 to-secondary-50/20 dark:from-primary-900/10 dark:to-secondary-900/10 opacity-30" style={{ zIndex: 0 }} />
 
-                                            <CardHeader className="pt-8">
+                                            <CardHeader className="pt-3 sm:pt-4 md:pt-6 lg:pt-8 p-3 sm:p-4 md:p-6 relative z-10">
                                                 {/* Number badge */}
                                                 <div className="flex justify-center">
-                                                    <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold shadow-md">{job.rank}</div>
+                                                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold shadow-md text-xs sm:text-sm md:text-base">{job.rank}</div>
                                                 </div>
-                                                <div className="text-center mt-3">
-                                                    <CardTitle className="text-xl">{job.job_title}</CardTitle>
-                                                    <CardDescription className="mt-1 inline-flex items-center gap-2">
-                                                        <Building className="h-4 w-4" />
-                                                        {job.industry} • {job.career_level}
+                                                <div className="text-center mt-2 sm:mt-3">
+                                                    <CardTitle className="text-sm sm:text-base md:text-lg lg:text-xl line-clamp-2 break-words px-1">{job.job_title}</CardTitle>
+                                                    <CardDescription className="mt-1 inline-flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm flex-wrap justify-center px-1">
+                                                        <Building className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                                        <span className="truncate max-w-[120px] sm:max-w-[180px] md:max-w-none">{job.industry}</span>
+                                                        <span className="hidden sm:inline">•</span>
+                                                        <span className="hidden sm:inline">{job.career_level}</span>
                                                     </CardDescription>
                                                 </div>
-                                                <div className={`absolute top-4 right-4 px-3 py-1 rounded-lg font-bold text-sm md:text-base bg-white/70 dark:bg-gray-900/40 backdrop-blur border ${getMatchScoreColor(job.match_score)}`}>
+                                                <div className={`absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg font-bold text-[10px] sm:text-xs md:text-sm lg:text-base bg-white/70 dark:bg-gray-900/40 backdrop-blur border ${getMatchScoreColor(job.match_score)}`}>
                                                     {job.match_score}%
                                                 </div>
                                             </CardHeader>
 
-                                            <CardContent className="space-y-4">
-                                                {/* Match Reasons */}
-                                                <div>
-                                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                                        Why You're a Good Fit
-                                                    </h4>
-                                                    <ul className="space-y-1">
-                                                        {job.match_reasons && Array.isArray(job.match_reasons) ? job.match_reasons.map((reason, idx) => (
-                                                            <li key={idx} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
-                                                                <span className="text-green-600 mt-0.5">✓</span>
-                                                                <span>{typeof reason === 'string' ? reason : JSON.stringify(reason)}</span>
-                                                            </li>
-                                                        )) : <li className="text-sm text-gray-500">No match reasons available</li>}
-                                                    </ul>
-                                                </div>
-
-                                                {/* Skills */}
-                                                <div className="grid md:grid-cols-2 gap-4">
+                                            <CardContent className="flex-1 flex flex-col p-3 sm:p-4 md:p-5 lg:p-6 relative z-10">
+                                                <div className="space-y-2.5 sm:space-y-3 md:space-y-4 flex-1">
+                                                    {/* Match Reasons */}
                                                     <div>
-                                                        <h4 className="text-sm font-semibold mb-2 text-green-700 dark:text-green-500">
-                                                            Your Matching Skills
+                                                        <h4 className="text-[10px] sm:text-xs md:text-sm font-semibold mb-1 sm:mb-1.5 md:mb-2 flex items-center gap-1 sm:gap-1.5 md:gap-2">
+                                                            <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0" />
+                                                            Why You're a Good Fit
                                                         </h4>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {job.key_skills_matched && Array.isArray(job.key_skills_matched) ? job.key_skills_matched.map((skill, idx) => (
-                                                                <Badge key={idx} variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                                    {typeof skill === 'string' ? skill : JSON.stringify(skill)}
-                                                                </Badge>
-                                                            )) : <span className="text-sm text-gray-500">No skills matched</span>}
-                                                        </div>
+                                                        <ul className="space-y-0.5 sm:space-y-1">
+                                                            {job.match_reasons && Array.isArray(job.match_reasons) ? job.match_reasons.map((reason, idx) => (
+                                                                <li key={idx} className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1 sm:gap-1.5 md:gap-2">
+                                                                    <span className="text-green-600 mt-0.5 flex-shrink-0 text-xs sm:text-sm">✓</span>
+                                                                    <span className="break-words leading-relaxed">{typeof reason === 'string' ? reason : JSON.stringify(reason)}</span>
+                                                                </li>
+                                                            )) : <li className="text-[10px] sm:text-xs md:text-sm text-gray-500">No match reasons available</li>}
+                                                        </ul>
                                                     </div>
 
-                                                    {job.skills_gap && job.skills_gap.length > 0 && (
+                                                    {/* Skills */}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
                                                         <div>
-                                                            <h4 className="text-sm font-semibold mb-2 text-red-700 dark:text-red-500">
-                                                                Skills to Develop
+                                                            <h4 className="text-[10px] sm:text-xs md:text-sm font-semibold mb-1 sm:mb-1.5 md:mb-2 text-green-700 dark:text-green-500">
+                                                                Your Matching Skills
                                                             </h4>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {job.skills_gap && Array.isArray(job.skills_gap) ? job.skills_gap.map((skill, idx) => (
-                                                                    <Badge key={idx} variant="outline" className="border-red-300 text-red-800 dark:border-red-700 dark:text-red-400">
+                                                            <div className="flex flex-wrap gap-1 sm:gap-1.5 md:gap-2">
+                                                                {job.key_skills_matched && Array.isArray(job.key_skills_matched) ? job.key_skills_matched.map((skill, idx) => (
+                                                                    <Badge key={idx} variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[140px] sm:max-w-[180px] md:max-w-none">
                                                                         {typeof skill === 'string' ? skill : JSON.stringify(skill)}
                                                                     </Badge>
-                                                                )) : <span className="text-sm text-gray-500">No skills gap</span>}
+                                                                )) : <span className="text-[10px] sm:text-xs md:text-sm text-gray-500">No skills matched</span>}
                                                             </div>
                                                         </div>
-                                                    )}
-                                                </div>
 
-                                                {/* Bottom Info */}
-                                                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                                    <div className="flex items-center gap-2">
-                                                        <DollarSign className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{job.typical_salary_range}</span>
+                                                        {job.skills_gap && job.skills_gap.length > 0 && (
+                                                            <div>
+                                                                <h4 className="text-[10px] sm:text-xs md:text-sm font-semibold mb-1 sm:mb-1.5 md:mb-2 text-red-700 dark:text-red-500">
+                                                                    Skills to Develop
+                                                                </h4>
+                                                                <div className="flex flex-wrap gap-1 sm:gap-1.5 md:gap-2">
+                                                                    {job.skills_gap && Array.isArray(job.skills_gap) ? job.skills_gap.map((skill, idx) => (
+                                                                        <Badge key={idx} variant="outline" className="border-red-300 text-red-800 dark:border-red-700 dark:text-red-400 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[140px] sm:max-w-[180px] md:max-w-none">
+                                                                            {typeof skill === 'string' ? skill : JSON.stringify(skill)}
+                                                                        </Badge>
+                                                                    )) : <span className="text-[10px] sm:text-xs md:text-sm text-gray-500">No skills gap</span>}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <Badge className={getGrowthPotentialColor(job.growth_potential)}>
-                                                        <TrendingUp className="h-3 w-3 mr-1" />
-                                                        {job.growth_potential} Growth
-                                                    </Badge>
-                                                    <div className="flex items-center gap-2 ml-auto">
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">Top Hirers:</span>
-                                                        {job.top_companies_hiring && Array.isArray(job.top_companies_hiring) ? job.top_companies_hiring.slice(0, 3).map((company, idx) => (
-                                                            <Badge key={idx} variant="outline" className="text-xs">
-                                                                {typeof company === 'string' ? company : JSON.stringify(company)}
-                                                            </Badge>
-                                                        )) : <span className="text-sm text-gray-500 dark:text-gray-400">No companies listed</span>}
+
+                                                    {/* Bottom Info */}
+                                                    <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-2.5 md:gap-3 lg:gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 w-full sm:w-auto">
+                                                            <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100 break-words">{job.typical_salary_range}</span>
+                                                        </div>
+                                                        <Badge className={`${getGrowthPotentialColor(job.growth_potential)} text-[9px] sm:text-[10px] md:text-xs`}>
+                                                            <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 mr-0.5 sm:mr-1" />
+                                                            {job.growth_potential} Growth
+                                                        </Badge>
+                                                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 md:gap-2 w-full sm:w-auto sm:ml-auto">
+                                                            <span className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Top Hirers:</span>
+                                                            {job.top_companies_hiring && Array.isArray(job.top_companies_hiring) ? job.top_companies_hiring.slice(0, 3).map((company, idx) => (
+                                                                <Badge key={idx} variant="outline" className="text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[120px] sm:max-w-[150px] md:max-w-none">
+                                                                    {typeof company === 'string' ? company : JSON.stringify(company)}
+                                                                </Badge>
+                                                            )) : <span className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400">No companies listed</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Start Assessment Button */}
-                                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                                                <div className="pt-2.5 sm:pt-3 md:pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
                                                     <Button 
-                                                        className="w-full bg-primary-500 hover:bg-primary-600 text-white" 
+                                                        className="w-full bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm md:text-base h-9 sm:h-10 md:h-11 lg:h-12" 
                                                         size="lg"
                                                         onClick={() => handleStartAssessment(job.job_role_id, job.job_title, job.rank)}
                                                         disabled={startingAssessment === job.rank || !!activeAssessment}
                                                     >
                                                         {startingAssessment === job.rank ? (
                                                             <>
-                                                                <Loader size="sm" className="mr-2" />
-                                                                Starting Assessment...
+                                                                <Loader size="sm" className="mr-1 sm:mr-1.5 md:mr-2 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                                                                <span className="hidden sm:inline">Starting Assessment...</span>
+                                                                <span className="sm:hidden">Starting...</span>
                                                             </>
                                                         ) : activeAssessment ? (
                                                             <>
-                                                                <AlertCircle className="mr-2 h-5 w-5" />
-                                                                Complete Active Assessment First
+                                                                <AlertCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                                                <span className="hidden sm:inline">Complete Active Assessment First</span>
+                                                                <span className="sm:hidden">Complete Active First</span>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <PlayCircle className="mr-2 h-5 w-5" />
-                                                                Start Assessment for this Role
+                                                                <PlayCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                                                <span className="hidden sm:inline">Start Assessment for this Role</span>
+                                                                <span className="sm:hidden">Start Assessment</span>
                                                             </>
                                                         )}
                                                     </Button>
@@ -486,24 +494,24 @@ export default function JobRecommendationsPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <p className="text-gray-500 dark:text-gray-400">No job recommendations available</p>
+                                <div className="text-center py-6 sm:py-8 px-4">
+                                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">No job recommendations available</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Skill Development Recommendations */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Target className="h-5 w-5" />
+                        <Card className="mx-1 sm:mx-0">
+                            <CardHeader className="p-3 sm:p-4 md:p-6">
+                                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+                                    <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0" />
                                     Recommended Skills to Develop
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap gap-2">
+                            <CardContent className="p-3 sm:p-4 md:p-6">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {recommendations.skill_development_recommendations.map((skill, idx) => (
-                                        <Badge key={idx} variant="secondary" className="text-sm">
+                                        <Badge key={idx} variant="secondary" className="text-[10px] sm:text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] sm:max-w-[200px] md:max-w-none">
                                             {skill}
                                         </Badge>
                                     ))}
@@ -512,17 +520,17 @@ export default function JobRecommendationsPage() {
                         </Card>
 
                         {/* Certification Recommendations */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Award className="h-5 w-5" />
+                        <Card className="mx-1 sm:mx-0">
+                            <CardHeader className="p-3 sm:p-4 md:p-6">
+                                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+                                    <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0" />
                                     Recommended Certifications
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap gap-2">
+                            <CardContent className="p-3 sm:p-4 md:p-6">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {recommendations.certification_recommendations.map((cert, idx) => (
-                                        <Badge key={idx} variant="outline" className="text-sm">
+                                        <Badge key={idx} variant="outline" className="text-[10px] sm:text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] sm:max-w-[200px] md:max-w-none">
                                             {cert}
                                         </Badge>
                                     ))}

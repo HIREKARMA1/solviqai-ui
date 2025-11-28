@@ -1,5 +1,11 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosProgressEvent, InternalAxiosRequestConfig } from 'axios';
-import { config } from './config';
+import axios, {
+  AxiosInstance,
+  AxiosResponse,
+  AxiosProgressEvent,
+  InternalAxiosRequestConfig,
+} from "axios";
+import { config } from "./config";
+import toast from "react-hot-toast";
 
 // Extend Axios config to include custom properties
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -12,53 +18,66 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: config.api.fullUrl,
-      timeout: 180000, // 3 minutes timeout for long-running operations like job applications
+      timeout: 120000, // 120 seconds timeout (2 minutes) for web scraping operations
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
+    });
+
+    console.log("🚀 API Client initialized:", {
+      baseURL: config.api.fullUrl,
+      timeout: "120s (2 minutes)",
     });
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use(
       async (config: CustomAxiosRequestConfig) => {
         // Add API version prefix
-        if (!config.url?.startsWith('/api/v1/')) {
+        if (!config.url?.startsWith("/api/v1/")) {
           config.url = `/api/v1${config.url}`;
         }
-        
+
         // Add auth token
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem("access_token");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        
+
         // Skip proactive refresh for refresh token endpoint itself to prevent infinite loop
-        if (config.url?.includes('/auth/refresh')) {
+        if (config.url?.includes("/auth/refresh")) {
           return config;
         }
-        
+
         // Check if token is about to expire and refresh proactively
-        const tokenExpiry = localStorage.getItem('token_expiry');
-        if (tokenExpiry && Date.now() > parseInt(tokenExpiry) - 60000) { // Refresh 1 minute before expiry
-          const refreshToken = localStorage.getItem('refresh_token');
+        const tokenExpiry = localStorage.getItem("token_expiry");
+        if (tokenExpiry && Date.now() > parseInt(tokenExpiry) - 60000) {
+          // Refresh 1 minute before expiry
+          const refreshToken = localStorage.getItem("refresh_token");
           if (refreshToken) {
             try {
               const response = await this.refreshToken(refreshToken);
-              localStorage.setItem('access_token', response.access_token);
-              localStorage.setItem('refresh_token', response.refresh_token);
-              localStorage.setItem('token_expiry', String(Date.now() + 30 * 60 * 1000)); // 30 minutes
+              localStorage.setItem("access_token", response.access_token);
+              localStorage.setItem("refresh_token", response.refresh_token);
+              localStorage.setItem(
+                "token_expiry",
+                String(Date.now() + 30 * 60 * 1000),
+              ); // 30 minutes
               config.headers.Authorization = `Bearer ${response.access_token}`;
             } catch (error) {
-              console.warn('Token refresh failed, continuing with existing token');
+              console.warn(
+                "Proactive token refresh failed, continuing with existing token",
+                error
+              );
+              // If refresh fails, don't clear tokens - let the response interceptor handle it
             }
           }
         }
-        
+
         return config;
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     // Add response interceptor to handle token refresh
@@ -70,222 +89,318 @@ class ApiClient {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
+          // Check if error message indicates session was invalidated (logged in on another device)
+          const errorMessage = error.response?.data?.detail || "";
+          const isSessionInvalidated = 
+            errorMessage.includes("Session expired or invalid") ||
+            errorMessage.includes("Session not found");
+
+          // If session was invalidated, don't try to refresh - just logout
+          if (isSessionInvalidated) {
+            console.warn("Session invalidated - user logged in on another device");
+            this.clearAuthTokens();
+            // Show user-friendly notification
+            toast.error("You have been logged out. You logged in on another device.", {
+              duration: 5000,
+              icon: "🔐",
+            });
+            // Only redirect if we're not already on the login page
+            if (window.location.pathname !== "/auth/login") {
+              window.location.href = "/auth/login";
+            }
+            return Promise.reject(error);
+          }
+
           try {
-            const refreshToken = localStorage.getItem('refresh_token');
+            const refreshToken = localStorage.getItem("refresh_token");
             if (refreshToken) {
               const response = await this.refreshToken(refreshToken);
-              localStorage.setItem('access_token', response.access_token);
-              localStorage.setItem('refresh_token', response.refresh_token);
-              
+              localStorage.setItem("access_token", response.access_token);
+              localStorage.setItem("refresh_token", response.refresh_token);
+              localStorage.setItem(
+                "token_expiry",
+                String(Date.now() + 30 * 60 * 1000),
+              );
+
               originalRequest.headers.Authorization = `Bearer ${response.access_token}`;
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // Refresh failed, redirect to login
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = '/auth/login';
+            // Refresh failed, clear all auth data and redirect to login
+            this.clearAuthTokens();
+            // Only redirect if we're not already on the login page
+            if (window.location.pathname !== "/auth/login") {
+              window.location.href = "/auth/login";
+            }
           }
         }
 
         return Promise.reject(error);
-      }
+      },
     );
   }
 
   // Auth endpoints
   async registerStudent(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/auth/register/student', data);
+    const response: AxiosResponse = await this.client.post(
+      "/auth/register/student",
+      data,
+    );
     return response.data;
   }
 
   async login(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/auth/login', data);
+    console.log(
+      "📡 API login POST:",
+      this.client.defaults.baseURL + "/api/v1/auth/login",
+      data,
+    );
+    const response: AxiosResponse = await this.client.post("/auth/login", data);
+    console.log("📥 Login response:", response.data);
     return response.data;
   }
 
   async refreshToken(refreshToken: string): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/auth/refresh', { refresh_token: refreshToken });
+    const response: AxiosResponse = await this.client.post("/auth/refresh", {
+      refresh_token: refreshToken,
+    });
     return response.data;
   }
 
   async logout(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/auth/logout');
+    const response: AxiosResponse = await this.client.post("/auth/logout");
     return response.data;
   }
 
   async getCurrentUser(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/auth/me');
+    const response: AxiosResponse = await this.client.get("/auth/me");
     return response.data;
   }
 
   // Helper methods
   setAuthTokens(accessToken: string, refreshToken: string): void {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
+    localStorage.setItem("access_token", accessToken);
+    localStorage.setItem("refresh_token", refreshToken);
   }
 
   clearAuthTokens() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("token_expiry");
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem("access_token");
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    return localStorage.getItem("access_token");
   }
 
   // Admin endpoints
   async getAdminDashboard(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/admin/dashboard');
+    const response: AxiosResponse = await this.client.get("/admin/dashboard");
     return response.data;
   }
 
   async getColleges(params?: any): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/admin/colleges', { params });
+    const response: AxiosResponse = await this.client.get("/admin/colleges", {
+      params,
+    });
     return response.data;
   }
 
   async createCollege(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/admin/colleges', data);
+    const response: AxiosResponse = await this.client.post(
+      "/admin/colleges",
+      data,
+    );
     return response.data;
   }
 
   async updateCollege(id: string, data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/colleges/${id}`, data);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/colleges/${id}`,
+      data,
+    );
     return response.data;
   }
 
   async deactivateCollege(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/colleges/${id}/deactivate`);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/colleges/${id}/deactivate`,
+    );
     return response.data;
   }
 
   async activateCollege(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/colleges/${id}/activate`);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/colleges/${id}/activate`,
+    );
     return response.data;
   }
 
   async deleteCollege(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.delete(`/admin/colleges/${id}`);
+    const response: AxiosResponse = await this.client.delete(
+      `/admin/colleges/${id}`,
+    );
     return response.data;
   }
 
   async getStudents(params?: any): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/admin/students', { params });
+    const response: AxiosResponse = await this.client.get("/admin/students", {
+      params,
+    });
     return response.data;
   }
 
   async createStudent(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/admin/students', data);
+    const response: AxiosResponse = await this.client.post(
+      "/admin/students",
+      data,
+    );
     return response.data;
   }
 
   async updateStudent(id: string, data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/students/${id}`, data);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/students/${id}`,
+      data,
+    );
     return response.data;
   }
 
   async deactivateStudent(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/students/${id}/deactivate`);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/students/${id}/deactivate`,
+    );
     return response.data;
   }
 
   async activateStudent(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/admin/students/${id}/activate`);
+    const response: AxiosResponse = await this.client.put(
+      `/admin/students/${id}/activate`,
+    );
     return response.data;
   }
 
   async deleteStudent(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.delete(`/admin/students/${id}`);
+    const response: AxiosResponse = await this.client.delete(
+      `/admin/students/${id}`,
+    );
     return response.data;
   }
 
   async uploadStudentsCSV(file: File, collegeId?: string): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     if (collegeId) {
-      formData.append('college_id', collegeId);
-      console.log('📤 Uploading CSV with college_id:', collegeId);
+      formData.append("college_id", collegeId);
+      console.log("📤 Uploading CSV with college_id:", collegeId);
     } else {
-      console.log('📤 Uploading CSV without college_id');
+      console.log("📤 Uploading CSV without college_id");
     }
-    const response: AxiosResponse = await this.client.post('/admin/students/upload-csv', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+    const response: AxiosResponse = await this.client.post(
+      "/admin/students/upload-csv",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       },
-    });
+    );
     return response.data;
   }
 
   // College endpoints
   async getCollegeDashboard(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/college/dashboard');
+    const response: AxiosResponse = await this.client.get("/college/dashboard");
     return response.data;
   }
 
   async getCollegeProfile(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/college/profile');
+    const response: AxiosResponse = await this.client.get("/college/profile");
     return response.data;
   }
 
   async updateCollegeProfile(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.put('/college/profile', data);
+    const response: AxiosResponse = await this.client.put(
+      "/college/profile",
+      data,
+    );
     return response.data;
   }
 
   async getCollegeStudents(params?: any): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/college/students', { params });
+    const response: AxiosResponse = await this.client.get("/college/students", {
+      params,
+    });
     return response.data;
   }
 
   async createCollegeStudent(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/college/students', data);
+    const response: AxiosResponse = await this.client.post(
+      "/college/students",
+      data,
+    );
     return response.data;
   }
 
   async updateCollegeStudent(id: string, data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/college/students/${id}`, data);
+    const response: AxiosResponse = await this.client.put(
+      `/college/students/${id}`,
+      data,
+    );
     return response.data;
   }
 
   async deleteCollegeStudent(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.delete(`/college/students/${id}`);
+    const response: AxiosResponse = await this.client.delete(
+      `/college/students/${id}`,
+    );
     return response.data;
   }
 
   async activateCollegeStudent(id: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/college/students/${id}/activate`);
+    const response: AxiosResponse = await this.client.put(
+      `/college/students/${id}/activate`,
+    );
     return response.data;
   }
 
   async uploadCollegeStudentsCSV(file: File): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
-    const response: AxiosResponse = await this.client.post('/college/students/upload-csv', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+    formData.append("file", file);
+    const response: AxiosResponse = await this.client.post(
+      "/college/students/upload-csv",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       },
-    });
+    );
     return response.data;
   }
 
   // ✅ Student endpoints - ALL using /students/ (plural)
   async getStudentDashboard(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/dashboard');
+    const response: AxiosResponse = await this.client.get(
+      "/students/dashboard",
+    );
     return response.data;
   }
 
   async getStudentProfile(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/profile');
+    const response: AxiosResponse = await this.client.get("/students/profile");
     return response.data;
   }
 
   async updateStudentProfile(data: any): Promise<any> {
-    const response: AxiosResponse = await this.client.put('/students/profile', data);
+    const response: AxiosResponse = await this.client.put(
+      "/students/profile",
+      data,
+    );
     return response.data;
   }
 
@@ -297,27 +412,27 @@ class ApiClient {
    */
   async uploadResume(
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
-    
+    formData.append("file", file);
+
     const response: AxiosResponse = await this.client.post(
-      '/students/resume/upload',  // ✅ /students/
+      "/students/resume/upload", // ✅ /students/
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
         onUploadProgress: (progressEvent: AxiosProgressEvent) => {
           if (progressEvent.total && onProgress) {
             const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
+              (progressEvent.loaded * 100) / progressEvent.total,
             );
             onProgress(percentCompleted);
           }
         },
-      }
+      },
     );
     return response.data;
   }
@@ -327,7 +442,9 @@ class ApiClient {
    * @returns Resume status and details
    */
   async getResumeStatus(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/resume/status');  // ✅ /students/
+    const response: AxiosResponse = await this.client.get(
+      "/students/resume/status",
+    ); // ✅ /students/
     return response.data;
   }
 
@@ -338,7 +455,10 @@ class ApiClient {
    */
   async getATSScore(jobDescription?: string): Promise<any> {
     const params = jobDescription ? { job_description: jobDescription } : {};
-    const response: AxiosResponse = await this.client.get('/students/ats-score', { params });  // ✅ /students/
+    const response: AxiosResponse = await this.client.get(
+      "/students/ats-score",
+      { params },
+    ); // ✅ /students/
     return response.data;
   }
 
@@ -347,7 +467,56 @@ class ApiClient {
    * @returns Top 15 job recommendations with match scores
    */
   async getJobRecommendations(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/job-recommendations');  // ✅ /students/
+    const response: AxiosResponse = await this.client.get(
+      "/students/job-recommendations",
+    ); // ✅ /students/
+    return response.data;
+  }
+
+  /**
+   * Get available jobs in the market from multiple platforms (LinkedIn, Unstop, Foundit, Naukri)
+   * @param keywords - Optional comma-separated keywords (e.g., "software engineer,data analyst")
+   * @param location - Job location (default: "India")
+   * @param maxJobs - Maximum number of jobs to fetch per source (default: 15, max: 15)
+   * @param includeResumeSkills - Include skills extracted from resume (default: false)
+   * @param sources - Comma-separated platforms to search (e.g., "linkedin,unstop,foundit,naukri")
+   * @returns Live job listings from selected platforms
+   */
+  async getMarketJobs(
+    keywords?: string,
+    location: string = "India",
+    maxJobs: number = 15,
+    includeResumeSkills: boolean = false,
+    sources: string = "linkedin",
+  ): Promise<any> {
+    const params: any = {
+      location,
+      max_jobs: maxJobs,
+      include_resume_skills: includeResumeSkills,
+      sources,
+    };
+    if (keywords) {
+      params.keywords = keywords;
+    }
+    // Use extended timeout for web scraping operations (2 minutes)
+    const response: AxiosResponse = await this.client.get(
+      "/students/market-jobs",
+      {
+        params,
+        timeout: 120000, // 2 minutes for web scraping
+      },
+    );
+    return response.data;
+  }
+
+  /**
+   * Get skills extracted from student's resume
+   * @returns Extracted skills from ATS analysis
+   */
+  async getResumeSkills(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/resume-skills",
+    );
     return response.data;
   }
 
@@ -370,103 +539,229 @@ class ApiClient {
    * @returns Subscription information
    */
   async getSubscriptionStatus(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/subscription');  // ✅ /students/
+    const response: AxiosResponse = await this.client.get(
+      "/students/subscription",
+    ); // ✅ /students/
     return response.data;
   }
 
   // Assessment endpoints
   async getJobRoles(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/assessments/job-roles');
-    return response.data;
-  }
-
-  async startAssessment(jobRoleId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/start', {
-      job_role_id: jobRoleId
-    });
-    return response.data;
-  }
-
-  async getAssessmentRound(assessmentId: string, roundNumber: number): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/rounds/${roundNumber}`);
-    return response.data;
-  }
-
-  async submitRoundResponses(assessmentId: string, roundId: string, responses: any[]): Promise<any> {
-    const response: AxiosResponse = await this.client.post(`/assessments/${assessmentId}/rounds/${roundId}/submit`, responses);
-    return response.data;
-  }
-
-  async executeCode(assessmentId: string, roundId: string, payload: {question_id: string; language: string; code: string; stdin?: string}): Promise<any> {
-    // Judge0 executions can take longer; override the default 30s client timeout for this call
-    const response: AxiosResponse = await this.client.post(
-      `/assessments/${assessmentId}/rounds/${roundId}/code/execute`,
-      payload,
-      { timeout: 60000 } // 60s
+    const response: AxiosResponse = await this.client.get(
+      "/assessments/job-roles",
     );
     return response.data;
   }
 
-  async submitVoiceResponse(assessmentId: string, roundId: string, formData: FormData): Promise<any> {
-    const response: AxiosResponse = await this.client.post(`/assessments/${assessmentId}/rounds/${roundId}/voice-response`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+  async startAssessment(jobRoleId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessments/start",
+      {
+        job_role_id: jobRoleId,
       },
-    });
+    );
+    return response.data;
+  }
+
+  async getAssessmentRound(
+    assessmentId: string,
+    roundNumber: number,
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/rounds/${roundNumber}`,
+    );
+    return response.data;
+  }
+
+  async submitRoundResponses(
+    assessmentId: string,
+    roundId: string,
+    responses: any[],
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/assessments/${assessmentId}/rounds/${roundId}/submit`,
+      responses,
+    );
+    return response.data;
+  }
+
+  async executeCode(
+    assessmentId: string,
+    roundId: string,
+    payload: {
+      question_id: string;
+      language: string;
+      code: string;
+      stdin?: string;
+    },
+  ): Promise<any> {
+    // Judge0 executions can take longer; override the default 30s client timeout for this call
+    const response: AxiosResponse = await this.client.post(
+      `/assessments/${assessmentId}/rounds/${roundId}/code/execute`,
+      payload,
+      { timeout: 60000 }, // 60s
+    );
+    return response.data;
+  }
+
+  async submitVoiceResponse(
+    assessmentId: string,
+    roundId: string,
+    formData: FormData,
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/assessments/${assessmentId}/rounds/${roundId}/voice-response`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
     return response.data;
   }
 
   async completeAssessment(assessmentId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.post(`/assessments/${assessmentId}/complete`);
+    const response: AxiosResponse = await this.client.post(
+      `/assessments/${assessmentId}/complete`,
+    );
     return response.data;
   }
 
   async getAssessmentStatus(assessmentId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/status`);
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/status`,
+    );
     return response.data;
   }
 
   async getAssessmentReport(assessmentId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/report`);
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/report`,
+    );
     return response.data;
   }
 
   async getAssessmentReportWithQuestions(assessmentId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/report`, {
-      params: { include: 'questions' }
-    });
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/report`,
+      {
+        params: { include: "questions" },
+      },
+    );
     return response.data;
   }
 
   async getAssessmentQA(assessmentId: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/qa`);
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/qa`,
+    );
     return response.data;
   }
 
-  async getAssessmentPlaylist(assessmentId: string, max_results: number = 6): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/assessments/${assessmentId}/playlist`, { params: { max_results } });
+  async getAssessmentPlaylist(
+    assessmentId: string,
+    max_results?: number,
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/assessments/${assessmentId}/playlist`,
+      {
+        params: max_results ? { max_results } : {},
+      },
+    );
     return response.data;
   }
 
-  async getStudentAssessments(skip: number = 0, limit: number = 50): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/assessments', {
-      params: { skip, limit }
-    });
+  async getStudentAssessments(
+    skip: number = 0,
+    limit: number = 50,
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/assessments",
+      {
+        params: { skip, limit },
+      },
+    );
     return response.data;
   }
 
   async getStudentAnalytics(): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/analytics');
+    const response: AxiosResponse = await this.client.get(
+      "/students/analytics",
+    );
     return response.data;
   }
 
-  async getStudentAnalyticsWithFilters(params: { start_date?: string; end_date?: string; categories?: string } = {}): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/analytics', { params });
+  async getStudentAnalyticsWithFilters(
+    params: {
+      start_date?: string;
+      end_date?: string;
+      categories?: string;
+    } = {},
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/analytics",
+      { params },
+    );
     return response.data;
   }
 
-  async getStudentTimeline(params: { start_date?: string; end_date?: string; categories?: string } = {}): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/students/analytics/timeline', { params });
+  async getStudentTimeline(
+    params: {
+      start_date?: string;
+      end_date?: string;
+      categories?: string;
+    } = {},
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/analytics/timeline",
+      { params },
+    );
+    return response.data;
+  }
+
+  // Career Guidance API
+  careerGuidance = {
+    startSession: async (data: {
+      resume_included: boolean;
+      preferred_language: string;
+    }): Promise<any> => {
+      const response = await this.client.post("/career-guidance/start", data);
+      return response.data;
+    },
+
+    sendMessage: async (data: {
+      session_id: string;
+      message: string;
+    }): Promise<any> => {
+      const response = await this.client.post("/career-guidance/message", data);
+      return response.data;
+    },
+
+    getSession: async (sessionId: string): Promise<any> => {
+      const response = await this.client.get(
+        `/career-guidance/session/${sessionId}`,
+      );
+      return response.data;
+    },
+
+    getSessions: async (): Promise<any> => {
+      const response = await this.client.get("/career-guidance/sessions");
+      return response.data;
+    },
+
+    deleteSession: async (sessionId: string): Promise<any> => {
+      const response = await this.client.delete(
+        `/career-guidance/session/${sessionId}`,
+      );
+      return response.data;
+    },
+  };
+
+  async getCareerGuidancePlaylist(sessionId: string): Promise<any> {
+    const response = await this.client.get(
+      `/career-guidance/session/${sessionId}/playlist`,
+    );
     return response.data;
   }
 
@@ -501,4 +796,5 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export const api = apiClient; // Export as 'api' for cleaner imports
 export default apiClient;

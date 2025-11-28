@@ -4,10 +4,20 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient } from '@/lib/api'
-import { Home, User, FileText, Briefcase, Zap, BarChart3, Target, ShieldCheck, CheckCircle, ClipboardList, Users, MessageCircle, Clock } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { 
+    BarChart3, Target, ShieldCheck, TrendingUp, TrendingDown, 
+    Award, Brain, Users, FileText, Briefcase, Calendar, Filter,
+    ClipboardList, MessageCircle, Clock, Activity, Zap, Sparkles,
+    CheckCircle, AlertCircle, ArrowUpRight, ArrowDownRight,
+    PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon
+} from 'lucide-react'
 
 // Recharts (SSR-safe)
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false })
@@ -28,29 +38,112 @@ const Cell = dynamic(() => import('recharts').then(m => m.Cell), { ssr: false })
 const BarChart = dynamic(() => import('recharts').then(m => m.BarChart), { ssr: false })
 const Bar = dynamic(() => import('recharts').then(m => m.Bar), { ssr: false })
 const LabelList = dynamic(() => import('recharts').then(m => m.LabelList), { ssr: false })
+const AreaChart = dynamic(() => import('recharts').then(m => m.AreaChart), { ssr: false })
+const Area = dynamic(() => import('recharts').then(m => m.Area), { ssr: false })
 
-const sidebarItems = [
-    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
-    { name: 'Profile', href: '/dashboard/student/profile', icon: User },
-    { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
-    { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
-    { name: 'Auto Job Apply', href: '/dashboard/student/auto-apply', icon: Zap },
-    { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
-]
+// Stat Card Component with hover effects
+function StatCard({ 
+    icon: Icon, 
+    label, 
+    value, 
+    subtitle, 
+    trend, 
+    trendValue,
+    color, 
+    bgColor 
+}: { 
+    icon: any
+    label: string
+    value: string | number
+    subtitle?: string
+    trend?: 'up' | 'down' | 'neutral'
+    trendValue?: string
+    color: string
+    bgColor: string
+}) {
+    const [isHovered, setIsHovered] = useState(false)
+    
+    return (
+        <motion.div 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            whileHover={{ y: -4, scale: 1.02 }} 
+            transition={{ duration: 0.2 }}
+            className="relative"
+        >
+            <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-all duration-300">
+                {/* Animated Background Gradient */}
+                <motion.div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-transparent via-primary-50/30 to-secondary-50/20 dark:from-transparent dark:via-primary-900/10 dark:to-secondary-900/10"
+                    initial={false}
+                    animate={isHovered ? { scale: 1 } : { scale: 0.9 }}
+                />
+                
+                <CardContent className="p-4 sm:p-6 relative z-10">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                        <div className={`p-2 sm:p-3 rounded-xl ${bgColor} shadow-md flex-shrink-0`}>
+                            <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
+                        </div>
+                        {trend && trend !== 'neutral' && (
+                            <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex-shrink-0 ${
+                                trend === 'up' 
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                                {trend === 'up' ? <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                <span className="whitespace-nowrap">{trendValue}</span>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div>
+                        <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+                        <motion.p 
+                            animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1"
+                        >
+                            {value}
+                        </motion.p>
+                        {subtitle && (
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{subtitle}</p>
+                        )}
+                    </div>
+                </CardContent>
+                
+                {/* Bottom accent line */}
+                <motion.div
+                    className={`absolute bottom-0 left-0 h-1 rounded-full ${bgColor.replace('bg-', 'bg-gradient-to-r from-').replace('-200', '-500')}`}
+                    initial={{ width: '0%' }}
+                    animate={isHovered ? { width: '100%' } : { width: '0%' }}
+                    transition={{ duration: 0.3 }}
+                />
+            </Card>
+        </motion.div>
+    )
+}
+
+const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4']
 
 export default function StudentAnalyticsPage() {
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
     const [timeline, setTimeline] = useState<any[]>([])
+    const [activeTab, setActiveTab] = useState('overview')
     const [filters, setFilters] = useState<{ start_date?: string; end_date?: string; categories: Record<string, boolean> }>({
         start_date: undefined,
         end_date: undefined,
         categories: { assessment: true, interview: true, application: true, resume: true, portfolio: true }
     })
+    const [showFilters, setShowFilters] = useState(false)
 
     useEffect(() => {
-        const load = async () => {
+        loadData()
+    }, [])
+
+    const loadData = async () => {
             try {
+            setLoading(true)
                 const params = buildParams()
                 const analytics = await apiClient.getStudentAnalyticsWithFilters(params)
                 const tl = await apiClient.getStudentTimeline(params)
@@ -62,8 +155,6 @@ export default function StudentAnalyticsPage() {
                 setLoading(false)
             }
         }
-        load()
-    }, [])
 
     const buildParams = () => {
         const categories = Object.entries(filters.categories)
@@ -77,6 +168,11 @@ export default function StudentAnalyticsPage() {
         }
     }
 
+    const handleFilterApply = async () => {
+        await loadData()
+        setShowFilters(false)
+    }
+
     // Safe fallbacks for first render
     const skills = (data?.skills_assessment?.categories || []).map((s: any) => ({
         category: s.name,
@@ -84,7 +180,7 @@ export default function StudentAnalyticsPage() {
     }))
 
     const interviewTrend = (data?.interview_performance?.trend || []).map((d: any) => ({
-        date: d.date,
+        date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         score: d.score ?? 0,
     }))
 
@@ -97,16 +193,14 @@ export default function StudentAnalyticsPage() {
         submitted: 0, responses: 0, interviews: 0, offers: 0,
     })
     const funnelData = [
-        { name: 'Submitted', value: funnel.submitted },
-        { name: 'Responses', value: funnel.responses },
-        { name: 'Interview Calls', value: funnel.interviews },
-        { name: 'Offers', value: funnel.offers },
+        { name: 'Submitted', value: funnel.submitted, fill: '#3b82f6' },
+        { name: 'Responses', value: funnel.responses, fill: '#8b5cf6' },
+        { name: 'Interviews', value: funnel.interviews, fill: '#10b981' },
+        { name: 'Offers', value: funnel.offers, fill: '#f59e0b' },
     ]
 
     const resumeCompletion = data?.resume?.completion || 0
     const portfolioStrength = data?.portfolio?.strength || 0
-
-    // Aggregated metrics from backend (with safe fallbacks)
     const overallScore = data?.overall_performance?.average_score || 0
     const readinessIndex = data?.job_readiness?.index || 0
     const topicDistribution = (data?.topic_distribution || []).map((t: any) => ({ name: t.topic, average: t.average }))
@@ -121,198 +215,617 @@ export default function StudentAnalyticsPage() {
     const showResume = !!filters.categories.resume
     const showPortfolio = !!filters.categories.portfolio
 
+    if (loading) {
     return (
         <DashboardLayout requiredUserType="student">
-            {loading ? (
                 <div className="w-full flex items-center justify-center py-24">
-                    <Loader />
+                    <Loader size="lg" />
                 </div>
-            ) : (
-                <div className="space-y-6">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Student Analytics & Job Readiness</h1>
-                        <p className="text-sm text-muted-foreground">Track skills, interviews, applications, and portfolio readiness.</p>
-                    </div>
+            </DashboardLayout>
+        )
+    }
 
-                    {/* Filters */}
-                    <div className="flex flex-col md:flex-row gap-3 md:items-end">
-                        <div className="flex gap-2">
-                            <input type="date" className="border rounded px-2 py-1 text-sm bg-background" value={filters.start_date || ''}
-                                onChange={e => setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))} />
-                            <input type="date" className="border rounded px-2 py-1 text-sm bg-background" value={filters.end_date || ''}
-                                onChange={e => setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))} />
+    return (
+        <DashboardLayout requiredUserType="student">
+                <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0">
+                {/* Header - Matching Dashboard Style */}
+                <motion.div 
+                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    {/* Decorative corners */}
+                    <motion.div 
+                        className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
+                        animate={{ rotate: [45, 50, 45] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <motion.div 
+                        className="pointer-events-none absolute -bottom-14 -left-14 w-64 h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <div className="relative z-10">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                                    <motion.div 
+                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
+                                        animate={{ rotate: [0, 360] }}
+                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                    >
+                                        <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
+                                    </motion.div>
+                                    <motion.h1 
+                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
+                                        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                                        transition={{ duration: 3, repeat: Infinity }}
+                                        style={{ backgroundSize: '200% 200%' }}
+                                    >
+                                        <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Analytics Dashboard</span>
+                                    </motion.h1>
+                                </div>
+                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+                                    Track your performance, skills, and job readiness metrics
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => setShowFilters(!showFilters)}
+                                variant="outline"
+                                className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"
+                            >
+                                <Filter className="w-4 h-4" />
+                                <span className="sm:inline">Filters</span>
+                            </Button>
                         </div>
-                        <div className="flex flex-wrap gap-2 text-sm">
+                    </div>
+                </motion.div>
+
+                {/* Filters Panel */}
+                {showFilters && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <Card className="border border-gray-200 dark:border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Filter className="w-5 h-5" />
+                                    Filter Analytics
+                                </CardTitle>
+                                <CardDescription>Customize what data you want to see</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block">Start Date</label>
+                                            <input 
+                                                type="date" 
+                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                                value={filters.start_date || ''}
+                                                onChange={e => setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block">End Date</label>
+                                            <input 
+                                                type="date" 
+                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                                value={filters.end_date || ''}
+                                                onChange={e => setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))} 
+                                            />
+                                        </div>
+                        </div>
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block">Categories</label>
+                                        <div className="flex flex-wrap gap-3">
                             {Object.keys(filters.categories).map((key) => (
-                                <label key={key} className="inline-flex items-center gap-1">
-                                    <input type="checkbox" checked={filters.categories[key as keyof typeof filters.categories]}
-                                        onChange={e => setFilters(prev => ({ ...prev, categories: { ...prev.categories, [key]: e.target.checked } }))} />
-                                    <span className="capitalize">{key}</span>
+                                                <label key={key} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={filters.categories[key as keyof typeof filters.categories]}
+                                                        onChange={e => setFilters(prev => ({ ...prev, categories: { ...prev.categories, [key]: e.target.checked } }))}
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm font-medium capitalize">{key}</span>
                                 </label>
                             ))}
                         </div>
-                        <button className="border rounded px-3 py-1 text-sm" onClick={async () => {
-                            setLoading(true)
-                            try {
-                                const params = buildParams()
-                                const analytics = await apiClient.getStudentAnalyticsWithFilters(params)
-                                const tl = await apiClient.getStudentTimeline(params)
-                                setData(analytics)
-                                setTimeline(tl?.timeline || [])
-                            } finally {
-                                setLoading(false)
-                            }
-                        }}>Apply</button>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Button onClick={handleFilterApply} className="flex items-center gap-2">
+                                            <Filter className="w-4 h-4" />
+                                            Apply Filters
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            onClick={() => {
+                                                setFilters({
+                                                    start_date: undefined,
+                                                    end_date: undefined,
+                                                    categories: { assessment: true, interview: true, application: true, resume: true, portfolio: true }
+                                                })
+                                            }}
+                                        >
+                                            Reset
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {/* Key Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        icon={Target}
+                        label="Overall Score"
+                        value={`${Math.round(overallScore)}%`}
+                        subtitle="Average across assessments"
+                        trend={overallScore > 70 ? 'up' : overallScore > 50 ? 'neutral' : 'down'}
+                        trendValue={overallScore > 70 ? 'Good' : overallScore > 50 ? 'Fair' : 'Needs Improvement'}
+                        color="text-blue-600 dark:text-blue-400"
+                        bgColor="bg-blue-100 dark:bg-blue-900/30"
+                    />
+                    <StatCard
+                        icon={ShieldCheck}
+                        label="Job Readiness"
+                        value={`${Math.round(readinessIndex)}%`}
+                        subtitle="Composite readiness index"
+                        trend={readinessIndex > 75 ? 'up' : readinessIndex > 50 ? 'neutral' : 'down'}
+                        trendValue={readinessIndex > 75 ? 'Excellent' : readinessIndex > 50 ? 'Good' : 'Developing'}
+                        color="text-green-600 dark:text-green-400"
+                        bgColor="bg-green-100 dark:bg-green-900/30"
+                    />
+                    <StatCard
+                        icon={ClipboardList}
+                        label="Assessments"
+                        value={`${assessmentCompleted}/${assessmentTotal}`}
+                        subtitle={`${completionRate}% completion rate`}
+                        trend={completionRate > 75 ? 'up' : 'neutral'}
+                        trendValue={completionRate > 75 ? 'Active' : 'On Track'}
+                        color="text-purple-600 dark:text-purple-400"
+                        bgColor="bg-purple-100 dark:bg-purple-900/30"
+                    />
+                    <StatCard
+                        icon={Briefcase}
+                        label="Applications"
+                        value={funnel.submitted || 0}
+                        subtitle={`${funnel.offers || 0} offers received`}
+                        trend={funnel.offers > 0 ? 'up' : 'neutral'}
+                        trendValue={funnel.offers > 0 ? 'Success!' : 'Keep Going'}
+                        color="text-orange-600 dark:text-orange-400"
+                        bgColor="bg-orange-100 dark:bg-orange-900/30"
+                    />
                     </div>
 
-                    {/* Key metrics */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <Target className="h-4 w-4" /> Overall Score
+                {/* Tabs for different views */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-auto gap-1 sm:gap-1.5">
+                        <TabsTrigger 
+                            value="overview"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                        >
+                            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
+                            <span className="whitespace-nowrap relative z-10">Overview</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="skills"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                        >
+                            <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
+                            <span className="whitespace-nowrap relative z-10">Skills</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="performance"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                        >
+                            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
+                            <span className="whitespace-nowrap relative z-10">Performance</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="timeline"
+                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                        >
+                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
+                            <span className="whitespace-nowrap relative z-10">Timeline</span>
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* Overview Tab */}
+                    <TabsContent value="overview" className="space-y-6">
+                        {/* Overall Progress Cards */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Target className="w-5 h-5 text-blue-600" />
+                                        Overall Performance Score
                                 </CardTitle>
-                                <CardDescription>Average across completed assessments</CardDescription>
+                                    <CardDescription>Your average score across all assessments</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold mb-2">{Math.round(overallScore)}%</div>
-                                <Progress value={overallScore} className="h-2" />
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(overallScore)}%</span>
+                                                <Badge className={overallScore >= 70 ? "bg-green-500" : overallScore >= 50 ? "bg-yellow-500" : "bg-red-500"}>
+                                                    {overallScore >= 70 ? "Excellent" : overallScore >= 50 ? "Good" : "Needs Improvement"}
+                                                </Badge>
+                                            </div>
+                                            <Progress value={overallScore} className="h-3" />
+                                        </div>
+                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                            <div className="grid grid-cols-3 gap-4 text-center">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Assessments</p>
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{assessmentCompleted}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Completion</p>
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{completionRate}%</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Readiness</p>
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{Math.round(readinessIndex)}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <ShieldCheck className="h-4 w-4" /> Job Readiness
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <ShieldCheck className="w-5 h-5 text-green-600" />
+                                        Job Readiness Index
                                 </CardTitle>
-                                <CardDescription>Weighted composite (mock, resume, skills, interview, portfolio)</CardDescription>
+                                    <CardDescription>Comprehensive readiness assessment</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold mb-2">{Math.round(readinessIndex)}%</div>
-                                <Progress value={readinessIndex} className="h-2" />
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(readinessIndex)}%</span>
+                                                <Badge className={readinessIndex >= 75 ? "bg-green-500" : readinessIndex >= 50 ? "bg-blue-500" : "bg-orange-500"}>
+                                                    {readinessIndex >= 75 ? "Ready" : readinessIndex >= 50 ? "Almost Ready" : "In Progress"}
+                                                </Badge>
+                                            </div>
+                                            <Progress value={readinessIndex} className="h-3" />
+                                        </div>
+                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Resume</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Progress value={resumeCompletion} className="w-24 h-2" />
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{resumeCompletion}%</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Portfolio</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Progress value={portfolioStrength} className="w-24 h-2" />
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{portfolioStrength}%</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Assessments</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Progress value={completionRate} className="w-24 h-2" />
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{completionRate}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                             </CardContent>
                         </Card>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {showAssessment && (
-                        <Card className="col-span-1 lg:col-span-1">
+                        {/* Application Funnel */}
+                        {showApplication && funnelData.some(f => f.value > 0) && (
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Briefcase className="w-5 h-5 text-orange-600" />
+                                        Application Funnel
+                                    </CardTitle>
+                                    <CardDescription>Your job application journey from submission to offers</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-80">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={funnelData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
+                                                <YAxis tick={{ fill: '#6b7280' }} />
+                                                <Tooltip 
+                                                    contentStyle={{ 
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '8px'
+                                                    }}
+                                                />
+                                                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                                                    {funnelData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                        {funnelData.map((item, idx) => (
+                                            <div key={idx} className="text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }} />
+                                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{item.name}</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                                                {idx > 0 && funnelData[idx - 1].value > 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        {Math.round((item.value / funnelData[idx - 1].value) * 100)}% conversion
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+
+                    {/* Skills Tab */}
+                    <TabsContent value="skills" className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {showAssessment && skills.length > 0 && (
+                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
                             <CardHeader>
-                                <CardTitle>Skills Assessment</CardTitle>
-                                <CardDescription>Strengths and weaknesses across categories</CardDescription>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Brain className="w-5 h-5 text-purple-600" />
+                                            Skills Assessment
+                                        </CardTitle>
+                                        <CardDescription>Performance across skill categories</CardDescription>
                             </CardHeader>
-                            <CardContent className="h-80">
+                                    <CardContent>
+                                        <div className="h-80">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skills}>
-                                        <PolarGrid />
-                                        <PolarAngleAxis dataKey="category" scale="auto" reversed={false} />
-                                        <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                                        <Radar name="Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
+                                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={skills}>
+                                                    <PolarGrid stroke="#e5e7eb" />
+                                                    {/* @ts-ignore - PolarAngleAxis type definition mismatch */}
+                                                    <PolarAngleAxis 
+                                                        dataKey="category"
+                                                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                    />
+                                                    <PolarRadiusAxis 
+                                                        angle={30} 
+                                                        domain={[0, 100]} 
+                                                        tick={{ fill: '#6b7280', fontSize: 10 }}
+                                                    />
+                                                    <Radar 
+                                                        name="Score" 
+                                                        dataKey="score" 
+                                                        stroke="#6366f1" 
+                                                        fill="#6366f1" 
+                                                        fillOpacity={0.6}
+                                                        strokeWidth={2}
+                                                    />
+                                                    <Tooltip 
+                                                        contentStyle={{ 
+                                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                            border: '1px solid #e5e7eb',
+                                                            borderRadius: '8px'
+                                                        }}
+                                                        formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
+                                                    />
                                     </RadarChart>
                                 </ResponsiveContainer>
+                                        </div>
                             </CardContent>
                         </Card>
                         )}
 
-                        {showInterview && (
-                        <Card className="col-span-1 lg:col-span-2">
+                            {showAssessment && topicDistribution.length > 0 && (
+                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
                             <CardHeader>
-                                <CardTitle>Interview Performance</CardTitle>
-                                <CardDescription>Improvement across mock and real interviews</CardDescription>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <BarChartIcon className="w-5 h-5 text-indigo-600" />
+                                            Topic Distribution
+                                        </CardTitle>
+                                        <CardDescription>Average performance by topic</CardDescription>
                             </CardHeader>
-                            <CardContent className="h-80">
+                                    <CardContent>
+                                        <div className="h-80">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={interviewTrend}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" />
-                                        <YAxis domain={[0, 100]} />
-                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
-                                        <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} dot={false} />
-                                    </LineChart>
+                                                <BarChart data={topicDistribution} layout="vertical">
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#6b7280' }} />
+                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                                                    <Tooltip 
+                                                        contentStyle={{ 
+                                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                            border: '1px solid #e5e7eb',
+                                                            borderRadius: '8px'
+                                                        }}
+                                                        formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
+                                                    />
+                                                    <Bar dataKey="average" fill="#6366f1" radius={[0, 8, 8, 0]} />
+                                                </BarChart>
                                 </ResponsiveContainer>
+                                        </div>
                             </CardContent>
                         </Card>
                         )}
                     </div>
+                    </TabsContent>
 
-                    {/* Topic Distribution & Weekly Activity */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {showAssessment && (
-                        <Card>
+                    {/* Performance Tab */}
+                    <TabsContent value="performance" className="space-y-6">
+                        {showInterview && interviewTrend.length > 0 && (
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
                             <CardHeader>
-                                <CardTitle>Topic Distribution</CardTitle>
-                                <CardDescription>Average performance by section</CardDescription>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <LineChartIcon className="w-5 h-5 text-green-600" />
+                                        Interview Performance Trend
+                                    </CardTitle>
+                                    <CardDescription>Your interview scores over time</CardDescription>
                             </CardHeader>
-                            <CardContent className="h-72">
+                                <CardContent>
+                                    <div className="h-80">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={topicDistribution}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" hide={false} />
-                                        <YAxis domain={[0, 100]} />
-                                        <Tooltip formatter={(value: any) => (typeof value === 'number' ? Number(value).toFixed(2) : value)} />
-                                        <Bar dataKey="average" fill="#6366f1" />
-                                    </BarChart>
+                                            <AreaChart data={interviewTrend}>
+                                                <defs>
+                                                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis dataKey="date" tick={{ fill: '#6b7280' }} />
+                                                <YAxis domain={[0, 100]} tick={{ fill: '#6b7280' }} />
+                                                <Tooltip 
+                                                    contentStyle={{ 
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '8px'
+                                                    }}
+                                                    formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
+                                                />
+                                                <Area 
+                                                    type="monotone" 
+                                                    dataKey="score" 
+                                                    stroke="#10b981" 
+                                                    strokeWidth={3}
+                                                    fill="url(#colorScore)"
+                                                />
+                                            </AreaChart>
                                 </ResponsiveContainer>
+                                    </div>
                             </CardContent>
                         </Card>
                         )}
 
-                        <Card className="lg:col-span-2">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {showInterview && interviewStageSplit.length > 0 && (
+                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
                             <CardHeader>
-                                <CardTitle>Weekly Activity</CardTitle>
-                                <CardDescription>Engagement over the last 4 weeks</CardDescription>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Users className="w-5 h-5 text-indigo-600" />
+                                            Interview Stages
+                                        </CardTitle>
+                                        <CardDescription>Breakdown by interview stage</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {(() => {
-                                    // Build GitHub-style 7xN calendar from weeklyActivity (expects ascending dates)
-                                    const parse = (s: string) => new Date(s + 'T00:00:00')
-                                    const days = weeklyActivity || []
-                                    if (!days.length) {
-                                        return <div className="text-sm text-muted-foreground">No data for this window.</div>
-                                    }
-                                    const start = parse(days[0].date)
-                                    const cols: number[][] = []
-                                    for (let i = 0; i < days.length; i++) {
-                                        const dt = parse(days[i].date)
-                                        const diffDays = Math.round((dt.getTime() - start.getTime()) / 86400000)
-                                        const weekIdx = Math.floor((diffDays + (start.getDay() || 0)) / 7)
-                                        const dayIdx = dt.getDay() // 0=Sun ... 6=Sat
-                                        if (!cols[weekIdx]) cols[weekIdx] = new Array(7).fill(0)
-                                        cols[weekIdx][dayIdx] = days[i].count || 0
-                                    }
-                                    const color = (c: number) => c === 0 ? 'bg-gray-200' : c < 2 ? 'bg-emerald-200' : c < 4 ? 'bg-emerald-400' : 'bg-emerald-600'
+                                            const total = interviewStageSplit.reduce((s: number, x: any) => s + (x.value || 0), 0)
+                                            const colors = ['bg-indigo-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500']
+                                            return (
+                                                <div className="space-y-4">
+                                                    {interviewStageSplit.map((s: any, idx: number) => {
+                                                        const val = s.value || 0
+                                                        const pct = total ? Math.round((val / total) * 100) : 0
                                     return (
-                                        <div className="flex items-start gap-1 overflow-x-auto">
-                                            {cols.map((col, ci) => (
-                                                <div key={ci} className="flex flex-col gap-1">
-                                                    {col.map((c, ri) => (
-                                                        <div key={`${ci}-${ri}`} className={`w-3 h-3 md:w-4 md:h-4 ${color(c)} rounded`} title={`${c} activities`} />
-                                                    ))}
+                                                            <div key={`${s.name}-${idx}`} className="space-y-2">
+                                                                <div className="flex items-center justify-between text-sm gap-2">
+                                                                    <span className="font-medium text-gray-900 dark:text-white break-words min-w-0 flex-1">{s.name}</span>
+                                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold shrink-0">{val}</span>
+                                                                </div>
+                                                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                                    <motion.div 
+                                                                        className={`h-2 ${colors[idx % colors.length]} rounded-full`}
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${pct}%` }}
+                                                                        transition={{ duration: 0.8, delay: idx * 0.1 }}
+                                                                    />
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{pct}% of total</p>
                                                 </div>
-                                            ))}
+                                                        )
+                                                    })}
                                         </div>
                                     )
                                 })()}
                             </CardContent>
                         </Card>
-                    </div>
+                            )}
 
-                    {/* Timeline */}
-                    <Card>
+                            {showAssessment && (
+                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                            Assessment Progress
+                                        </CardTitle>
+                                        <CardDescription>Completion status and rate</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-6">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="font-medium text-gray-900 dark:text-white">Started</span>
+                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold">{assessmentTotal}</span>
+                                                </div>
+                                                <Progress value={assessmentTotal > 0 ? 100 : 0} className="h-3" />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="font-medium text-gray-900 dark:text-white">Completed</span>
+                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold">{assessmentCompleted}</span>
+                                                </div>
+                                                <Progress value={completionRate} className="h-3" />
+                                            </div>
+                                            <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium text-gray-900 dark:text-white">Completion Rate</span>
+                                                    <span className="text-2xl font-bold text-gray-900 dark:text-white">{completionRate}%</span>
+                                                </div>
+                                                {completionRate < 100 && (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        {assessmentTotal - assessmentCompleted} assessment{assessmentTotal - assessmentCompleted !== 1 ? 's' : ''} remaining
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                    </div>
+                    </TabsContent>
+
+                    {/* Timeline Tab */}
+                    <TabsContent value="timeline" className="space-y-6">
+                        <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
                         <CardHeader>
-                            <CardTitle>Activity Timeline</CardTitle>
-                            <CardDescription>Chronological view of your activities</CardDescription>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-blue-600" />
+                                    Activity Timeline
+                                </CardTitle>
+                                <CardDescription>Chronological view of all your activities</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {(() => {
                                 const getIcon = (type: string) => {
                                     const t = String(type || '').toLowerCase()
-                                    if (t === 'assessment') return <ClipboardList className="h-4 w-4" />
-                                    if (t === 'interview') return <Users className="h-4 w-4" />
-                                    if (t === 'resume' || t === 'portfolio') return <FileText className="h-4 w-4" />
-                                    if (t === 'application') return <Briefcase className="h-4 w-4" />
-                                    return <Clock className="h-4 w-4" />
+                                        const iconClass = "w-5 h-5"
+                                        if (t === 'assessment') return <ClipboardList className={iconClass} />
+                                        if (t === 'interview') return <Users className={iconClass} />
+                                        if (t === 'resume' || t === 'portfolio') return <FileText className={iconClass} />
+                                        if (t === 'application') return <Briefcase className={iconClass} />
+                                        return <Clock className={iconClass} />
+                                    }
+
+                                    const getColor = (type: string) => {
+                                        const t = String(type || '').toLowerCase()
+                                        if (t === 'assessment') return 'bg-blue-500'
+                                        if (t === 'interview') return 'bg-green-500'
+                                        if (t === 'resume' || t === 'portfolio') return 'bg-purple-500'
+                                        if (t === 'application') return 'bg-orange-500'
+                                        return 'bg-gray-500'
                                 }
 
                                 const dayLabel = (iso: string) => {
@@ -323,7 +836,7 @@ export default function StudentAnalyticsPage() {
                                     const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
                                     if (sameDay(d, today)) return 'Today'
                                     if (sameDay(d, yday)) return 'Yesterday'
-                                    return d.toLocaleDateString()
+                                        return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
                                 }
 
                                 // Group timeline by calendar day
@@ -334,184 +847,91 @@ export default function StudentAnalyticsPage() {
                                     groups[k].push(item)
                                 }
                                 const ordered = Object.entries(groups).sort((a, b) => {
-                                    // parse first item date in group for ordering desc
                                     const da = new Date(a[1][0]?.date || 0).getTime()
                                     const db = new Date(b[1][0]?.date || 0).getTime()
                                     return db - da
                                 })
 
                                 if (!timeline.length) {
-                                    return <div className="text-sm text-muted-foreground">No activities found for the selected filters.</div>
+                                        return (
+                                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                                <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                                                <p className="text-gray-600 dark:text-gray-400 font-medium">No activities found</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Start taking assessments or applying to jobs to see your timeline</p>
+                                            </div>
+                                        )
                                 }
 
                                 return (
-                                    <div className="space-y-6">
+                                        <div className="space-y-8">
                                         {ordered.map(([label, items], gi) => (
-                                            <div key={`grp-${gi}`} className="relative">
-                                                <div className="mb-3 text-xs font-medium text-muted-foreground">{label}</div>
-                                                <div className="relative pl-6">
-                                                    <div className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-muted" />
+                                                <motion.div 
+                                                    key={`grp-${gi}`} 
+                                                    className="relative"
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.3, delay: gi * 0.1 }}
+                                                >
+                                                    <div className="mb-4 text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-lg inline-block">
+                                                        {label}
+                                                    </div>
+                                                    <div className="relative pl-8 ml-2">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500" />
                                                     <div className="space-y-4">
                                                         {items.map((t: any, idx: number) => (
-                                                            <div key={`it-${gi}-${idx}`} className="relative">
-                                                                <div className="absolute -left-[2px] top-1 h-2 w-2 rounded-full bg-primary" />
-                                                                <div className="flex items-start justify-between gap-4">
-                                                                    <div className="flex items-start gap-2">
-                                                                        <div className="mt-0.5 text-primary">{getIcon(t.type)}</div>
-                                                                        <div>
-                                                                            <div className="text-sm font-medium capitalize">{t.type}
-                                                                                {t.subtype && <span className="ml-2 text-xs text-muted-foreground lowercase">{t.subtype}</span>}
-                                                                            </div>
-                                                                            {t.score != null && (
-                                                                                <div className="mt-1 text-xs text-muted-foreground">Score: {Math.round(t.score)}</div>
-                                                                            )}
+                                                                <motion.div 
+                                                                    key={`it-${gi}-${idx}`} 
+                                                                    className="relative"
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ duration: 0.2, delay: (gi * 0.1) + (idx * 0.05) }}
+                                                                >
+                                                                    <div className="absolute -left-[18px] top-1">
+                                                                        <div className={`w-4 h-4 rounded-full ${getColor(t.type)} border-2 border-white dark:border-gray-800 shadow-md flex items-center justify-center`}>
+                                                                            {getIcon(t.type)}
                                                                         </div>
                                                                     </div>
-                                                                    <div className="text-xs text-muted-foreground whitespace-nowrap">{new Date(t.date).toLocaleTimeString()}</div>
+                                                                    <Card className="ml-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                                                                        <CardContent className="p-4">
+                                                                <div className="flex items-start justify-between gap-4">
+                                                                                <div className="flex-1">
+                                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                                        <Badge variant="outline" className="capitalize">
+                                                                                            {t.type}
+                                                                                        </Badge>
+                                                                                        {t.subtype && (
+                                                                                            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                                                                                {t.subtype}
+                                                                                            </span>
+                                                                                        )}
+                                                                            </div>
+                                                                            {t.score != null && (
+                                                                                        <div className="flex items-center gap-2 mt-2">
+                                                                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score:</span>
+                                                                                            <span className="text-lg font-bold text-gray-900 dark:text-white">{Math.round(t.score)}%</span>
+                                                                                        </div>
+                                                                            )}
+                                                                        </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                                                    {new Date(t.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                                                                 </div>
                                                             </div>
+                                                                        </CardContent>
+                                                                    </Card>
+                                                                </motion.div>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            </div>
+                                                </motion.div>
                                         ))}
                                     </div>
                                 )
                             })()}
                         </CardContent>
                     </Card>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {showInterview && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Interview Stages</CardTitle>
-                                <CardDescription>Stage counts with mini progress bars</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {(() => {
-                                    const total = interviewStageSplit.reduce((s: number, x: any) => s + (x.value || 0), 0)
-                                    const rows = interviewStageSplit.length ? interviewStageSplit : [{ name: 'No data', value: 0 }]
-                                    return (
-                                        <div className="space-y-3">
-                                            {rows.map((s: any, idx: number) => {
-                                                const val = s.value || 0
-                                                const pct = total ? Math.round((val / total) * 100) : 0
-                                                const color = ["bg-indigo-500", "bg-amber-500", "bg-rose-500", "bg-emerald-500"][idx % 4]
-                                                return (
-                                                    <div key={`${s.name}-${idx}`} className="space-y-1">
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="font-medium truncate pr-2">{s.name}</span>
-                                                            <span className="text-muted-foreground">{val}</span>
-                                                        </div>
-                                                        <div className="h-2 w-full bg-muted rounded">
-                                                            <div className={`h-2 ${color} rounded`} style={{ width: `${pct}%` }} />
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                            {total === 0 && (
-                                                <div className="text-sm text-muted-foreground">No interview activity yet.</div>
-                                            )}
-                                        </div>
-                                    )
-                                })()}
-                            </CardContent>
-                        </Card>
-                        )}
-
-                        <Card className="lg:col-span-2">
-                            <CardHeader>
-                                <CardTitle>Assessment Completion</CardTitle>
-                                <CardDescription>From started to completed assessments</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-5">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="font-medium">Started</span>
-                                            <span className="text-muted-foreground">{assessmentTotal}</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-muted rounded">
-                                            <div
-                                                className="h-2 bg-primary rounded"
-                                                style={{ width: `${assessmentTotal ? 100 : 0}%` }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="font-medium">Completed</span>
-                                            <span className="text-muted-foreground">{assessmentCompleted}</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-muted rounded">
-                                            <div
-                                                className="h-2 bg-emerald-500 rounded"
-                                                style={{ width: `${assessmentTotal ? Math.max(3, Math.round((assessmentCompleted / Math.max(1, assessmentTotal)) * 100)) : 0}%` }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="font-medium">Completion Rate</span>
-                                            <span className="text-muted-foreground">{completionRate}%</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-muted rounded">
-                                            <div className="h-2 bg-indigo-500 rounded" style={{ width: `${completionRate}%` }} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {showResume && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Resume Completion</CardTitle>
-                                <CardDescription>Profile and resume strength</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="font-medium">Completion</span>
-                                        <span className="text-muted-foreground">{resumeCompletion}%</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-muted rounded">
-                                        <div className="h-2 bg-primary rounded" style={{ width: `${resumeCompletion}%` }} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        )}
-
-                        {showPortfolio && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Portfolio Strength Index</CardTitle>
-                                <CardDescription>Projects, keywords, and engagement</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="font-medium">Strength</span>
-                                        <span className="text-muted-foreground">{portfolioStrength}%</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-muted rounded">
-                                        <div className="h-2 bg-emerald-500 rounded" style={{ width: `${portfolioStrength}%` }} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        )}
-                    </div>
+                    </TabsContent>
+                </Tabs>
                 </div>
-            )}
         </DashboardLayout>
     )
 }
-
-
