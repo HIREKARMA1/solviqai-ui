@@ -850,7 +850,7 @@ export function GroupDiscussionRound({
         if (discussionComplete) {
             return;
         }
-        
+
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
             return;
