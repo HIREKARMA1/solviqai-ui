@@ -44,6 +44,110 @@ interface MarketJob {
     keyword: string
 }
 
+const PLATFORM_KEYS = ['linkedin', 'unstop', 'foundit', 'naukri'] as const
+type PlatformKey = typeof PLATFORM_KEYS[number]
+
+interface PlatformJobsState extends Record<PlatformKey, MarketJob[]> {
+    totalJobs: number
+}
+
+interface LastSearchParams {
+    keywords: string
+    location: string
+    maxJobs: number
+    includeResumeSkills: boolean
+}
+
+const PLATFORM_LABELS: Record<PlatformKey, string> = {
+    linkedin: 'LinkedIn',
+    unstop: 'Unstop',
+    foundit: 'Foundit',
+    naukri: 'Naukri'
+}
+
+const clampJobCount = (value: number) => Math.min(15, Math.max(1, value))
+
+const createEmptyPlatformJobsState = (): PlatformJobsState => ({
+    linkedin: [],
+    unstop: [],
+    foundit: [],
+    naukri: [],
+    totalJobs: 0
+})
+
+const computeTotalJobs = (state: PlatformJobsState, selection: PlatformKey[]) =>
+    selection.reduce((sum, platform) => sum + (state[platform]?.length || 0), 0)
+
+const flattenJobsBySelection = (state: PlatformJobsState, selection: PlatformKey[]): MarketJob[] => {
+    const ordered: MarketJob[] = []
+    selection.forEach(platform => {
+        ordered.push(...(state[platform] || []))
+    })
+    return ordered
+}
+
+const toPlatformKey = (source?: string): PlatformKey | null => {
+    const normalized = (source || '').toLowerCase()
+    if (PLATFORM_KEYS.includes(normalized as PlatformKey)) {
+        return normalized as PlatformKey
+    }
+    return null
+}
+
+const clonePlatformState = (state: PlatformJobsState): PlatformJobsState => ({
+    linkedin: [...state.linkedin],
+    unstop: [...state.unstop],
+    foundit: [...state.foundit],
+    naukri: [...state.naukri],
+    totalJobs: state.totalJobs
+})
+
+const buildPersistableState = (state: PlatformJobsState, selection: PlatformKey[]): PlatformJobsState => {
+    const snapshot = clonePlatformState(state)
+    snapshot.totalJobs = computeTotalJobs(snapshot, selection)
+    return snapshot
+}
+
+const parseSelectedSources = (sources?: any): PlatformKey[] => {
+    if (!Array.isArray(sources)) return []
+    const normalized: PlatformKey[] = []
+    sources.forEach(entry => {
+        const key = toPlatformKey(String(entry))
+        if (key && !normalized.includes(key)) {
+            normalized.push(key)
+        }
+    })
+    return normalized
+}
+
+const ensurePlatformJobsState = (
+    incomingState?: Partial<PlatformJobsState> | null,
+    fallbackJobs?: MarketJob[],
+    limitPerPlatform: number = 15
+): PlatformJobsState => {
+    const next = createEmptyPlatformJobsState()
+    if (incomingState) {
+        PLATFORM_KEYS.forEach(key => {
+            if (Array.isArray(incomingState[key])) {
+                next[key] = incomingState[key]!.slice(0, limitPerPlatform)
+            }
+        })
+    }
+    if (fallbackJobs && fallbackJobs.length > 0) {
+        fallbackJobs.forEach(job => {
+            const key = toPlatformKey(job.source)
+            if (!key) return
+            if (next[key].length < limitPerPlatform) {
+                next[key].push(job)
+                if (next[key].length > limitPerPlatform) {
+                    next[key] = next[key].slice(0, limitPerPlatform)
+                }
+            }
+        })
+    }
+    return next
+}
+
 // Hover-enabled stat card component
 function StatCard({ icon: Icon, label, value, color, bgColor, colorClass }: { icon: any, label: string, value: string | number, color: string, bgColor: string, colorClass: string }) {
     const [isHovered, setIsHovered] = useState(false)
@@ -172,13 +276,17 @@ export default function MarketJobsPage() {
         return `market-jobs:${k}:${loc}:${count}:${includeSkills ? 'skills' : 'no-skills'}:${s}`
     }
     const [jobs, setJobs] = useState<MarketJob[]>([])
+    const [platformJobs, setPlatformJobs] = useState<PlatformJobsState>(() => createEmptyPlatformJobsState())
+    const [fetchedPlatforms, setFetchedPlatforms] = useState<Set<PlatformKey>>(() => new Set())
+    const [lastSearchParams, setLastSearchParams] = useState<LastSearchParams | null>(null)
     const [filteredJobs, setFilteredJobs] = useState<MarketJob[]>([])
     const [loading, setLoading] = useState(false)
+    const [platformFetchPending, setPlatformFetchPending] = useState(false)
     const [keywords, setKeywords] = useState('')
     const [location, setLocation] = useState('India')
     const [maxJobs, setMaxJobs] = useState<number | string>(15)
     const [includeResumeSkills, setIncludeResumeSkills] = useState(false)
-    const [selectedSources, setSelectedSources] = useState<string[]>(['unstop'])
+    const [selectedSources, setSelectedSources] = useState<PlatformKey[]>(['unstop'])
     const [error, setError] = useState<string | null>(null)
     const [keywordsUsed, setKeywordsUsed] = useState<string[]>([])
     const [resumeSkills, setResumeSkills] = useState<string[]>([])
@@ -194,6 +302,7 @@ export default function MarketJobsPage() {
     const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
     const [showFilters, setShowFilters] = useState(false)
     const [showSavedOnly, setShowSavedOnly] = useState(false)
+    const isBusy = loading || platformFetchPending
 
     // Fetch resume skills when checkbox is checked
     useEffect(() => {
@@ -218,18 +327,57 @@ export default function MarketJobsPage() {
                     if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_TTL_MS) {
                         const data = cached.data || {}
                         const params = cached.params || {}
+                        const cachedSelection = parseSelectedSources(params.selectedSources)
+                        const cachedFetched = parseSelectedSources(params.fetchedPlatforms)
+                        const cachedJobCount = typeof params.jobCount === 'number'
+                            ? clampJobCount(params.jobCount)
+                            : 15
+                        const restoredState = ensurePlatformJobsState(
+                            data.jobsByPlatform,
+                            data.jobs,
+                            cachedJobCount
+                        )
+                        const effectiveSelection = cachedSelection.length > 0
+                            ? cachedSelection
+                            : (PLATFORM_KEYS.filter(key => restoredState[key].length > 0) as PlatformKey[])
+                        restoredState.totalJobs = computeTotalJobs(
+                            restoredState,
+                            effectiveSelection.length > 0 ? effectiveSelection : selectedSources
+                        )
+                        setPlatformJobs(restoredState)
+                        const fetchedFromCache = cachedFetched.length > 0
+                            ? cachedFetched
+                            : (PLATFORM_KEYS.filter(key => restoredState[key].length > 0) as PlatformKey[])
+                        setFetchedPlatforms(new Set(fetchedFromCache))
+                        if (effectiveSelection.length > 0) setSelectedSources(effectiveSelection)
                         if (typeof params.keywords === 'string') setKeywords(params.keywords)
                         if (typeof params.location === 'string') setLocation(params.location)
-                        if (typeof params.jobCount !== 'undefined') setMaxJobs(params.jobCount)
+                        setMaxJobs(cachedJobCount)
                         setIncludeResumeSkills(!!params.includeResumeSkills)
-                        if (Array.isArray(params.selectedSources) && params.selectedSources.length > 0) setSelectedSources(params.selectedSources)
-                        setJobs(data.jobs || [])
-                        setKeywordsUsed(data.keywords_used || [])
+                        setKeywordsUsed(Array.isArray(data.keywords_used) ? data.keywords_used : [])
+                        setLastSearchParams({
+                            keywords: typeof params.keywords === 'string' ? params.keywords : '',
+                            location: typeof params.location === 'string' ? params.location : 'India',
+                            maxJobs: cachedJobCount,
+                            includeResumeSkills: !!params.includeResumeSkills
+                        })
                     }
                 }
             }
         } catch { }
     }, [])
+
+    useEffect(() => {
+        setJobs(flattenJobsBySelection(platformJobs, selectedSources))
+    }, [platformJobs, selectedSources])
+
+    useEffect(() => {
+        setPlatformJobs(prev => {
+            const total = computeTotalJobs(prev, selectedSources)
+            if (total === prev.totalJobs) return prev
+            return { ...prev, totalJobs: total }
+        })
+    }, [selectedSources])
 
     // Apply filters and sorting when jobs or filter criteria change
     useEffect(() => {
@@ -344,65 +492,185 @@ export default function MarketJobsPage() {
         }
     }
 
+    const persistSearchState = (
+        selection: PlatformKey[],
+        params: LastSearchParams,
+        state: PlatformJobsState,
+        keywordsList: string[],
+        fetchedList?: PlatformKey[]
+    ) => {
+        if (typeof window === 'undefined') return
+        try {
+            const fetchedSnapshot = fetchedList && fetchedList.length > 0
+                ? Array.from(new Set(fetchedList))
+                : selection
+            const cacheKey = buildCacheKey(
+                params.keywords,
+                params.location,
+                params.maxJobs,
+                params.includeResumeSkills,
+                selection
+            )
+            const payload = {
+                timestamp: Date.now(),
+                data: {
+                    jobsByPlatform: clonePlatformState(state),
+                    keywords_used: keywordsList
+                },
+                params: { ...params, selectedSources: selection, fetchedPlatforms: fetchedSnapshot }
+            }
+            localStorage.setItem(cacheKey, JSON.stringify(payload))
+            localStorage.setItem(LAST_CACHE_KEY, cacheKey)
+        } catch { }
+    }
+
+    const fetchPlatformJobs = async (platform: PlatformKey, params: LastSearchParams) => {
+        const { keywords: kw, location: loc, maxJobs: count, includeResumeSkills: includeSkills } = params
+        const response = await apiClient.getMarketJobs(
+            kw || undefined,
+            loc,
+            count,
+            includeSkills,
+            platform
+        )
+        const jobs = Array.isArray(response.jobs) ? response.jobs.slice(0, count) : []
+        const keywordList = Array.isArray(response.keywords_used) ? response.keywords_used : []
+        return { platform, jobs, keywordsUsed: keywordList }
+    }
+
+    const fetchPlatformsBatch = async (platforms: PlatformKey[], params: LastSearchParams) => {
+        if (platforms.length === 0) {
+            return { jobsMap: {} as Partial<Record<PlatformKey, MarketJob[]>>, keywords: [] as string[] }
+        }
+        const results = await Promise.all(platforms.map(platform => fetchPlatformJobs(platform, params)))
+        const jobsMap: Partial<Record<PlatformKey, MarketJob[]>> = {}
+        const keywordSet = new Set<string>()
+        results.forEach(result => {
+            jobsMap[result.platform] = result.jobs
+            result.keywordsUsed.forEach((k: string) => keywordSet.add(k))
+        })
+        return {
+            jobsMap,
+            keywords: Array.from(keywordSet)
+        }
+    }
+
     const fetchMarketJobs = async () => {
-        // Validate: require keywords or resume skills
         if (!keywords.trim() && !includeResumeSkills) {
             toast.error('Please enter keywords or enable "Include skills from resume" to search')
             return
         }
+        if (selectedSources.length === 0) {
+            toast.error('Please select at least one platform')
+            return
+        }
+
+        const activeSources = [...selectedSources]
+        const parsedMax = typeof maxJobs === 'string' ? parseInt(maxJobs) || 15 : maxJobs
+        const jobCount = clampJobCount(parsedMax)
+        const searchParams: LastSearchParams = {
+            keywords: keywords.trim(),
+            location: location.trim() || 'India',
+            maxJobs: jobCount,
+            includeResumeSkills
+        }
+        const platformNames = activeSources.map(source => PLATFORM_LABELS[source]).join(' and ')
+        const cacheKey = buildCacheKey(
+            searchParams.keywords,
+            searchParams.location,
+            searchParams.maxJobs,
+            searchParams.includeResumeSkills,
+            activeSources
+        )
 
         setLoading(true)
         setError(null)
+        setKeywordsUsed([])
 
         try {
-            const sourcesStr = selectedSources.join(',')
-            const platformNames = selectedSources.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' and ')
-            toast.info(`Fetching live jobs from ${platformNames}... This may take 10-60 seconds`)
-
-            const jobCount = typeof maxJobs === 'string' ? parseInt(maxJobs) || 15 : maxJobs
-            const cacheKey = buildCacheKey(keywords, location, jobCount, includeResumeSkills, selectedSources)
-
+            // 1) Try cache for this full selection/query
             if (typeof window !== 'undefined') {
                 const cachedStr = localStorage.getItem(cacheKey)
                 if (cachedStr) {
                     try {
                         const cached = JSON.parse(cachedStr)
                         if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-                            const data = cached.data || {}
-                            setJobs(data.jobs || [])
-                            setKeywordsUsed(data.keywords_used || [])
-                            try { localStorage.setItem(LAST_CACHE_KEY, cacheKey) } catch { }
-                            toast.success(`Loaded ${data.total_jobs || (data.jobs?.length || 0)} cached jobs from ${platformNames}`)
+                            const restoredState = ensurePlatformJobsState(
+                                cached.data?.jobsByPlatform,
+                                cached.data?.jobs,
+                                jobCount
+                            )
+                            restoredState.totalJobs = computeTotalJobs(restoredState, activeSources)
+                            setPlatformJobs(restoredState)
+                            const fetched = parseSelectedSources(cached.params?.fetchedPlatforms || activeSources)
+                            setFetchedPlatforms(new Set(fetched.length ? fetched : activeSources))
+                            const cachedKeywords = Array.isArray(cached.data?.keywords_used) ? cached.data.keywords_used : []
+                            setKeywordsUsed(cachedKeywords)
+                            setLastSearchParams(searchParams)
+                            localStorage.setItem(LAST_CACHE_KEY, cacheKey)
+                            toast.success(`Loaded ${restoredState.totalJobs} cached jobs from ${platformNames}`)
                             return
                         }
                     } catch { }
                 }
             }
 
-            const data = await apiClient.getMarketJobs(
-                keywords || undefined,
-                location,
-                jobCount,
-                includeResumeSkills,
-                sourcesStr
-            )
+            // 2) Decide whether this is a brand-new search or incremental
+            const sameQuery =
+                lastSearchParams &&
+                lastSearchParams.keywords === searchParams.keywords &&
+                lastSearchParams.location === searchParams.location &&
+                lastSearchParams.includeResumeSkills === searchParams.includeResumeSkills &&
+                lastSearchParams.maxJobs === searchParams.maxJobs
 
-            setJobs(data.jobs || [])
-            setKeywordsUsed(data.keywords_used || [])
-            if (typeof window !== 'undefined') {
-                try {
-                    const toStore = { timestamp: Date.now(), data, params: { keywords, location, jobCount, includeResumeSkills, selectedSources } }
-                    localStorage.setItem(cacheKey, JSON.stringify(toStore))
-                    localStorage.setItem(LAST_CACHE_KEY, cacheKey)
-                } catch { }
+            let baseState: PlatformJobsState
+            let platformsToFetch: PlatformKey[]
+
+            if (!sameQuery) {
+                // Different query or first time: refetch for all selected platforms
+                baseState = createEmptyPlatformJobsState()
+                platformsToFetch = activeSources
+            } else {
+                // Same query: keep already-fetched platforms, and fetch only new ones
+                baseState = clonePlatformState(platformJobs)
+                platformsToFetch = activeSources.filter(p => !fetchedPlatforms.has(p))
             }
 
-            toast.success(`Found ${data.total_jobs} jobs from ${platformNames}!`)
+            if (platformsToFetch.length === 0 && sameQuery) {
+                // Nothing new to fetch; just recompute totals and persist
+                baseState.totalJobs = computeTotalJobs(baseState, activeSources)
+                setPlatformJobs(baseState)
+                setLastSearchParams(searchParams)
+                persistSearchState(activeSources, searchParams, baseState, keywordsUsed, Array.from(fetchedPlatforms))
+                toast.success(`Showing ${baseState.totalJobs} jobs from ${platformNames}`)
+                return
+            }
+
+            toast.info(`Fetching live jobs from ${platformsToFetch.map(p => PLATFORM_LABELS[p]).join(' and ')}... This may take 10-60 seconds`)
+
+            const { jobsMap, keywords: keywordList } = await fetchPlatformsBatch(platformsToFetch, searchParams)
+
+            // Merge new platform jobs into base state
+            platformsToFetch.forEach(source => {
+                baseState[source] = (jobsMap[source] || []).slice(0)
+            })
+            baseState.totalJobs = computeTotalJobs(baseState, activeSources)
+
+            const newFetched = new Set<PlatformKey>(sameQuery ? fetchedPlatforms : new Set())
+            platformsToFetch.forEach(p => newFetched.add(p))
+
+            setPlatformJobs(baseState)
+            setFetchedPlatforms(newFetched)
+            const combinedKeywords = keywordList.length > 0 ? keywordList : keywordsUsed
+            setKeywordsUsed(combinedKeywords)
+            setLastSearchParams(searchParams)
+            persistSearchState(activeSources, searchParams, baseState, combinedKeywords, Array.from(newFetched))
+
+            toast.success(`Found ${baseState.totalJobs} jobs from ${platformNames}!`)
         } catch (err) {
             console.error('Error fetching market jobs:', err)
             const axiosError = err as AxiosError<{ detail: string }>
             const errorMessage = axiosError.response?.data?.detail || axiosError.message || 'Failed to fetch market jobs'
-
             setError(errorMessage)
             toast.error(errorMessage)
         } finally {
@@ -410,30 +678,87 @@ export default function MarketJobsPage() {
         }
     }
 
-    const toggleSource = (source: string) => {
-        setSelectedSources(prev =>
-            prev.includes(source)
-                ? prev.filter(s => s !== source)
-                : [...prev, source]
-        )
+    const fetchAdditionalPlatforms = async (platformsToFetch: PlatformKey[], updatedSelection: PlatformKey[]) => {
+        if (!lastSearchParams || platformsToFetch.length === 0) return
+        setPlatformFetchPending(true)
+        setError(null)
+        try {
+            const { jobsMap, keywords: keywordList } = await fetchPlatformsBatch(platformsToFetch, lastSearchParams)
+            let snapshot: PlatformJobsState | null = null
+            setPlatformJobs(prev => {
+                const base = { ...prev }
+                platformsToFetch.forEach(platform => {
+                    base[platform] = (jobsMap[platform] || []).slice(0)
+                })
+                base.totalJobs = computeTotalJobs(base, updatedSelection)
+                snapshot = clonePlatformState(base)
+                return base
+            })
+            const combinedKeywords = keywordList.length > 0
+                ? Array.from(new Set([...keywordsUsed, ...keywordList]))
+                : keywordsUsed
+            if (keywordList.length > 0) {
+                setKeywordsUsed(combinedKeywords)
+            }
+            const fetchedSnapshot = Array.from(new Set([...Array.from(fetchedPlatforms), ...platformsToFetch]))
+            setFetchedPlatforms(prev => {
+                const next = new Set(prev)
+                platformsToFetch.forEach(platform => next.add(platform))
+                return next
+            })
+            if (snapshot) {
+                persistSearchState(updatedSelection, lastSearchParams, snapshot, combinedKeywords, fetchedSnapshot)
+            }
+        } catch (err) {
+            console.error('Error fetching additional platform jobs:', err)
+            const platformNames = platformsToFetch.map(platform => PLATFORM_LABELS[platform]).join(', ')
+            toast.error(`Failed to load ${platformNames}`)
+        } finally {
+            setPlatformFetchPending(false)
+        }
+    }
+
+    const toggleSource = (source: PlatformKey) => {
+        const alreadySelected = selectedSources.includes(source)
+        const updatedSelection = alreadySelected
+            ? selectedSources.filter(s => s !== source)
+            : [...selectedSources, source]
+        setSelectedSources(updatedSelection)
+
+        // Only persist selection; actual fetching happens when clicking Search
+        if (lastSearchParams) {
+            const snapshot = buildPersistableState(platformJobs, updatedSelection)
+            persistSearchState(updatedSelection, lastSearchParams, snapshot, keywordsUsed, Array.from(fetchedPlatforms))
+        }
     }
 
     const selectAllSources = () => {
-        setSelectedSources(['linkedin', 'unstop', 'foundit', 'naukri'])
+        const allSources = [...PLATFORM_KEYS] as PlatformKey[]
+        setSelectedSources(allSources)
+
+        if (lastSearchParams) {
+            const snapshot = buildPersistableState(platformJobs, allSources)
+            persistSearchState(allSources, lastSearchParams, snapshot, keywordsUsed, Array.from(fetchedPlatforms))
+        }
     }
 
     const deselectAllSources = () => {
         setSelectedSources([])
+        if (lastSearchParams) {
+        
+            const snapshot = buildPersistableState(platformJobs, [])
+            persistSearchState([], lastSearchParams, snapshot, keywordsUsed, Array.from(fetchedPlatforms))
+        }
     }
 
     const getJobStats = () => {
         if (jobs.length === 0) return null
 
         const stats = {
-            linkedin: jobs.filter(j => j.source === 'LinkedIn').length,
-            unstop: jobs.filter(j => j.source === 'Unstop').length,
-            foundit: jobs.filter(j => j.source === 'Foundit').length,
-            naukri: jobs.filter(j => j.source === 'Naukri').length,
+            linkedin: selectedSources.includes('linkedin') ? platformJobs.linkedin.length : 0,
+            unstop: selectedSources.includes('unstop') ? platformJobs.unstop.length : 0,
+            foundit: selectedSources.includes('foundit') ? platformJobs.foundit.length : 0,
+            naukri: selectedSources.includes('naukri') ? platformJobs.naukri.length : 0,
             saved: jobs.filter(j => savedJobs.has(j.url)).length,
         }
 
@@ -547,7 +872,7 @@ export default function MarketJobsPage() {
                         placeholder="e.g., software engineer, data analyst"
                         value={keywords}
                         onChange={(e) => setKeywords(e.target.value)}
-                        disabled={loading}
+                        disabled={isBusy}
                         className={`
                             pl-10 py-3 rounded-xl transition-all bg-white dark:bg-gray-800
                             border shadow-sm
@@ -574,7 +899,7 @@ export default function MarketJobsPage() {
                     placeholder="e.g., India, Bangalore"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    disabled={loading}
+                    disabled={isBusy}
                     className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
                 />
             </div>
@@ -588,7 +913,7 @@ export default function MarketJobsPage() {
                     <button
                         type="button"
                         onClick={selectAllSources}
-                        disabled={loading}
+                        disabled={isBusy}
                         className="text-teal-600 dark:text-teal-400 hover:underline disabled:opacity-40"
                     >
                         Select All
@@ -597,7 +922,7 @@ export default function MarketJobsPage() {
                     <button
                         type="button"
                         onClick={deselectAllSources}
-                        disabled={loading}
+                        disabled={isBusy}
                         className="text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-40"
                     >
                         Clear
@@ -616,12 +941,12 @@ export default function MarketJobsPage() {
                     <button
                         key={item.key}
                         type="button"
-                        onClick={() => toggleSource(item.key)}
-                        disabled={loading}
+                        onClick={() => toggleSource(item.key as PlatformKey)}
+                        disabled={isBusy}
                         className={`
                             px-4 py-2 rounded-xl font-medium transition-all shadow-sm 
                             flex items-center gap-2 border 
-                            ${selectedSources.includes(item.key)
+                            ${selectedSources.includes(item.key as PlatformKey)
                                 ? `text-white bg-gradient-to-r ${item.color} shadow-md`
                                 : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}
                         `}
@@ -653,14 +978,14 @@ export default function MarketJobsPage() {
                         setMaxJobs(val === "" ? "" : Math.min(15, Math.max(1, val)));
                     }}
                     onBlur={() => !maxJobs && setMaxJobs(15)}
-                    disabled={loading}
+                    disabled={isBusy}
                     className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
                 />
             </div>
 
             <Button
                 onClick={fetchMarketJobs}
-                disabled={loading || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
+                disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
                 size="lg"
                 className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3"
             >
@@ -693,7 +1018,7 @@ export default function MarketJobsPage() {
                 id="includeResumeSkills"
                 checked={includeResumeSkills}
                 onChange={(e) => setIncludeResumeSkills(e.target.checked)}
-                disabled={loading}
+                disabled={isBusy}
                 className="w-4 h-4 text-teal-600 bg-white border-gray-300 rounded cursor-pointer focus:ring-teal-500 focus:ring-2"
             />
             <label
