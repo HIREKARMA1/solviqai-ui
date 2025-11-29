@@ -628,6 +628,23 @@ class ApiClient {
     return response.data;
   }
 
+  // Practice Coding Challenge methods
+  async getPracticeCodingQuestions(branch: string, difficulty: string = 'medium'): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/practice/coding`, {
+      params: { branch, difficulty }
+    });
+    return response.data;
+  }
+
+  async executePracticeCode(payload: {question_id: string; language: string; code: string; stdin?: string}): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/practice/coding/execute`,
+      payload,
+      { timeout: 60000 } // 60s
+    );
+    return response.data;
+  }
+
   async getAssessmentStatus(assessmentId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/assessments/${assessmentId}/status`,
