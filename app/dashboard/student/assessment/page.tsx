@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -114,6 +114,20 @@ const roundDisplay: Record<
     icon: Mic,
     color: "bg-orange-500",
   },
+  electrical_circuit: {
+    name: "Electrical Circuit Design",
+    description: "Design and evaluate a circuit using the interactive workspace",
+    duration: "45 min",
+    icon: Zap,
+    color: "bg-amber-500",
+  },
+  civil_quantity: {
+    name: "Civil Quantity Estimation",
+    description: "Estimate quantities for construction projects",
+    duration: "45 min",
+    icon: Ruler,
+    color: "bg-teal-500",
+  },
   hr_interview: {
     name: "HR Interview",
     description: "Behavioral and cultural fit",
@@ -161,11 +175,11 @@ export default function AssessmentPage() {
     try {
       setLoading(true);
       const data = await apiClient.getAssessmentStatus(assessmentId!);
-      console.log("📊 Assessment data received:", data);
-      console.log("📊 Rounds data:", data.rounds);
+      console.log("ðŸ“Š Assessment data received:", data);
+      console.log("ðŸ“Š Rounds data:", data.rounds);
       setAssessment(data);
 
-      // ✅ Auto-complete assessment if all rounds are done (triggers playlist generation)
+      // âœ… Auto-complete assessment if all rounds are done (triggers playlist generation)
       if (data.rounds && data.rounds.length > 0) {
         const allRoundsCompleted = data.rounds.every(
           (round: any) => String(round.status).toLowerCase() === "completed",
@@ -175,7 +189,7 @@ export default function AssessmentPage() {
 
         if (allRoundsCompleted && assessmentNotCompleted) {
           console.log(
-            "🎉 All rounds completed! Finalizing assessment and generating playlist...",
+            "ðŸŽ‰ All rounds completed! Finalizing assessment and generating playlist...",
           );
           try {
             await apiClient.completeAssessment(assessmentId!);
@@ -215,10 +229,27 @@ export default function AssessmentPage() {
     }
   };
 
-  const handleStartRound = async (roundNumber: number) => {
+  const handleStartRound = async (round: any) => {
     await requestFullscreen();
+    const roundType = String(round.round_type || "").toLowerCase();
+    if (roundType === "electrical_circuit") {
+      const params = new URLSearchParams();
+      if (assessmentId) params.set("assessment_id", assessmentId);
+      if (round.round_id) params.set("round_id", round.round_id);
+      params.set("round_number", String(round.round_number));
+      router.push(`/dashboard/student/electrical?${params.toString()}`);
+      return;
+    }
+    if (roundType === "civil_quantity") {
+      const params = new URLSearchParams();
+      if (assessmentId) params.set("assessment_id", assessmentId);
+      if (round.round_id) params.set("round_id", round.round_id);
+      params.set("round_number", String(round.round_number));
+      router.push(`/dashboard/student/civil?${params.toString()}`);
+      return;
+    }
     router.push(
-      `/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${roundNumber}`,
+      `/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${round.round_number}`,
     );
   };
 
@@ -226,7 +257,7 @@ export default function AssessmentPage() {
     round: any,
   ): "completed" | "in_progress" | "not_started" => {
     console.log(
-      "🔍 Checking round status:",
+      "ðŸ” Checking round status:",
       round.round_type,
       "status:",
       round.status,
@@ -272,6 +303,10 @@ export default function AssessmentPage() {
       "from-purple-50 to-purple-100/60 dark:from-purple-900/20 dark:to-purple-900/10",
     coding:
       "from-emerald-50 to-emerald-100/60 dark:from-emerald-900/20 dark:to-emerald-900/10",
+    electrical_circuit:
+      "from-amber-50 to-amber-100/60 dark:from-amber-900/20 dark:to-amber-900/10",
+    civil_quantity:
+      "from-teal-50 to-teal-100/60 dark:from-teal-900/20 dark:to-teal-900/10",
     technical_interview:
       "from-orange-50 to-orange-100/60 dark:from-orange-900/20 dark:to-orange-900/10",
     hr_interview:
@@ -531,7 +566,7 @@ export default function AssessmentPage() {
                       )}
                       {status !== "completed" && (
                         <Button
-                          onClick={() => handleStartRound(round.round_number)}
+                          onClick={() => handleStartRound(round)}
                           disabled={!isRoundEnabled}
                           size="sm"
                           className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-10 whitespace-nowrap"

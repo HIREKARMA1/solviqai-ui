@@ -853,6 +853,35 @@ class ApiClient {
     );
     return response.data;
   }
+
+  // Electrical endpoints
+  async generateElectricalQuestion(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+    return response.data;
+  }
+
+  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
+      timeout: 180000,
+    });
+    return response.data;
+  }
+
+  // Civil Engineering endpoints
+  async generateCivilProblem(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
+    return response.data;
+  }
+
+  async evaluateCivilQuantities(payload: {
+    problem: Record<string, any>;  // Complete problem object for AI evaluation
+    student_answers: Record<string, number>;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
+      timeout: 60000,  // AI evaluation may take longer
+    });
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();

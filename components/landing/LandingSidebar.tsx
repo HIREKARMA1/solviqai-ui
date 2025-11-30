@@ -85,6 +85,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Analytics',
     onClick: undefined,
   },
+  {
+    id: 'electrical',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
+  {
+    id: 'civil',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Civil Engineering',
+    onClick: undefined,
+  },
 ];
 
 // College sidebar features
