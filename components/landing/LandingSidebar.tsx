@@ -84,6 +84,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Electrical',
     onClick: undefined,
   },
+  {
+    id: 'civil',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Civil Engineering',
+    onClick: undefined,
+  },
 ];
 
 // College sidebar features
@@ -188,6 +194,8 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
         'electrical': `${baseRoute}/electrical`,
+'civil': `${baseRoute}/civil`,
+
       };
       return routeMap[featureId] || null;
     }

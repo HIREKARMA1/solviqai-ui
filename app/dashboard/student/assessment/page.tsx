@@ -1,21 +1,43 @@
 "use client";
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Loader } from '@/components/ui/loader'
-import { apiClient } from '@/lib/api'
-import { 
-    Home, User, FileText, Briefcase, 
-    Brain, Mic, CheckCircle, Clock, Target, MessageCircle, AlertCircle, TrendingUp,
-    Play, ArrowRight, BarChart3, Award, Calendar
-} from 'lucide-react'
-import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useRouter, useSearchParams } from "next/navigation";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader } from "@/components/ui/loader";
+import { apiClient } from "@/lib/api";
+import {
+  Home,
+  User,
+  FileText,
+  Briefcase,
+  Brain,
+  Mic,
+  CheckCircle,
+  Clock,
+  Target,
+  MessageCircle,
+  AlertCircle,
+  TrendingUp,
+  Play,
+  ArrowRight,
+  BarChart3,
+  Award,
+  Calendar,
+  Zap,
+  Ruler,
+} from "lucide-react";
+import Link from "next/link";
+import toast from "react-hot-toast";
 
 const sidebarItems = [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -26,57 +48,80 @@ const sidebarItems = [
 ]
 
 // Round display information
-const roundDisplay: Record<string, { name: string; description: string; duration: string; icon: any; color: string }> = {
-    aptitude: {
-        name: "Aptitude Test",
-        description: "Quantitative, Reasoning, English",
-        duration: "30 min",
-        icon: Brain,
-        color: "bg-blue-500",
-    },
-    soft_skills: {
-        name: "Soft Skills",
-        description: "Communication, Leadership, Teamwork",
-        duration: "20 min",
-        icon: User,
-        color: "bg-green-500",
-    },
-    group_discussion: {
-        name: "Group Discussion",
-        description: "Interactive discussion with AI moderator",
-        duration: "25 min",
-        icon: MessageCircle,
-        color: "bg-violet-500",
-    },
-    technical_mcq: {
-        name: "Technical MCQ",
-        description: "Domain-specific questions",
-        duration: "30 min",
-        icon: Target,
-        color: "bg-purple-500",
-    },
-    coding: {
-        name: "Coding Challenge",
-        description: "Solve programming tasks with tests",
-        duration: "60 min",
-        icon: Target,
-        color: "bg-emerald-600",
-    },
-    technical_interview: {
-        name: "Technical Interview",
-        description: "Voice-based technical discussion",
-        duration: "20 min",
-        icon: Mic,
-        color: "bg-orange-500",
-    },
-    hr_interview: {
-        name: "HR Interview",
-        description: "Behavioral and cultural fit",
-        duration: "15 min",
-        icon: Target,
-        color: "bg-pink-500",
-    },
-}
+const roundDisplay: Record<
+  string,
+  {
+    name: string;
+    description: string;
+    duration: string;
+    icon: any;
+    color: string;
+  }
+> = {
+  aptitude: {
+    name: "Aptitude Test",
+    description: "Quantitative, Reasoning, English",
+    duration: "30 min",
+    icon: Brain,
+    color: "bg-blue-500",
+  },
+  soft_skills: {
+    name: "Soft Skills",
+    description: "Communication, Leadership, Teamwork",
+    duration: "20 min",
+    icon: User,
+    color: "bg-green-500",
+  },
+  group_discussion: {
+    name: "Group Discussion",
+    description: "Interactive discussion with AI moderator",
+    duration: "25 min",
+    icon: MessageCircle,
+    color: "bg-violet-500",
+  },
+  technical_mcq: {
+    name: "Technical MCQ",
+    description: "Domain-specific questions",
+    duration: "30 min",
+    icon: Target,
+    color: "bg-purple-500",
+  },
+  coding: {
+    name: "Coding Challenge",
+    description: "Solve programming tasks with tests",
+    duration: "60 min",
+    icon: Target,
+    color: "bg-emerald-600",
+  },
+  technical_interview: {
+    name: "Technical Interview",
+    description: "Voice-based technical discussion",
+    duration: "20 min",
+    icon: Mic,
+    color: "bg-orange-500",
+  },
+  electrical_circuit: {
+    name: "Electrical Circuit Design",
+    description: "Design and evaluate a circuit using the interactive workspace",
+    duration: "45 min",
+    icon: Zap,
+    color: "bg-amber-500",
+  },
+  civil_quantity: {
+    name: "Civil Quantity Estimation",
+    description: "Estimate quantities for construction projects",
+    duration: "45 min",
+    icon: Ruler,
+    color: "bg-teal-500",
+  },
+  hr_interview: {
+    name: "HR Interview",
+    description: "Behavioral and cultural fit",
+    duration: "15 min",
+    icon: Target,
+    color: "bg-pink-500",
+  },
+};
 
 export default function AssessmentPage() {
   const router = useRouter();
@@ -170,18 +215,45 @@ export default function AssessmentPage() {
     }
   };
 
-    const handleStartRound = async (roundNumber: number) => {
-        await requestFullscreen()
-        router.push(`/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${roundNumber}`)
+const handleStartRound = async (round: any) => {
+    await requestFullscreen();
+    const roundType = String(round.round_type || "").toLowerCase();
+    if (roundType === "electrical_circuit") {
+      const params = new URLSearchParams();
+      if (assessmentId) params.set("assessment_id", assessmentId);
+      if (round.round_id) params.set("round_id", round.round_id);
+      params.set("round_number", String(round.round_number));
+      router.push(`/dashboard/student/electrical?${params.toString()}`);
+      return;
     }
+    if (roundType === "civil_quantity") {
+      const params = new URLSearchParams();
+      if (assessmentId) params.set("assessment_id", assessmentId);
+      if (round.round_id) params.set("round_id", round.round_id);
+      params.set("round_number", String(round.round_number));
+      router.push(`/dashboard/student/civil?${params.toString()}`);
+      return;
+    }
+    router.push(
+      `/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${round.round_number}`,
+    );
+  };
 
-    const getRoundStatus = (round: any): 'completed' | 'in_progress' | 'not_started' => {
-        console.log('🔍 Checking round status:', round.round_type, 'status:', round.status)
-        const status = String(round.status).toLowerCase()
-        if (status === 'completed') return 'completed'
-        if (status === 'in_progress') return 'in_progress'
-        return 'not_started'
-    }
+  const getRoundStatus = (
+    round: any,
+  ): "completed" | "in_progress" | "not_started" => {
+    console.log(
+      "🔍 Checking round status:",
+      round.round_type,
+      "status:",
+      round.status,
+    );
+    const status = String(round.status).toLowerCase();
+    if (status === "completed") return "completed";
+    if (status === "in_progress") return "in_progress";
+    return "not_started";
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -205,16 +277,28 @@ export default function AssessmentPage() {
     }
   };
 
-    // Light hover/tint background per round type to match landing theme
-    const roundHoverBg: Record<string, string> = {
-        aptitude: 'from-blue-50 to-blue-100/60 dark:from-blue-900/20 dark:to-blue-900/10',
-        soft_skills: 'from-green-50 to-green-100/60 dark:from-green-900/20 dark:to-green-900/10',
-        group_discussion: 'from-violet-50 to-violet-100/60 dark:from-violet-900/20 dark:to-violet-900/10',
-        technical_mcq: 'from-purple-50 to-purple-100/60 dark:from-purple-900/20 dark:to-purple-900/10',
-        coding: 'from-emerald-50 to-emerald-100/60 dark:from-emerald-900/20 dark:to-emerald-900/10',
-        technical_interview: 'from-orange-50 to-orange-100/60 dark:from-orange-900/20 dark:to-orange-900/10',
-        hr_interview: 'from-pink-50 to-pink-100/60 dark:from-pink-900/20 dark:to-pink-900/10',
-    }
+// Light hover/tint background per round type to match landing theme
+  const roundHoverBg: Record<string, string> = {
+    aptitude:
+      "from-blue-50 to-blue-100/60 dark:from-blue-900/20 dark:to-blue-900/10",
+    soft_skills:
+      "from-green-50 to-green-100/60 dark:from-green-900/20 dark:to-green-900/10",
+    group_discussion:
+      "from-violet-50 to-violet-100/60 dark:from-violet-900/20 dark:to-violet-900/10",
+    technical_mcq:
+      "from-purple-50 to-purple-100/60 dark:from-purple-900/20 dark:to-purple-900/10",
+    coding:
+      "from-emerald-50 to-emerald-100/60 dark:from-emerald-900/20 dark:to-emerald-900/10",
+    electrical_circuit:
+      "from-amber-50 to-amber-100/60 dark:from-amber-900/20 dark:to-amber-900/10",
+    civil_quantity:
+      "from-teal-50 to-teal-100/60 dark:from-teal-900/20 dark:to-teal-900/10",
+    technical_interview:
+      "from-orange-50 to-orange-100/60 dark:from-orange-900/20 dark:to-orange-900/10",
+    hr_interview:
+      "from-pink-50 to-pink-100/60 dark:from-pink-900/20 dark:to-pink-900/10",
+  };
+
 
   if (loading) {
     return (
@@ -411,60 +495,81 @@ export default function AssessmentPage() {
                   previousRoundCompleted ||
                   index === 0;
 
-                                // Type guard to check if status is 'completed'
-                                const isCompleted = status === 'completed'
-                                const isDisabled = !isRoundEnabled && !isCompleted
-                                
-                                return (
-                                    <motion.div
-                                        key={round.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true }}
-                                        transition={{ duration: 0.35, delay: index * 0.05 }}
-                                        whileHover={{ y: -2 }}
-                                        className={`group relative overflow-hidden flex items-center justify-between p-5 border rounded-2xl card-hover`}
-                                        style={{ opacity: isDisabled ? 0.5 : 1 }}
-                                    >
-                                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${roundHoverBg[round.round_type] || 'from-primary-50 to-secondary-50'}`} />
-                                        <div className={`absolute -top-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${roundHoverBg[round.round_type] || 'from-primary-100/40 to-secondary-100/20'}`} />
-                                        <div className="flex items-center space-x-4 relative z-10">
-                                            <div className={`p-3 rounded-xl text-white shadow-sm ${roundInfo.color}`}>
-                                                <IconComponent className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold">{roundInfo.name}</h3>
-                                                <p className="text-sm text-gray-600">{roundInfo.description}</p>
-                                                <p className="text-xs text-gray-500">{roundInfo.duration}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-4 relative z-10">
-                                            <Badge className={`${getStatusColor(status)} ${status === 'in_progress' ? 'animate-pulse' : ''}`}>
-                                                {getStatusIcon(status)}
-                                                <span className="ml-1 capitalize">{status.replace('_', ' ')}</span>
-                                            </Badge>
-                                            {status === 'completed' && round.score && (
-                                                <div className="text-right">
-                                                    <p className="text-sm font-medium">{round.score} points</p>
-                                                    <p className="text-xs text-gray-500">{round.percentage}%</p>
-                                </div>
-                                            )}
-                                            {status !== 'completed' && (
-                                <Button 
-                                                    onClick={() => handleStartRound(round.round_number)}
-                                                    disabled={!isRoundEnabled}
-                                                >
-                                                    {status === 'in_progress' ? 'Continue' : 'Start'}
-                                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )
-                            })}
-                            </div>
-                        </CardContent>
-                    </Card>
+// Type guard to check if status is 'completed'
+                const isCompleted = status === "completed";
+                const isDisabled = !isRoundEnabled && !isCompleted;
+
+                return (
+                  <motion.div
+                    key={round.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
+                    whileHover={{ y: -2 }}
+                    className={`group relative overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 sm:p-5 border rounded-xl sm:rounded-2xl card-hover`}
+                    style={{ opacity: isDisabled ? 0.5 : 1 }}
+                  >
+                    <div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${roundHoverBg[round.round_type] || "from-primary-50 to-secondary-50"}`}
+                    />
+                    <div
+                      className={`absolute -top-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${roundHoverBg[round.round_type] || "from-primary-100/40 to-secondary-100/20"}`}
+                    />
+                    <div className="flex items-center space-x-3 sm:space-x-4 relative z-10 flex-1 min-w-0">
+                      <div
+                        className={`p-2 sm:p-3 rounded-xl text-white shadow-sm flex-shrink-0 ${roundInfo.color}`}
+                      >
+                        <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{roundInfo.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 sm:line-clamp-none">
+                          {roundInfo.description}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
+                          {roundInfo.duration}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-4 relative z-10 flex-shrink-0">
+                      <Badge
+                        className={`${getStatusColor(status)} ${status === "in_progress" ? "animate-pulse" : ""} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}
+                      >
+                        {getStatusIcon(status)}
+                        <span className="ml-1 capitalize whitespace-nowrap">
+                          {status.replace("_", " ")}
+                        </span>
+                      </Badge>
+                      {status === "completed" && round.score && (
+                        <div className="text-right">
+                          <p className="text-xs sm:text-sm font-medium">
+                            {round.score} points
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500">
+                            {round.percentage}%
+                          </p>
+                        </div>
+                      )}
+                      {status !== "completed" && (
+                        <Button
+                          onClick={() => handleStartRound(round)}
+                          disabled={!isRoundEnabled}
+                          size="sm"
+                          className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-10 whitespace-nowrap"
+                        >
+                          {status === "in_progress" ? "Continue" : "Start"}
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* Actions */}
         <div className="flex justify-between">
