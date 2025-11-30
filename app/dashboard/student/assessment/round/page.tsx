@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
 import CodingRound from '@/components/assessment/CodingRound'
+import { CircuitDesignRound } from '@/components/assessment/CircuitDesignRound'
 
 interface GDResponse {
     response_text: string;
@@ -139,6 +140,7 @@ export default function AssessmentRoundPage() {
     const isVoiceRound = roundType === 'technical_interview' || roundType === 'hr_interview'
     const isGroupDiscussionRound = roundType === 'group_discussion'
     const isCodingRound = roundType === 'coding'
+    const isCircuitDesignRound = roundType === 'circuit_design'
     const currentQ = roundData?.questions?.[currentQuestion]
     const counts = roundData ? getCounts() : { answered: 0, notAnswered: 0, marked: 0, notVisited: 0 }
     const canSubmit = roundData && !submitting
@@ -355,8 +357,10 @@ export default function AssessmentRoundPage() {
     // Initialize timer
     useEffect(() => {
         if (roundData && roundData.time_limit && timeLeft === null) {
-            const initialTime = roundData.time_limit * 60
-            console.log(`⏰ Timer initialized: ${initialTime} seconds`)
+            // Circuit design rounds start with 45 minutes (2700 seconds)
+            const isCircuitDesign = roundData.round_type === 'circuit_design'
+            const initialTime = isCircuitDesign ? 45 * 60 : roundData.time_limit * 60
+            console.log(`⏰ Timer initialized: ${initialTime} seconds (${isCircuitDesign ? '45:00 for circuit design' : 'from backend'})`)
             setTimeLeft(initialTime)
         }
     }, [roundData, timeLeft])
@@ -718,9 +722,10 @@ export default function AssessmentRoundPage() {
 
     const formatTime = (seconds: number | null) => {
         if (seconds === null) return '--:--'
-        const mins = Math.floor(seconds / 60)
+        const totalMinutes = Math.floor(seconds / 60)
         const secs = seconds % 60
-        return `${mins}:${secs.toString().padStart(2, '0')}`
+        // Format as mm:ss (always 2 digits for minutes, 2 digits for seconds)
+        return `${totalMinutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
     }
 
     const splitTime = (seconds: number | null) => {
@@ -887,6 +892,39 @@ export default function AssessmentRoundPage() {
                                     }}
                                 />
                             </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </DashboardLayout>
+        )
+    }
+
+    // Circuit Design Round UI
+    if (isCircuitDesignRound) {
+        return (
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+                <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+                    {/* Header */}
+                    <div className="bg-amber-600 text-white p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-2 sm:gap-0">
+                            <h1 className="text-base sm:text-lg md:text-xl font-semibold">Round {roundNumber}: Circuit Design</h1>
+                            <div className="text-xs sm:text-sm">Time Left: {formatTime(timeLeft)}</div>
+                        </div>
+                    </div>
+
+                {/* Full-height Circuit Design Workspace */}
+                <div className="flex-1 overflow-hidden">
+                    <div className="h-full w-full">
+                        <div className="h-full">
+                            <CircuitDesignRound
+                                assessmentId={assessmentId!}
+                                roundData={roundData}
+                                timeLeft={timeLeft}
+                                onSubmitted={() => {
+                                    router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
