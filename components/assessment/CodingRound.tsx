@@ -14,6 +14,9 @@ export type CodingRoundProps = {
   assessmentId: string
   roundData: any
   onSubmitted?: (result: any) => void
+  executeCodeFn?: (payload: {question_id: string; language: string; code: string; stdin?: string}) => Promise<any>
+  submitFn?: (responses: any[]) => Promise<any>
+  showSubmitButton?: boolean
 }
 
 const LANGS = [
@@ -30,7 +33,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -85,7 +88,12 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
           time_taken: 0,
         }
       })
-      const res = await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
+      
+      // Use custom submit function if provided (for practice), otherwise use assessment endpoint
+      const res = submitFn 
+        ? await submitFn(responses)
+        : await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
+      
       toast.success('Solutions submitted successfully!')
       onSubmitted?.(res)
     } catch (e: any) {
@@ -106,11 +114,18 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
         setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
       )
       
-      const apiPromise = apiClient.executeCode(assessmentId, roundData.round_id, {
-        question_id: qid,
-        language: ed.language,
-        code: ed.code,
-      })
+      // Use custom execute function if provided (for practice), otherwise use assessment endpoint
+      const apiPromise = executeCodeFn 
+        ? executeCodeFn({
+            question_id: qid,
+            language: ed.language,
+            code: ed.code,
+          })
+        : apiClient.executeCode(assessmentId, roundData.round_id, {
+            question_id: qid,
+            language: ed.language,
+            code: ed.code,
+          })
       
       const res = await Promise.race([apiPromise, timeoutPromise])
       setResults(prev => ({...prev, [qid]: res}))
@@ -465,7 +480,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                       </div>
                       <span className="text-xs text-gray-500">{editor.code.split('\n').length} lines</span>
                     </div>
-                    <div className="flex-1 bg-gray-900" style={{ height: isFullscreen ? 'calc(100vh - 340px)' : '440px' }}>
+                    <div className="flex-1 bg-gray-900" style={{ height: isFullscreen ? 'calc(100vh - 340px)' : '600px' }}>
                       {MonacoEditor ? (
                         <MonacoEditor
                           height="100%"
@@ -533,29 +548,31 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
         })}
 
         {/* Submit Button */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Ready to Submit?</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Make sure you've tested all solutions before submitting
+        {showSubmitButton && (
+          <div className="sticky bottom-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Ready to Submit?</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Make sure you've tested all solutions before submitting
+                </div>
               </div>
+              <Button
+                onClick={handleSubmit}
+                disabled={busy}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? (
+                  <span className="flex items-center gap-2">
+                    <Loader size="sm" /> Submitting...
+                  </span>
+                ) : (
+                  'Submit All Solutions'
+                )}
+              </Button>
             </div>
-            <Button
-              onClick={handleSubmit}
-              disabled={busy}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {busy ? (
-                <span className="flex items-center gap-2">
-                  <Loader size="sm" /> Submitting...
-                </span>
-              ) : (
-                'Submit All Solutions'
-              )}
-            </Button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

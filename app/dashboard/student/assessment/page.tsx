@@ -39,15 +39,16 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 const sidebarItems = [
-    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
-    { name: 'Profile', href: '/dashboard/student/profile', icon: User },
-    { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
-    { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
-    { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
+  { name: 'Dashboard', href: '/dashboard/student', icon: Home },
+  { name: 'Profile', href: '/dashboard/student/profile', icon: User },
+  { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
+  { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
+  { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
 ]
 
 // Round display information
 const roundDisplay: Record<
+
   string,
   {
     name: string;
@@ -57,6 +58,13 @@ const roundDisplay: Record<
     color: string;
   }
 > = {
+  practice: {
+    name: "Practice Session",
+    description: "Practice and improve your skills",
+    duration: "Flexible",
+    icon: BookOpen,
+    color: "bg-indigo-500",
+  },
   aptitude: {
     name: "Aptitude Test",
     description: "Quantitative, Reasoning, English",
@@ -456,8 +464,8 @@ export default function AssessmentPage() {
                   | "completed"
                   | "in_progress"
                   | "not_started" = previousRound
-                  ? getRoundStatus(previousRound)
-                  : "completed";
+                    ? getRoundStatus(previousRound)
+                    : "completed";
                 const previousRoundCompleted =
                   previousRoundStatus === "completed";
                 const isRoundEnabled =
