@@ -14,6 +14,7 @@ import {
   Building2,
   Sparkles,
   BookOpen,
+  Ruler,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -83,6 +84,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
+    onClick: undefined,
+  },
+  {
+    id: 'electrical',
+    icon: <Zap className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
+  {
+    id: 'civil',
+    icon: <Ruler className="w-5 h-5" />,
+    label: 'Civil Engineering',
     onClick: undefined,
   },
 ];
@@ -190,6 +203,9 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       'practice': `${baseRoute}/practice`,
       'jobs': `${baseRoute}/jobs`,
       'auto-apply': `${baseRoute}/auto-apply`,
+      'analytics': `${baseRoute}/analytics`,
+      'electrical': `${baseRoute}/electrical`,
+      'civil': `${baseRoute}/civil`,
     };
     return routeMap[featureId] || null;
   };
