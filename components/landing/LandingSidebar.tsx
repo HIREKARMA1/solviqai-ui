@@ -13,6 +13,7 @@ import {
   User,
   Building2,
   Sparkles,
+  BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -58,6 +59,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'assessment',
     icon: <ClipboardList className="w-5 h-5" />,
     label: 'Mock Assessment',
+    onClick: undefined,
+  },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice',
     onClick: undefined,
   },
   // {
@@ -140,6 +147,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     label: 'Profile',
     onClick: undefined,
   },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice Assessment',
+    onClick: undefined,
+  },
 ];
 
 // Export default features for backward compatibility (student features)
@@ -154,7 +167,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   // Get sidebar features based on user type
   const getSidebarFeatures = (): SidebarItem[] => {
     if (!user) return studentSidebarFeatures; // Default to student features when not logged in
-    
+
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
@@ -170,7 +183,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    
+
     // Student routes
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
@@ -184,7 +197,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       };
       return routeMap[featureId] || null;
     }
-    
+
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
@@ -195,7 +208,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       };
       return routeMap[featureId] || null;
     }
-    
+
     // Admin routes
     if (user.user_type === 'admin') {
       const routeMap: Record<string, string> = {
@@ -207,7 +220,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       };
       return routeMap[featureId] || null;
     }
-    
+
     return null;
   };
 
