@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
 import CodingRound from '@/components/assessment/CodingRound'
+import { TallyExcelRound } from '@/components/assessment/TallyExcelRound'
 
 interface GDResponse {
     response_text: string;
@@ -799,6 +800,42 @@ export default function AssessmentRoundPage() {
         )
     }
 
+    // ========== TALLY/EXCEL PRACTICAL ROUND ==========
+    const isTallyExcelRound = roundType === 'tally_excel_practical' || roundType === 'TALLY_EXCEL_PRACTICAL'
+    
+    if (isTallyExcelRound) {
+        if (!roundData || (!roundData.round_id && !roundData.id)) {
+            return (
+                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+                    <div className="flex justify-center items-center min-h-screen">
+                        <div className="text-center max-w-lg px-6">
+                            <Loader size="lg" />
+                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
+                                Loading Tally/Excel Assessment
+                            </h2>
+                            <p className="mt-3 text-gray-600 dark:text-gray-400">
+                                Preparing your practical tasks...
+                            </p>
+                        </div>
+                    </div>
+                </DashboardLayout>
+            )
+        }
+
+        return (
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+                <TallyExcelRound
+                    assessmentId={assessmentId!}
+                    roundData={roundData}
+                    onSubmitted={(result) => {
+                        toast.success('All solutions submitted successfully!');
+                        router.push(`/dashboard/student/assessment?id=${assessmentId}`);
+                    }}
+                />
+            </DashboardLayout>
+        )
+    }
+
     if (isElectricalRound) {
         const roundId = roundData?.round_id || roundData?.id
         const params = new URLSearchParams()
@@ -937,7 +974,7 @@ export default function AssessmentRoundPage() {
         )
     }
 
-    if (!roundData || (!isGroupDiscussionRound && (!roundData.questions || roundData.questions.length === 0))) {
+    if (!roundData || (!isGroupDiscussionRound && !isTallyExcelRound && (!roundData.questions || roundData.questions.length === 0))) {
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="text-center py-12">
@@ -1116,6 +1153,8 @@ export default function AssessmentRoundPage() {
                                 technical_mcq: 'Technical MCQ',
                                 coding: 'Coding Challenge',
                                 electrical_circuit: 'Electrical Circuit Design',
+                                tally_excel_practical: 'Tally/Excel Practical',
+                                TALLY_EXCEL_PRACTICAL: 'Tally/Excel Practical',
                                 technical_interview: 'Technical Interview',
                                 hr_interview: 'HR Interview',
                             }
