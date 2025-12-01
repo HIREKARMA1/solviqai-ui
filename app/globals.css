@@ -140,7 +140,7 @@
   }
   
   .card-hover {
-    @apply rounded-lg border border-gray-200 bg-white text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer;
+    @apply card hover:shadow-lg hover:scale-[1.02] hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer;
   }
   
   .card-header {
@@ -311,100 +311,6 @@ html, body {
   .overflow-x-hidden {
     overflow-x: hidden !important;
   }
-}
-
-/* Custom slider styling for Assessment Practice */
-.slider {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 8px;
-  border-radius: 9999px;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: white;
-  border: 3px solid #3b82f6;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-  transition: all 0.2s ease;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
-}
-
-.slider::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: white;
-  border: 3px solid #3b82f6;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-  transition: all 0.2s ease;
-}
-
-.slider::-moz-range-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
-}
-
-/* Enhanced animations for Practice Category Cards */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(2rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-}
-
-/* Smooth transitions for category cards */
-.category-card {
-  will-change: transform, box-shadow;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-}
-
-.category-card:hover {
-  will-change: transform, box-shadow;
-}
-
-/* Icon glow effect */
-.icon-glow {
-  filter: drop-shadow(0 4px 6px rgba(37, 99, 235, 0.3));
-  transition: filter 0.5s ease-out;
-}
-
-.icon-glow:hover {
-  filter: drop-shadow(0 10px 20px rgba(37, 99, 235, 0.5));
-}
-
-/* Glass morphism effect */
-.glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 

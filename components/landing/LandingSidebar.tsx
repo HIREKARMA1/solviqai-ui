@@ -13,7 +13,6 @@ import {
   User,
   Building2,
   Sparkles,
-  BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -61,12 +60,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Mock Assessment',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
-    onClick: undefined,
-  },
   // {
   //   id: 'jobs',
   //   icon: <Briefcase className="w-5 h-5" />,
@@ -83,6 +76,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
+    onClick: undefined,
+  },
+  {
+    id: 'electrical',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
+  {
+    id: 'civil',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Civil Engineering',
     onClick: undefined,
   },
 ];
@@ -147,12 +152,6 @@ export const adminSidebarFeatures: SidebarItem[] = [
     label: 'Profile',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice Assessment',
-    onClick: undefined,
-  },
 ];
 
 // Export default features for backward compatibility (student features)
@@ -167,7 +166,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   // Get sidebar features based on user type
   const getSidebarFeatures = (): SidebarItem[] => {
     if (!user) return studentSidebarFeatures; // Default to student features when not logged in
-
+    
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
@@ -183,15 +182,47 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    const routeMap: Record<string, string> = {
-      'dashboard': baseRoute,
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'practice': `${baseRoute}/practice`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-    };
-    return routeMap[featureId] || null;
+    
+    // Student routes
+    if (user.user_type === 'student') {
+      const routeMap: Record<string, string> = {
+        'dashboard': baseRoute,
+        // 'career-guidance': `${baseRoute}/career-guidance`,
+        'resume': `${baseRoute}/resume`,
+        'assessment': `${baseRoute}/assessment`,
+        // 'jobs': `${baseRoute}/jobs`,
+        // 'auto-apply': `${baseRoute}/auto-apply`,
+        'analytics': `${baseRoute}/analytics`,
+        'electrical': `${baseRoute}/electrical`,
+        'civil': `${baseRoute}/civil`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // College routes
+    if (user.user_type === 'college') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/college`,
+        'students': `/dashboard/college/students`,
+        'analytics': `/dashboard/college/analytics`,
+        'profile': `/dashboard/college/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    // Admin routes
+    if (user.user_type === 'admin') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/admin`,
+        'colleges': `/dashboard/admin/colleges`,
+        'students': `/dashboard/admin/students`,
+        'analytics': `/dashboard/admin/analytics`,
+        'profile': `/dashboard/admin/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+    
+    return null;
   };
 
   // Check if we're in dashboard context
