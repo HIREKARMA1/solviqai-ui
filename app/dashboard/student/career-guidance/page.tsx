@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Send, Sparkles, Target, Brain, Lightbulb, Rocket, 
+import {
+  Send, Sparkles, Target, Brain, Lightbulb, Rocket,
   Trophy, TrendingUp, CheckCircle, MessageCircle, Loader2,
   Mic, MicOff, Volume2, VolumeX, PlayCircle, Workflow, Calendar,
   AlertCircle, RefreshCw, Wifi, WifiOff
@@ -46,32 +46,24 @@ export default function CareerGuidancePage() {
   const [activeTab, setActiveTab] = useState('playlist');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const [error, setError] = useState<string | null>(null);
-  
+
   // Flowchart state
   const [nodes, setNodes] = useState<any[]>([]);
   const [edges, setEdges] = useState<any[]>([]);
-  
-  // WebSocket
-  const wsRef = useRef<WebSocket | null>(null);
+
+  // SSE (Server-Sent Events)
+  const eventSourceRef = useRef<EventSource | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPongTimeRef = useRef<number>(Date.now());
-  const isManualCloseRef = useRef(false);
-  const isConnectingRef = useRef(false);
-  
+
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Get WebSocket URL from config
-  const getWebSocketUrl = useCallback((sessionId: string) => {
-    const baseUrl = config.api.baseUrl.replace(/^http/, 'ws');
+  // Get SSE URL from config
+  const getSSEUrl = useCallback((sessionId: string) => {
+    const baseUrl = config.api.baseUrl;
     const token = localStorage.getItem('access_token');
     // Add token as query parameter for authentication
-    const url = `${baseUrl}/api/v1/career-guidance/ws/${sessionId}`;
+    const url = `${baseUrl}/api/v1/career-guidance/sse/${sessionId}`;
     return token ? `${url}?token=${encodeURIComponent(token)}` : url;
   }, []);
 
@@ -101,22 +93,9 @@ export default function CareerGuidancePage() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      isManualCloseRef.current = true; // Mark as manual close to prevent reconnection
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-      if (heartbeatTimeoutRef.current) {
-        clearTimeout(heartbeatTimeoutRef.current);
-        heartbeatTimeoutRef.current = null;
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounting');
-        wsRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);
@@ -135,12 +114,11 @@ export default function CareerGuidancePage() {
       setCompletionPercentage(data.completion_percentage || 0);
       setCurrentStage(data.current_stage || 'introduction');
 
-      if (wsRef.current) {
-        isManualCloseRef.current = true;
-        wsRef.current.close(1000, 'Loading new session');
-        isManualCloseRef.current = false;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
-      connectWebSocket(data.session_id);
+      connectSSE(data.session_id);
       toast.success('Session loaded successfully!');
     } catch (e: any) {
       console.error('Failed to load session', e);
@@ -157,7 +135,7 @@ export default function CareerGuidancePage() {
     setIsLoading(true);
     setLoadingPercentage(0);
     setError(null);
-    
+
     // Animate progress during session initialization
     const initProgressInterval = setInterval(() => {
       setLoadingPercentage(prev => {
@@ -167,7 +145,7 @@ export default function CareerGuidancePage() {
         return prev + Math.random() * 20;
       });
     }, 150);
-    
+
     try {
       const response = await api.careerGuidance.startSession({
         resume_included: false,
@@ -188,14 +166,14 @@ export default function CareerGuidancePage() {
         setEdges(response.initial_edges);
       }
 
-      connectWebSocket(response.session_id);
-      
+      connectSSE(response.session_id);
+
       // Complete to 100% when session starts
       clearInterval(initProgressInterval);
       setLoadingPercentage(100);
-      
+
       toast.success('Career guidance session started!');
-      
+
       // Reset progress after a short delay
       setTimeout(() => {
         setLoadingPercentage(0);
@@ -213,119 +191,41 @@ export default function CareerGuidancePage() {
     }
   };
 
-  // Start heartbeat mechanism
-  const startHeartbeat = useCallback((ws: WebSocket) => {
-    // Clear any existing heartbeat
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-    }
-
-    // Update last pong time
-    lastPongTimeRef.current = Date.now();
-
-    // Send ping every 30 seconds (less aggressive)
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN && !isManualCloseRef.current) {
-        try {
-          ws.send(JSON.stringify({ type: 'ping' }));
-          console.log('Sent ping');
-          
-          // Set timeout to detect if pong doesn't arrive within 15 seconds
-          // But don't auto-close - just log a warning
-          if (heartbeatTimeoutRef.current) {
-            clearTimeout(heartbeatTimeoutRef.current);
-          }
-          
-          heartbeatTimeoutRef.current = setTimeout(() => {
-            const timeSinceLastPong = Date.now() - lastPongTimeRef.current;
-            if (timeSinceLastPong > 20000 && ws.readyState === WebSocket.OPEN) {
-              console.warn('No pong received, but keeping connection alive');
-              // Don't close automatically - let the connection stay alive
-              // The server will close it if needed
-            }
-          }, 15000);
-        } catch (error) {
-          console.error('Error sending ping:', error);
-        }
-      }
-    }, 30000); // Increased to 30 seconds
-  }, []);
-
-  // Stop heartbeat mechanism
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-      heartbeatTimeoutRef.current = null;
-    }
-  }, []);
-
-  const connectWebSocket = useCallback((sessionId: string) => {
-    // Prevent multiple simultaneous connection attempts
-    if (isConnectingRef.current) {
-      console.log('Connection already in progress, skipping...');
-      return;
-    }
-
+  const connectSSE = useCallback((sessionId: string) => {
     // Close existing connection
-    if (wsRef.current) {
-      isManualCloseRef.current = true; // Mark as manual close
-      stopHeartbeat();
-      wsRef.current.close(1000, 'Reconnecting'); // Normal closure
-      wsRef.current = null;
-      isManualCloseRef.current = false; // Reset after closing
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
-    // Clear any pending reconnection
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    isConnectingRef.current = true;
     setConnectionStatus('connecting');
-    
-    try {
-      const wsUrl = getWebSocketUrl(sessionId);
-      const ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => {
-        isConnectingRef.current = false;
+    try {
+      const sseUrl = getSSEUrl(sessionId);
+      const eventSource = new EventSource(sseUrl);
+
+      eventSource.onopen = () => {
         setConnectionStatus('connected');
-        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
-        console.log('WebSocket connected');
-        
-        // Start heartbeat mechanism
-        startHeartbeat(ws);
+        console.log('SSE connected');
       };
 
-      ws.onmessage = (event) => {
+      eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
-          // Handle pong response
-          if (data.type === 'pong') {
-            lastPongTimeRef.current = Date.now();
-            console.log('Received pong');
-            if (heartbeatTimeoutRef.current) {
-              clearTimeout(heartbeatTimeoutRef.current);
-            }
+
+          // Handle connection confirmation
+          if (data.type === 'connected') {
+            console.log('SSE connection confirmed');
             return;
           }
-          
+
           if (data.type === 'typing') {
             setIsTyping(data.data.is_typing);
           } else if (data.type === 'message') {
-            setMessages(prev => [...prev, { 
-              role: 'ai', 
-              content: data.data.content, 
-              timestamp: new Date().toISOString() 
+            setMessages(prev => [...prev, {
+              role: 'ai',
+              content: data.data.content,
+              timestamp: new Date().toISOString()
             }]);
             scrollToBottom(true);
           } else if (data.type === 'update_flowchart') {
@@ -336,64 +236,28 @@ export default function CareerGuidancePage() {
             setError(data.message || 'An error occurred');
           }
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          console.error('Error parsing SSE message:', e);
         }
       };
 
-      ws.onerror = (error) => {
-        isConnectingRef.current = false;
-        console.error('WebSocket error:', error);
+      eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
         setConnectionStatus('disconnected');
-        stopHeartbeat();
-      };
-
-      ws.onclose = (event) => {
-        isConnectingRef.current = false;
-        setConnectionStatus('disconnected');
-        stopHeartbeat();
-        console.log('WebSocket closed:', event.code, event.reason);
-        
-        // Only reconnect if:
-        // 1. Not a manual close (code 1000)
-        // 2. Not already at max attempts
-        // 3. Not currently connecting
-        // 4. We have a valid sessionId
-        if (
-          event.code !== 1000 && 
-          !isManualCloseRef.current &&
-          reconnectAttemptsRef.current < maxReconnectAttempts &&
-          !isConnectingRef.current &&
-          sessionId
-        ) {
-          reconnectAttemptsRef.current += 1;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // Exponential backoff, max 30s
-          
-          console.log(`Scheduling reconnection attempt ${reconnectAttemptsRef.current} in ${delay}ms...`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (!isConnectingRef.current && sessionId) {
-              console.log(`Reconnecting attempt ${reconnectAttemptsRef.current}...`);
-              connectWebSocket(sessionId);
-            }
-          }, delay);
-        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-          console.log('Max reconnection attempts reached');
-          toast.error('Connection lost. Please refresh the page.');
-          setError('Connection lost. Please refresh the page to reconnect.');
-        } else if (event.code === 1000 || isManualCloseRef.current) {
-          console.log('Connection closed normally, not reconnecting');
+        // EventSource automatically reconnects, but we'll handle errors
+        if (eventSource.readyState === EventSource.CLOSED) {
+          toast.error('Connection lost. EventSource will attempt to reconnect.');
+          setError('Connection lost. EventSource will attempt to reconnect.');
         }
       };
 
-      wsRef.current = ws;
+      eventSourceRef.current = eventSource;
     } catch (error) {
-      isConnectingRef.current = false;
-      console.error('Failed to create WebSocket:', error);
+      console.error('Failed to create EventSource:', error);
       setConnectionStatus('disconnected');
-      stopHeartbeat();
       toast.error('Failed to establish connection. Please refresh the page.');
       setError('Failed to establish connection. Please refresh the page.');
     }
-  }, [getWebSocketUrl, scrollToBottom, startHeartbeat, stopHeartbeat]);
+  }, [getSSEUrl, scrollToBottom]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || !sessionId || isLoading) return;
@@ -447,7 +311,7 @@ export default function CareerGuidancePage() {
 
       setMessages(prev => [...prev, aiMessage]);
       setTimeout(() => scrollToBottom(true), 200);
-      
+
       const stageChanged = response.current_stage !== currentStage;
       if (stageChanged) {
         const newStageInfo = getStageInfo(response.current_stage);
@@ -456,20 +320,20 @@ export default function CareerGuidancePage() {
           duration: 4000
         });
       }
-      
+
       setCompletionPercentage(response.completion_percentage);
       setCurrentStage(response.current_stage);
 
       if (response.updated_nodes && response.updated_nodes.length > 0) {
         const previousNodeCount = nodes.length;
         const newNodeCount = response.updated_nodes.length - previousNodeCount;
-        
+
         if (newNodeCount > 0) {
           toast.info(`✨ ${newNodeCount} new ${newNodeCount === 1 ? 'node' : 'nodes'} added to your career map!`, {
             duration: 3000
           });
         }
-        
+
         const newNodes = response.updated_nodes.map((node: any, index: number) => ({
           id: node.id,
           type: 'custom',
@@ -479,7 +343,7 @@ export default function CareerGuidancePage() {
             animationDelay: index * 0.1
           }
         }));
-        
+
         setTimeout(() => setNodes(newNodes), 100);
       }
       if (response.updated_edges && response.updated_edges.length > 0) {
@@ -514,7 +378,7 @@ export default function CareerGuidancePage() {
           labelBgPadding: [8, 4] as [number, number],
           labelBgBorderRadius: 8,
         }));
-        
+
         setTimeout(() => setEdges(newEdges), 300);
       }
 
@@ -563,7 +427,7 @@ export default function CareerGuidancePage() {
 
   const handleRetry = () => {
     if (sessionId) {
-      connectWebSocket(sessionId);
+      connectSSE(sessionId);
     } else {
       startSession();
     }
@@ -595,7 +459,7 @@ export default function CareerGuidancePage() {
       }
     };
     initSession();
-    
+
     return () => {
       mounted = false;
     };
@@ -625,30 +489,30 @@ export default function CareerGuidancePage() {
     <DashboardLayout requiredUserType="student">
       <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 lg:pt-0">
         {/* Header - Simplified */}
-        <motion.div 
+        <motion.div
           className="relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
         >
           {/* Decorative corners */}
-          <motion.div 
+          <motion.div
             className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 sm:w-56 sm:h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
             animate={{ rotate: [45, 50, 45] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
-          <motion.div 
+          <motion.div
             className="pointer-events-none absolute -bottom-14 -left-14 w-48 h-48 sm:w-64 sm:h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           />
           <div className="relative z-10">
             <div className="flex items-center gap-2 sm:gap-3 mb-2">
-              <motion.div 
+              <motion.div
                 className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               >
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
               </motion.div>
-              <motion.h1 
+              <motion.h1
                 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold gradient-text"
                 animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                 transition={{ duration: 3, repeat: Infinity }}
@@ -726,36 +590,15 @@ export default function CareerGuidancePage() {
           <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4 sm:p-6">
               <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">Quick Actions</div>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg h-8 w-8 sm:h-10 sm:w-10"
-                  title={soundEnabled ? 'Disable sound' : 'Enable sound'}
-                >
-                  {soundEnabled ? (
-                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  ) : (
-                    <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowHistory(true)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg h-8 w-8 sm:h-10 sm:w-10"
-                  aria-label="Session history"
-                  title="View session history"
-                >
-                  <Workflow className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </div>
-              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                  {soundEnabled ? '🔊 Sound enabled' : '🔇 Sound disabled'}
-                </div>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowHistory(true)}
+                className="w-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg h-9 sm:h-10"
+                aria-label="Session history"
+              >
+                <Workflow className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="text-xs sm:text-sm font-medium">View History</span>
+              </Button>
             </CardContent>
           </Card>
         </motion.div>
@@ -782,7 +625,7 @@ export default function CareerGuidancePage() {
         {/* Main Content - Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           {/* Chat Interface - Left Column */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
@@ -922,7 +765,7 @@ export default function CareerGuidancePage() {
           </motion.div>
 
           {/* Right Column - Tabs */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -933,22 +776,22 @@ export default function CareerGuidancePage() {
               {/* Tab Navigation */}
               <div className="flex-shrink-0 mb-3 sm:mb-4">
                 <TabsList className="grid grid-cols-3 bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full gap-1 sm:gap-1.5 h-auto">
-                  <TabsTrigger 
-                    value="playlist" 
+                  <TabsTrigger
+                    value="playlist"
                     className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
                     <PlayCircle className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                     <span className="hidden sm:inline whitespace-nowrap relative z-10">Playlist</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="calendar" 
+                  <TabsTrigger
+                    value="calendar"
                     className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
                     <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
                     <span className="hidden sm:inline whitespace-nowrap relative z-10">Calendar</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="flowchart" 
+                  <TabsTrigger
+                    value="flowchart"
                     className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
                   >
                     <Workflow className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
