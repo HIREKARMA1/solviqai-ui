@@ -865,6 +865,34 @@ class ApiClient {
     });
     return response.data;
   }
+
+  // Excel Accountant Assessment endpoints
+  public excelAssessment = {
+    getAssessments: async (): Promise<any[]> => {
+      const response: AxiosResponse = await this.client.get('/excel-assessment/assessments');
+      return response.data;
+    },
+
+    createAssessment: async (payload: {
+      title: string;
+      description: string;
+      num_questions: number;
+      difficulty_level?: string;
+    }): Promise<any> => {
+      const response: AxiosResponse = await this.client.post('/excel-assessment/assessments', payload);
+      return response.data;
+    },
+
+    getAssessmentDetail: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}`);
+      return response.data;
+    },
+
+    getAssessmentReport: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}/report`);
+      return response.data;
+    },
+  };
 }
 
 export const apiClient = new ApiClient();
