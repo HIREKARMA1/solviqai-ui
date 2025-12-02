@@ -13,7 +13,7 @@ import {
   User,
   Building2,
   Sparkles,
-  BookOpen,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -62,9 +62,9 @@ export const studentSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
+    id: 'excel-assessment',
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+    label: 'Accountant Assessment',
     onClick: undefined,
   },
   // {
@@ -191,6 +191,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
+        'excel-assessment': `${baseRoute}/excel-assessment`,
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,

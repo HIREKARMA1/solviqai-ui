@@ -1,0 +1,177 @@
+.excel-spreadsheet-container {
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 0.5rem;
+}
+
+.excel-spreadsheet {
+  min-width: 100%;
+}
+
+/* Spreadsheet styling */
+.excel-spreadsheet table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+.excel-spreadsheet th,
+.excel-spreadsheet td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  min-width: 100px;
+  height: 36px;
+}
+
+.excel-spreadsheet th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: center;
+  color: #374151;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.excel-spreadsheet td {
+  background-color: white;
+}
+
+.excel-spreadsheet td:hover {
+  background-color: #f9fafb;
+}
+
+.excel-spreadsheet td:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: -1px;
+  background-color: #eff6ff;
+}
+
+.excel-spreadsheet input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+}
+
+/* Row labels */
+.excel-spreadsheet th:first-child {
+  background-color: #e5e7eb;
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  min-width: 50px;
+}
+
+/* Column labels */
+.excel-spreadsheet thead th {
+  background-color: #e5e7eb;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .excel-spreadsheet-container {
+    background: #1f2937;
+  }
+
+  .excel-spreadsheet th {
+    background-color: #374151;
+    color: #f3f4f6;
+    border-color: #4b5563;
+  }
+
+  .excel-spreadsheet td {
+    background-color: #1f2937;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .excel-spreadsheet td:hover {
+    background-color: #374151;
+  }
+
+  .excel-spreadsheet td:focus-within {
+    outline-color: #60a5fa;
+    background-color: #1e3a8a;
+  }
+
+  .excel-spreadsheet th:first-child {
+    background-color: #4b5563;
+  }
+
+  .excel-spreadsheet thead th {
+    background-color: #4b5563;
+  }
+}
+
+/* Formula bar styling */
+.formula-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-family: 'Courier New', monospace;
+}
+
+.formula-bar-label {
+  font-weight: 600;
+  color: #374151;
+  min-width: 60px;
+}
+
+.formula-bar-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+/* Cell with formula indicator */
+.cell-with-formula {
+  position: relative;
+}
+
+.cell-with-formula::after {
+  content: '𝑓';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+/* Cell formatting support */
+.styled-cell-viewer {
+  width: 100%;
+  height: 100%;
+  padding: 8px 12px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.excel-spreadsheet td {
+  padding: 0 !important;
+}
+
+.excel-spreadsheet input {
+  /* Inherit formatting from styled-cell-viewer */
+  padding: 8px 12px;
+}
+
+/* Selected cell indicator */
+.excel-spreadsheet .selected-cell {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  background-color: #dbeafe !important;
+}
