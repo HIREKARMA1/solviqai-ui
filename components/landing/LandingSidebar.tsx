@@ -13,7 +13,6 @@ import {
   User,
   Building2,
   Sparkles,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -85,6 +84,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Analytics',
     onClick: undefined,
   },
+  {
+    id: 'electrical',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
+  {
+    id: 'civil',
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: 'Civil Engineering',
+    onClick: undefined,
+  },
 ];
 
 // College sidebar features
@@ -147,12 +158,6 @@ export const adminSidebarFeatures: SidebarItem[] = [
     label: 'Profile',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice Assessment',
-    onClick: undefined,
-  },
 ];
 
 // Export default features for backward compatibility (student features)
@@ -188,13 +193,14 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
         'dashboard': baseRoute,
-        'career-guidance': `${baseRoute}/career-guidance`,
+        // 'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
-        'excel-assessment': `${baseRoute}/excel-assessment`,
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
+        'electrical': `${baseRoute}/electrical`,
+        'civil': `${baseRoute}/civil`,
       };
       return routeMap[featureId] || null;
     }
