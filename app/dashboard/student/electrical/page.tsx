@@ -36,9 +36,7 @@ export default function ElectricalPracticePage() {
 
   // Auto-save to localStorage on scene changes
   const handleSceneChange = useCallback((elements: any, appState: any, files: any) => {
-    setScene({ elements, appState, files })
-    
-    // Auto-save to localStorage (debounced via state change)
+    // Auto-save to localStorage
     try {
       const saveData = {
         elements,
