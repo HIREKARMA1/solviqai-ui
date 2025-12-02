@@ -765,132 +765,75 @@ class ApiClient {
     return response.data;
   }
 
-  // Accountant Assessment API
-  excelAssessment = {
-    // Create a new assessment
-    createAssessment: async (data: {
-      title: string;
-      description?: string;
-      difficulty_level?: string;
-      num_questions?: number;
-    }): Promise<any> => {
-      const response = await this.client.post("/excel-assessment/assessments", data);
-      return response.data;
-    },
-
-    // Get all assessments for current student
-    getAssessments: async (status?: string): Promise<any> => {
-      const params = status ? { status } : {};
-      const response = await this.client.get("/excel-assessment/assessments", { params });
-      return response.data;
-    },
-
-    // Get specific assessment with questions
-    getAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/assessments/${assessmentId}`);
-      return response.data;
-    },
-
-    // Start an assessment
-    startAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.post(`/excel-assessment/assessments/${assessmentId}/start`);
-      return response.data;
-    },
-
-    // Submit Excel file for a question
-    submitExcelFile: async (
-      assessmentId: string,
-      questionId: string,
-      file: File
-    ): Promise<any> => {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await this.client.post(
-        `/excel-assessment/assessments/${assessmentId}/submit/${questionId}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      return response.data;
-    },
-
-    // Submit spreadsheet data as JSON
-    submitSpreadsheetData: async (
-      assessmentId: string,
-      questionId: string,
-      data: {
-        cells: any[][];
-        formulas: string[];
-        summary: string;
-      }
-    ): Promise<any> => {
-      const response = await this.client.post(
-        `/excel-assessment/assessments/${assessmentId}/submit-data/${questionId}`,
-        data
-      );
-      return response.data;
-    },
-
-    // Complete assessment
-    completeAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.post(`/excel-assessment/assessments/${assessmentId}/complete`);
-      return response.data;
-    },
-
-    // Get assessment report
-    getAssessmentReport: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/assessments/${assessmentId}/report`);
-      return response.data;
-    },
-
-    // Get specific submission
-    getSubmission: async (submissionId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/submissions/${submissionId}`);
-      return response.data;
-    },
-
-    // Get all questions (for admin/practice)
-    getQuestions: async (params?: {
-      difficulty?: string;
-      question_type?: string;
-      skip?: number;
-      limit?: number;
-    }): Promise<any> => {
-      const response = await this.client.get("/excel-assessment/questions", { params });
-      return response.data;
-    },
-  };
-
-  // Electrical endpoints
-  async generateElectricalQuestion(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+  // Admin Analytics API
+  async getAdminAnalytics(
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.get("/admin/analytics", { params });
     return response.data;
   }
 
-  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
-      timeout: 180000,
-    });
+  async exportAnalytics(
+    format: string = 'json',
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = { format };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.post("/admin/analytics/export", null, { params });
     return response.data;
   }
 
-  // Civil Engineering endpoints
-  async generateCivilProblem(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
+  // Admin - Student Assessment Reports
+  async getStudentAssessmentsAdmin(studentId: string): Promise<any> {
+    const response = await this.client.get(`/admin/students/${studentId}/assessments`);
     return response.data;
   }
 
-  async evaluateCivilQuantities(payload: {
-    problem: Record<string, any>;  // Complete problem object for AI evaluation
-    student_answers: Record<string, number>;
-  }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
-      timeout: 60000,  // AI evaluation may take longer
-    });
+  async getStudentAssessmentReportAdmin(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/admin/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // College - Student Assessment Reports
+  async getStudentAssessmentsCollege(studentId: string): Promise<any> {
+    const response = await this.client.get(`/college/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportCollege(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/college/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
     return response.data;
   }
 

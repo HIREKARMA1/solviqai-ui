@@ -310,13 +310,13 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
                 <nav className="space-y-2">
                   {features.map((item) => {
                     // Determine active state
-                    let isActive = false;
+                    let isActive: boolean = false;
                     if (isDashboardContext) {
                       // In dashboard, check if current path matches the feature route
                       if (user) {
                         const route = getFeatureRoute(item.id);
                         if (route) {
-                          isActive = pathname === route || pathname?.startsWith(route + '/');
+                          isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                           if (item.id === 'dashboard') {
                             isActive = pathname === route || pathname === `/dashboard/${user.user_type}`;
                           }

@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { CircuitComponentsLibrary } from '@/components/electrical/CircuitComponentsLibrary'
-import { circuitComponents } from '@/lib/electrical/components'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
@@ -38,6 +36,9 @@ export default function ElectricalPracticePage() {
 
   // Auto-save to localStorage on scene changes
   const handleSceneChange = useCallback((elements: any, appState: any, files: any) => {
+    setScene({ elements, appState, files })
+    
+    // Auto-save to localStorage (debounced via state change)
     try {
       const saveData = {
         elements,
@@ -62,14 +63,14 @@ export default function ElectricalPracticePage() {
       const res = await apiClient.generateElectricalQuestion()
       const newQuestion = res?.question || "Design a full-wave bridge rectifier with labeled components and proper input/output connections."
       setQuestion(newQuestion)
-
+      
       // Clear localStorage when generating new question
       try {
         localStorage.removeItem(storageKey)
       } catch (error) {
         console.error('Failed to clear auto-save:', error)
       }
-
+      
       toast.success('Question generated')
     } catch (e) {
       console.error(e)
@@ -85,22 +86,22 @@ export default function ElectricalPracticePage() {
         toast.error('Canvas not ready')
         return
       }
-
+      
       const elements = excalidrawAPI.getSceneElements()
-
+      
       // Validate that canvas is not empty
       if (!elements || elements.length === 0) {
         toast.error('Please draw your circuit before submitting')
         return
       }
-
+      
       // Filter out deleted elements and check if there are any valid elements
       const validElements = elements.filter((el: any) => !el.isDeleted)
       if (validElements.length === 0) {
         toast.error('Your canvas is empty. Please draw your circuit before submitting')
         return
       }
-
+      
       setBusy(true)
       setEvaluation(null)
       setRoundSubmitError(null)
@@ -139,7 +140,7 @@ export default function ElectricalPracticePage() {
           )
           setRoundSubmitted(true)
           toast.success('Assessment round recorded successfully!')
-
+          
           // Clear auto-save after successful submission
           try {
             localStorage.removeItem(storageKey)
@@ -168,12 +169,12 @@ export default function ElectricalPracticePage() {
       if (saved) {
         const data = JSON.parse(saved)
         const age = Date.now() - (data.timestamp || 0)
-
+        
         // Restore if saved within last 24 hours
         if (age < 24 * 60 * 60 * 1000) {
           setQuestion(data.question || "")
           setIsRestored(true)
-
+          
           // Restore canvas after API is ready
           if (excalidrawAPI && data.elements) {
             setTimeout(() => {
@@ -193,7 +194,7 @@ export default function ElectricalPracticePage() {
     } catch (error) {
       console.error('Failed to restore saved work:', error)
     }
-
+    
     // Only generate new question if no saved work was restored
     if (!isRestored) {
       handleGenerate()
@@ -208,7 +209,7 @@ export default function ElectricalPracticePage() {
       if (saved) {
         const data = JSON.parse(saved)
         const age = Date.now() - (data.timestamp || 0)
-
+        
         if (age < 24 * 60 * 60 * 1000 && data.question) {
           setQuestion(data.question)
           setIsRestored(true)
@@ -280,12 +281,7 @@ export default function ElectricalPracticePage() {
             <CardDescription>LLM-generated circuit design prompt</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-start gap-3">
-              <div className="flex-1 p-3 border rounded bg-muted/30 text-sm min-h-[60px] whitespace-pre-wrap">{question || '...'}</div>
-              <Button onClick={handleGenerate} disabled={busy}>
-                {busy ? <Loader size="sm" /> : 'Regenerate'}
-              </Button>
-            </div>
+            <div className="p-3 border rounded bg-muted/30 text-sm min-h-[60px] whitespace-pre-wrap">{question || '...'}</div>
           </CardContent>
         </Card>
 
@@ -295,38 +291,7 @@ export default function ElectricalPracticePage() {
             <CardDescription>Use shapes, connectors, and labels to represent components and wiring</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
-              <div className="w-48 flex-shrink-0">
-                <CircuitComponentsLibrary />
-              </div>
-              <div
-                className="flex-1 h-[600px] border rounded overflow-hidden"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  const componentName = e.dataTransfer.getData('application/circuit-component')
-                  const component = circuitComponents[componentName]
-                  if (component && excalidrawAPI) {
-                    // Get drop position relative to canvas
-                    const bounds = e.currentTarget.getBoundingClientRect()
-                    const x = e.clientX - bounds.left
-                    const y = e.clientY - bounds.top
-
-                    // Add component to canvas at drop position
-                    const elements = JSON.parse(JSON.stringify(component.elements))
-                    elements.forEach((el: any) => {
-                      el.x += x
-                      el.y += y
-                    })
-
-                    // Get current elements and append new ones
-                    const currentElements = excalidrawAPI.getSceneElements()
-                    excalidrawAPI.updateScene({
-                      elements: [...currentElements, ...elements]
-                    })
-                  }
-                }}
-              >
+            <div className="h-[600px] border rounded overflow-hidden">
                 {/* @ts-ignore */}
                 <Excalidraw
                   excalidrawAPI={onExcalidrawAPIMount}
@@ -334,11 +299,10 @@ export default function ElectricalPracticePage() {
                   gridModeEnabled={true}
                   theme="light"
                 />
-              </div>
             </div>
             <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 onClick={handleClearCanvas}
                 disabled={busy}
               >
