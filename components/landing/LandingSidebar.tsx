@@ -194,9 +194,10 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
         'dashboard': baseRoute,
-        // 'career-guidance': `${baseRoute}/career-guidance`,
+        'career-guidance': `${baseRoute}/career-guidance`,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
+        'excel-assessment': `${baseRoute}/excel-assessment`,
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
