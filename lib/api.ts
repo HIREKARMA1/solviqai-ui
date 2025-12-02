@@ -865,6 +865,111 @@ class ApiClient {
     });
     return response.data;
   }
+
+  // Excel Assessment endpoints
+  excelAssessment = {
+    // Create a new Excel assessment with AI-generated questions
+    createAssessment: async (data: {
+      title: string;
+      description?: string;
+      difficulty_level?: string;
+      num_questions?: number;
+    }): Promise<any> => {
+      const response = await this.client.post('/excel-assessments/assessments', data);
+      return response.data;
+    },
+
+    // Start an Excel assessment
+    startAssessment: async (assessmentId: string): Promise<any> => {
+      const response = await this.client.post(`/excel-assessments/assessments/${assessmentId}/start`);
+      return response.data;
+    },
+
+    // Get all assessments for current student
+    getAssessments: async (status?: string): Promise<any> => {
+      const params = status ? { status } : {};
+      const response = await this.client.get('/excel-assessments/assessments', { params });
+      return response.data;
+    },
+
+    // Get a specific assessment with questions
+    getAssessment: async (assessmentId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/assessments/${assessmentId}`);
+      return response.data;
+    },
+
+    // Submit an Excel file for a question
+    submitExcelFile: async (
+      assessmentId: string,
+      questionId: string,
+      file: File
+    ): Promise<any> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await this.client.post(
+        `/excel-assessments/assessments/${assessmentId}/submit/${questionId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 120000, // 2 minutes for AI evaluation
+        }
+      );
+      return response.data;
+    },
+
+    // Submit spreadsheet data as JSON for a question
+    submitSpreadsheetData: async (
+      assessmentId: string,
+      questionId: string,
+      data: any
+    ): Promise<any> => {
+      const response = await this.client.post(
+        `/excel-assessments/assessments/${assessmentId}/submit-data/${questionId}`,
+        data,
+        {
+          timeout: 120000, // 2 minutes for AI evaluation
+        }
+      );
+      return response.data;
+    },
+
+    // Complete an assessment
+    completeAssessment: async (assessmentId: string): Promise<any> => {
+      const response = await this.client.post(`/excel-assessments/assessments/${assessmentId}/complete`);
+      return response.data;
+    },
+
+    // Get assessment report
+    getAssessmentReport: async (assessmentId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/assessments/${assessmentId}/report`);
+      return response.data;
+    },
+
+    // Get all questions
+    getQuestions: async (params?: {
+      difficulty?: string;
+      question_type?: string;
+      skip?: number;
+      limit?: number;
+    }): Promise<any> => {
+      const response = await this.client.get('/excel-assessments/questions', { params });
+      return response.data;
+    },
+
+    // Get a specific question
+    getQuestion: async (questionId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/questions/${questionId}`);
+      return response.data;
+    },
+
+    // Get a specific submission
+    getSubmission: async (submissionId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/submissions/${submissionId}`);
+      return response.data;
+    },
+  };
 }
 
 export const apiClient = new ApiClient();
