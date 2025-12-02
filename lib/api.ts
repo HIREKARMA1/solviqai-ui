@@ -765,163 +765,211 @@ class ApiClient {
     return response.data;
   }
 
-  // Accountant Assessment API
+  // Admin Analytics API
+  async getAdminAnalytics(
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.get("/admin/analytics", { params });
+    return response.data;
+  }
+
+  async exportAnalytics(
+    format: string = 'json',
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = { format };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+    
+    const response = await this.client.post("/admin/analytics/export", null, { params });
+    return response.data;
+  }
+
+  // Admin - Student Assessment Reports
+  async getStudentAssessmentsAdmin(studentId: string): Promise<any> {
+    const response = await this.client.get(`/admin/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportAdmin(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/admin/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // College - Student Assessment Reports
+  async getStudentAssessmentsCollege(studentId: string): Promise<any> {
+    const response = await this.client.get(`/college/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportCollege(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+    
+    const response = await this.client.get(
+      `/college/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // Electrical endpoints
+  async generateElectricalQuestion(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+    return response.data;
+  }
+
+  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
+      timeout: 180000,
+    });
+    return response.data;
+  }
+
+  // Civil Engineering endpoints
+  async generateCivilProblem(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
+    return response.data;
+  }
+
+  async evaluateCivilQuantities(payload: {
+    problem: Record<string, any>;  // Complete problem object for AI evaluation
+    student_answers: Record<string, number>;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
+      timeout: 60000,  // AI evaluation may take longer
+    });
+    return response.data;
+  }
+
+  // Excel Assessment endpoints
   excelAssessment = {
-    // Create a new assessment
+    // Create a new Excel assessment with AI-generated questions
     createAssessment: async (data: {
       title: string;
       description?: string;
       difficulty_level?: string;
       num_questions?: number;
     }): Promise<any> => {
-      const response = await this.client.post("/excel-assessment/assessments", data);
+      const response = await this.client.post('/excel-assessments/assessments', data);
+      return response.data;
+    },
+
+    // Start an Excel assessment
+    startAssessment: async (assessmentId: string): Promise<any> => {
+      const response = await this.client.post(`/excel-assessments/assessments/${assessmentId}/start`);
       return response.data;
     },
 
     // Get all assessments for current student
     getAssessments: async (status?: string): Promise<any> => {
       const params = status ? { status } : {};
-      const response = await this.client.get("/excel-assessment/assessments", { params });
+      const response = await this.client.get('/excel-assessments/assessments', { params });
       return response.data;
     },
 
-    // Get specific assessment with questions
+    // Get a specific assessment with questions
     getAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/assessments/${assessmentId}`);
+      const response = await this.client.get(`/excel-assessments/assessments/${assessmentId}`);
       return response.data;
     },
 
-    // Start an assessment
-    startAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.post(`/excel-assessment/assessments/${assessmentId}/start`);
-      return response.data;
-    },
-
-    // Submit Excel file for a question
+    // Submit an Excel file for a question
     submitExcelFile: async (
       assessmentId: string,
       questionId: string,
       file: File
     ): Promise<any> => {
       const formData = new FormData();
-      formData.append("file", file);
-
+      formData.append('file', file);
       const response = await this.client.post(
-        `/excel-assessment/assessments/${assessmentId}/submit/${questionId}`,
+        `/excel-assessments/assessments/${assessmentId}/submit/${questionId}`,
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            'Content-Type': 'multipart/form-data',
           },
+          timeout: 120000, // 2 minutes for AI evaluation
         }
       );
       return response.data;
     },
 
-    // Submit spreadsheet data as JSON
+    // Submit spreadsheet data as JSON for a question
     submitSpreadsheetData: async (
       assessmentId: string,
       questionId: string,
-      data: {
-        cells: any[][];
-        formulas: string[];
-        summary: string;
-      }
+      data: any
     ): Promise<any> => {
       const response = await this.client.post(
-        `/excel-assessment/assessments/${assessmentId}/submit-data/${questionId}`,
-        data
+        `/excel-assessments/assessments/${assessmentId}/submit-data/${questionId}`,
+        data,
+        {
+          timeout: 120000, // 2 minutes for AI evaluation
+        }
       );
       return response.data;
     },
 
-    // Complete assessment
+    // Complete an assessment
     completeAssessment: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.post(`/excel-assessment/assessments/${assessmentId}/complete`);
+      const response = await this.client.post(`/excel-assessments/assessments/${assessmentId}/complete`);
       return response.data;
     },
 
     // Get assessment report
     getAssessmentReport: async (assessmentId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/assessments/${assessmentId}/report`);
+      const response = await this.client.get(`/excel-assessments/assessments/${assessmentId}/report`);
       return response.data;
     },
 
-    // Get specific submission
-    getSubmission: async (submissionId: string): Promise<any> => {
-      const response = await this.client.get(`/excel-assessment/submissions/${submissionId}`);
-      return response.data;
-    },
-
-    // Get all questions (for admin/practice)
+    // Get all questions
     getQuestions: async (params?: {
       difficulty?: string;
       question_type?: string;
       skip?: number;
       limit?: number;
     }): Promise<any> => {
-      const response = await this.client.get("/excel-assessment/questions", { params });
+      const response = await this.client.get('/excel-assessments/questions', { params });
+      return response.data;
+    },
+
+    // Get a specific question
+    getQuestion: async (questionId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/questions/${questionId}`);
+      return response.data;
+    },
+
+    // Get a specific submission
+    getSubmission: async (submissionId: string): Promise<any> => {
+      const response = await this.client.get(`/excel-assessments/submissions/${submissionId}`);
       return response.data;
     },
   };
-
-  // Electrical endpoints
-  async generateElectricalQuestion(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
-    return response.data;
-  }
-
-  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
-      timeout: 180000,
-    });
-    return response.data;
-  }
-
-  // Civil Engineering endpoints
-  async generateCivilProblem(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
-    return response.data;
-  }
-
-  async evaluateCivilQuantities(payload: {
-    problem: Record<string, any>;  // Complete problem object for AI evaluation
-    student_answers: Record<string, number>;
-  }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
-      timeout: 60000,  // AI evaluation may take longer
-    });
-    return response.data;
-  }
-
-  // Electrical endpoints
-  async generateElectricalQuestion(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
-    return response.data;
-  }
-
-  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
-      timeout: 180000,
-    });
-    return response.data;
-  }
-
-  // Civil Engineering endpoints
-  async generateCivilProblem(): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
-    return response.data;
-  }
-
-  async evaluateCivilQuantities(payload: {
-    problem: Record<string, any>;  // Complete problem object for AI evaluation
-    student_answers: Record<string, number>;
-  }): Promise<any> {
-    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
-      timeout: 60000,  // AI evaluation may take longer
-    });
-    return response.data;
-  }
 }
 
 export const apiClient = new ApiClient();
