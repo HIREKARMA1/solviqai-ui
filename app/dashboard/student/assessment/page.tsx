@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -161,11 +161,11 @@ export default function AssessmentPage() {
     try {
       setLoading(true);
       const data = await apiClient.getAssessmentStatus(assessmentId!);
-      console.log("ðŸ“Š Assessment data received:", data);
-      console.log("ðŸ“Š Rounds data:", data.rounds);
+      console.log("📊 Assessment data received:", data);
+      console.log("📊 Rounds data:", data.rounds);
       setAssessment(data);
 
-      // âœ… Auto-complete assessment if all rounds are done (triggers playlist generation)
+      // ✅ Auto-complete assessment if all rounds are done (triggers playlist generation)
       if (data.rounds && data.rounds.length > 0) {
         const allRoundsCompleted = data.rounds.every(
           (round: any) => String(round.status).toLowerCase() === "completed",
@@ -175,7 +175,7 @@ export default function AssessmentPage() {
 
         if (allRoundsCompleted && assessmentNotCompleted) {
           console.log(
-            "ðŸŽ‰ All rounds completed! Finalizing assessment and generating playlist...",
+            "🎉 All rounds completed! Finalizing assessment and generating playlist...",
           );
           try {
             await apiClient.completeAssessment(assessmentId!);
@@ -215,7 +215,7 @@ export default function AssessmentPage() {
     }
   };
 
-  const handleStartRound = async (round: any) => {
+const handleStartRound = async (round: any) => {
     await requestFullscreen();
     const roundType = String(round.round_type || "").toLowerCase();
     if (roundType === "electrical_circuit") {
@@ -243,7 +243,7 @@ export default function AssessmentPage() {
     round: any,
   ): "completed" | "in_progress" | "not_started" => {
     console.log(
-      "ðŸ” Checking round status:",
+      "🔍 Checking round status:",
       round.round_type,
       "status:",
       round.status,
@@ -253,6 +253,7 @@ export default function AssessmentPage() {
     if (status === "in_progress") return "in_progress";
     return "not_started";
   };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -276,7 +277,7 @@ export default function AssessmentPage() {
     }
   };
 
-  // Light hover/tint background per round type to match landing theme
+// Light hover/tint background per round type to match landing theme
   const roundHoverBg: Record<string, string> = {
     aptitude:
       "from-blue-50 to-blue-100/60 dark:from-blue-900/20 dark:to-blue-900/10",
@@ -297,6 +298,7 @@ export default function AssessmentPage() {
     hr_interview:
       "from-pink-50 to-pink-100/60 dark:from-pink-900/20 dark:to-pink-900/10",
   };
+
 
   if (loading) {
     return (
@@ -493,7 +495,7 @@ export default function AssessmentPage() {
                   previousRoundCompleted ||
                   index === 0;
 
-                // Type guard to check if status is 'completed'
+// Type guard to check if status is 'completed'
                 const isCompleted = status === "completed";
                 const isDisabled = !isRoundEnabled && !isCompleted;
 
@@ -567,6 +569,7 @@ export default function AssessmentPage() {
             </div>
           </CardContent>
         </Card>
+
 
         {/* Actions */}
         <div className="flex justify-between">
