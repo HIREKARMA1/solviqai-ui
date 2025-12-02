@@ -85,19 +85,19 @@ export const studentSidebarFeatures: SidebarItem[] = [
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
     onClick: undefined,
-  },
-  {
-    id: 'electrical',
-    icon: <Zap className="w-5 h-5" />,
-    label: 'Electrical',
-    onClick: undefined,
-  },
-  {
-    id: 'civil',
-    icon: <Ruler className="w-5 h-5" />,
-    label: 'Civil Engineering',
-    onClick: undefined,
-  },
+  }
+  // {
+  //   id: 'electrical',
+  //   icon: <Zap className="w-5 h-5" />,
+  //   label: 'Electrical',
+  //   onClick: undefined,
+  // },
+  // {
+  //   id: 'civil',
+  //   icon: <Ruler className="w-5 h-5" />,
+  //   label: 'Civil Engineering',
+  //   onClick: undefined,
+  // },
 ];
 
 // College sidebar features
