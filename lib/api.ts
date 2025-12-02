@@ -888,8 +888,19 @@ class ApiClient {
       return response.data;
     },
 
+    // Backwards-compatible alias used by some components
+    getAssessment: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}`);
+      return response.data;
+    },
+
     getAssessmentReport: async (id: string): Promise<any> => {
       const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}/report`);
+      return response.data;
+    },
+
+    startAssessment: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(`/excel-assessment/assessments/${id}/start`, {});
       return response.data;
     },
   };
