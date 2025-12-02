@@ -13,6 +13,8 @@ import {
   User,
   Building2,
   Sparkles,
+  BookOpen,
+  Ruler,
   FileSpreadsheet
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
