@@ -15,6 +15,7 @@ import {
   Sparkles,
   BookOpen,
   Ruler,
+  FileSpreadsheet ,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -190,18 +191,46 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    const routeMap: Record<string, string> = {
-      'dashboard': baseRoute,
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'practice': `${baseRoute}/practice`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-      'analytics': `${baseRoute}/analytics`,
-      'electrical': `${baseRoute}/electrical`,
-      'civil': `${baseRoute}/civil`,
-    };
-    return routeMap[featureId] || null;
+
+    // Student routes
+    if (user.user_type === 'student') {
+      const routeMap: Record<string, string> = {
+        dashboard: baseRoute,
+        'career-guidance': `${baseRoute}/career-guidance`,
+        resume: `${baseRoute}/resume`,
+        assessment: `${baseRoute}/assessment`,
+        'excel-assessment': `${baseRoute}/excel-assessment`,
+        analytics: `${baseRoute}/analytics`,
+        electrical: `${baseRoute}/electrical`,
+        civil: `${baseRoute}/civil`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    // College routes
+    if (user.user_type === 'college') {
+      const routeMap: Record<string, string> = {
+        dashboard: `/dashboard/college`,
+        students: `/dashboard/college/students`,
+        analytics: `/dashboard/college/analytics`,
+        profile: `/dashboard/college/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    // Admin routes
+    if (user.user_type === 'admin') {
+      const routeMap: Record<string, string> = {
+        dashboard: `/dashboard/admin`,
+        colleges: `/dashboard/admin/colleges`,
+        students: `/dashboard/admin/students`,
+        analytics: `/dashboard/admin/analytics`,
+        profile: `/dashboard/admin/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    return null;
   };
 
   // Check if we're in dashboard context
