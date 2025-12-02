@@ -13,6 +13,7 @@ import {
   User,
   Building2,
   Sparkles,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
