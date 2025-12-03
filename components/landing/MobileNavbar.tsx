@@ -47,6 +47,8 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
+        'electrical': `${baseRoute}/electrical`,
+        'civil': `${baseRoute}/civil`,
       };
       return routeMap[featureId] || null;
     }
@@ -120,13 +122,13 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
         <div className="flex items-center justify-start gap-3 px-4 py-3">
           {features.map((item, index) => {
             // Determine active state based on context
-            let isActive = false;
+            let isActive: boolean = false;
             if (isDashboardContext) {
               // In dashboard, check if current path matches the feature route
               const route = getFeatureRoute(item.id);
               if (route) {
                 // For exact matches or nested routes
-                isActive = pathname === route || pathname?.startsWith(route + '/');
+                isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                 // Special case: dashboard route should match exactly or be the base dashboard
                 if (item.id === 'dashboard') {
                   isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;

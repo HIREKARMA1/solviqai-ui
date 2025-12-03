@@ -83,25 +83,20 @@ interface AssessmentResponse {
 }
 
 interface GroupDiscussionRoundProps {
-    roundId?: string;
+    roundId: string;
     assessmentId?: string;  // Optional: will fallback to URL param
-    onComplete?: (responses: AssessmentResponse[]) => void;
-    mode?: 'assessment' | 'practice';
-    practiceJoinPayload?: Record<string, any>;
+    onComplete: (responses: AssessmentResponse[]) => void;
 }
 
 export function GroupDiscussionRound({ 
-    roundId: initialRoundId,
+    roundId,
     assessmentId: propAssessmentId,
-    onComplete,
-    mode = 'assessment',
-    practiceJoinPayload
+    onComplete 
 }: GroupDiscussionRoundProps) {
     const router = useRouter();
     
     // State for managing the discussion flow
     const [loading, setLoading] = useState(false);
-    const [roundId, setRoundId] = useState(initialRoundId || '');
     const [topic, setTopic] = useState<Topic | null>(null);
     const [currentAIResponse, setCurrentAIResponse] = useState<AIResponse | null>(null);
     const [gdResponses, setGDResponses] = useState<GDResponse[]>([]);
@@ -117,7 +112,6 @@ export function GroupDiscussionRound({
     const [discussionComplete, setDiscussionComplete] = useState(false);
     const [finalEvaluation, setFinalEvaluation] = useState<any | null>(null);
     const [micTested, setMicTested] = useState(false);
-    const [gdCompleted, setGdCompleted] = useState(false); // Track if GD was properly completed
     const [audioLevel, setAudioLevel] = useState(0);
     const [confidenceScore, setConfidenceScore] = useState(100);
     const [speechRate, setSpeechRate] = useState(0);
@@ -172,13 +166,6 @@ export function GroupDiscussionRound({
         }
     }, []);
 
-    // Sync roundId from props when provided
-    useEffect(() => {
-        if (initialRoundId) {
-            setRoundId(initialRoundId);
-        }
-    }, [initialRoundId]);
-
     // Fetch topic when entering topic step
     useEffect(() => {
         if (currentStep === 'topic' && !topic) {
@@ -198,33 +185,6 @@ export function GroupDiscussionRound({
         inFlightRef.current = true;
         setLoading(true);
         try {
-            if (mode === 'practice') {
-                const response = await apiClient.client.post('/practice/gd/join', practiceJoinPayload || { mode: 'practice' });
-                const data = response.data;
-
-                if (!data || !data.room_id) {
-                    throw new Error('Failed to create practice GD room');
-                }
-
-                if (!roundId) {
-                    setRoundId(data.room_id);
-                }
-
-                const topicData = data.topic || {};
-                const processedTopicData = {
-                    title: topicData.title || "The Impact of Data Privacy Laws on Data Analytics",
-                    content: topicData.background || topicData.content ||
-                        "Discuss how evolving privacy regulations are reshaping data analytics strategies.",
-                    followUpQuestions: topicData.key_points || topicData.followUpQuestions || topicData.expected_perspectives || [],
-                    instructions: topicData.instructions || "Share your thoughts on this topic. Speak for 1-2 minutes per turn."
-                };
-
-                setTopic(processedTopicData);
-                toast.success('Practice discussion topic ready!');
-                setFetchAttempt(0);
-                return;
-            }
-
             const timestamp = new Date().getTime();
             const response = await Promise.race([
                 apiClient.client.post(`/assessments/rounds/${roundId}/gd/topic?t=${timestamp}&refresh=false`),
@@ -304,55 +264,7 @@ export function GroupDiscussionRound({
             setLoading(true);
             toast.loading('Submitting your discussion...', { id: 'submitting' });
             
-            if (mode === 'practice') {
-                // Only evaluate if GD was completed (not exited early)
-                if (!gdCompleted) {
-                    toast.error('Please complete the discussion to get evaluation.');
-                    setLoading(false);
-                    return;
-                }
-                
-                toast.loading('Evaluating your discussion...', { id: 'evaluating' });
-                try {
-                    const evalResponse = await apiClient.client.post(`/practice/gd/evaluate`, {
-                        room_id: roundId,
-                        conversation: gdTurns
-                    });
-
-                    const rawEval = evalResponse.data || {};
-                    const criteriaScores = rawEval.feedback?.criteria_scores || {};
-
-                    const normalizedEvaluation = {
-                        score: rawEval.score ?? rawEval.overall_score ?? 0,
-                        feedback: {
-                            criteria_scores: {
-                                communication: criteriaScores.communication ?? rawEval.communication ?? 0,
-                                topic_understanding: criteriaScores.topic_understanding ?? rawEval.understanding ?? 0,
-                                interaction: criteriaScores.interaction ?? rawEval.interaction ?? 0,
-                            },
-                            strengths: rawEval.feedback?.strengths ?? rawEval.strengths ?? [],
-                            improvements: rawEval.feedback?.improvements ?? rawEval.improvements ?? rawEval.areasOfImprovement ?? [],
-                        },
-                        strengths: rawEval.feedback?.strengths ?? rawEval.strengths ?? [],
-                        areasOfImprovement: rawEval.feedback?.improvements ?? rawEval.improvements ?? rawEval.areasOfImprovement ?? [],
-                    };
-
-                    setFinalEvaluation(normalizedEvaluation);
-                    setCurrentStep('evaluation');
-                    toast.dismiss('submitting');
-                    toast.dismiss('evaluating');
-                    toast.success('Practice discussion evaluated!', { duration: 3000 });
-                } catch (evalError) {
-                    console.error('Practice evaluation failed:', evalError);
-                    toast.dismiss('evaluating');
-                    toast.error('Evaluation failed. Please try again.', { id: 'evaluating' });
-                } finally {
-                    setLoading(false);
-                }
-                return;
-            }
-            
-            // Assessment mode
+            // Get assessment ID from prop or URL
             const urlParams = new URLSearchParams(window.location.search);
             const assessmentId = propAssessmentId || urlParams.get('assessment_id') || urlParams.get('id');
             
@@ -361,6 +273,7 @@ export function GroupDiscussionRound({
                 throw new Error('Assessment ID not found in props or URL');
             }
             
+            // STEP 1: Save full conversation transcript via API
             const submitPayload = [{
                 response_text: JSON.stringify({
                     turns: gdTurns,
@@ -386,8 +299,10 @@ export function GroupDiscussionRound({
                 console.log('GD submit result', submitRes);
             } catch (saveErr) {
                 console.warn('GD transcript save failed, proceeding to evaluation anyway:', saveErr);
+                // Don't rethrow; evaluation endpoint can work from provided conversation
             }
             
+            // STEP 2: Call evaluate endpoint to complete the round and get score
             try {
                 toast.loading('Evaluating your discussion...', { id: 'evaluating' });
                 const evalResponse = await apiClient.client.post(`/assessments/rounds/${roundId}/evaluate-discussion`, {
@@ -404,6 +319,7 @@ export function GroupDiscussionRound({
                 toast.error('Evaluation failed. Please contact support.', { id: 'evaluating' });
             }
             
+            // Redirect to assessment page and force a fresh fetch of statuses
             setTimeout(() => {
                 window.location.href = `/dashboard/student/assessment?id=${assessmentId}&ts=${Date.now()}`;
             }, 1500);
@@ -769,7 +685,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    if (mode !== 'practice' && !roundId) {
+    if (!roundId) {
         return (
             <Card className="p-6">
                 <div className="text-center">
@@ -850,7 +766,7 @@ export function GroupDiscussionRound({
         if (discussionComplete) {
             return;
         }
-
+        
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
             return;
@@ -861,23 +777,15 @@ export function GroupDiscussionRound({
             
             let responseData: any;
             try {
-                const requestPayload: any = {
-                    text: trimmedText,
-                    personas: personas.map(p => p.name),
-                    context: {
-                        topic,
-                        previousTurns: gdTurns
-                    }
-                };
-
-                if (mode === 'practice') {
-                    requestPayload.room_id = roundId;
-                }
-
                 const response = await Promise.race([
-                    mode === 'practice'
-                        ? apiClient.client.post(`/practice/gd/response`, requestPayload)
-                        : apiClient.client.post(`/assessments/rounds/${roundId}/gd/response`, requestPayload),
+                    apiClient.client.post(`/assessments/rounds/${roundId}/gd/response`, { 
+                        text: trimmedText,
+                        personas: personas.map(p => p.name),
+                        context: {
+                            topic,
+                            previousTurns: gdTurns
+                        }
+                    }),
                     new Promise((_, reject) => 
                         setTimeout(() => reject(new Error('Timeout')), 15000)
                     )
@@ -992,9 +900,6 @@ export function GroupDiscussionRound({
 
             if ((gdTurns.length + 1) >= MAX_RESPONSES) {
                 setDiscussionComplete(true);
-                toast.success('Discussion complete! Click Submit for evaluation.');
-            } else {
-                toast.success(`Round ${gdTurns.length + 1} complete! Continue or submit.`, { duration: 6000 });
             }
 
             setTranscript('');
@@ -1328,7 +1233,6 @@ export function GroupDiscussionRound({
                                     <Button
                                         onClick={() => {
                                             setDiscussionComplete(true);
-                                            toast.success('Ready for evaluation!');
                                         }}
                                         disabled={loading}
                                         size="sm"
@@ -1615,7 +1519,6 @@ export function GroupDiscussionRound({
                                                 </p>
                                                 <Button
                                                     onClick={() => {
-                                                        setGdCompleted(true); // Mark as completed before evaluation
                                                         setEvaluationInitiated(true);
                                                         getFinalEvaluation();
                                                     }}
@@ -1644,18 +1547,6 @@ export function GroupDiscussionRound({
 
             {currentStep === 'evaluation' && finalEvaluation && (
                 <Card className="p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900">
-                    {(() => {
-                        const criteriaScores = finalEvaluation?.feedback?.criteria_scores ?? {
-                            communication: finalEvaluation?.communication ?? 0,
-                            topic_understanding: finalEvaluation?.understanding ?? 0,
-                            interaction: finalEvaluation?.interaction ?? 0,
-                        };
-
-                        const strengths = finalEvaluation?.strengths ?? finalEvaluation?.feedback?.strengths ?? [];
-                        const improvements = finalEvaluation?.areasOfImprovement ?? finalEvaluation?.feedback?.improvements ?? [];
-
-                        return (
-                            <>
                     <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 p-6 mb-8 rounded-2xl border-2 border-green-400 flex items-center shadow-lg">
                         <div className="bg-green-500 p-4 rounded-full mr-4 shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1699,9 +1590,9 @@ export function GroupDiscussionRound({
                         <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Performance Breakdown</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
-                                { name: 'Communication', score: criteriaScores.communication, icon: '💬' },
-                                { name: 'Topic Understanding', score: criteriaScores.topic_understanding, icon: '🧠' },
-                                { name: 'Interaction', score: criteriaScores.interaction, icon: '🤝' }
+                                { name: 'Communication', score: finalEvaluation.feedback.criteria_scores.communication, icon: '💬' },
+                                { name: 'Topic Understanding', score: finalEvaluation.feedback.criteria_scores.topic_understanding, icon: '🧠' },
+                                { name: 'Interaction', score: finalEvaluation.feedback.criteria_scores.interaction, icon: '🤝' }
                             ].map((criteria) => (
                                 <div key={criteria.name} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border-2 border-blue-200 dark:border-blue-800 transform hover:scale-105 transition-all">
                                     <div className="text-4xl mb-3">{criteria.icon}</div>
@@ -1722,7 +1613,7 @@ export function GroupDiscussionRound({
                             Key Strengths
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {strengths.map((strength: string, index: number) => (
+                            {finalEvaluation.strengths.map((strength: string, index: number) => (
                                 <div key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-md hover:shadow-lg transition-all">
                                     <div className="flex items-start gap-3">
                                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shadow-md">✓</span>
@@ -1740,7 +1631,7 @@ export function GroupDiscussionRound({
                             Areas for Improvement
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {improvements.map((area: string, index: number) => (
+                            {finalEvaluation.areasOfImprovement.map((area: string, index: number) => (
                                 <div key={index} className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 p-5 rounded-xl border-2 border-orange-300 dark:border-orange-700 shadow-md hover:shadow-lg transition-all">
                                     <div className="flex items-start gap-3">
                                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold shadow-md">!</span>
@@ -1756,11 +1647,8 @@ export function GroupDiscussionRound({
                         size="lg"
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-6 text-lg shadow-xl transform hover:scale-[1.02] transition-all"
                     >
-                        🏁 Return to Dashboard
+                        🏁 Complete & Return to Dashboard
                     </Button>
-                            </>
-                        );
-                    })()}
                 </Card>
             )}
         </div>

@@ -14,6 +14,8 @@ import {
   Building2,
   Sparkles,
   BookOpen,
+  Ruler,
+  FileSpreadsheet ,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -62,9 +64,9 @@ export const studentSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
+    id: 'excel-assessment',
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+    label: 'Accountant Assessment',
     onClick: undefined,
   },
   // {
@@ -83,6 +85,18 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
+    onClick: undefined,
+  },
+  {
+    id: 'electrical',
+    icon: <Zap className="w-5 h-5" />,
+    label: 'Electrical',
+    onClick: undefined,
+  },
+  {
+    id: 'civil',
+    icon: <Ruler className="w-5 h-5" />,
+    label: 'Civil Engineering',
     onClick: undefined,
   },
 ];
@@ -147,12 +161,6 @@ export const adminSidebarFeatures: SidebarItem[] = [
     label: 'Profile',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice Assessment',
-    onClick: undefined,
-  },
 ];
 
 // Export default features for backward compatibility (student features)
@@ -187,13 +195,14 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // Student routes
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
-        'dashboard': baseRoute,
+        dashboard: baseRoute,
         'career-guidance': `${baseRoute}/career-guidance`,
-        'resume': `${baseRoute}/resume`,
-        'assessment': `${baseRoute}/assessment`,
-        // 'jobs': `${baseRoute}/jobs`,
-        // 'auto-apply': `${baseRoute}/auto-apply`,
-        'analytics': `${baseRoute}/analytics`,
+        resume: `${baseRoute}/resume`,
+        assessment: `${baseRoute}/assessment`,
+        'excel-assessment': `${baseRoute}/excel-assessment`,
+        analytics: `${baseRoute}/analytics`,
+        electrical: `${baseRoute}/electrical`,
+        civil: `${baseRoute}/civil`,
       };
       return routeMap[featureId] || null;
     }
@@ -201,10 +210,10 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/college`,
-        'students': `/dashboard/college/students`,
-        'analytics': `/dashboard/college/analytics`,
-        'profile': `/dashboard/college/profile`,
+        dashboard: `/dashboard/college`,
+        students: `/dashboard/college/students`,
+        analytics: `/dashboard/college/analytics`,
+        profile: `/dashboard/college/profile`,
       };
       return routeMap[featureId] || null;
     }
@@ -212,11 +221,11 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // Admin routes
     if (user.user_type === 'admin') {
       const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/admin`,
-        'colleges': `/dashboard/admin/colleges`,
-        'students': `/dashboard/admin/students`,
-        'analytics': `/dashboard/admin/analytics`,
-        'profile': `/dashboard/admin/profile`,
+        dashboard: `/dashboard/admin`,
+        colleges: `/dashboard/admin/colleges`,
+        students: `/dashboard/admin/students`,
+        analytics: `/dashboard/admin/analytics`,
+        profile: `/dashboard/admin/profile`,
       };
       return routeMap[featureId] || null;
     }
@@ -297,13 +306,13 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
             <nav className="space-y-1">
               {features.map((item) => {
                 // Determine active state based on context
-                let isActive = false;
+                let isActive: boolean = false;
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
                   if (route) {
                     // For exact matches or nested routes
-                    isActive = pathname === route || pathname?.startsWith(route + '/');
+                    isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                     // Special case: dashboard route should match exactly or be the base dashboard
                     if (item.id === 'dashboard') {
                       isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;

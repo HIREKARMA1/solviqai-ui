@@ -14,6 +14,7 @@ import {
   User,
   Building2,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -54,6 +55,12 @@ const studentSidebarFeatures: SidebarItem[] = [
     id: 'assessment',
     icon: <ClipboardList className="w-5 h-5" />,
     label: 'Mock Assessment',
+    onClick: undefined,
+  },
+  {
+    id: 'excel-assessment',
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+    label: 'Accountant Assessment',
     onClick: undefined,
   },
   {
@@ -170,6 +177,7 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
         'dashboard': baseRoute,
         'resume': `${baseRoute}/resume`,
         'assessment': `${baseRoute}/assessment`,
+        'excel-assessment': `${baseRoute}/excel-assessment`,
         'analytics': `${baseRoute}/analytics`,
       };
       return routeMap[featureId] || null;
@@ -302,13 +310,13 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
                 <nav className="space-y-2">
                   {features.map((item) => {
                     // Determine active state
-                    let isActive = false;
+                    let isActive: boolean = false;
                     if (isDashboardContext) {
                       // In dashboard, check if current path matches the feature route
                       if (user) {
                         const route = getFeatureRoute(item.id);
                         if (route) {
-                          isActive = pathname === route || pathname?.startsWith(route + '/');
+                          isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                           if (item.id === 'dashboard') {
                             isActive = pathname === route || pathname === `/dashboard/${user.user_type}`;
                           }
