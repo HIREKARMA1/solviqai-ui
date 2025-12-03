@@ -5,6 +5,7 @@ import { Loader2, Code, TrendingUp, Target, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '@/lib/api';
 import { CodingRound } from '@/components/assessment/CodingRound';
+import PracticeCodingEvaluation from './PracticeCodingEvaluation';
 
 interface CodingChallengePracticeProps {
   branch: string;
@@ -17,7 +18,14 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [hasStarted, setHasStarted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [submissionsData, setSubmissionsData] = useState<any>(null);
   const autoFullscreenAttemptedRef = useRef(false);
+
+  // Refs to track CodingRound state
+  const codingRoundRef = useRef<any>(null);
+  const editorsRef = useRef<Record<string, { language: string; code: string }>>({});
+  const resultsRef = useRef<Record<string, any>>({});
 
   // Request fullscreen function - more aggressive approach
   const requestFullscreen = async () => {
@@ -65,7 +73,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
       // Backend will generate 1 question based on difficulty
       const data = await apiClient.getPracticeCodingQuestions(branch, difficulty);
       const items: any[] = data.items || [];
-      
+
       if (!items.length) {
         throw new Error('No coding challenges returned. Try different difficulty level.');
       }
@@ -92,7 +100,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
 
       setQuestions(transformedQuestions);
       setHasStarted(true);
-      
+
       // Attempt to enter fullscreen automatically
       // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(() => {
@@ -100,7 +108,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
           requestFullscreen();
         }, 100);
       });
-      
+
       toast.success(`Loaded ${items.length} ${difficulty} coding problems!`);
     } catch (e: any) {
       const msg = e?.response?.data?.detail || e?.message || 'Failed to load coding challenges.';
@@ -114,7 +122,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
   // Transform questions data to roundData format expected by CodingRound
   const roundData = useMemo(() => {
     if (!questions.length) return null;
-    
+
     return {
       round_id: 'practice_coding',
       round_type: 'coding',
@@ -124,6 +132,74 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
 
   // Mock assessmentId for practice (not used in practice mode)
   const practiceAssessmentId = 'practice';
+
+  // Handle practice submission - collect data and navigate to evaluation
+  const handlePracticeSubmit = async (responses: any[]) => {
+    try {
+      // Collect submission data with test results
+      const submissions = responses.map((response) => {
+        const responseData = JSON.parse(response.response_text || '{}');
+        const question = questions.find(q => q.id === response.question_id);
+        const testResults = resultsRef.current[response.question_id];
+
+        return {
+          question_id: response.question_id,
+          question_text: question?.question_text || '',
+          code: responseData.code || '',
+          language: responseData.language || 'python',
+          test_results: testResults || null,
+        };
+      });
+
+      // Store submissions data and show evaluation
+      setSubmissionsData({
+        branch,
+        difficulty,
+        submissions,
+        questions,
+      });
+
+      // Exit fullscreen before showing evaluation
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+
+      setShowEvaluation(true);
+
+      toast.success('Submitting for evaluation...');
+      return { success: true, message: 'Practice completed' };
+    } catch (e: any) {
+      toast.error('Failed to prepare evaluation. Please try again.');
+      console.error('Submission error:', e);
+      return { success: false, message: 'Submission failed' };
+    }
+  };
+
+  const handleBackFromEvaluation = () => {
+    setShowEvaluation(false);
+    setSubmissionsData(null);
+    setHasStarted(false);
+    setQuestions([]);
+    editorsRef.current = {};
+    resultsRef.current = {};
+  };
+
+  const handlePracticeMore = () => {
+    setShowEvaluation(false);
+    setSubmissionsData(null);
+    setQuestions([]);
+    editorsRef.current = {};
+    resultsRef.current = {};
+    setHasStarted(false);
+    // Reset difficulty selector state by re-rendering
+  };
+
+  // Use CodingRound with practice execute function
+  const executePracticeCode = async (payload: { question_id: string; language: string; code: string; stdin?: string }) => {
+    const result = await apiClient.executePracticeCode(payload);
+    // Store result for evaluation
+    resultsRef.current[payload.question_id] = result;
+    return result;
+  };
 
   // Track fullscreen changes
   useEffect(() => {
@@ -185,10 +261,10 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
                 className="absolute top-1 bottom-1 rounded-lg shadow-lg transition-all duration-500 ease-out z-0"
                 style={{
                   width: 'calc(33.333% - 8px)',
-                  left: difficulty === 'easy' 
-                    ? '4px' 
-                    : difficulty === 'medium' 
-                      ? 'calc(33.333% + 4px)' 
+                  left: difficulty === 'easy'
+                    ? '4px'
+                    : difficulty === 'medium'
+                      ? 'calc(33.333% + 4px)'
                       : 'calc(66.666% + 4px)',
                   background: difficulty === 'easy'
                     ? 'linear-gradient(to right, #10b981, #059669)'
@@ -223,11 +299,10 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
                   <button
                     key={level}
                     onClick={() => setDifficulty(level)}
-                    className={`relative z-10 flex-1 py-4 px-4 rounded-lg font-semibold transition-all duration-300 capitalize flex flex-col items-center justify-center gap-2 ${
-                      isSelected
-                        ? 'scale-105 shadow-md'
-                        : 'hover:scale-[1.02]'
-                    } ${colors[level]}`}
+                    className={`relative z-10 flex-1 py-4 px-4 rounded-lg font-semibold transition-all duration-300 capitalize flex flex-col items-center justify-center gap-2 ${isSelected
+                      ? 'scale-105 shadow-md'
+                      : 'hover:scale-[1.02]'
+                      } ${colors[level]}`}
                   >
                     <div className="flex items-center gap-2">
                       {icons[level]}
@@ -264,11 +339,10 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
           <button
             onClick={fetchQuestions}
             disabled={loading}
-            className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 transform ${
-              loading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl hover:scale-[1.02]'
-            }`}
+            className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 transform ${loading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl hover:scale-[1.02]'
+              }`}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -301,6 +375,20 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
     );
   }
 
+  // Show evaluation page if submissions are ready
+  if (showEvaluation && submissionsData) {
+    return (
+      <PracticeCodingEvaluation
+        branch={submissionsData.branch}
+        difficulty={submissionsData.difficulty}
+        submissions={submissionsData.submissions}
+        questions={submissionsData.questions}
+        onBack={handleBackFromEvaluation}
+        onPracticeMore={handlePracticeMore}
+      />
+    );
+  }
+
   if (!roundData) {
     return (
       <div className="w-full max-w-5xl mx-auto p-6">
@@ -317,16 +405,6 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
     );
   }
 
-  // Use CodingRound with practice execute function
-  const executePracticeCode = async (payload: {question_id: string; language: string; code: string; stdin?: string}) => {
-    return apiClient.executePracticeCode(payload);
-  };
-
-  // For practice, we don't need to submit to assessment, just show completion message
-  const handlePracticeSubmit = async (responses: any[]) => {
-    toast.success('Practice session completed! Great job!');
-    return { success: true, message: 'Practice completed' };
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 select-none flex flex-col">
@@ -367,18 +445,15 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
         <div className="h-full w-full px-3">
           <div className="h-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="h-full">
-              <CodingRound 
-                assessmentId={practiceAssessmentId} 
+              <CodingRound
+                assessmentId={practiceAssessmentId}
                 roundData={roundData}
                 executeCodeFn={executePracticeCode}
                 submitFn={handlePracticeSubmit}
                 showSubmitButton={true}
-                onSubmitted={() => {
-                  toast.success('Practice session completed!');
-                  setHasStarted(false);
-                  setQuestions([]);
-                  if (document.exitFullscreen) document.exitFullscreen();
-                  else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+                onSubmitted={(result) => {
+                  // Evaluation page will be shown via handlePracticeSubmit
+                  // This callback is just for cleanup if needed
                 }}
               />
             </div>

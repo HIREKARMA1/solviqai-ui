@@ -866,6 +866,45 @@ class ApiClient {
     return response.data;
   }
 
+  // Practice Coding endpoints
+  async getPracticeCodingQuestions(branch: string, difficulty: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/practice/coding', {
+      params: { branch, difficulty }
+    });
+    return response.data;
+  }
+
+  async executePracticeCode(payload: {
+    question_id: string;
+    language: string;
+    code: string;
+    stdin?: string;
+  }): Promise<any> {
+    // Use extended timeout for code execution
+    const response: AxiosResponse = await this.client.post('/practice/coding/execute', payload, {
+      timeout: 60000
+    });
+    return response.data;
+  }
+
+  async evaluatePracticeCodingSubmission(payload: {
+    branch: string;
+    difficulty: string;
+    items: Array<{
+      question_id: string;
+      question_text: string;
+      code: string;
+      language: string;
+      test_results?: any;
+    }>;
+  }): Promise<any> {
+    // Use extended timeout for AI evaluation
+    const response: AxiosResponse = await this.client.post('/practice/coding/evaluate', payload, {
+      timeout: 120000
+    });
+    return response.data;
+  }
+
   // Excel Accountant Assessment endpoints
   public excelAssessment = {
     getAssessments: async (): Promise<any[]> => {

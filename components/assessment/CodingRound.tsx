@@ -14,6 +14,9 @@ export type CodingRoundProps = {
   assessmentId: string
   roundData: any
   onSubmitted?: (result: any) => void
+  executeCodeFn?: (payload: { question_id: string; language: string; code: string; stdin?: string }) => Promise<any>
+  submitFn?: (responses: any[]) => Promise<any>
+  showSubmitButton?: boolean
 }
 
 const LANGS = [
@@ -30,7 +33,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -61,7 +64,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
   const setLang = (qid: string, lang: string) => {
     setEditors(prev => {
       const next = { ...prev }
-      const meta = (roundData.questions.find((q:any)=> q.id === qid)?.metadata) || {}
+      const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
       const starter = (meta.starter_code || {}) as Record<string, string>
       next[qid] = { language: lang, code: starter[lang] || next[qid]?.code || '' }
       return next
@@ -69,7 +72,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
   }
 
   const setCode = (qid: string, code: string) => {
-    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid]||{language:'python', code:''}), code } }))
+    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid] || { language: 'python', code: '' }), code } }))
   }
 
   const handleSubmit = async () => {
@@ -85,8 +88,15 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
           time_taken: 0,
         }
       })
-      const res = await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
-      toast.success('Solutions submitted successfully!')
+
+      // Use custom submit function if provided (for practice mode), otherwise use default assessment endpoint
+      let res
+      if (submitFn) {
+        res = await submitFn(responses)
+      } else {
+        res = await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
+        toast.success('Solutions submitted successfully!')
+      }
       onSubmitted?.(res)
     } catch (e: any) {
       const msg = e?.response?.data?.detail || e?.message || 'Submit failed'
@@ -99,22 +109,29 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
   const runTests = async (qid: string) => {
     const ed = editors[qid] || { language: 'python', code: '' }
     try {
-      setRunning(prev => ({...prev, [qid]: true}))
-      
+      setRunning(prev => ({ ...prev, [qid]: true }))
+
       // Add timeout wrapper to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
       )
-      
-      const apiPromise = apiClient.executeCode(assessmentId, roundData.round_id, {
-        question_id: qid,
-        language: ed.language,
-        code: ed.code,
-      })
-      
-      const res = await Promise.race([apiPromise, timeoutPromise])
-      setResults(prev => ({...prev, [qid]: res}))
-      
+
+      // Use custom execute function if provided (for practice mode), otherwise use default assessment endpoint
+      const executePromise = executeCodeFn
+        ? executeCodeFn({
+          question_id: qid,
+          language: ed.language,
+          code: ed.code,
+        })
+        : apiClient.executeCode(assessmentId, roundData.round_id, {
+          question_id: qid,
+          language: ed.language,
+          code: ed.code,
+        })
+
+      const res = await Promise.race([executePromise, timeoutPromise])
+      setResults(prev => ({ ...prev, [qid]: res }))
+
       if (res.mode === 'tests') {
         const passRate = Math.round((res.passed / res.total) * 100)
         if (passRate === 100) {
@@ -131,28 +148,30 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
       } else {
         toast.success('Program executed successfully')
       }
-      setActiveTab(prev => ({...prev, [qid]: 'tests'}))
+      setActiveTab(prev => ({ ...prev, [qid]: 'tests' }))
     } catch (e: any) {
       console.error('Code execution error:', e)
       const msg = e?.response?.data?.detail || e?.message || 'Execution failed'
       toast.error(msg)
-      
+
       // Set error result to show in tests tab
-      setResults(prev => ({...prev, [qid]: { 
-        error: true, 
-        message: msg,
-        stderr: msg,
-        mode: 'error'
-      }}))
+      setResults(prev => ({
+        ...prev, [qid]: {
+          error: true,
+          message: msg,
+          stderr: msg,
+          mode: 'error'
+        }
+      }))
     } finally {
-      setRunning(prev => ({...prev, [qid]: false}))
+      setRunning(prev => ({ ...prev, [qid]: false }))
     }
   }
 
   const getPassRate = (qid: string) => {
     const res = results[qid]
     if (!res?.results) return null
-    const passed = res.results.filter((r:any) => r.passed).length
+    const passed = res.results.filter((r: any) => r.passed).length
     const total = res.results.length
     return { passed, total, percentage: Math.round((passed / total) * 100) }
   }
@@ -198,8 +217,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
           const isFullscreen = fullscreen === q.id
 
           return (
-            <div 
-              key={q.id} 
+            <div
+              key={q.id}
               className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden ${isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : 'shadow-sm'}`}
             >
               {/* Question Header */}
@@ -214,13 +233,12 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                         {difficultyConfig.label}
                       </span>
                       {passRate && (
-                        <span className={`px-2.5 py-1 rounded text-xs font-medium border ${
-                          passRate.percentage === 100 
-                            ? 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800' 
-                            : passRate.percentage >= 50 
-                            ? 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800'
-                            : 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded text-xs font-medium border ${passRate.percentage === 100
+                            ? 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800'
+                            : passRate.percentage >= 50
+                              ? 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800'
+                              : 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800'
+                          }`}>
                           {passRate.passed}/{passRate.total}
                         </span>
                       )}
@@ -232,7 +250,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                       <div className="text-sm text-gray-500 dark:text-gray-400">{meta.category}</div>
                     )}
                   </div>
-                  <button 
+                  <button
                     onClick={() => setFullscreen(isFullscreen ? null : q.id)}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
                     title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -256,12 +274,11 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                     {(['problem', 'tests', 'submissions'] as const).map(tab => (
                       <button
                         key={tab}
-                        onClick={() => setActiveTab(prev => ({...prev, [q.id]: tab}))}
-                        className={`px-4 py-3 text-sm font-medium transition-colors ${
-                          currentTab === tab
+                        onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab }))}
+                        className={`px-4 py-3 text-sm font-medium transition-colors ${currentTab === tab
                             ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900 border-b-2 border-blue-600 dark:border-blue-400'
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
+                          }`}
                       >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
                       </button>
@@ -269,7 +286,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                   </div>
 
                   {/* Tab Content */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{maxHeight: isFullscreen ? 'calc(100vh - 240px)' : '600px'}}>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ maxHeight: isFullscreen ? 'calc(100vh - 240px)' : '600px' }}>
                     {currentTab === 'problem' && (
                       <>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -363,21 +380,19 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                                 {results[q.id].results.map((r: any, i: number) => (
                                   <div
                                     key={i}
-                                    className={`rounded-lg p-4 border ${
-                                      r.passed
+                                    className={`rounded-lg p-4 border ${r.passed
                                         ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900'
                                         : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900'
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center justify-between mb-3">
                                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                         Test Case {i + 1}
                                       </span>
-                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                        r.passed
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${r.passed
                                           ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                                           : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                      }`}>
+                                        }`}>
                                         {r.passed ? 'Passed' : 'Failed'}
                                       </span>
                                     </div>
@@ -438,11 +453,10 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                         <button
                           key={l.key}
                           onClick={() => setLang(q.id, l.key)}
-                          className={`flex-1 px-3 py-2 rounded text-sm font-medium border transition-colors ${
-                            editor.language === l.key
+                          className={`flex-1 px-3 py-2 rounded text-sm font-medium border transition-colors ${editor.language === l.key
                               ? 'bg-blue-600 text-white border-blue-600'
                               : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
-                          }`}
+                            }`}
                         >
                           {l.label}
                         </button>
@@ -508,7 +522,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => setRunning(prev => ({...prev, [q.id]: false}))}
+                        onClick={() => setRunning(prev => ({ ...prev, [q.id]: false }))}
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded transition-colors"
                       >
                         <span className="flex items-center justify-center gap-2">
@@ -533,29 +547,31 @@ export function CodingRound({ assessmentId, roundData, onSubmitted }: CodingRoun
         })}
 
         {/* Submit Button */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Ready to Submit?</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Make sure you've tested all solutions before submitting
+        {showSubmitButton && (
+          <div className="sticky bottom-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Ready to Submit?</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Make sure you've tested all solutions before submitting
+                </div>
               </div>
+              <Button
+                onClick={handleSubmit}
+                disabled={busy}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? (
+                  <span className="flex items-center gap-2">
+                    <Loader size="sm" /> Submitting...
+                  </span>
+                ) : (
+                  'Submit All Solutions'
+                )}
+              </Button>
             </div>
-            <Button
-              onClick={handleSubmit}
-              disabled={busy}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {busy ? (
-                <span className="flex items-center gap-2">
-                  <Loader size="sm" /> Submitting...
-                </span>
-              ) : (
-                'Submit All Solutions'
-              )}
-            </Button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

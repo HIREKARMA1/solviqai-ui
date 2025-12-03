@@ -83,18 +83,22 @@ interface AssessmentResponse {
 }
 
 interface GroupDiscussionRoundProps {
-    roundId: string;
+    roundId?: string;
     assessmentId?: string;  // Optional: will fallback to URL param
-    onComplete: (responses: AssessmentResponse[]) => void;
+    onComplete?: (responses: AssessmentResponse[]) => void;
+    mode?: 'practice' | 'assessment';
+    practiceJoinPayload?: any;
 }
 
-export function GroupDiscussionRound({ 
+export function GroupDiscussionRound({
     roundId,
     assessmentId: propAssessmentId,
-    onComplete 
+    onComplete,
+    mode = 'assessment',
+    practiceJoinPayload
 }: GroupDiscussionRoundProps) {
     const router = useRouter();
-    
+
     // State for managing the discussion flow
     const [loading, setLoading] = useState(false);
     const [topic, setTopic] = useState<Topic | null>(null);
@@ -115,18 +119,18 @@ export function GroupDiscussionRound({
     const [audioLevel, setAudioLevel] = useState(0);
     const [confidenceScore, setConfidenceScore] = useState(100);
     const [speechRate, setSpeechRate] = useState(0);
-    
+
     // Enhanced features
     const [participationBalance, setParticipationBalance] = useState({ user: 0, ai: 0 });
     const [wordCount, setWordCount] = useState(0);
     const [statsCollapsed, setStatsCollapsed] = useState(false);
-    
+
     // Voice synthesis states
     const [currentSpeakingAgent, setCurrentSpeakingAgent] = useState<string | null>(null);
     const [voicesLoaded, setVoicesLoaded] = useState(false);
     const [typingAgent, setTypingAgent] = useState<string | null>(null);
     const availableVoices = useRef<SpeechSynthesisVoice[]>([]);
-    
+
     // Track fetch attempts
     const [fetchAttempt, setFetchAttempt] = useState(0);
     const maxRetries = 10;
@@ -159,7 +163,7 @@ export function GroupDiscussionRound({
             };
 
             loadVoices();
-            
+
             if (window.speechSynthesis.onvoiceschanged !== undefined) {
                 window.speechSynthesis.onvoiceschanged = loadVoices;
             }
@@ -172,7 +176,7 @@ export function GroupDiscussionRound({
             setFetchAttempt(0);
             fetchTopic();
         }
-        
+
         return () => {
             setFetchAttempt(0);
         };
@@ -182,6 +186,19 @@ export function GroupDiscussionRound({
         if (loading || inFlightRef.current || fetchAttempt > maxRetries) {
             return;
         }
+
+        if (mode === 'practice') {
+            setTopic({
+                title: "Practice Session",
+                content: "Welcome to the practice group discussion. You can discuss any topic you like.",
+                followUpQuestions: ["What are your thoughts?", "Can you elaborate?"],
+                instructions: "Speak clearly and confidently."
+            });
+            setLoading(false);
+            return;
+        }
+
+        if (!roundId) return;
         inFlightRef.current = true;
         setLoading(true);
         try {
@@ -211,7 +228,7 @@ export function GroupDiscussionRound({
                 followUpQuestions: topicData.key_points || topicData.expected_perspectives || [],
                 instructions: topicData.instructions || "Share your thoughts on this topic. You can speak briefly or in detail - it's up to you!"
             };
-            
+
             setTopic(processedTopicData);
             setFetchAttempt(0);
 
@@ -220,7 +237,7 @@ export function GroupDiscussionRound({
             }
         } catch (error) {
             console.error('Error fetching topic:', error);
-            
+
             if (fetchAttempt < 1) {
                 setFetchAttempt(prev => prev + 1);
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -260,19 +277,28 @@ export function GroupDiscussionRound({
             return;
         }
 
+        if (mode === 'practice') {
+            toast.success('Practice session completed!');
+            setLoading(false);
+            if (onComplete) {
+                onComplete([]);
+            }
+            return;
+        }
+
         try {
             setLoading(true);
             toast.loading('Submitting your discussion...', { id: 'submitting' });
-            
+
             // Get assessment ID from prop or URL
             const urlParams = new URLSearchParams(window.location.search);
             const assessmentId = propAssessmentId || urlParams.get('assessment_id') || urlParams.get('id');
-            
+
             if (!assessmentId) {
                 console.error('Assessment ID not found. URL params:', Object.fromEntries(urlParams));
                 throw new Error('Assessment ID not found in props or URL');
             }
-            
+
             // STEP 1: Save full conversation transcript via API
             const submitPayload = [{
                 response_text: JSON.stringify({
@@ -301,7 +327,7 @@ export function GroupDiscussionRound({
                 console.warn('GD transcript save failed, proceeding to evaluation anyway:', saveErr);
                 // Don't rethrow; evaluation endpoint can work from provided conversation
             }
-            
+
             // STEP 2: Call evaluate endpoint to complete the round and get score
             try {
                 toast.loading('Evaluating your discussion...', { id: 'evaluating' });
@@ -318,12 +344,12 @@ export function GroupDiscussionRound({
                 toast.dismiss('evaluating');
                 toast.error('Evaluation failed. Please contact support.', { id: 'evaluating' });
             }
-            
+
             // Redirect to assessment page and force a fresh fetch of statuses
             setTimeout(() => {
                 window.location.href = `/dashboard/student/assessment?id=${assessmentId}&ts=${Date.now()}`;
             }, 1500);
-            
+
         } catch (error) {
             console.error('Error submitting discussion:', error);
             toast.error('Failed to submit discussion. Please try again.', { id: 'submitting' });
@@ -358,7 +384,7 @@ export function GroupDiscussionRound({
                 v => v.lang.includes('en') && !v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
                 v => v.lang.includes('en') && !v.name.toLowerCase().includes('female'),
             ]) || voices.find(v => v.lang.startsWith('en')) || voices[0];
-        } 
+        }
         else if (agentName.includes('Meera')) {
             return getBestVoice([
                 v => v.lang.includes('en-IN') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('neural')),
@@ -367,7 +393,7 @@ export function GroupDiscussionRound({
                 v => v.lang.includes('en') && v.name.toLowerCase().includes('female') && (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')),
                 v => v.lang.includes('en') && v.name.toLowerCase().includes('female'),
             ]) || voices.find(v => v.lang.startsWith('en') && v !== voices[0]) || voices[1] || voices[0];
-        } 
+        }
         else if (agentName.includes('Rahul')) {
             return getBestVoice([
                 v => v.lang.includes('en-AU') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('neural')),
@@ -428,7 +454,7 @@ export function GroupDiscussionRound({
                         speakNext();
                         return;
                     }
-                    
+
                     const speakChunk = (attempt: number = 0) => {
                         if (attempt >= 3) {
                             console.error('Failed to speak after 3 attempts');
@@ -449,12 +475,12 @@ export function GroupDiscussionRound({
                                 } else {
                                     utterance.lang = 'en-US';
                                 }
-                                
+
                                 // Optimized settings for clarity
                                 utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
                                 utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
                                 utterance.volume = 1.0; // Maximum volume
-                                
+
                                 let hasStarted = false;
                                 const timeout = setTimeout(() => {
                                     if (!hasStarted) {
@@ -470,13 +496,13 @@ export function GroupDiscussionRound({
                                     setCurrentSpeakingAgent(agentName);
                                     setIsAISpeaking(true);
                                 };
-                                
+
                                 utterance.onend = () => {
                                     clearTimeout(timeout);
                                     idx++;
                                     speakNext();
                                 };
-                                
+
                                 utterance.onerror = (event: any) => {
                                     clearTimeout(timeout);
                                     console.error('TTS error:', event.error);
@@ -487,7 +513,7 @@ export function GroupDiscussionRound({
                                         speakNext();
                                     }
                                 };
-                                
+
                                 window.speechSynthesis.speak(utterance);
                             }, 100);
                         } catch (err) {
@@ -495,7 +521,7 @@ export function GroupDiscussionRound({
                             speakChunk(attempt + 1);
                         }
                     };
-                    
+
                     speakChunk();
                 };
                 speakNext();
@@ -523,12 +549,12 @@ export function GroupDiscussionRound({
                         } else {
                             utterance.lang = 'en-US';
                         }
-                        
+
                         // Optimized settings for clarity
                         utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
                         utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
                         utterance.volume = 1.0; // Maximum volume
-                        
+
                         let hasStarted = false;
                         const timeout = setTimeout(() => {
                             if (!hasStarted) {
@@ -544,14 +570,14 @@ export function GroupDiscussionRound({
                             setCurrentSpeakingAgent(agentName);
                             setIsAISpeaking(true);
                         };
-                        
+
                         utterance.onend = () => {
                             clearTimeout(timeout);
                             setCurrentSpeakingAgent(null);
                             setIsAISpeaking(false);
                             resolve();
                         };
-                        
+
                         utterance.onerror = (event: any) => {
                             clearTimeout(timeout);
                             console.error('TTS error:', event.error);
@@ -563,7 +589,7 @@ export function GroupDiscussionRound({
                                 resolve();
                             }
                         };
-                        
+
                         window.speechSynthesis.speak(utterance);
                     }, 100);
                 } catch (err) {
@@ -571,7 +597,7 @@ export function GroupDiscussionRound({
                     speakSingle(attempt + 1);
                 }
             };
-            
+
             speakSingle();
         });
     };
@@ -593,7 +619,7 @@ export function GroupDiscussionRound({
                     for (let i = event.resultIndex; i < event.results.length; i++) {
                         const transcript = event.results[i][0].transcript;
                         const confidence = event.results[i][0].confidence;
-                        
+
                         if (event.results[i].isFinal) {
                             finalText += transcript + ' ';
                             setConfidenceScore(Math.round(confidence * 100));
@@ -615,7 +641,7 @@ export function GroupDiscussionRound({
 
                 speechRecognition.current.onerror = (error: any) => {
                     console.error('Speech recognition error:', error);
-                    
+
                     if (transcriptRef.current.trim()) {
                         handleUserResponse(transcriptRef.current);
                     } else {
@@ -642,11 +668,11 @@ export function GroupDiscussionRound({
             if (speechRecognition.current) {
                 speechRecognition.current.stop();
             }
-            
+
             if (speakingTimerId) {
                 clearInterval(speakingTimerId);
             }
-            
+
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
             }
@@ -665,7 +691,7 @@ export function GroupDiscussionRound({
             audioAnalyser.current = analyser;
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            
+
             const checkLevel = () => {
                 analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
@@ -673,7 +699,7 @@ export function GroupDiscussionRound({
             };
 
             const interval = setInterval(checkLevel, 100);
-            
+
             setTimeout(() => {
                 clearInterval(interval);
                 stream.getTracks().forEach(track => track.stop());
@@ -685,7 +711,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    if (!roundId) {
+    if (!roundId && mode !== 'practice') {
         return (
             <Card className="p-6">
                 <div className="text-center">
@@ -708,7 +734,7 @@ export function GroupDiscussionRound({
         setInterimTranscript('');
         setSpeakingTime(0);
         setWordCount(0);
-        
+
         const timerId = setInterval(() => {
             setSpeakingTime(prevTime => {
                 const newTime = prevTime + 1;
@@ -718,9 +744,9 @@ export function GroupDiscussionRound({
                 return newTime;
             });
         }, 1000);
-        
+
         setSpeakingTimerId(timerId);
-        
+
         try {
             speechRecognition.current.start();
         } catch (err) {
@@ -734,15 +760,15 @@ export function GroupDiscussionRound({
         if (speechRecognition.current) {
             speechRecognition.current.stop();
             setIsListening(false);
-            
+
             if (speakingTimerId) {
                 clearInterval(speakingTimerId);
                 setSpeakingTimerId(null);
             }
-            
+
             setTimeout(() => {
                 const finalTranscript = transcriptRef.current.trim();
-                
+
                 if (finalTranscript && finalTranscript.length > 0) {
                     handleUserResponse(finalTranscript);
                     setTranscript('');
@@ -758,15 +784,15 @@ export function GroupDiscussionRound({
 
     const handleUserResponse = async (text: string) => {
         const trimmedText = text.trim();
-        
+
         if (!trimmedText || trimmedText.length === 0) {
             return;
         }
-        
+
         if (discussionComplete) {
             return;
         }
-        
+
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
             return;
@@ -774,11 +800,11 @@ export function GroupDiscussionRound({
 
         try {
             setLoading(true);
-            
+
             let responseData: any;
             try {
                 const response = await Promise.race([
-                    apiClient.client.post(`/assessments/rounds/${roundId}/gd/response`, { 
+                    apiClient.client.post(`/assessments/rounds/${roundId}/gd/response`, {
                         text: trimmedText,
                         personas: personas.map(p => p.name),
                         context: {
@@ -786,24 +812,24 @@ export function GroupDiscussionRound({
                             previousTurns: gdTurns
                         }
                     }),
-                    new Promise((_, reject) => 
+                    new Promise((_, reject) =>
                         setTimeout(() => reject(new Error('Timeout')), 15000)
                     )
                 ]) as any;
-                
+
                 responseData = response.data;
             } catch (apiError) {
                 console.error('API failed:', apiError);
-                
+
                 setResponseAttempt(prev => prev + 1);
-                
+
                 if (responseAttempt < maxResponseRetries) {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     setLoading(false);
                     handleUserResponse(trimmedText);
                     return;
                 }
-                
+
                 const userSnippet = trimmedText.slice(0, 140);
                 responseData = {
                     agents: [
@@ -812,13 +838,13 @@ export function GroupDiscussionRound({
                         { name: personas[2].name, text: `Both sides valid. Balance is key.` }
                     ]
                 };
-                
+
                 toast.error('Using fallback response.');
             }
 
             const agents: AgentMessage[] = Array.isArray(responseData?.agents) && responseData.agents.length
                 ? responseData.agents.slice(0, 3).map((a: any, idx: number) => ({
-                    name: String(a.name || personas[idx]?.name || `Participant ${idx+1}`),
+                    name: String(a.name || personas[idx]?.name || `Participant ${idx + 1}`),
                     text: String(a.text || a.message || a.content || '')
                 }))
                 : [
@@ -829,15 +855,15 @@ export function GroupDiscussionRound({
 
             // Add user message first (without agents yet)
             const turnTimestamp = Date.now();
-            setGDTurns(prev => [...prev, { 
-                user: trimmedText, 
+            setGDTurns(prev => [...prev, {
+                user: trimmedText,
                 agents: [],
                 timestamp: turnTimestamp
             }]);
 
-            setGDResponses(prev => [...prev, { 
-                userResponse: trimmedText, 
-                aiQuestion: agents.map(a => a.text).join('\n') 
+            setGDResponses(prev => [...prev, {
+                userResponse: trimmedText,
+                aiQuestion: agents.map(a => a.text).join('\n')
             }]);
 
             const userWords = trimmedText.split(/\s+/).length;
@@ -851,11 +877,11 @@ export function GroupDiscussionRound({
             if (voicesLoaded) {
                 for (let i = 0; i < agents.length; i++) {
                     const agent = agents[i];
-                    
+
                     // Show typing indicator
                     setTypingAgent(agent.name);
                     await new Promise(resolve => setTimeout(resolve, 800));
-                    
+
                     // Add this agent to the turn
                     setGDTurns(prev => {
                         const updatedTurns = [...prev];
@@ -871,15 +897,15 @@ export function GroupDiscussionRound({
 
                     // Remove typing indicator
                     setTypingAgent(null);
-                    
+
                     // Small delay to show the message appeared
                     await new Promise(resolve => setTimeout(resolve, 300));
-                    
+
                     // Then speak
                     if (agent.text && agent.text.trim()) {
                         await speakAgentText(agent.name, agent.text);
                     }
-                    
+
                     // Pause before next agent
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
@@ -928,7 +954,7 @@ export function GroupDiscussionRound({
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
             if (currentStep !== 'discussion' || !isTopicAnnounced) return;
-            
+
             if (e.code === 'Space' && !discussionComplete) {
                 e.preventDefault();
                 if (isListening) {
@@ -937,7 +963,7 @@ export function GroupDiscussionRound({
                     startListening();
                 }
             }
-            
+
             if (e.code === 'Escape' && isListening) {
                 e.preventDefault();
                 stopListening();
@@ -957,25 +983,23 @@ export function GroupDiscussionRound({
                         <div key={step} className="flex items-center flex-1 w-full sm:w-auto">
                             <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold transition-all text-sm sm:text-base
                                 ${idx === 0 && currentStep === 'topic' ? 'bg-blue-600 text-white scale-110' :
-                                  idx === 1 && currentStep === 'discussion' ? 'bg-blue-600 text-white scale-110' :
-                                  idx === 2 && currentStep === 'evaluation' ? 'bg-blue-600 text-white scale-110' :
-                                  'bg-gray-200 text-gray-600'}`}>
+                                    idx === 1 && currentStep === 'discussion' ? 'bg-blue-600 text-white scale-110' :
+                                        idx === 2 && currentStep === 'evaluation' ? 'bg-blue-600 text-white scale-110' :
+                                            'bg-gray-200 text-gray-600'}`}>
                                 {idx + 1}
                             </div>
-                            <span className={`ml-2 font-medium transition-all text-xs sm:text-sm ${
-                                (idx === 0 && currentStep === 'topic') ||
+                            <span className={`ml-2 font-medium transition-all text-xs sm:text-sm ${(idx === 0 && currentStep === 'topic') ||
                                 (idx === 1 && currentStep === 'discussion') ||
                                 (idx === 2 && currentStep === 'evaluation')
                                 ? 'text-blue-600' : 'text-gray-500'
-                            }`}>{step}</span>
+                                }`}>{step}</span>
                             {idx < 2 && (
-                                <div className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition-all hidden sm:block ${
-                                    idx === 0 && (currentStep === 'discussion' || currentStep === 'evaluation')
+                                <div className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition-all hidden sm:block ${idx === 0 && (currentStep === 'discussion' || currentStep === 'evaluation')
                                     ? 'bg-blue-600'
                                     : idx === 1 && currentStep === 'evaluation'
-                                    ? 'bg-blue-600'
-                                    : 'bg-gray-200'
-                                }`} />
+                                        ? 'bg-blue-600'
+                                        : 'bg-gray-200'
+                                    }`} />
                             )}
                         </div>
                     ))}
@@ -993,7 +1017,7 @@ export function GroupDiscussionRound({
                                     <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">{topic.content}</p>
                                 </div>
                             </div>
-                            
+
                             {!micTested && (
                                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 sm:p-6 rounded-xl border-2 border-yellow-400">
                                     <h4 className="font-bold mb-2 sm:mb-3 text-yellow-800 dark:text-yellow-400 flex items-center text-sm sm:text-base">
@@ -1015,8 +1039,8 @@ export function GroupDiscussionRound({
                                             <div className="flex items-center space-x-2">
                                                 <Volume2 className="w-5 h-5 text-green-600" />
                                                 <div className="flex-1 bg-gray-200 rounded-full h-3">
-                                                    <div 
-                                                        className="bg-green-600 h-3 rounded-full transition-all duration-100" 
+                                                    <div
+                                                        className="bg-green-600 h-3 rounded-full transition-all duration-100"
                                                         style={{ width: `${Math.min(audioLevel, 100)}%` }}
                                                     />
                                                 </div>
@@ -1026,12 +1050,12 @@ export function GroupDiscussionRound({
                                     )}
                                 </div>
                             )}
-                            
+
                             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 sm:p-6 rounded-xl border-2 border-indigo-400">
                                 <h4 className="font-bold mb-2 sm:mb-3 text-indigo-800 dark:text-indigo-400 text-sm sm:text-base">📋 Instructions</h4>
                                 <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200">{topic.instructions}</p>
                             </div>
-                            
+
                             {topic.followUpQuestions && topic.followUpQuestions.length > 0 && (
                                 <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
                                     <h4 className="font-bold mb-3 sm:mb-4 text-blue-800 dark:text-blue-400 flex items-center text-sm sm:text-base">
@@ -1050,7 +1074,7 @@ export function GroupDiscussionRound({
                                     </ul>
                                 </div>
                             )}
-                            
+
                             <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 sm:p-6 rounded-xl border-2 border-blue-300">
                                 <h4 className="font-bold mb-3 sm:mb-4 text-blue-900 dark:text-blue-300 text-sm sm:text-base">🎯 Discussion Flow</h4>
                                 <ol className="space-y-2 sm:space-y-3">
@@ -1072,41 +1096,41 @@ export function GroupDiscussionRound({
                                     ))}
                                 </ol>
                             </div>
-                            
+
                             <Button
                                 onClick={() => {
                                     setCurrentStep('discussion');
                                     setIsTopicAnnounced(false);
-                                    
+
                                     try {
                                         // Create a concise announcement - long text causes speech errors
                                         const MAX_ANNOUNCEMENT_LENGTH = 400; // characters
                                         let announcement = `Today's discussion topic is: ${topic.title}.`;
-                                        
+
                                         // Add a shortened version of the content if available
                                         if (topic.content) {
-                                            const contentPreview = topic.content.length > 150 
+                                            const contentPreview = topic.content.length > 150
                                                 ? topic.content.substring(0, 150) + '...'
                                                 : topic.content;
                                             announcement += ' ' + contentPreview;
                                         }
-                                        
+
                                         announcement += ' You can now share your thoughts. Remember to click Stop Speaking when you finish.';
-                                        
+
                                         // Ensure total length is within limits
                                         if (announcement.length > MAX_ANNOUNCEMENT_LENGTH) {
                                             announcement = announcement.substring(0, MAX_ANNOUNCEMENT_LENGTH) + '...';
                                         }
-                                        
+
                                         // Get best voice for announcement
                                         const voices = window.speechSynthesis.getVoices();
-                                        const bestVoice = voices.find(v => 
-                                            v.lang.startsWith('en') && 
-                                            (v.name.toLowerCase().includes('neural') || 
-                                             v.name.toLowerCase().includes('premium') ||
-                                             v.name.toLowerCase().includes('enhanced'))
+                                        const bestVoice = voices.find(v =>
+                                            v.lang.startsWith('en') &&
+                                            (v.name.toLowerCase().includes('neural') ||
+                                                v.name.toLowerCase().includes('premium') ||
+                                                v.name.toLowerCase().includes('enhanced'))
                                         ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
-                                        
+
                                         const utterance = new SpeechSynthesisUtterance(announcement);
                                         if (bestVoice) {
                                             utterance.voice = bestVoice;
@@ -1117,7 +1141,7 @@ export function GroupDiscussionRound({
                                         utterance.rate = 0.9;  // Clear and understandable
                                         utterance.pitch = 1.0;
                                         utterance.volume = 1.0;  // Maximum volume
-                                        
+
                                         let hasStarted = false;
                                         const timeout = setTimeout(() => {
                                             if (!hasStarted) {
@@ -1125,23 +1149,23 @@ export function GroupDiscussionRound({
                                                 setIsTopicAnnounced(true);
                                             }
                                         }, 10000);
-                                        
+
                                         utterance.onstart = () => {
                                             hasStarted = true;
                                             clearTimeout(timeout);
                                         };
-                                        
+
                                         utterance.onend = () => {
                                             clearTimeout(timeout);
                                             setIsTopicAnnounced(true);
                                         };
-                                        
+
                                         utterance.onerror = (error: any) => {
                                             clearTimeout(timeout);
                                             console.error('TTS error:', error);
                                             setIsTopicAnnounced(true);
                                         };
-                                        
+
                                         // Timeout fallback in case speech hangs
                                         setTimeout(() => {
                                             if (!isTopicAnnounced) {
@@ -1149,7 +1173,7 @@ export function GroupDiscussionRound({
                                                 setIsTopicAnnounced(true);
                                             }
                                         }, 20000); // 20 second timeout
-                                        
+
                                         window.speechSynthesis.speak(utterance);
                                     } catch (err) {
                                         // If speech fails, just proceed without it
@@ -1162,7 +1186,7 @@ export function GroupDiscussionRound({
                             >
                                 🎙️ Begin Topic Introduction
                             </Button>
-                            
+
                             {!micTested && (
                                 <p className="text-center text-sm text-yellow-600 dark:text-yellow-400">
                                     Please test your microphone before starting
@@ -1185,7 +1209,7 @@ export function GroupDiscussionRound({
                         <Card className="p-4 sm:p-6 lg:sticky lg:top-6 h-fit bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 shadow-lg">
                             <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-blue-900 dark:text-blue-300 line-clamp-2">{topic?.title}</h3>
                             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 line-clamp-3">{topic?.content}</p>
-                            
+
                             {/* Round Progress */}
                             <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-lg">
                                 <div className="flex justify-between items-center mb-2">
@@ -1194,7 +1218,7 @@ export function GroupDiscussionRound({
                                 </div>
                                 <Progress value={(gdTurns.length / MAX_RESPONSES) * 100} className="h-2" />
                             </div>
-                            
+
                             {/* Participants */}
                             <div className="mb-3 sm:mb-4">
                                 <h4 className="text-xs sm:text-sm font-semibold mb-2 flex items-center text-gray-700 dark:text-gray-300">
@@ -1218,16 +1242,16 @@ export function GroupDiscussionRound({
                                     ))}
                                 </div>
                             </div>
-                            
-                            
-                            
+
+
+
                             {gdTurns.length > 0 && !discussionComplete && !isAISpeaking && !typingAgent && (
                                 <div className="mt-4 p-3 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-lg border-2 border-orange-300">
                                     <h4 className="text-sm font-semibold mb-2 text-orange-800 dark:text-orange-400">
                                         Early Submit
                                     </h4>
                                     <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
-                                        Completed {gdTurns.length}/{MAX_RESPONSES} rounds. 
+                                        Completed {gdTurns.length}/{MAX_RESPONSES} rounds.
                                         Ready to finish?
                                     </p>
                                     <Button
@@ -1243,7 +1267,7 @@ export function GroupDiscussionRound({
                                 </div>
                             )}
                         </Card>
-                        
+
                         {/* Main Discussion Area */}
                         <div className="lg:col-span-3 space-y-4">
                             {!isTopicAnnounced ? (
@@ -1259,7 +1283,7 @@ export function GroupDiscussionRound({
                                     {/* Discussion History */}
                                     <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800">
                                         <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 dark:text-white">Discussion History</h3>
-                                        <div 
+                                        <div
                                             ref={chatContainerRef}
                                             className="space-y-4 sm:space-y-6 min-h-[250px] sm:min-h-[300px] max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-2 scroll-smooth"
                                         >
@@ -1269,7 +1293,7 @@ export function GroupDiscussionRound({
                                                     <p>No messages yet. Start speaking to begin the discussion!</p>
                                                 </div>
                                             )}
-                                            
+
                                             {gdTurns.map((turn, tIdx) => (
                                                 <div key={tIdx} className="space-y-4 animate-in slide-in-from-bottom duration-300">
                                                     {/* User Message */}
@@ -1287,19 +1311,17 @@ export function GroupDiscussionRound({
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {/* AI Messages with speaking indicator */}
                                                     {turn.agents.map((a, aIdx) => (
                                                         <div key={aIdx} className="flex items-start space-x-2 sm:space-x-3 ml-4 sm:ml-6">
-                                                            <div className={`flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md ${
-                                                                currentSpeakingAgent === a.name ? 'animate-pulse ring-2 sm:ring-4 ring-purple-400' : ''
-                                                            }`}>
+                                                            <div className={`flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md ${currentSpeakingAgent === a.name ? 'animate-pulse ring-2 sm:ring-4 ring-purple-400' : ''
+                                                                }`}>
                                                                 <span className="text-white font-bold text-[10px] sm:text-xs">{a.name.charAt(0)}</span>
                                                             </div>
                                                             <div className="flex-1 max-w-2xl min-w-0">
-                                                                <div className={`bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-sm transition-all ${
-                                                                    currentSpeakingAgent === a.name ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20' : ''
-                                                                }`}>
+                                                                <div className={`bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-sm transition-all ${currentSpeakingAgent === a.name ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20' : ''
+                                                                    }`}>
                                                                     <div className="flex items-center justify-between mb-1 sm:mb-2">
                                                                         <div className="text-[10px] sm:text-xs font-semibold text-purple-700 dark:text-purple-400">
                                                                             {a.name}
@@ -1323,7 +1345,7 @@ export function GroupDiscussionRound({
                                                     ))}
                                                 </div>
                                             ))}
-                                            
+
                                             {/* Typing Indicator */}
                                             {typingAgent && (
                                                 <div className="flex items-start space-x-3 ml-6 animate-in slide-in-from-bottom duration-300">
@@ -1370,7 +1392,7 @@ export function GroupDiscussionRound({
                                                     <span className="text-sm">is speaking...</span>
                                                 </div>
                                             </div>
-                                            
+
                                             <Button
                                                 onClick={() => {
                                                     window.speechSynthesis.cancel();
@@ -1413,7 +1435,7 @@ export function GroupDiscussionRound({
                                             </p>
                                         </Card>
                                     )}
-                                    
+
                                     {/* Voice Controls - Bottom Sticky */}
                                     {!discussionComplete && (
                                         <div className="sticky bottom-0 z-20 pb-4">
@@ -1424,7 +1446,7 @@ export function GroupDiscussionRound({
                                                 >
                                                     {statsCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
                                                 </button>
-                                                
+
                                                 {!statsCollapsed && (
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
                                                         <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
@@ -1433,12 +1455,12 @@ export function GroupDiscussionRound({
                                                                 {formatTime(speakingTime)}
                                                             </div>
                                                             <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-                                                                {speakingTime < 60 ? "Keep going" : 
-                                                                 speakingTime < 120 ? "Good!" : 
-                                                                 "Wrap up"}
+                                                                {speakingTime < 60 ? "Keep going" :
+                                                                    speakingTime < 120 ? "Good!" :
+                                                                        "Wrap up"}
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {wordCount > 0 && (
                                                             <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
                                                                 <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mx-auto mb-1" />
@@ -1446,42 +1468,40 @@ export function GroupDiscussionRound({
                                                                 <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">words</div>
                                                             </div>
                                                         )}
-                                                        
+
                                                         {speechRate > 0 && isListening && (
                                                             <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
                                                                 <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 mx-auto mb-1" />
                                                                 <div className="text-lg sm:text-xl font-bold text-purple-600">{speechRate}</div>
                                                                 <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
                                                                     {speechRate < 100 ? "Faster" :
-                                                                     speechRate > 160 ? "Slower" :
-                                                                     "Good!"} wpm
+                                                                        speechRate > 160 ? "Slower" :
+                                                                            "Good!"} wpm
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        
+
                                                         {isListening && (
                                                             <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
                                                                 <div className="text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Clarity</div>
-                                                                <div className={`text-lg sm:text-xl font-bold ${
-                                                                    confidenceScore >= 80 ? 'text-green-600' :
+                                                                <div className={`text-lg sm:text-xl font-bold ${confidenceScore >= 80 ? 'text-green-600' :
                                                                     confidenceScore >= 60 ? 'text-yellow-600' :
-                                                                    'text-red-600'
-                                                                }`}>{confidenceScore}%</div>
+                                                                        'text-red-600'
+                                                                    }`}>{confidenceScore}%</div>
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
-                                                
+
                                                 <div className="flex space-x-2 sm:space-x-3">
                                                     <Button
                                                         onClick={isListening ? stopListening : startListening}
                                                         disabled={loading || isAISpeaking || typingAgent !== null}
                                                         size="lg"
-                                                        className={`w-full font-bold py-3 sm:py-4 text-sm sm:text-base shadow-lg transform hover:scale-[1.02] transition-all ${
-                                                            isListening 
-                                                            ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' 
+                                                        className={`w-full font-bold py-3 sm:py-4 text-sm sm:text-base shadow-lg transform hover:scale-[1.02] transition-all ${isListening
+                                                            ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
                                                             : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {isListening ? (
                                                             <span className="flex items-center justify-center space-x-2">
@@ -1496,14 +1516,14 @@ export function GroupDiscussionRound({
                                                         )}
                                                     </Button>
                                                 </div>
-                                                
+
                                                 <div className="mt-2 sm:mt-3 text-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                                                     💡 Press <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Space</kbd> to start/stop • <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Esc</kbd> to cancel
                                                 </div>
                                             </Card>
                                         </div>
                                     )}
-                                    
+
                                     {/* Submit Button */}
                                     {discussionComplete && (
                                         <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-400 dark:border-green-600 shadow-xl">
@@ -1558,9 +1578,9 @@ export function GroupDiscussionRound({
                             <p className="text-green-700 dark:text-green-300">Thank you for participating. Here's your detailed evaluation.</p>
                         </div>
                     </div>
-                
+
                     <h2 className="text-4xl font-bold mb-8 text-gray-900 dark:text-white">Group Discussion Results</h2>
-                    
+
                     {/* Overall Score */}
                     <div className="mb-10 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-blue-200 dark:border-blue-800">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-4">
@@ -1571,15 +1591,15 @@ export function GroupDiscussionRound({
                                 </span>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                                     {finalEvaluation.score >= 80 ? 'Excellent!' :
-                                     finalEvaluation.score >= 70 ? 'Good Job!' :
-                                     finalEvaluation.score >= 60 ? 'Fair' :
-                                     'Needs Improvement'}
+                                        finalEvaluation.score >= 70 ? 'Good Job!' :
+                                            finalEvaluation.score >= 60 ? 'Fair' :
+                                                'Needs Improvement'}
                                 </p>
                             </div>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 shadow-inner">
-                            <div 
-                                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-4 rounded-full shadow-md transition-all duration-1000 ease-out" 
+                            <div
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-4 rounded-full shadow-md transition-all duration-1000 ease-out"
                                 style={{ width: `${Math.min(Math.max(finalEvaluation.score, 0), 100)}%` }}
                             ></div>
                         </div>
@@ -1642,7 +1662,7 @@ export function GroupDiscussionRound({
                         </div>
                     </div>
 
-                    <Button 
+                    <Button
                         onClick={() => router.push('/dashboard/student/assessment')}
                         size="lg"
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-6 text-lg shadow-xl transform hover:scale-[1.02] transition-all"
