@@ -299,6 +299,11 @@ export function GroupDiscussionRound({
                 throw new Error('Assessment ID not found in props or URL');
             }
 
+            if (!roundId) {
+                console.error('Round ID is required');
+                throw new Error('Round ID is required');
+            }
+
             // STEP 1: Save full conversation transcript via API
             const submitPayload = [{
                 response_text: JSON.stringify({
