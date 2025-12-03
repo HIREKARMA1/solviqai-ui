@@ -9,11 +9,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { 
-    Home, 
-    User, 
-    FileText, 
-    Briefcase, 
+import {
+    Home,
+    User,
+    FileText,
+    Briefcase,
     ClipboardList,
     TrendingUp,
     AlertCircle,
@@ -85,7 +85,8 @@ export default function JobRecommendationsPage() {
 
     const checkActiveAssessment = async () => {
         try {
-            const data = await apiClient.getStudentAssessments(0, 5)
+            // Fetch more assessments to ensure we find the active one
+            const data = await apiClient.getStudentAssessments(0, 100)
             const active = data.assessments?.find((a: any) => {
                 const status = String(a.status || '').toLowerCase()
                 return status === 'not_started' || status === 'in_progress'
@@ -104,14 +105,14 @@ export default function JobRecommendationsPage() {
                 throw new Error('Missing job role id for this recommendation')
             }
             const data = await apiClient.startAssessment(jobRoleId)
-            
+
             // Check if this is a resumed assessment
             if (data.resumed) {
                 toast.success('Resuming your active assessment...')
             } else {
                 toast.success('Assessment started!')
             }
-            
+
             router.push(`/dashboard/student/assessment?id=${data.assessment_id}`)
         } catch (err) {
             console.error('Failed to start assessment:', err)
@@ -134,7 +135,7 @@ export default function JobRecommendationsPage() {
             console.log('📄 Resume status keys:', Object.keys(resumeStatus || {}))
             console.log('📄 has_resume value:', resumeStatus?.has_resume)
             console.log('📄 resume_uploaded value:', resumeStatus?.resume_uploaded)
-            
+
             // ✅ FIX: Check resume_uploaded field (which verifies file exists) instead of just has_resume
             if (!resumeStatus || !resumeStatus.resume_uploaded) {
                 console.log('❌ No resume found or file does not exist on disk')
@@ -152,27 +153,27 @@ export default function JobRecommendationsPage() {
             console.log('💼 Job recommendations:', data)
             console.log('💼 Job recommendations type:', typeof data)
             console.log('💼 Job recommendations keys:', Object.keys(data || {}))
-            
+
             // Check if recommendations were cached
             if (data.model === 'cached' || data.message?.includes('cache')) {
                 setIsCached(true)
                 setGeneratedAt(data.generated_at || null)
             }
-            
+
             setRecommendations(data)
             setHasResume(true)
         } catch (err) {
             console.error('❌ Error in fetchJobRecommendations:', err)
             const axiosError = err as AxiosError<{ detail: string }>
             const errorMessage = axiosError.response?.data?.detail || axiosError.message || 'Failed to get job recommendations'
-            
+
             console.error('Error details:', {
                 status: axiosError.response?.status,
                 statusText: axiosError.response?.statusText,
                 data: axiosError.response?.data,
                 message: axiosError.message
             })
-            
+
             if (axiosError.response?.status === 400) {
                 setHasResume(false)
                 setError('No resume uploaded. Please upload your resume first to get personalized job recommendations.')
@@ -220,16 +221,16 @@ export default function JobRecommendationsPage() {
                     <AnimatedBackground variant="default" />
                 </div>
             </div>
-            
+
             {/* Content with margin-top */}
             <div className="relative z-10 mt-1 sm:mt-6 lg:mt-3 space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8">
-                    {/* Header */}
-                    <div className="px-1 sm:px-0">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">Job Recommendations</h1>
-                        <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                            AI-powered job suggestions based on your resume analysis
-                        </p>
-                    </div>
+                {/* Header */}
+                <div className="px-1 sm:px-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">Job Recommendations</h1>
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+                        AI-powered job suggestions based on your resume analysis
+                    </p>
+                </div>
 
                 {/* Active Assessment Banner */}
                 {activeAssessment && (
@@ -247,12 +248,12 @@ export default function JobRecommendationsPage() {
                                         <Badge className="badge-primary border-0 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">Action Required</Badge>
                                     </div>
                                     <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 break-words">
-                                        You have an incomplete assessment for <span className="font-semibold text-primary-600 dark:text-primary-400">{activeAssessment.job_role?.title}</span>. Please complete it before starting a new assessment.
+                                        You have an incomplete assessment for <span className="font-semibold text-primary-600 dark:text-primary-400">{activeAssessment.job_role?.title || 'a Job Role'}</span>. Please complete it before starting a new assessment.
                                     </p>
                                 </div>
                                 {/* cta */}
                                 <div className="w-full md:w-auto flex-shrink-0 self-stretch md:self-center">
-                                    <Button 
+                                    <Button
                                         onClick={() => router.push(`/dashboard/student/assessment?id=${activeAssessment.assessment_id}`)}
                                         className="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white shadow-lg hover:shadow-xl text-xs sm:text-sm md:text-base h-10 sm:h-11 md:h-12"
                                         size="lg"
@@ -312,7 +313,7 @@ export default function JobRecommendationsPage() {
                                 </div>
                             </div>
                         )}
-                        
+
                         {/* Profile Summary Card */}
                         <Card className="border-primary-200 dark:border-primary-800 overflow-hidden mx-1 sm:mx-0">
                             <div className="relative">
@@ -462,32 +463,44 @@ export default function JobRecommendationsPage() {
 
                                                 {/* Start Assessment Button */}
                                                 <div className="pt-2.5 sm:pt-3 md:pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
-                                                    <Button 
-                                                        className="w-full bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm md:text-base h-9 sm:h-10 md:h-11 lg:h-12" 
-                                                        size="lg"
-                                                        onClick={() => handleStartAssessment(job.job_role_id, job.job_title, job.rank)}
-                                                        disabled={startingAssessment === job.rank || !!activeAssessment}
-                                                    >
-                                                        {startingAssessment === job.rank ? (
-                                                            <>
-                                                                <Loader size="sm" className="mr-1 sm:mr-1.5 md:mr-2 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-                                                                <span className="hidden sm:inline">Starting Assessment...</span>
-                                                                <span className="sm:hidden">Starting...</span>
-                                                            </>
-                                                        ) : activeAssessment ? (
-                                                            <>
-                                                                <AlertCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                                                                <span className="hidden sm:inline">Complete Active Assessment First</span>
-                                                                <span className="sm:hidden">Complete Active First</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <PlayCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                                                                <span className="hidden sm:inline">Start Assessment for this Role</span>
-                                                                <span className="sm:hidden">Start Assessment</span>
-                                                            </>
-                                                        )}
-                                                    </Button>
+                                                    {activeAssessment && activeAssessment.job_role?.title === job.job_title ? (
+                                                        <Button
+                                                            className="w-full bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm md:text-base h-9 sm:h-10 md:h-11 lg:h-12"
+                                                            size="lg"
+                                                            onClick={() => router.push(`/dashboard/student/assessment?id=${activeAssessment.assessment_id}`)}
+                                                        >
+                                                            <PlayCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                                            <span className="hidden sm:inline">Resume Assessment</span>
+                                                            <span className="sm:hidden">Resume</span>
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            className="w-full bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm md:text-base h-9 sm:h-10 md:h-11 lg:h-12"
+                                                            size="lg"
+                                                            onClick={() => handleStartAssessment(job.job_role_id, job.job_title, job.rank)}
+                                                            disabled={startingAssessment === job.rank || !!activeAssessment}
+                                                        >
+                                                            {startingAssessment === job.rank ? (
+                                                                <>
+                                                                    <Loader size="sm" className="mr-1 sm:mr-1.5 md:mr-2 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                                                                    <span className="hidden sm:inline">Starting Assessment...</span>
+                                                                    <span className="sm:hidden">Starting...</span>
+                                                                </>
+                                                            ) : activeAssessment ? (
+                                                                <>
+                                                                    <AlertCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                                                    <span className="hidden sm:inline">Complete Active Assessment First</span>
+                                                                    <span className="sm:hidden">Complete Active First</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <PlayCircle className="mr-1 sm:mr-1.5 md:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                                                                    <span className="hidden sm:inline">Start Assessment for this Role</span>
+                                                                    <span className="sm:hidden">Start Assessment</span>
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </CardContent>
                                         </Card>
