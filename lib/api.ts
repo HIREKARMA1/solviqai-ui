@@ -775,7 +775,7 @@ class ApiClient {
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
     if (collegeId) params.college_id = collegeId;
-    
+
     const response = await this.client.get("/admin/analytics", { params });
     return response.data;
   }
@@ -790,7 +790,7 @@ class ApiClient {
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
     if (collegeId) params.college_id = collegeId;
-    
+
     const response = await this.client.post("/admin/analytics/export", null, { params });
     return response.data;
   }
@@ -808,7 +808,7 @@ class ApiClient {
   ): Promise<any> {
     const params: any = {};
     if (includeQuestions) params.include = 'questions';
-    
+
     const response = await this.client.get(
       `/admin/students/${studentId}/assessments/${assessmentId}/report`,
       { params }
@@ -829,7 +829,7 @@ class ApiClient {
   ): Promise<any> {
     const params: any = {};
     if (includeQuestions) params.include = 'questions';
-    
+
     const response = await this.client.get(
       `/college/students/${studentId}/assessments/${assessmentId}/report`,
       { params }
@@ -901,6 +901,36 @@ class ApiClient {
 
     startAssessment: async (id: string): Promise<any> => {
       const response: AxiosResponse = await this.client.post(`/excel-assessment/assessments/${id}/start`, {});
+      return response.data;
+    },
+
+    submitExcelFile: async (assessmentId: string, questionId: string, file: File): Promise<any> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/questions/${questionId}/submit-file`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    },
+
+    submitSpreadsheetData: async (assessmentId: string, questionId: string, data: any): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/questions/${questionId}/submit-data`,
+        data
+      );
+      return response.data;
+    },
+
+    completeAssessment: async (assessmentId: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/complete`
+      );
       return response.data;
     },
   };
