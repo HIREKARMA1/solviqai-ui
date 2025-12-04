@@ -24,13 +24,25 @@ interface Category {
     fullWidth?: boolean;
 }
 
-export default function PracticeQuestions() {
+interface PracticeQuestionsProps {
+    // Notify parent when the user has entered or exited an active practice mode
+    onPracticeModeChange?: (inPractice: boolean) => void;
+}
+
+export default function PracticeQuestions({ onPracticeModeChange }: PracticeQuestionsProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         setIsVisible(true);
     }, []);
+
+    // Inform parent whenever we enter/exit a specific practice category
+    useEffect(() => {
+        if (onPracticeModeChange) {
+            onPracticeModeChange(Boolean(selectedCategory));
+        }
+    }, [selectedCategory, onPracticeModeChange]);
 
     const categories: Category[] = [
         {
