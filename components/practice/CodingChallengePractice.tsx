@@ -159,9 +159,17 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
         questions,
       });
 
-      // Exit fullscreen before showing evaluation
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+      // Exit fullscreen before showing evaluation (only if active)
+      const docAny = document as any;
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (docAny.webkitFullscreenElement && docAny.webkitExitFullscreen) {
+          await docAny.webkitExitFullscreen();
+        }
+      } catch (fullscreenError) {
+        console.warn('Failed to exit fullscreen (likely already closed):', fullscreenError);
+      }
 
       setShowEvaluation(true);
 
