@@ -82,6 +82,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
   //   onClick: undefined,
   // },
   {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice',
+    onClick: undefined,
+  },
+  {
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
@@ -203,6 +209,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         analytics: `${baseRoute}/analytics`,
         electrical: `${baseRoute}/electrical`,
         civil: `${baseRoute}/civil`,
+        practice: `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;
     }
