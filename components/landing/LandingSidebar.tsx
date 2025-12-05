@@ -14,8 +14,7 @@ import {
   Building2,
   Sparkles,
   BookOpen,
-  Ruler,
-  FileSpreadsheet ,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -97,12 +96,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'electrical',
     icon: <Zap className="w-5 h-5" />,
     label: 'Electrical',
-    onClick: undefined,
-  },
-  {
-    id: 'civil',
-    icon: <Ruler className="w-5 h-5" />,
-    label: 'Civil Engineering',
     onClick: undefined,
   },
 ];
@@ -208,7 +201,6 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         'excel-assessment': `${baseRoute}/excel-assessment`,
         analytics: `${baseRoute}/analytics`,
         electrical: `${baseRoute}/electrical`,
-        civil: `${baseRoute}/civil`,
         practice: `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;
