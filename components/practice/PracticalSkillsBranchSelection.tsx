@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Zap, Cpu, Wrench } from 'lucide-react';
+import { Building2, Zap, Cpu, Wrench, FileSpreadsheet } from 'lucide-react';
 import PracticalSkillsPractice from './PracticalSkillsPractice';
 import CodingChallengePractice from './CodingChallengePractice';
 import CivilQuantityEstimation from './CivilQuantityEstimation';
+import ElectricalCircuitPractice from './ElectricalCircuitPractice';
+import AccountantAssessmentPractice from './AccountantAssessmentPractice';
 
 interface Branch {
     id: string;
@@ -50,7 +52,7 @@ export default function PracticalSkillsBranchSelection() {
             id: 'electrical',
             number: '2',
             title: 'Electrical Engineering',
-            description: 'Power systems, circuits, and electrical machinery',
+            description: 'Circuit design, power systems, and electrical diagrams',
             icon: <Zap className="w-6 h-6 sm:w-7 sm:h-7" />,
             gradient: 'from-yellow-500 to-amber-500',
             iconGradient: 'from-yellow-500 to-amber-500',
@@ -58,8 +60,8 @@ export default function PracticalSkillsBranchSelection() {
             borderColor: 'border-yellow-200',
             hoverBorder: 'hover:border-yellow-400',
             textColor: 'text-yellow-700',
-            component: PracticalSkillsPractice,
-            requiresBranch: true,
+            component: ElectricalCircuitPractice,
+            requiresBranch: false,
         },
         {
             id: 'cse',
@@ -91,6 +93,21 @@ export default function PracticalSkillsBranchSelection() {
             component: PracticalSkillsPractice,
             requiresBranch: true,
         },
+        {
+            id: 'accountant',
+            number: '5',
+            title: 'Accountant Assessment',
+            description: 'Excel skills practice with accounting scenarios',
+            icon: <FileSpreadsheet className="w-6 h-6 sm:w-7 sm:h-7" />,
+            gradient: 'from-green-500 to-emerald-500',
+            iconGradient: 'from-green-500 to-emerald-500',
+            bgGradient: 'from-green-50 to-emerald-50',
+            borderColor: 'border-green-200',
+            hoverBorder: 'hover:border-green-400',
+            textColor: 'text-green-700',
+            component: AccountantAssessmentPractice,
+            requiresBranch: false,
+        },
     ];
 
     const selectedBranchData = branches.find(b => b.id === selectedBranch);
@@ -99,7 +116,8 @@ export default function PracticalSkillsBranchSelection() {
         const SelectedComponent = selectedBranchData.component;
         const branchName = selectedBranch === 'cse' ? 'Computer Science' :
             selectedBranch === 'civil' ? 'Civil' :
-                selectedBranch === 'electrical' ? 'Electrical' : 'Mechanical';
+                selectedBranch === 'electrical' ? 'Electrical' :
+                    selectedBranch === 'accountant' ? 'Accountant' : 'Mechanical';
 
         return (
             <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 pb-8">
@@ -136,7 +154,7 @@ export default function PracticalSkillsBranchSelection() {
 
     // Branch Selection
     return (
-        <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 lg:p-12">
+        <div className="w-full relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 lg:p-12 pb-12">
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>

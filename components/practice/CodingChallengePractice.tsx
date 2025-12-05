@@ -415,7 +415,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
 
 
   return (
-    <div className="min-h-screen bg-gray-100 select-none flex flex-col">
+    <div className="w-full bg-gray-100 select-none flex flex-col min-h-screen">
       {/* Header - Matching Assessment Style */}
       <div className="bg-indigo-600 text-white p-4">
         <div className="flex justify-between items-center max-w-7xl mx-auto w-full px-6">
@@ -449,7 +449,7 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
       </div>
 
       {/* Full-height Coding Workspace - Matching Assessment Style */}
-      <div className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex-1 overflow-auto" style={{ minHeight: 'calc(100vh - 64px)' }}>
         <div className="h-full w-full px-3">
           <div className="h-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="h-full">

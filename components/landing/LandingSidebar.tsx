@@ -6,7 +6,6 @@ import {
   FileText,
   Briefcase,
   ClipboardList,
-  Zap,
   LayoutGrid,
   Users,
   BarChart3,
@@ -14,7 +13,6 @@ import {
   Building2,
   Sparkles,
   BookOpen,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -62,12 +60,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Mock Assessment',
     onClick: undefined,
   },
-  {
-    id: 'excel-assessment',
-    icon: <FileSpreadsheet className="w-5 h-5" />,
-    label: 'Accountant Assessment',
-    onClick: undefined,
-  },
   // {
   //   id: 'jobs',
   //   icon: <Briefcase className="w-5 h-5" />,
@@ -90,12 +82,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
     label: 'Analytics',
-    onClick: undefined,
-  },
-  {
-    id: 'electrical',
-    icon: <Zap className="w-5 h-5" />,
-    label: 'Electrical',
     onClick: undefined,
   },
 ];
@@ -198,9 +184,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         'career-guidance': `${baseRoute}/career-guidance`,
         resume: `${baseRoute}/resume`,
         assessment: `${baseRoute}/assessment`,
-        'excel-assessment': `${baseRoute}/excel-assessment`,
         analytics: `${baseRoute}/analytics`,
-        electrical: `${baseRoute}/electrical`,
         practice: `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;

@@ -47,7 +47,6 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
-        'electrical': `${baseRoute}/electrical`,
         'practice': `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;
