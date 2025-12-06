@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import toast from 'react-hot-toast'
@@ -14,7 +14,7 @@ export type CodingRoundProps = {
   assessmentId: string
   roundData: any
   onSubmitted?: (result: any) => void
-  executeCodeFn?: (payload: {question_id: string; language: string; code: string; stdin?: string}) => Promise<any>
+  executeCodeFn?: (payload: { question_id: string; language: string; code: string; stdin?: string }) => Promise<any>
   submitFn?: (responses: any[]) => Promise<any>
   showSubmitButton?: boolean
 }
@@ -27,6 +27,19 @@ const LANGS = [
   { key: 'cpp', label: 'C++', icon: 'C++', ext: '.cpp' },
 ]
 
+type SubmissionEntry = {
+  id: string
+  timestamp: number
+  language: string
+  code: string
+  result: any
+  status: 'success' | 'error'
+  summary?: {
+    passed: number
+    total: number
+  }
+}
+
 const DIFFICULTY_CONFIG = {
   easy: { label: 'Easy', color: 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800' },
   medium: { label: 'Medium', color: 'text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800' },
@@ -38,6 +51,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
   const [fullscreen, setFullscreen] = useState<string | null>(null)
+  const [submissionHistory, setSubmissionHistory] = useState<Record<string, SubmissionEntry[]>>({})
 
   // Build per-question editor state
   const initial = useMemo(() => {
@@ -64,7 +78,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   const setLang = (qid: string, lang: string) => {
     setEditors(prev => {
       const next = { ...prev }
-      const meta = (roundData.questions.find((q:any)=> q.id === qid)?.metadata) || {}
+      const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
       const starter = (meta.starter_code || {}) as Record<string, string>
       next[qid] = { language: lang, code: starter[lang] || next[qid]?.code || '' }
       return next
@@ -72,7 +86,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   }
 
   const setCode = (qid: string, code: string) => {
-    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid]||{language:'python', code:''}), code } }))
+    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid] || { language: 'python', code: '' }), code } }))
   }
 
   const handleSubmit = async () => {
@@ -88,13 +102,15 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
           time_taken: 0,
         }
       })
-      
-      // Use custom submit function if provided (for practice), otherwise use assessment endpoint
-      const res = submitFn 
-        ? await submitFn(responses)
-        : await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
-      
-      toast.success('Solutions submitted successfully!')
+
+      // Use custom submit function if provided (for practice mode), otherwise use default assessment endpoint
+      let res
+      if (submitFn) {
+        res = await submitFn(responses)
+      } else {
+        res = await apiClient.submitRoundResponses(assessmentId, roundData.round_id, responses)
+        toast.success('Solutions submitted successfully!')
+      }
       onSubmitted?.(res)
     } catch (e: any) {
       const msg = e?.response?.data?.detail || e?.message || 'Submit failed'
@@ -104,32 +120,62 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
     }
   }
 
+  // Reset submission history when round changes
+  useEffect(() => {
+    setSubmissionHistory({})
+  }, [roundData?.round_id])
+
   const runTests = async (qid: string) => {
     const ed = editors[qid] || { language: 'python', code: '' }
     try {
-      setRunning(prev => ({...prev, [qid]: true}))
-      
+      setRunning(prev => ({ ...prev, [qid]: true }))
+
       // Add timeout wrapper to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
       )
-      
-      // Use custom execute function if provided (for practice), otherwise use assessment endpoint
-      const apiPromise = executeCodeFn 
+
+      // Use custom execute function if provided (for practice mode), otherwise use default assessment endpoint
+      const executePromise = executeCodeFn
         ? executeCodeFn({
-            question_id: qid,
-            language: ed.language,
-            code: ed.code,
-          })
+          question_id: qid,
+          language: ed.language,
+          code: ed.code,
+        })
         : apiClient.executeCode(assessmentId, roundData.round_id, {
-            question_id: qid,
-            language: ed.language,
-            code: ed.code,
-          })
-      
-      const res = await Promise.race([apiPromise, timeoutPromise])
-      setResults(prev => ({...prev, [qid]: res}))
-      
+          question_id: qid,
+          language: ed.language,
+          code: ed.code,
+        })
+
+      const res = await Promise.race([executePromise, timeoutPromise])
+      setResults(prev => ({ ...prev, [qid]: res }))
+      const summary = (() => {
+        if (res?.results?.length) {
+          const passed = res.results.filter((r: any) => r.passed).length
+          return { passed, total: res.results.length }
+        }
+        if (typeof res?.passed === 'number' && typeof res?.total === 'number') {
+          return { passed: res.passed, total: res.total }
+        }
+        return undefined
+      })()
+      setSubmissionHistory(prev => {
+        const next = { ...prev }
+        const list = next[qid] ? [...next[qid]] : []
+        list.unshift({
+          id: `${Date.now()}-${Math.random()}`,
+          timestamp: Date.now(),
+          language: ed.language,
+          code: ed.code,
+          result: res,
+          status: 'success',
+          summary,
+        })
+        next[qid] = list.slice(0, 10)
+        return next
+      })
+
       if (res.mode === 'tests') {
         const passRate = Math.round((res.passed / res.total) * 100)
         if (passRate === 100) {
@@ -146,28 +192,44 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
       } else {
         toast.success('Program executed successfully')
       }
-      setActiveTab(prev => ({...prev, [qid]: 'tests'}))
+      setActiveTab(prev => ({ ...prev, [qid]: 'tests' }))
     } catch (e: any) {
       console.error('Code execution error:', e)
       const msg = e?.response?.data?.detail || e?.message || 'Execution failed'
       toast.error(msg)
-      
+
       // Set error result to show in tests tab
-      setResults(prev => ({...prev, [qid]: { 
-        error: true, 
-        message: msg,
-        stderr: msg,
-        mode: 'error'
-      }}))
+      setResults(prev => ({
+        ...prev, [qid]: {
+          error: true,
+          message: msg,
+          stderr: msg,
+          mode: 'error'
+        }
+      }))
+      setSubmissionHistory(prev => {
+        const next = { ...prev }
+        const list = next[qid] ? [...next[qid]] : []
+        list.unshift({
+          id: `${Date.now()}-${Math.random()}`,
+          timestamp: Date.now(),
+          language: ed.language,
+          code: ed.code,
+          result: { error: msg },
+          status: 'error',
+        })
+        next[qid] = list.slice(0, 10)
+        return next
+      })
     } finally {
-      setRunning(prev => ({...prev, [qid]: false}))
+      setRunning(prev => ({ ...prev, [qid]: false }))
     }
   }
 
   const getPassRate = (qid: string) => {
     const res = results[qid]
     if (!res?.results) return null
-    const passed = res.results.filter((r:any) => r.passed).length
+    const passed = res.results.filter((r: any) => r.passed).length
     const total = res.results.length
     return { passed, total, percentage: Math.round((passed / total) * 100) }
   }
@@ -213,8 +275,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
           const isFullscreen = fullscreen === q.id
 
           return (
-            <div 
-              key={q.id} 
+            <div
+              key={q.id}
               className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden ${isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : 'shadow-sm'}`}
             >
               {/* Question Header */}
@@ -229,13 +291,12 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                         {difficultyConfig.label}
                       </span>
                       {passRate && (
-                        <span className={`px-2.5 py-1 rounded text-xs font-medium border ${
-                          passRate.percentage === 100 
-                            ? 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800' 
-                            : passRate.percentage >= 50 
+                        <span className={`px-2.5 py-1 rounded text-xs font-medium border ${passRate.percentage === 100
+                          ? 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800'
+                          : passRate.percentage >= 50
                             ? 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800'
                             : 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800'
-                        }`}>
+                          }`}>
                           {passRate.passed}/{passRate.total}
                         </span>
                       )}
@@ -247,7 +308,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                       <div className="text-sm text-gray-500 dark:text-gray-400">{meta.category}</div>
                     )}
                   </div>
-                  <button 
+                  <button
                     onClick={() => setFullscreen(isFullscreen ? null : q.id)}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
                     title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -271,12 +332,11 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                     {(['problem', 'tests', 'submissions'] as const).map(tab => (
                       <button
                         key={tab}
-                        onClick={() => setActiveTab(prev => ({...prev, [q.id]: tab}))}
-                        className={`px-4 py-3 text-sm font-medium transition-colors ${
-                          currentTab === tab
-                            ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900 border-b-2 border-blue-600 dark:border-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
+                        onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab }))}
+                        className={`px-4 py-3 text-sm font-medium transition-colors ${currentTab === tab
+                          ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900 border-b-2 border-blue-600 dark:border-blue-400'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
                       >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
                       </button>
@@ -284,7 +344,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                   </div>
 
                   {/* Tab Content */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{maxHeight: isFullscreen ? 'calc(100vh - 240px)' : '600px'}}>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ maxHeight: isFullscreen ? 'calc(100vh - 240px)' : '600px' }}>
                     {currentTab === 'problem' && (
                       <>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -340,13 +400,45 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                     {currentTab === 'tests' && (
                       <div className="space-y-3">
                         {!results[q.id] ? (
-                          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                            <svg className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                            </svg>
-                            <div className="font-medium">No test results yet</div>
-                            <div className="text-sm mt-1">Run tests to see results here</div>
-                          </div>
+                          <>
+                            <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                              <div className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-2">
+                                Sample Test Cases (first 3 of all test cases)
+                              </div>
+                              {Array.isArray(meta.tests) && meta.tests.length > 0 ? (
+                                <div className="space-y-3">
+                                  {meta.tests.slice(0, 3).map((t: any, i: number) => (
+                                    <div key={i} className="bg-white dark:bg-gray-950 rounded p-3 text-xs border border-gray-200 dark:border-gray-800">
+                                      <div className="font-medium text-gray-800 dark:text-gray-200 mb-2">
+                                        Test Case {i + 1}
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <div className="text-gray-500 dark:text-gray-400 mb-1">Input</div>
+                                          <pre className="bg-gray-50 dark:bg-gray-900 p-2 rounded overflow-x-auto font-mono">
+                                            {String(t.input)}
+                                          </pre>
+                                        </div>
+                                        <div>
+                                          <div className="text-gray-500 dark:text-gray-400 mb-1">Expected Output</div>
+                                          <pre className="bg-gray-50 dark:bg-gray-900 p-2 rounded overflow-x-auto font-mono">
+                                            {String(t.output)}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  Test cases will appear here once they are available.
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                                Run tests to execute <span className="font-semibold">all hidden test cases</span> (including edge cases) and see detailed results.
+                              </div>
+                            </div>
+                          </>
                         ) : results[q.id]?.error ? (
                           <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4">
                             <div className="font-medium text-red-900 dark:text-red-200 text-sm mb-2">Execution Error</div>
@@ -378,21 +470,19 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                 {results[q.id].results.map((r: any, i: number) => (
                                   <div
                                     key={i}
-                                    className={`rounded-lg p-4 border ${
-                                      r.passed
-                                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900'
-                                        : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900'
-                                    }`}
+                                    className={`rounded-lg p-4 border ${r.passed
+                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900'
+                                      : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900'
+                                      }`}
                                   >
                                     <div className="flex items-center justify-between mb-3">
                                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                         Test Case {i + 1}
                                       </span>
-                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                        r.passed
-                                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                      }`}>
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${r.passed
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                        }`}>
                                         {r.passed ? 'Passed' : 'Failed'}
                                       </span>
                                     </div>
@@ -430,12 +520,49 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                     )}
 
                     {currentTab === 'submissions' && (
-                      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                        <svg className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <div className="font-medium">No submissions yet</div>
-                        <div className="text-sm mt-1">Your submission history will appear here</div>
+                      <div className="space-y-3">
+                        {!(submissionHistory[q.id]?.length) ? (
+                          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                            <svg className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div className="font-medium">No submissions yet</div>
+                            <div className="text-sm mt-1">Run tests to record your attempts</div>
+                          </div>
+                        ) : (
+                          submissionHistory[q.id]!.map((entry, idx) => (
+                            <div
+                              key={entry.id}
+                              className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    Attempt #{submissionHistory[q.id]!.length - idx}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {new Date(entry.timestamp).toLocaleString()} • {entry.language.toUpperCase()}
+                                  </div>
+                                </div>
+                                <span className={`px-2 py-1 text-xs font-medium rounded ${entry.status === 'success'
+                                  ? (entry.summary && entry.summary.passed === entry.summary.total
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300')
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                  }`}>
+                                  {entry.status === 'success'
+                                    ? entry.summary
+                                      ? `${entry.summary.passed}/${entry.summary.total} tests`
+                                      : 'Executed'
+                                    : 'Error'}
+                                </span>
+                              </div>
+                              <pre className="text-xs bg-gray-50 dark:bg-gray-950 p-3 rounded border border-dashed border-gray-200 dark:border-gray-800 overflow-x-auto">
+                                {entry.code}
+                              </pre>
+                            </div>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
@@ -453,11 +580,10 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                         <button
                           key={l.key}
                           onClick={() => setLang(q.id, l.key)}
-                          className={`flex-1 px-3 py-2 rounded text-sm font-medium border transition-colors ${
-                            editor.language === l.key
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
-                          }`}
+                          className={`flex-1 px-3 py-2 rounded text-sm font-medium border transition-colors ${editor.language === l.key
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
+                            }`}
                         >
                           {l.label}
                         </button>
@@ -480,7 +606,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                       </div>
                       <span className="text-xs text-gray-500">{editor.code.split('\n').length} lines</span>
                     </div>
-                    <div className="flex-1 bg-gray-900" style={{ height: isFullscreen ? 'calc(100vh - 340px)' : '600px' }}>
+                    <div className="flex-1 bg-gray-900" style={{ height: isFullscreen ? 'calc(100vh - 340px)' : '440px' }}>
                       {MonacoEditor ? (
                         <MonacoEditor
                           height="100%"
@@ -523,7 +649,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => setRunning(prev => ({...prev, [q.id]: false}))}
+                        onClick={() => setRunning(prev => ({ ...prev, [q.id]: false }))}
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded transition-colors"
                       >
                         <span className="flex items-center justify-center gap-2">

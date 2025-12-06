@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Zap, Cpu, Wrench } from 'lucide-react';
+import { Building2, Zap, Cpu, Wrench, FileSpreadsheet } from 'lucide-react';
 import PracticalSkillsPractice from './PracticalSkillsPractice';
 import CodingChallengePractice from './CodingChallengePractice';
+import CivilQuantityEstimation from './CivilQuantityEstimation';
+import ElectricalCircuitPractice from './ElectricalCircuitPractice';
+import AccountantAssessmentPractice from './AccountantAssessmentPractice';
 
 interface Branch {
     id: string;
@@ -17,7 +20,8 @@ interface Branch {
     hoverBorder: string;
     textColor: string;
     iconGradient: string;
-    component: React.ComponentType<{ branch: string; onBack?: () => void }>;
+    component: React.ComponentType<any>;
+    requiresBranch?: boolean;
 }
 
 export default function PracticalSkillsBranchSelection() {
@@ -33,7 +37,7 @@ export default function PracticalSkillsBranchSelection() {
             id: 'civil',
             number: '1',
             title: 'Civil Engineering',
-            description: 'Structural analysis, construction management, and infrastructure design',
+            description: 'Quantity estimation, structural analysis, and infrastructure design',
             icon: <Building2 className="w-6 h-6 sm:w-7 sm:h-7" />,
             gradient: 'from-orange-500 to-red-500',
             iconGradient: 'from-orange-500 to-red-500',
@@ -41,13 +45,14 @@ export default function PracticalSkillsBranchSelection() {
             borderColor: 'border-orange-200',
             hoverBorder: 'hover:border-orange-400',
             textColor: 'text-orange-700',
-            component: PracticalSkillsPractice,
+            component: CivilQuantityEstimation,
+            requiresBranch: false,
         },
         {
             id: 'electrical',
             number: '2',
             title: 'Electrical Engineering',
-            description: 'Power systems, circuits, and electrical machinery',
+            description: 'Circuit design, power systems, and electrical diagrams',
             icon: <Zap className="w-6 h-6 sm:w-7 sm:h-7" />,
             gradient: 'from-yellow-500 to-amber-500',
             iconGradient: 'from-yellow-500 to-amber-500',
@@ -55,7 +60,8 @@ export default function PracticalSkillsBranchSelection() {
             borderColor: 'border-yellow-200',
             hoverBorder: 'hover:border-yellow-400',
             textColor: 'text-yellow-700',
-            component: PracticalSkillsPractice,
+            component: ElectricalCircuitPractice,
+            requiresBranch: false,
         },
         {
             id: 'cse',
@@ -70,6 +76,7 @@ export default function PracticalSkillsBranchSelection() {
             hoverBorder: 'hover:border-blue-400',
             textColor: 'text-blue-700',
             component: CodingChallengePractice,
+            requiresBranch: true,
         },
         {
             id: 'mechanical',
@@ -84,6 +91,22 @@ export default function PracticalSkillsBranchSelection() {
             hoverBorder: 'hover:border-gray-400',
             textColor: 'text-gray-700',
             component: PracticalSkillsPractice,
+            requiresBranch: true,
+        },
+        {
+            id: 'accountant',
+            number: '5',
+            title: 'Accountant Assessment',
+            description: 'Excel skills practice with accounting scenarios',
+            icon: <FileSpreadsheet className="w-6 h-6 sm:w-7 sm:h-7" />,
+            gradient: 'from-green-500 to-emerald-500',
+            iconGradient: 'from-green-500 to-emerald-500',
+            bgGradient: 'from-green-50 to-emerald-50',
+            borderColor: 'border-green-200',
+            hoverBorder: 'hover:border-green-400',
+            textColor: 'text-green-700',
+            component: AccountantAssessmentPractice,
+            requiresBranch: false,
         },
     ];
 
@@ -91,46 +114,52 @@ export default function PracticalSkillsBranchSelection() {
 
     if (selectedBranch && selectedBranchData) {
         const SelectedComponent = selectedBranchData.component;
-        const branchName = selectedBranch === 'cse' ? 'Computer Science' : 
-                         selectedBranch === 'civil' ? 'Civil' :
-                         selectedBranch === 'electrical' ? 'Electrical' : 'Mechanical';
-        
+        const branchName = selectedBranch === 'cse' ? 'Computer Science' :
+            selectedBranch === 'civil' ? 'Civil' :
+                selectedBranch === 'electrical' ? 'Electrical' :
+                    selectedBranch === 'accountant' ? 'Accountant' : 'Mechanical';
+
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8">
-                {/* Navigation - Single Line */}
-                <div className="mb-6 flex flex-wrap items-center gap-3">
-                    <button
-                        onClick={() => setSelectedBranch(null)}
-                        className="group flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:bg-blue-50 font-medium"
-                    >
-                        <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Categories
-                    </button>
-                    <button
-                        onClick={() => setSelectedBranch(null)}
-                        className="group flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-700 transition-colors duration-300"
-                    >
-                        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Branches
-                    </button>
+            <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 pb-8">
+                <div className="p-4 sm:p-6 lg:p-8">
+                    {/* Navigation - Single Line */}
+                    <div className="mb-6 flex flex-wrap items-center gap-3">
+                        <button
+                            onClick={() => setSelectedBranch(null)}
+                            className="group flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:bg-blue-50 font-medium"
+                        >
+                            <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Back to Categories
+                        </button>
+                        <button
+                            onClick={() => setSelectedBranch(null)}
+                            className="group flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-700 transition-colors duration-300"
+                        >
+                            <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Back to Branches
+                        </button>
+                    </div>
                 </div>
-                <SelectedComponent branch={branchName} onBack={() => setSelectedBranch(null)} />
+                <SelectedComponent
+                    {...(selectedBranchData.requiresBranch ? { branch: branchName } : {})}
+                    onBack={() => setSelectedBranch(null)}
+                />
             </div>
         );
     }
 
     // Branch Selection
     return (
-        <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 lg:p-12">
+        <div className="w-full relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 lg:p-12 pb-12">
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
             <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-200/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-            
+
             {/* Top Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-gradient-to-b from-blue-400/10 via-transparent to-transparent pointer-events-none"></div>
 
@@ -174,16 +203,16 @@ export default function PracticalSkillsBranchSelection() {
                             }}
                         >
                             {/* Gradient Overlay on Hover */}
-                            <div 
+                            <div
                                 className={`absolute inset-0 bg-gradient-to-br ${branch.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
                             ></div>
-                            
+
                             {/* Content */}
                             <div className="relative z-10">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex items-center gap-3">
                                         {/* Icon */}
-                                        <div 
+                                        <div
                                             className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${branch.iconGradient} 
                                                 flex items-center justify-center text-white
                                                 shadow-lg group-hover:scale-110 group-hover:shadow-xl
@@ -204,7 +233,7 @@ export default function PracticalSkillsBranchSelection() {
                                             <div className="text-xs sm:text-sm font-semibold text-gray-500 mb-1 group-hover:text-gray-700 transition-colors duration-300">
                                                 Branch {branch.number}
                                             </div>
-                                            <div 
+                                            <div
                                                 className={`font-bold text-xl sm:text-2xl ${branch.textColor} 
                                                     group-hover:text-blue-800 
                                                     transition-all duration-300`}
@@ -223,10 +252,10 @@ export default function PracticalSkillsBranchSelection() {
                                         </div>
                                     </div>
                                     {/* Arrow */}
-                                    <svg 
-                                        className="w-6 h-6 text-gray-400 group-hover:text-blue-600 transition-all duration-300" 
-                                        fill="none" 
-                                        stroke="currentColor" 
+                                    <svg
+                                        className="w-6 h-6 text-gray-400 group-hover:text-blue-600 transition-all duration-300"
+                                        fill="none"
+                                        stroke="currentColor"
                                         viewBox="0 0 24 24"
                                         style={{
                                             transform: 'translateX(0)',

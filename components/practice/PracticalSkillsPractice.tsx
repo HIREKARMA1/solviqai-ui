@@ -194,7 +194,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
     const mcqPct = totalMcq ? Math.round((correctMcq / totalMcq) * 100) : 0;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8">
+      <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 pb-12">
 
         {/* Results Card */}
         <div className={`bg-white rounded-2xl p-6 sm:p-8 shadow-xl border-2 border-blue-200 mb-6 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} transition-all duration-700`}>
@@ -249,11 +249,11 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
               <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border-2 border-gray-200">
                 <div className="mb-4 p-4 bg-white rounded-xl border-2 border-blue-200">
                   <p className="text-gray-700 text-lg">
-                    <span className="font-bold text-blue-600">Overall Score:</span> 
+                    <span className="font-bold text-blue-600">Overall Score:</span>
                     <span className="ml-2 text-2xl font-extrabold text-gray-900">{evaluation.score}/10</span>
                   </p>
                   <p className="text-gray-700 mt-2">
-                    <span className="font-semibold">Feedback:</span> 
+                    <span className="font-semibold">Feedback:</span>
                     <span className="ml-2">{evaluation.feedback || '—'}</span>
                   </p>
                 </div>
@@ -265,11 +265,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
                     <div key={item.index} className="p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 transition-all duration-300">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-semibold text-gray-500">Question #{item.index + 1}</p>
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          item.score >= 8 ? 'bg-green-100 text-green-700' :
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${item.score >= 8 ? 'bg-green-100 text-green-700' :
                           item.score >= 6 ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                            'bg-red-100 text-red-700'
+                          }`}>
                           {item.score}/10
                         </span>
                       </div>
@@ -322,7 +321,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
   const branchColor = branchColors[branchDisplayName] || branchColors['MECHANICAL'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8">
+    <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 pb-12">
 
       {/* Header Section */}
       <div className={`mb-8 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'} transition-all duration-700`}>
@@ -389,11 +388,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setDifficulty('easy')}
-              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-                difficulty === 'easy'
-                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/50'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${difficulty === 'easy'
+                ? 'bg-green-500 text-white shadow-lg shadow-green-500/50'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-400"></div>
@@ -402,11 +400,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
             </button>
             <button
               onClick={() => setDifficulty('medium')}
-              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-                difficulty === 'medium'
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${difficulty === 'medium'
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
@@ -415,11 +412,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
             </button>
             <button
               onClick={() => setDifficulty('hard')}
-              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-                difficulty === 'hard'
-                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`flex-1 min-w-[100px] px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${difficulty === 'hard'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -480,11 +476,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
         <button
           onClick={fetchQuestions}
           disabled={loading}
-          className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] ${
-            loading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl'
-          }`}
+          className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] ${loading
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl'
+            }`}
         >
           {loading ? (
             <>
@@ -548,37 +543,35 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
                 Question {currentIndex + 1} of {questions.length}
               </div>
               {current?.difficulty && (
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  current.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${current.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
                   current.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
+                    'bg-red-100 text-red-700'
+                  }`}>
                   {current.difficulty.toUpperCase()}
                 </span>
               )}
             </div>
-            
+
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 leading-relaxed">{current?.question_text}</h3>
 
             {/* MCQ Options */}
             {current?.question_type === 'mcq' && current?.options && (
               <div className="space-y-3 mb-6">
                 {current.options.map((opt, idx) => {
-                  const letter = ['A','B','C','D'][idx] || String(idx + 1);
+                  const letter = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
                   const selected = userMcqAnswers[currentIndex] === letter;
                   return (
-                    <label 
-                      key={idx} 
-                      className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
-                        selected 
-                          ? 'bg-blue-100 border-blue-500 shadow-lg shadow-blue-500/20' 
-                          : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                      }`}
+                    <label
+                      key={idx}
+                      className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${selected
+                        ? 'bg-blue-100 border-blue-500 shadow-lg shadow-blue-500/20'
+                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
                     >
-                      <input 
-                        type="radio" 
-                        name={`q-${currentIndex}`} 
-                        checked={selected} 
+                      <input
+                        type="radio"
+                        name={`q-${currentIndex}`}
+                        checked={selected}
                         onChange={() => handleMcqSelect(letter)}
                         className="mt-1 w-5 h-5 text-blue-600 focus:ring-2 focus:ring-blue-500"
                       />
@@ -622,13 +615,12 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
                     return (
                       <button
                         key={i}
-                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-110 ${
-                          i === currentIndex 
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-110' 
-                            : hasAnswer
+                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-110 ${i === currentIndex
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-110'
+                          : hasAnswer
                             ? 'bg-green-100 text-green-700 border-2 border-green-300'
                             : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
-                        }`}
+                          }`}
                         onClick={() => goTo(i)}
                       >
                         {i + 1}
@@ -636,8 +628,8 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
                     );
                   })}
                 </div>
-                <button 
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-bold hover:from-purple-700 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
+                <button
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-bold hover:from-purple-700 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                   onClick={finishAndEvaluate}
                 >
                   Finish & Evaluate

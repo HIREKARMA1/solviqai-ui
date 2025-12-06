@@ -8,11 +8,12 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { 
     Home, User, FileText, Briefcase, ClipboardList,
-    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3
+    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
 import CodingRound from '@/components/assessment/CodingRound'
+import { TallyExcelRound } from '@/components/assessment/TallyExcelRound'
 
 interface GDResponse {
     response_text: string;
@@ -139,6 +140,7 @@ export default function AssessmentRoundPage() {
     const isVoiceRound = roundType === 'technical_interview' || roundType === 'hr_interview'
     const isGroupDiscussionRound = roundType === 'group_discussion'
     const isCodingRound = roundType === 'coding'
+    const isElectricalRound = roundType === 'electrical_circuit'
     const currentQ = roundData?.questions?.[currentQuestion]
     const counts = roundData ? getCounts() : { answered: 0, notAnswered: 0, marked: 0, notVisited: 0 }
     const canSubmit = roundData && !submitting
@@ -798,6 +800,83 @@ export default function AssessmentRoundPage() {
         )
     }
 
+    // ========== TALLY/EXCEL PRACTICAL ROUND ==========
+    const isTallyExcelRound = roundType === 'tally_excel_practical' || roundType === 'TALLY_EXCEL_PRACTICAL'
+    
+    if (isTallyExcelRound) {
+        if (!roundData || (!roundData.round_id && !roundData.id)) {
+            return (
+                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+                    <div className="flex justify-center items-center min-h-screen">
+                        <div className="text-center max-w-lg px-6">
+                            <Loader size="lg" />
+                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
+                                Loading Tally/Excel Assessment
+                            </h2>
+                            <p className="mt-3 text-gray-600 dark:text-gray-400">
+                                Preparing your practical tasks...
+                            </p>
+                        </div>
+                    </div>
+                </DashboardLayout>
+            )
+        }
+
+        return (
+            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+                <TallyExcelRound
+                    assessmentId={assessmentId!}
+                    roundData={roundData}
+                    onSubmitted={(result) => {
+                        toast.success('All solutions submitted successfully!');
+                        router.push(`/dashboard/student/assessment?id=${assessmentId}`);
+                    }}
+                />
+            </DashboardLayout>
+        )
+    }
+
+    if (isElectricalRound) {
+        const roundId = roundData?.round_id || roundData?.id
+        const params = new URLSearchParams()
+        if (assessmentId) params.set('assessment_id', assessmentId)
+        if (roundId) params.set('round_id', roundId)
+        params.set('round_number', String(roundNumber))
+        const workspaceUrl = `/dashboard/student/electrical?${params.toString()}`
+
+        return (
+            <DashboardLayout requiredUserType="student">
+                <div className="max-w-3xl mx-auto space-y-6">
+                    <div className="flex items-center gap-3 text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <Zap className="h-5 w-5" />
+                        <div>
+                            <h2 className="text-lg font-semibold">Electrical Circuit Design Round</h2>
+                            <p className="text-sm text-amber-700">
+                                Complete this round by designing the required circuit in the dedicated workspace and submitting it for AI evaluation.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white border rounded-xl shadow-sm p-6 space-y-4">
+                        <h3 className="text-base font-semibold">How this round works</h3>
+                        <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                            <li>Click the button below to open the Electrical Practice workspace.</li>
+                            <li>Generate the provided circuit question and design your circuit using the component library.</li>
+                            <li>Submit your design for AI evaluation. Your feedback and score will be recorded automatically.</li>
+                        </ol>
+                        <div className="flex gap-3">
+                            <Button onClick={() => router.push(workspaceUrl)}>
+                                Open Electrical Workspace
+                            </Button>
+                            <Button variant="outline" onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                                Back to Assessment
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </DashboardLayout>
+        )
+    }
+
     if (isGroupDiscussionRound) {
         // Ensure we have valid roundData with round_id before rendering
         if (!roundData || (!roundData.round_id && !roundData.id)) {
@@ -895,7 +974,7 @@ export default function AssessmentRoundPage() {
         )
     }
 
-    if (!roundData || (!isGroupDiscussionRound && (!roundData.questions || roundData.questions.length === 0))) {
+    if (!roundData || (!isGroupDiscussionRound && !isTallyExcelRound && (!roundData.questions || roundData.questions.length === 0))) {
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <div className="text-center py-12">
@@ -1073,6 +1152,9 @@ export default function AssessmentRoundPage() {
                                 group_discussion: 'Group Discussion',
                                 technical_mcq: 'Technical MCQ',
                                 coding: 'Coding Challenge',
+                                electrical_circuit: 'Electrical Circuit Design',
+                                tally_excel_practical: 'Tally/Excel Practical',
+                                TALLY_EXCEL_PRACTICAL: 'Tally/Excel Practical',
                                 technical_interview: 'Technical Interview',
                                 hr_interview: 'HR Interview',
                             }

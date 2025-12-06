@@ -6,7 +6,6 @@ import {
   FileText,
   Briefcase,
   ClipboardList,
-  Zap,
   LayoutGrid,
   Users,
   BarChart3,
@@ -43,12 +42,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Dashboard',
     onClick: undefined, // Will be set by component
   },
-  // {
-  //   id: 'career-guidance',
-  //   icon: <Sparkles className="w-5 h-5" />,
-  //   label: 'AI Career Guidance',
-  //   onClick: undefined,
-  // },
+  {
+    id: 'career-guidance',
+    icon: <Sparkles className="w-5 h-5" />,
+    label: 'AI Career Guidance',
+    onClick: undefined,
+  },
   {
     id: 'resume',
     icon: <FileText className="w-5 h-5" />,
@@ -59,12 +58,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'assessment',
     icon: <ClipboardList className="w-5 h-5" />,
     label: 'Mock Assessment',
-    onClick: undefined,
-  },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
     onClick: undefined,
   },
   // {
@@ -79,6 +72,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
   //   label: 'Auto Job Apply',
   //   onClick: undefined,
   // },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice',
+    onClick: undefined,
+  },
   {
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
@@ -147,12 +146,6 @@ export const adminSidebarFeatures: SidebarItem[] = [
     label: 'Profile',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice Assessment',
-    onClick: undefined,
-  },
 ];
 
 // Export default features for backward compatibility (student features)
@@ -183,15 +176,44 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    const routeMap: Record<string, string> = {
-      'dashboard': baseRoute,
-      'resume': `${baseRoute}/resume`,
-      'assessment': `${baseRoute}/assessment`,
-      'practice': `${baseRoute}/practice`,
-      'jobs': `${baseRoute}/jobs`,
-      'auto-apply': `${baseRoute}/auto-apply`,
-    };
-    return routeMap[featureId] || null;
+
+    // Student routes
+    if (user.user_type === 'student') {
+      const routeMap: Record<string, string> = {
+        dashboard: baseRoute,
+        'career-guidance': `${baseRoute}/career-guidance`,
+        resume: `${baseRoute}/resume`,
+        assessment: `${baseRoute}/assessment`,
+        analytics: `${baseRoute}/analytics`,
+        practice: `${baseRoute}/practice`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    // College routes
+    if (user.user_type === 'college') {
+      const routeMap: Record<string, string> = {
+        dashboard: `/dashboard/college`,
+        students: `/dashboard/college/students`,
+        analytics: `/dashboard/college/analytics`,
+        profile: `/dashboard/college/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    // Admin routes
+    if (user.user_type === 'admin') {
+      const routeMap: Record<string, string> = {
+        dashboard: `/dashboard/admin`,
+        colleges: `/dashboard/admin/colleges`,
+        students: `/dashboard/admin/students`,
+        analytics: `/dashboard/admin/analytics`,
+        profile: `/dashboard/admin/profile`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    return null;
   };
 
   // Check if we're in dashboard context
@@ -267,13 +289,13 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
             <nav className="space-y-1">
               {features.map((item) => {
                 // Determine active state based on context
-                let isActive = false;
+                let isActive: boolean = false;
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
                   if (route) {
                     // For exact matches or nested routes
-                    isActive = pathname === route || pathname?.startsWith(route + '/');
+                    isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                     // Special case: dashboard route should match exactly or be the base dashboard
                     if (item.id === 'dashboard') {
                       isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;
