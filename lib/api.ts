@@ -960,7 +960,7 @@ class ApiClient {
 
     submitSpreadsheetData: async (assessmentId: string, questionId: string, data: any): Promise<any> => {
       const response: AxiosResponse = await this.client.post(
-        `/excel-assessment/assessments/${assessmentId}/questions/${questionId}/submit-data`,
+        `/excel-assessment/assessments/${assessmentId}/submit-data/${questionId}`,
         data
       );
       return response.data;

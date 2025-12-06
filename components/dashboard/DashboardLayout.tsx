@@ -60,7 +60,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             )}
 
             {/* Mobile Top Navbar - Only visible on small screens and when not hidden */}
-            <div 
+            <div
                 className={cn(hideNavigation && "hidden")}
                 style={hideNavigation ? { display: 'none' } : undefined}
             >
@@ -71,7 +71,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             </div>
 
             {/* Mobile Sidebar - Slides from right on small screens */}
-            <div 
+            <div
                 className={cn(hideNavigation && "hidden")}
                 style={hideNavigation ? { display: 'none' } : undefined}
             >
@@ -90,9 +90,9 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             </div> */}
 
             {/* Main Content Area with Sidebar */}
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-1 flex-col min-h-0">
                 {/* Sidebar - Hidden on mobile and when hideNavigation is true */}
-                <div 
+                <div
                     className={cn("hidden lg:block", hideNavigation && "hidden")}
                     style={hideNavigation ? { display: 'none' } : undefined}
                 >
@@ -104,11 +104,11 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                 {/* Main Content */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 overflow-y-auto",
-                        hideNavigation 
+                        "flex-1 transition-all duration-300 overflow-y-auto min-h-0",
+                        hideNavigation
                             ? "p-0" // No padding in fullscreen
                             : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile top navbar
-                        hideNavigation 
+                        hideNavigation
                             ? "" // No margin in fullscreen
                             : isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
                     )}

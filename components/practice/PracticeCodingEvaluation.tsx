@@ -87,7 +87,7 @@ export default function PracticeCodingEvaluation({
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 flex items-center justify-center p-4">
+            <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 flex items-center justify-center p-4 pb-12">
                 <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-100/50 p-8 max-w-md w-full text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">Evaluating Your Code</h3>
@@ -99,7 +99,7 @@ export default function PracticeCodingEvaluation({
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 flex items-center justify-center p-4">
+            <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 flex items-center justify-center p-4 pb-12">
                 <div className="bg-white rounded-2xl shadow-xl border-2 border-red-100/50 p-8 max-w-md w-full">
                     <div className="text-center">
                         <XCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
@@ -135,7 +135,7 @@ export default function PracticeCodingEvaluation({
     const scoreLabel = getScoreLabel(evaluation.score);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 p-4 sm:p-6 lg:p-8">
+        <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 p-4 sm:p-6 lg:p-8 pb-12">
             <div className="max-w-6xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-100/50 p-6">
