@@ -74,7 +74,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/practice/practical?${params}`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/practical?${params}`;
       const resp = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -143,7 +143,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to evaluate');
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/practice/practical/evaluate`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/practical/evaluate`;
       const resp = await fetch(apiUrl, {
         method: 'POST',
         headers: {

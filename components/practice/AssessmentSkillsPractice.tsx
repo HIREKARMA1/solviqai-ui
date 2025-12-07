@@ -43,7 +43,7 @@ export default function AssessmentSkillsPractice() {
             const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/practice/assessment?${params}`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/assessment?${params}`,
                 {
                     method: 'GET',
                     headers: {
