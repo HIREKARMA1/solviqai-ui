@@ -32,6 +32,7 @@ import {
   DataTableCard
 } from '@/components/analytics'
 import toast from 'react-hot-toast'
+import { config } from '@/lib/config'
 
 export default function AdminAnalytics() {
     const [analytics, setAnalytics] = useState<any>(null)
@@ -122,7 +123,7 @@ export default function AdminAnalytics() {
                 return
             }
 
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+            const API_BASE_URL = config.api.baseUrl.replace(/\/+$/, '')
             
             if (format === 'json') {
                 // For JSON, fetch and download as file

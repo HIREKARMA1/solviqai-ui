@@ -21,9 +21,13 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    // Get API configuration from environment variables directly
-    const apiBaseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    // Get API configuration from environment variables directly (no localhost fallback)
+    const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
+
+    // Only add rewrite if API URL is configured
+    if (!apiBaseUrl) {
+      return [];
+    }
 
     return [
       {

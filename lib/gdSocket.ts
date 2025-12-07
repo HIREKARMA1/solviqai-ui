@@ -27,7 +27,7 @@ class GDSocketClient {
   private handlers: Map<GDClientEvents, Set<EventHandler>> = new Map();
 
   constructor() {
-    this.baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+    this.baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
     ['connect', 'disconnect', 'user_joined', 'user_left', 'transcript_update', 'bot_response', 'webrtc_offer', 'webrtc_answer', 'webrtc_ice', 'error'].forEach((e) => {
       this.handlers.set(e as GDClientEvents, new Set());
     });
