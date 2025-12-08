@@ -60,7 +60,7 @@ export default function CareerGuidancePage() {
 
   // Get SSE URL from config
   const getSSEUrl = useCallback((sessionId: string) => {
-    const baseUrl = config.api.baseUrl;
+    const baseUrl = config.api.baseUrl.replace(/\/+$/, ''); // Remove trailing slash
     const token = localStorage.getItem('access_token');
     // Add token as query parameter for authentication
     const url = `${baseUrl}/api/v1/career-guidance/sse/${sessionId}`;

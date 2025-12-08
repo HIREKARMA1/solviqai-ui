@@ -174,8 +174,7 @@ export default function InterviewPractice() {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to analyze your answer');
 
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const apiUrl = `${base}/api/v1/practice/interview/analyze`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/interview/analyze`;
       const examType = mode === 'technical' ? 'technical' : 'hr';
 
       const response = await fetch(apiUrl, {
@@ -213,8 +212,7 @@ export default function InterviewPractice() {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to evaluate your session');
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const apiUrl = `${base}/api/v1/practice/interview/evaluate`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/interview/evaluate`;
       const examType = mode === 'technical' ? 'technical' : 'hr';
 
       const items = questions.map((q, idx) => ({ question_text: q.question_text, response_text: responses[idx] || '' }));
@@ -278,9 +276,8 @@ export default function InterviewPractice() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const path = mode === 'technical' ? '/api/v1/practice/interview/technical' : '/api/v1/practice/interview/hr';
-      const apiUrl = `${base}${path}?${params}`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}${path}?${params}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',

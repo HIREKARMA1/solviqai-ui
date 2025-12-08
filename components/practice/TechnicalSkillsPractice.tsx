@@ -95,7 +95,7 @@ export default function TechnicalSkillsPractice() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased timeout to 60s
 
-            const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/practice/technical?${params}`;
+            const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/technical?${params}`;
             console.log('Fetching from:', apiUrl);
 
             const response = await fetch(apiUrl, {
@@ -290,20 +290,20 @@ export default function TechnicalSkillsPractice() {
                                 <div
                                     key={idx}
                                     className={`p-6 border-l-4 rounded-lg shadow-sm transition-all hover:shadow-md ${isAnswered && isCorrect
-                                        ? 'border-green-600 bg-green-50'
-                                        : isAnswered && !isCorrect
-                                            ? 'border-red-600 bg-red-50'
-                                            : 'border-gray-300 bg-gray-50'
+                                            ? 'border-green-600 bg-green-50'
+                                            : isAnswered && !isCorrect
+                                                ? 'border-red-600 bg-red-50'
+                                                : 'border-gray-300 bg-gray-50'
                                         }`}
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isAnswered && isCorrect
-                                                    ? 'bg-green-600 text-white'
-                                                    : isAnswered && !isCorrect
-                                                        ? 'bg-red-600 text-white'
-                                                        : 'bg-gray-500 text-white'
+                                                        ? 'bg-green-600 text-white'
+                                                        : isAnswered && !isCorrect
+                                                            ? 'bg-red-600 text-white'
+                                                            : 'bg-gray-500 text-white'
                                                     }`}>
                                                     Question {idx + 1}
                                                 </span>
@@ -348,18 +348,18 @@ export default function TechnicalSkillsPractice() {
                                                     <div
                                                         key={optIdx}
                                                         className={`p-4 rounded-lg border-2 transition-all ${isCorrectAnswer
-                                                            ? 'border-green-600 bg-green-100 shadow-sm'
-                                                            : isUserSelected && !isCorrect
-                                                                ? 'border-red-600 bg-red-100 shadow-sm'
-                                                                : 'border-gray-300 bg-white'
+                                                                ? 'border-green-600 bg-green-100 shadow-sm'
+                                                                : isUserSelected && !isCorrect
+                                                                    ? 'border-red-600 bg-red-100 shadow-sm'
+                                                                    : 'border-gray-300 bg-white'
                                                             }`}
                                                     >
                                                         <div className="flex items-start">
                                                             <span className={`font-bold mr-3 mt-1 ${isCorrectAnswer
-                                                                ? 'text-green-700'
-                                                                : isUserSelected && !isCorrect
-                                                                    ? 'text-red-700'
-                                                                    : 'text-gray-600'
+                                                                    ? 'text-green-700'
+                                                                    : isUserSelected && !isCorrect
+                                                                        ? 'text-red-700'
+                                                                        : 'text-gray-600'
                                                                 }`}>
                                                                 {optionLetter}.
                                                             </span>
@@ -488,8 +488,8 @@ export default function TechnicalSkillsPractice() {
                                             }}
                                             disabled={loading}
                                             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed border ${topic === suggestedTopic
-                                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-600 shadow-md'
-                                                : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-cyan-100'
+                                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-600 shadow-md'
+                                                    : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-cyan-100'
                                                 }`}
                                         >
                                             {suggestedTopic}
@@ -564,8 +564,8 @@ export default function TechnicalSkillsPractice() {
                                         }}
                                         disabled={loading}
                                         className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isSelected
-                                            ? 'scale-105 shadow-md'
-                                            : 'hover:scale-[1.02]'
+                                                ? 'scale-105 shadow-md'
+                                                : 'hover:scale-[1.02]'
                                             } ${colors[level]}`}
                                     >
                                         {icons[level]}
@@ -615,8 +615,8 @@ export default function TechnicalSkillsPractice() {
                     onClick={fetchQuestions}
                     disabled={loading}
                     className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
                         }`}
                 >
                     {loading ? (
@@ -669,8 +669,8 @@ export default function TechnicalSkillsPractice() {
                                         <span className="hidden sm:inline">•</span>
                                         <span className="hidden sm:inline">
                                             <span className={`px-2 py-1 rounded text-xs font-semibold ${difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                                difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
+                                                    difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
                                                 }`}>
                                                 {difficulty.toUpperCase()}
                                             </span>
@@ -723,15 +723,15 @@ export default function TechnicalSkillsPractice() {
                                                 key={idx}
                                                 onClick={() => handleAnswer(optionLetter)}
                                                 className={`w-full text-left p-4 sm:p-5 border-2 rounded-xl transition-all duration-300 group ${isSelected
-                                                    ? 'border-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-lg transform scale-[1.02] ring-2 ring-blue-200'
-                                                    : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-md'
+                                                        ? 'border-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-lg transform scale-[1.02] ring-2 ring-blue-200'
+                                                        : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-md'
                                                     }`}
                                             >
                                                 <div className="flex items-start gap-4">
                                                     {/* Option Letter Circle */}
                                                     <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center font-bold text-sm sm:text-base transition-all ${isSelected
-                                                        ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md'
-                                                        : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700'
+                                                            ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md'
+                                                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700'
                                                         }`}>
                                                         {optionLetter}
                                                     </div>
@@ -856,12 +856,12 @@ export default function TechnicalSkillsPractice() {
                                             key={idx}
                                             onClick={() => goToQuestion(idx)}
                                             className={`w-full aspect-square rounded-lg text-xs font-bold transition-all duration-300 transform hover:scale-110 ${isCurrent
-                                                ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg ring-2 ring-blue-300 scale-110'
-                                                : isAnswered
-                                                    ? isCorrect
-                                                        ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-md hover:shadow-lg'
-                                                        : 'bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-md hover:shadow-lg'
-                                                    : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-blue-300 hover:shadow-md'
+                                                    ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg ring-2 ring-blue-300 scale-110'
+                                                    : isAnswered
+                                                        ? isCorrect
+                                                            ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-md hover:shadow-lg'
+                                                            : 'bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-md hover:shadow-lg'
+                                                        : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-blue-300 hover:shadow-md'
                                                 }`}
                                             title={isAnswered ? `Question ${idx + 1} - ${isCorrect ? 'Correct' : 'Incorrect'}` : `Question ${idx + 1} - Not answered`}
                                         >

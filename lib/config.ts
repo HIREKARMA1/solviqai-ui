@@ -4,15 +4,14 @@
 export const config = {
   // API Configuration
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+    baseUrl: (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, ''), 
     version: process.env.NEXT_PUBLIC_API_VERSION || 'v1',
-    fullUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+    fullUrl: (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, ''), 
   },
-  
   // App Configuration
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'Saksham',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    url: process.env.NEXT_PUBLIC_APP_URL || '',
   },
   
   // Feature Flags
