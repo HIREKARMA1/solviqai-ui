@@ -867,10 +867,13 @@ class ApiClient {
   }
 
   // Practice Coding endpoints
-  async getPracticeCodingQuestions(branch: string, difficulty: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/practice/coding', {
-      params: { branch, difficulty }
-    });
+  async getPracticeCodingQuestions(branch: string, difficulty: string, timestamp?: number): Promise<any> {
+    const params: any = { branch, difficulty };
+    // Add timestamp for cache-busting to ensure fresh question generation
+    if (timestamp) {
+      params._t = timestamp;
+    }
+    const response: AxiosResponse = await this.client.get('/practice/coding', { params });
     return response.data;
   }
 
