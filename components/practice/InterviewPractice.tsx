@@ -500,11 +500,18 @@ export default function InterviewPractice() {
             </div>
             <button
               onClick={() => {
+                setQuestions([]);
+                setResponses({});
                 setShowEvaluation(false);
+                setSessionEval(null);
+                setError(null);
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 flex items-center gap-2"
             >
-              Back to Answers
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Categories
             </button>
           </div>
 
@@ -613,12 +620,6 @@ export default function InterviewPractice() {
             className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Start New Practice
-          </button>
-          <button
-            onClick={() => setShowEvaluation(false)}
-            className="px-6 py-3 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-          >
-            Back
           </button>
         </div>
       </div>
