@@ -341,6 +341,16 @@ export default function CollegeStudents() {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
+                                                            onClick={() => window.location.href = `/dashboard/college/students/${student.id}/analytics`}
+                                                            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                            title="View student analytics"
+                                                        >
+                                                            <BarChart3 className="w-4 h-4 mr-1" />
+                                                            Analytics
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
                                                             onClick={() => handleEditStudent(student)}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                             title="Edit student details"
