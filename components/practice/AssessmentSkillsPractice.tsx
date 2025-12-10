@@ -412,7 +412,7 @@ export default function AssessmentSkillsPractice() {
                                 ? "e.g., 'work and time', 'percentages' — leave empty for AI-curated mix"
                                 : "e.g., 'communication', 'leadership' — leave empty for AI-curated mix"
                         }
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm text-gray-900"
                     />
                 </div>
 
