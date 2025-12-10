@@ -318,6 +318,11 @@ class ApiClient {
     return response.data;
   }
 
+  async getCollegeAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get("/college/analytics");
+    return response.data;
+  }
+
   async getCollegeProfile(): Promise<any> {
     const response: AxiosResponse = await this.client.get("/college/profile");
     return response.data;
@@ -357,6 +362,13 @@ class ApiClient {
   async deleteCollegeStudent(id: string): Promise<any> {
     const response: AxiosResponse = await this.client.delete(
       `/college/students/${id}`,
+    );
+    return response.data;
+  }
+
+  async getCollegeStudentAnalytics(studentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/college/students/${studentId}/analytics`
     );
     return response.data;
   }
