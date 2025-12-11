@@ -70,8 +70,10 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
     setLoading(true);
     setError(null);
     try {
-      // Backend will generate 1 question based on difficulty
-      const data = await apiClient.getPracticeCodingQuestions(branch, difficulty);
+      // Backend will generate 1 NEW question based on difficulty
+      // Add cache-busting timestamp to ensure fresh question generation
+      const timestamp = Date.now();
+      const data = await apiClient.getPracticeCodingQuestions(branch, difficulty, timestamp);
       const items: any[] = data.items || [];
 
       if (!items.length) {

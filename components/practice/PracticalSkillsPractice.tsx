@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { BookOpen, Sparkles, Target, Rocket, Trophy, Award, TrendingUp } from 'lucide-react';
+import { config } from '@/lib/config';
 
 interface Question {
   exam_type: string;
@@ -74,7 +75,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/practical?${params}`;
+      const apiUrl = `${config.api.fullUrl}/api/v1/practice/practical?${params}`;
       const resp = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -143,7 +144,7 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to evaluate');
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/practical/evaluate`;
+      const apiUrl = `${config.api.fullUrl}/api/v1/practice/practical/evaluate`;
       const resp = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -446,29 +447,29 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
 
         {/* Number of Questions */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-gray-800">Number of Questions</h3>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-blue-600 font-bold">{limit}</span>
-            </div>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-800">Number of Questions</h3>
           </div>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={limit}
-            onChange={(e) => {
-              const val = parseInt(e.target.value || '1', 10);
-              if (val >= 1 && val <= 20) setLimit(val);
-            }}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
-          />
-          <div className="flex justify-between mt-2 text-sm text-gray-500">
-            <span>Min: 1</span>
-            <span>Max: 20</span>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500 font-medium">3 questions</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                {limit}
+              </span>
+              <span className="text-xs text-gray-500 font-medium">20 questions</span>
+            </div>
+            <input
+              type="range"
+              min="3"
+              max="20"
+              value={limit}
+              onChange={(e) => setLimit(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+              }}
+            />
           </div>
         </div>
 
