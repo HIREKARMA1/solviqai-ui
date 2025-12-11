@@ -16,17 +16,22 @@ class ApiClient {
   public client: AxiosInstance;
 
   constructor() {
+    // Validate API base URL
+    if (!config.api.fullUrl) {
+      console.error("⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.");
+    }
+
     this.client = axios.create({
       baseURL: config.api.fullUrl,
-      timeout: 120000, // 120 seconds timeout (2 minutes) for web scraping operations
+      timeout: 180000, // 180 seconds timeout (3 minutes) for web scraping operations
       headers: {
         "Content-Type": "application/json",
       },
     });
 
     console.log("🚀 API Client initialized:", {
-      baseURL: config.api.fullUrl,
-      timeout: "120s (2 minutes)",
+      baseURL: config.api.fullUrl || "(not configured)",
+      timeout: "180s (3 minutes)",
     });
 
     // Add request interceptor to include auth token
@@ -498,12 +503,12 @@ class ApiClient {
     if (keywords) {
       params.keywords = keywords;
     }
-    // Use extended timeout for web scraping operations (2 minutes)
+    // Use extended timeout for web scraping operations (3 minutes)
     const response: AxiosResponse = await this.client.get(
       "/students/market-jobs",
       {
         params,
-        timeout: 120000, // 2 minutes for web scraping
+        timeout: 180000, // 3 minutes for web scraping (increased from 2 minutes)
       },
     );
     return response.data;
@@ -867,10 +872,13 @@ class ApiClient {
   }
 
   // Practice Coding endpoints
-  async getPracticeCodingQuestions(branch: string, difficulty: string): Promise<any> {
-    const response: AxiosResponse = await this.client.get('/practice/coding', {
-      params: { branch, difficulty }
-    });
+  async getPracticeCodingQuestions(branch: string, difficulty: string, timestamp?: number): Promise<any> {
+    const params: any = { branch, difficulty };
+    // Add timestamp for cache-busting to ensure fresh question generation
+    if (timestamp) {
+      params._t = timestamp;
+    }
+    const response: AxiosResponse = await this.client.get('/practice/coding', { params });
     return response.data;
   }
 
