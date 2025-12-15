@@ -69,10 +69,15 @@ export interface TranslationKeys {
   // Partners
   'partners.title': string;
   'partners.subtitle': string;
+  'partners.label': string;
+  'partners.cta.title': string;
+  'partners.cta.description': string;
+  'partners.cta.button': string;
   
   // FAQ
   'faq.title': string;
   'faq.subtitle': string;
+  'faq.askQuestion': string;
   
   // Problem Solution
   'problemSolution.badge': string;
@@ -138,6 +143,34 @@ export interface TranslationKeys {
   'solution.smartPrep.benefit2': string;
   'solution.smartPrep.benefit3': string;
   'solution.smartPrep.benefit4': string;
+  
+  // Pricing
+  'pricing.title': string;
+  'pricing.subtitle': string;
+  'pricing.badge': string;
+  'pricing.billing': string;
+  'pricing.cta': string;
+  'pricing.basic.name': string;
+  'pricing.basic.price': string;
+  'pricing.basic.feature1': string;
+  'pricing.basic.feature2': string;
+  'pricing.basic.feature3': string;
+  'pricing.basic.feature4': string;
+  'pricing.basic.feature5': string;
+  'pricing.business.name': string;
+  'pricing.business.price': string;
+  'pricing.business.feature1': string;
+  'pricing.business.feature2': string;
+  'pricing.business.feature3': string;
+  'pricing.business.feature4': string;
+  'pricing.business.feature5': string;
+  'pricing.enterprise.name': string;
+  'pricing.enterprise.price': string;
+  'pricing.enterprise.feature1': string;
+  'pricing.enterprise.feature2': string;
+  'pricing.enterprise.feature3': string;
+  'pricing.enterprise.feature4': string;
+  'pricing.enterprise.feature5': string;
   
   // Footer
   'footer.tagline': string;
@@ -252,10 +285,15 @@ const translations: Translations = {
     // Partners
     'partners.title': 'Trusted by Leading Companies',
     'partners.subtitle': 'Our platform is recognized by top organizations worldwide',
+    'partners.label': 'In collaboration with:',
+    'partners.cta.title': 'Kick Start Your Career',
+    'partners.cta.description': 'Whether you\'re a freelancer, a team, or a growing agency— our tools adapt to your workflow. Design faster. Deliver better.',
+    'partners.cta.button': 'Get Started',
     
     // FAQ
     'faq.title': 'Frequently Asked Questions',
-    'faq.subtitle': 'Everything you need to know about Solviq AI',
+    'faq.subtitle': 'Life is short why spent to design from scratch, Use finalui templates and its dummy text like lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    'faq.askQuestion': 'Ask question',
     
     // Problem Solution
     'problemSolution.badge': 'Transform Your Interview Preparation',
@@ -321,6 +359,34 @@ const translations: Translations = {
     'solution.smartPrep.benefit2': 'Focus on your weak areas',
     'solution.smartPrep.benefit3': 'Time-efficient preparation',
     'solution.smartPrep.benefit4': 'Adaptive difficulty levels',
+    
+    // Pricing
+    'pricing.title': 'Choose the Plan That\'s Right for You',
+    'pricing.subtitle': 'Giving you access to essential features and over 1,000 creative tools. Upgrade to the Pro Plan to unlock powerful AI capabilities, cloud syncing, and a whole new level of creative freedom.',
+    'pricing.badge': 'Best Value',
+    'pricing.billing': 'Billed annually.',
+    'pricing.cta': 'Get started',
+    'pricing.basic.name': 'Basic plan',
+    'pricing.basic.price': '$10/month',
+    'pricing.basic.feature1': 'Flexible Plans',
+    'pricing.basic.feature2': 'Scalability',
+    'pricing.basic.feature3': '24/7 Email Support',
+    'pricing.basic.feature4': '200 Recording',
+    'pricing.basic.feature5': '30 Days Backup',
+    'pricing.business.name': 'Business plan',
+    'pricing.business.price': '$20/month',
+    'pricing.business.feature1': 'Access to all basic features',
+    'pricing.business.feature2': 'Basic reporting and analytics',
+    'pricing.business.feature3': 'Up to 10 individual users',
+    'pricing.business.feature4': '20GB individual data each user',
+    'pricing.business.feature5': 'Basic chat and email support',
+    'pricing.enterprise.name': 'Enterprise plan',
+    'pricing.enterprise.price': '$40/month',
+    'pricing.enterprise.feature1': 'Access to all basic features',
+    'pricing.enterprise.feature2': 'Basic reporting and analytics',
+    'pricing.enterprise.feature3': 'Up to 10 individual users',
+    'pricing.enterprise.feature4': '20GB individual data each user',
+    'pricing.enterprise.feature5': 'Basic chat and email support',
     
     // Footer
     'footer.tagline': 'The Engine That Defines Readiness',
@@ -431,10 +497,15 @@ const translations: Translations = {
     // Partners
     'partners.title': 'अग्रणी कंपनियों द्वारा विश्वसनीय',
     'partners.subtitle': 'हमारा प्लेटफॉर्म दुनिया भर के शीर्ष संगठनों द्वारा मान्यता प्राप्त है',
+    'partners.label': 'सहयोग में:',
+    'partners.cta.title': 'अपने करियर की शुरुआत करें',
+    'partners.cta.description': 'चाहे आप एक फ्रीलांसर हों, एक टीम हों, या एक बढ़ती एजेंसी— हमारे उपकरण आपके वर्कफ़्लो के अनुकूल होते हैं। तेज़ी से डिज़ाइन करें। बेहतर डिलीवर करें।',
+    'partners.cta.button': 'शुरू करें',
     
     // FAQ
     'faq.title': 'अक्सर पूछे जाने वाले प्रश्न',
-    'faq.subtitle': 'Solviq AI के बारे में जानने के लिए आवश्यक सब कुछ',
+    'faq.subtitle': 'जीवन छोटा है, शुरुआत से डिज़ाइन करने में समय क्यों बिताएं, finalui टेम्प्लेट्स का उपयोग करें और इसके डमी टेक्स्ट जैसे lorem ipsum dolor sit amet, consectetur adipiscing elit।',
+    'faq.askQuestion': 'प्रश्न पूछें',
     
     // Problem Solution
     'problemSolution.badge': 'अपनी इंटरव्यू तैयारी में क्रांति लाएं',
@@ -500,6 +571,34 @@ const translations: Translations = {
     'solution.smartPrep.benefit2': 'अपने कमजोर क्षेत्रों पर ध्यान दें',
     'solution.smartPrep.benefit3': 'समय-कुशल तैयारी',
     'solution.smartPrep.benefit4': 'अनुकूली कठिनाई स्तर',
+    
+    // Pricing
+    'pricing.title': 'अपने लिए सही योजना चुनें',
+    'pricing.subtitle': 'आपको आवश्यक सुविधाओं और 1,000 से अधिक रचनात्मक उपकरणों तक पहुंच प्रदान करना। शक्तिशाली AI क्षमताओं, क्लाउड सिंकिंग और रचनात्मक स्वतंत्रता के एक नए स्तर को अनलॉक करने के लिए Pro Plan में अपग्रेड करें।',
+    'pricing.badge': 'सर्वोत्तम मूल्य',
+    'pricing.billing': 'वार्षिक बिल किया गया।',
+    'pricing.cta': 'शुरू करें',
+    'pricing.basic.name': 'बेसिक योजना',
+    'pricing.basic.price': '$10/महीना',
+    'pricing.basic.feature1': 'लचीली योजनाएं',
+    'pricing.basic.feature2': 'मापनीयता',
+    'pricing.basic.feature3': '24/7 ईमेल सपोर्ट',
+    'pricing.basic.feature4': '200 रिकॉर्डिंग',
+    'pricing.basic.feature5': '30 दिन बैकअप',
+    'pricing.business.name': 'व्यवसाय योजना',
+    'pricing.business.price': '$20/महीना',
+    'pricing.business.feature1': 'सभी बेसिक सुविधाओं तक पहुंच',
+    'pricing.business.feature2': 'बेसिक रिपोर्टिंग और एनालिटिक्स',
+    'pricing.business.feature3': '10 व्यक्तिगत उपयोगकर्ता तक',
+    'pricing.business.feature4': 'प्रत्येक उपयोगकर्ता के लिए 20GB व्यक्तिगत डेटा',
+    'pricing.business.feature5': 'बेसिक चैट और ईमेल सपोर्ट',
+    'pricing.enterprise.name': 'एंटरप्राइज योजना',
+    'pricing.enterprise.price': '$40/महीना',
+    'pricing.enterprise.feature1': 'सभी बेसिक सुविधाओं तक पहुंच',
+    'pricing.enterprise.feature2': 'बेसिक रिपोर्टिंग और एनालिटिक्स',
+    'pricing.enterprise.feature3': '10 व्यक्तिगत उपयोगकर्ता तक',
+    'pricing.enterprise.feature4': 'प्रत्येक उपयोगकर्ता के लिए 20GB व्यक्तिगत डेटा',
+    'pricing.enterprise.feature5': 'बेसिक चैट और ईमेल सपोर्ट',
     
     // Footer
     'footer.tagline': 'वह इंजन जो तत्परता को परिभाषित करता है',
@@ -610,10 +709,15 @@ const translations: Translations = {
     // Partners
     'partners.title': 'ଅଗ୍ରଣୀ କମ୍ପାନୀଗୁଡିକ ଦ୍ୱାରା ବିଶ୍ୱାସିତ',
     'partners.subtitle': 'ଆମର ପ୍ଲାଟଫର୍ମ ବିଶ୍ୱବ୍ୟାପୀ ଶୀର୍ଷ ସଂଗଠନଗୁଡିକ ଦ୍ୱାରା ସ୍ୱୀକୃତିପ୍ରାପ୍ତ',
+    'partners.label': 'ସହଯୋଗରେ:',
+    'partners.cta.title': 'ଆପଣଙ୍କର କ୍ୟାରିଅର୍ ଆରମ୍ଭ କରନ୍ତୁ',
+    'partners.cta.description': 'ଆପଣ ଏକ ଫ୍ରିଲାନ୍ସର୍, ଏକ ଦଳ, କିମ୍ବା ଏକ ବୃଦ୍ଧିପ୍ରାପ୍ତ ଏଜେନ୍ସି ହୋଇଥାନ୍ତୁ— ଆମର ସାଧନଗୁଡ଼ିକ ଆପଣଙ୍କର କାର୍ଯ୍ୟପ୍ରଣାଳୀ ସହିତ ଅନୁକୂଳ ହୋଇଥାଏ। ଶୀଘ୍ର ଡିଜାଇନ୍ କରନ୍ତୁ। ଉନ୍ନତ ବିତରଣ କରନ୍ତୁ।',
+    'partners.cta.button': 'ଆରମ୍ଭ କରନ୍ତୁ',
     
     // FAQ
     'faq.title': 'ବାରମ୍ବାର ପଚରାଯାଉଥିବା ପ୍ରଶ୍ନ',
-    'faq.subtitle': 'Solviq AI ବିଷୟରେ ଜାଣିବା ପାଇଁ ଆପଣଙ୍କୁ ଆବଶ୍ୟକ ସବୁକିଛି',
+    'faq.subtitle': 'ଜୀବନ ଛୋଟ, ଶୂନ୍ୟରୁ ଡିଜାଇନ୍ କରିବାରେ ସମୟ କାହିଁକି ବିତାଇବେ, finalui ଟେମ୍ପଲେଟ୍ ବ୍ୟବହାର କରନ୍ତୁ ଏବଂ ଏହାର ଡମି ଟେକ୍ସ୍ଟ୍ ଯେପରି lorem ipsum dolor sit amet, consectetur adipiscing elit।',
+    'faq.askQuestion': 'ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ',
     
     // Problem Solution
     'problemSolution.badge': 'ଆପଣଙ୍କର ସାକ୍ଷାତକାର ପ୍ରସ୍ତୁତିରେ ପରିବର୍ତ୍ତନ ଆଣନ୍ତୁ',
@@ -679,6 +783,34 @@ const translations: Translations = {
     'solution.smartPrep.benefit2': 'ଆପଣଙ୍କର ଦୁର୍ବଳ କ୍ଷେତ୍ର ଉପରେ ଧ୍ୟାନ ଦିଅନ୍ତୁ',
     'solution.smartPrep.benefit3': 'ସମୟ-ଅସୁବିଧାକର ପ୍ରସ୍ତୁତି',
     'solution.smartPrep.benefit4': 'ଅନୁକୂଳ କଠିନତା ସ୍ତର',
+    
+    // Pricing
+    'pricing.title': 'ଆପଣଙ୍କ ପାଇଁ ସଠିକ୍ ଯୋଜନା ବାଛନ୍ତୁ',
+    'pricing.subtitle': 'ଆପଣଙ୍କୁ ମୌଳିକ ସୁବିଧା ଏବଂ 1,000ରୁ ଅଧିକ ସୃଜନାତ୍ମକ ସାଧନର ପ୍ରବେଶ ଦେଉଛି। ଶକ୍ତିଶାଳୀ AI କ୍ଷମତା, କ୍ଲାଉଡ୍ ସିଙ୍କିଂ, ଏବଂ ସୃଜନାତ୍ମକ ସ୍ୱାଧୀନତାର ଏକ ନୂତନ ସ୍ତର ଅନଲକ୍ କରିବା ପାଇଁ Pro Planକୁ ଅପଗ୍ରେଡ୍ କରନ୍ତୁ।',
+    'pricing.badge': 'ସର୍ବୋତ୍ତମ ମୂଲ୍ୟ',
+    'pricing.billing': 'ବାର୍ଷିକ ବିଲ୍ କରାଯାଇଛି।',
+    'pricing.cta': 'ଆରମ୍ଭ କରନ୍ତୁ',
+    'pricing.basic.name': 'ମୌଳିକ ଯୋଜନା',
+    'pricing.basic.price': '$10/ମାସ',
+    'pricing.basic.feature1': 'ନମନୀୟ ଯୋଜନା',
+    'pricing.basic.feature2': 'ମାପନୀୟତା',
+    'pricing.basic.feature3': '24/7 ଇମେଲ୍ ସହାୟତା',
+    'pricing.basic.feature4': '200 ରେକର୍ଡିଂ',
+    'pricing.basic.feature5': '30 ଦିନ ବ୍ୟାକଅପ୍',
+    'pricing.business.name': 'ବ୍ୟବସାୟ ଯୋଜନା',
+    'pricing.business.price': '$20/ମାସ',
+    'pricing.business.feature1': 'ସମସ୍ତ ମୌଳିକ ସୁବିଧାର ପ୍ରବେଶ',
+    'pricing.business.feature2': 'ମୌଳିକ ରିପୋର୍ଟିଂ ଏବଂ ବିଶ୍ଳେଷଣ',
+    'pricing.business.feature3': '10 ବ୍ୟକ୍ତିଗତ ବ୍ୟବହାରକାରୀ ପର୍ଯ୍ୟନ୍ତ',
+    'pricing.business.feature4': 'ପ୍ରତ୍ୟେକ ବ୍ୟବହାରକାରୀ ପାଇଁ 20GB ବ୍ୟକ୍ତିଗତ ଡାଟା',
+    'pricing.business.feature5': 'ମୌଳିକ ଚାଟ୍ ଏବଂ ଇମେଲ୍ ସହାୟତା',
+    'pricing.enterprise.name': 'ଏଣ୍ଟରପ୍ରାଇଜ୍ ଯୋଜନା',
+    'pricing.enterprise.price': '$40/ମାସ',
+    'pricing.enterprise.feature1': 'ସମସ୍ତ ମୌଳିକ ସୁବିଧାର ପ୍ରବେଶ',
+    'pricing.enterprise.feature2': 'ମୌଳିକ ରିପୋର୍ଟିଂ ଏବଂ ବିଶ୍ଳେଷଣ',
+    'pricing.enterprise.feature3': '10 ବ୍ୟକ୍ତିଗତ ବ୍ୟବହାରକାରୀ ପର୍ଯ୍ୟନ୍ତ',
+    'pricing.enterprise.feature4': 'ପ୍ରତ୍ୟେକ ବ୍ୟବହାରକାରୀ ପାଇଁ 20GB ବ୍ୟକ୍ତିଗତ ଡାଟା',
+    'pricing.enterprise.feature5': 'ମୌଳିକ ଚାଟ୍ ଏବଂ ଇମେଲ୍ ସହାୟତା',
     
     // Footer
     'footer.tagline': 'ସେହି ଇଞ୍ଜିନ୍ ଯାହା ପ୍ରସ୍ତୁତିକୁ ପରିଭାଷିତ କରେ',

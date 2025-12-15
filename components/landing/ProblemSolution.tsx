@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     X,
-    Check,
     Clock,
     Target,
     Brain,
@@ -14,7 +13,6 @@ import {
     Sparkles
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 
 interface Problem {
@@ -140,34 +138,18 @@ export function ProblemSolution() {
     ];
 
     return (
-        <section id="problem-solution" className="section-container relative overflow-hidden bg-white dark:bg-gray-950">
-            <AnimatedBackground variant="subtle" />
-
-            <div className="relative z-10">
+        <section id="problem-solution" className="section-container relative overflow-hidden" style={{ backgroundColor: '#2B354B' }}>
+            <div className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-12">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 dark:bg-primary-900/30 rounded-full mb-6"
-                    >
-                        <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                        <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
-                            {t('problemSolution.badge')}
-                        </span>
-                    </motion.div>
-
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6 }}
-                        className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900 dark:text-white"
+                        className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white"
                     >
-                        {t('problemSolution.title')}
-                        <span className="gradient-text"> Interview Success</span>
+                        From Interview Anxiety to Interview Success
                     </motion.h2>
 
                     <motion.p
@@ -175,7 +157,7 @@ export function ProblemSolution() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
+                        className="text-lg text-gray-300 max-w-3xl mx-auto"
                     >
                         {t('problemSolution.subtitle')}
                     </motion.p>
@@ -189,17 +171,17 @@ export function ProblemSolution() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="flex justify-center mb-12"
                 >
-                    <div className="inline-flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                    <div className="inline-flex bg-white p-1 rounded-xl">
                         <button
                             onClick={() => setActiveTab('problems')}
                             className={cn(
                                 'px-6 py-3 rounded-lg font-semibold transition-all duration-300',
                                 activeTab === 'problems'
-                                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                    ? 'text-white shadow-md'
+                                    : 'text-gray-600 hover:text-gray-900'
                             )}
+                            style={activeTab === 'problems' ? { backgroundColor: '#FF541F' } : {}}
                         >
-                            <X className="w-5 h-5 inline-block mr-2" />
                             {t('problemSolution.tabProblems')}
                         </button>
                         <button
@@ -207,11 +189,11 @@ export function ProblemSolution() {
                             className={cn(
                                 'px-6 py-3 rounded-lg font-semibold transition-all duration-300',
                                 activeTab === 'solutions'
-                                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                    ? 'text-white shadow-md'
+                                    : 'text-gray-600 hover:text-gray-900'
                             )}
+                            style={activeTab === 'solutions' ? { backgroundColor: '#A6CDFF' } : {}}
                         >
-                            <Check className="w-5 h-5 inline-block mr-2" />
                             {t('problemSolution.tabSolutions')}
                         </button>
                     </div>
@@ -255,17 +237,17 @@ function ProblemCard({ problem, index }: ProblemCardProps) {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="group"
         >
-            <div className="card p-6 h-full bg-red-50/50 dark:bg-red-900/10 border-l-4 border-red-500 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
                 {/* Icon & Title */}
                 <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-red-600 flex-shrink-0 group-hover:scale-110 transition-transform" style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}>
                         {problem.icon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
                             {t(problem.titleKey)}
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        <p className="text-gray-600 text-sm">
                             {t(problem.descriptionKey)}
                         </p>
                     </div>
@@ -274,8 +256,8 @@ function ProblemCard({ problem, index }: ProblemCardProps) {
                 {/* Pain Points */}
                 <ul className="space-y-2">
                     {problem.pointKeys.map((pointKey, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                            <X className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" style={{ color: '#FF0000' }} />
                             <span>{t(pointKey)}</span>
                         </li>
                     ))}
@@ -301,17 +283,17 @@ function SolutionCard({ solution, index }: SolutionCardProps) {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="group"
         >
-            <div className="card p-6 h-full bg-green-50/50 dark:bg-green-900/10 border-l-4 border-green-500 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
                 {/* Icon & Title */}
                 <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform" style={{ backgroundColor: '#22C55E' }}>
                         {solution.icon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
                             {t(solution.titleKey)}
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        <p className="text-gray-600 text-sm">
                             {t(solution.descriptionKey)}
                         </p>
                     </div>
@@ -320,8 +302,8 @@ function SolutionCard({ solution, index }: SolutionCardProps) {
                 {/* Benefits */}
                 <ul className="space-y-2">
                     {solution.benefitKeys.map((benefitKey, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" style={{ color: '#22C55E' }} />
                             <span>{t(benefitKey)}</span>
                         </li>
                     ))}

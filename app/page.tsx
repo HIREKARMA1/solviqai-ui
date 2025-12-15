@@ -10,8 +10,9 @@ import {
   WhyChooseUs,
   HowItWorks,
   ProblemSolution,
+  Pricing,
   // Testimonials,
-  // Partners,
+  Partners,
   FAQ,
 } from '@/components/landing';
 
@@ -74,7 +75,7 @@ export default function Home() {
           <FeatureCards />
 
           {/* Why Choose Us Section */}
-          <WhyChooseUs />
+          {/* <WhyChooseUs /> */}
 
           {/* How It Works Section */}
           <HowItWorks />
@@ -82,14 +83,17 @@ export default function Home() {
           {/* Problem Solution Section */}
           <ProblemSolution />
 
+          {/* Pricing Section */}
+          <Pricing />
+
           {/* Testimonials Section */}
           {/* <Testimonials /> */}
 
-          {/* Partners Section */}
-          {/* <Partners /> */}
-
           {/* FAQ Section */}
           <FAQ />
+
+          {/* Partners Section */}
+          <Partners />
         </>
       )}
     </LandingLayout>
