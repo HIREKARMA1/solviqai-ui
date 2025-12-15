@@ -347,51 +347,50 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                   <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ maxHeight: isFullscreen ? 'calc(100vh - 240px)' : '600px' }}>
                     {currentTab === 'problem' && (
                       <>
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{q.question_text}</p>
+                        {/* Problem Description - Enhanced Styling with Better Visibility */}
+                        <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-300 dark:border-gray-600 p-6 mb-6 shadow-sm">
+                          <div className="prose prose-base max-w-none">
+                            <div
+                              className="leading-relaxed whitespace-pre-wrap font-normal text-gray-900 dark:text-gray-100"
+                              style={{
+                                fontSize: '15px',
+                                lineHeight: '1.7',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              {q.question_text}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
-                          <div className="font-medium text-blue-900 dark:text-blue-200 text-sm mb-2">Input/Output Instructions</div>
-                          <p className="text-sm text-blue-800 dark:text-blue-300">
-                            Read input using <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded text-xs">input()</code> or <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded text-xs">sys.stdin.read()</code>, then print the result. Do not include test cases in your code.
+                        <div className="bg-blue-50 dark:bg-blue-950/50 border-2 border-blue-200 dark:border-blue-900 rounded-lg p-4">
+                          <div className="font-semibold text-blue-900 dark:text-blue-200 text-base mb-2 flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            Input/Output Instructions
+                          </div>
+                          <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+                            Read input using <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs font-mono font-semibold">input()</code> or <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs font-mono font-semibold">sys.stdin.read()</code>, then print the result. Do not include test cases in your code.
                           </p>
                         </div>
 
                         {Array.isArray(meta.constraints) && meta.constraints.length > 0 && (
-                          <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                            <div className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-3">Constraints</div>
-                            <ul className="space-y-2">
+                          <div className="border-2 border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30 rounded-lg p-5">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-4 flex items-center gap-2">
+                              <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              Constraints
+                            </div>
+                            <ul className="space-y-2.5">
                               {meta.constraints.map((c: string, i: number) => (
-                                <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
-                                  <span className="text-gray-400 mt-0.5">•</span>
-                                  <span>{c}</span>
+                                <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-3 leading-relaxed">
+                                  <span className="text-orange-600 dark:text-orange-400 mt-0.5 font-bold">•</span>
+                                  <span className="flex-1">{c}</span>
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        )}
-
-                        {Array.isArray(meta.tests) && meta.tests.length > 0 && (
-                          <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                            <div className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-3">Sample Test Cases</div>
-                            <div className="space-y-3">
-                              {meta.tests.slice(0, 3).map((t: any, i: number) => (
-                                <div key={i} className="bg-gray-50 dark:bg-gray-900/50 rounded p-3 text-xs">
-                                  <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">Test Case {i + 1}</div>
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                      <div className="text-gray-500 dark:text-gray-400 mb-1">Input</div>
-                                      <pre className="bg-white dark:bg-gray-950 p-2 rounded border border-gray-200 dark:border-gray-800 overflow-x-auto font-mono">{String(t.input)}</pre>
-                                    </div>
-                                    <div>
-                                      <div className="text-gray-500 dark:text-gray-400 mb-1">Output</div>
-                                      <pre className="bg-white dark:bg-gray-950 p-2 rounded border border-gray-200 dark:border-gray-800 overflow-x-auto font-mono">{String(t.output)}</pre>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
                           </div>
                         )}
                       </>

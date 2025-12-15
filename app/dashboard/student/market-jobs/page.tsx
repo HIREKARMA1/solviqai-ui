@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import {Target, LinkedinIcon,} from 'lucide-react'
+import { Target, LinkedinIcon, } from 'lucide-react'
 
 import {
     Search,
@@ -525,17 +525,37 @@ export default function MarketJobsPage() {
     }
 
     const fetchPlatformJobs = async (platform: PlatformKey, params: LastSearchParams) => {
-        const { keywords: kw, location: loc, maxJobs: count, includeResumeSkills: includeSkills } = params
-        const response = await apiClient.getMarketJobs(
-            kw || undefined,
-            loc,
-            count,
-            includeSkills,
-            platform
-        )
-        const jobs = Array.isArray(response.jobs) ? response.jobs.slice(0, count) : []
-        const keywordList = Array.isArray(response.keywords_used) ? response.keywords_used : []
-        return { platform, jobs, keywordsUsed: keywordList }
+        try {
+            const { keywords: kw, location: loc, maxJobs: count, includeResumeSkills: includeSkills } = params
+            console.log(`🔍 Fetching jobs from ${platform}...`, { keywords: kw, location: loc, maxJobs: count })
+
+            const response = await apiClient.getMarketJobs(
+                kw || undefined,
+                loc,
+                count,
+                includeSkills,
+                platform
+            )
+
+            console.log(`✅ Received response from ${platform}:`, {
+                totalJobs: response.total_jobs,
+                jobsCount: Array.isArray(response.jobs) ? response.jobs.length : 0
+            })
+
+            const jobs = Array.isArray(response.jobs) ? response.jobs.slice(0, count) : []
+            const keywordList = Array.isArray(response.keywords_used) ? response.keywords_used : []
+            return { platform, jobs, keywordsUsed: keywordList }
+        } catch (error: any) {
+            console.error(`❌ Error fetching jobs from ${platform}:`, error)
+            console.error(`Error details:`, {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                code: error.code
+            })
+            // Return empty result for this platform, don't fail entire search
+            return { platform, jobs: [], keywordsUsed: [] }
+        }
     }
 
     const fetchPlatformsBatch = async (platforms: PlatformKey[], params: LastSearchParams) => {
@@ -670,9 +690,25 @@ export default function MarketJobsPage() {
         } catch (err) {
             console.error('Error fetching market jobs:', err)
             const axiosError = err as AxiosError<{ detail: string }>
-            const errorMessage = axiosError.response?.data?.detail || axiosError.message || 'Failed to fetch market jobs'
+
+            // Better error message extraction
+            let errorMessage = 'Failed to fetch market jobs'
+            if (axiosError.response?.data?.detail) {
+                errorMessage = axiosError.response.data.detail
+            } else if (axiosError.message) {
+                errorMessage = axiosError.message
+                // Handle timeout errors specifically
+                if (axiosError.message.includes('timeout')) {
+                    errorMessage = 'Request timed out. The job search is taking longer than expected. Please try again with fewer platforms or fewer jobs per platform.'
+                }
+                // Handle network errors
+                if (axiosError.message.includes('Network Error') || axiosError.code === 'ERR_NETWORK') {
+                    errorMessage = 'Network error. Please check your internet connection and try again.'
+                }
+            }
+
             setError(errorMessage)
-            toast.error(errorMessage)
+            toast.error(errorMessage, { duration: 5000 })
         } finally {
             setLoading(false)
         }
@@ -745,7 +781,7 @@ export default function MarketJobsPage() {
     const deselectAllSources = () => {
         setSelectedSources([])
         if (lastSearchParams) {
-        
+
             const snapshot = buildPersistableState(platformJobs, [])
             persistSearchState([], lastSearchParams, snapshot, keywordsUsed, Array.from(fetchedPlatforms))
         }
@@ -842,245 +878,245 @@ export default function MarketJobsPage() {
                 </motion.div>
 
 
-{/* Search Card - Enhanced UI */}
-<Card className="border rounded-2xl shadow-lg bg-gradient-to-br from-white/90 via-white/50 to-teal-50/40 dark:from-gray-900/60 dark:via-gray-900/40 dark:to-teal-900/20 backdrop-blur-xl">
-    <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 shadow-md">
-                <Search className="h-5 w-5 text-white" />
-            </div>
-            Search Jobs
-        </CardTitle>
-        <CardDescription className="text-gray-600 dark:text-gray-400">
-            Enter keywords OR enable resume skills to search for jobs
-        </CardDescription>
-    </CardHeader>
+                {/* Search Card - Enhanced UI */}
+                <Card className="border rounded-2xl shadow-lg bg-gradient-to-br from-white/90 via-white/50 to-teal-50/40 dark:from-gray-900/60 dark:via-gray-900/40 dark:to-teal-900/20 backdrop-blur-xl">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 shadow-md">
+                                <Search className="h-5 w-5 text-white" />
+                            </div>
+                            Search Jobs
+                        </CardTitle>
+                        <CardDescription className="text-gray-600 dark:text-gray-400">
+                            Enter keywords OR enable resume skills to search for jobs
+                        </CardDescription>
+                    </CardHeader>
 
-    <CardContent className="space-y-6">
-        {/* Inputs */}
-        <div className="grid md:grid-cols-2 gap-6">
-            {/* Keywords */}
-            <div className="space-y-1.5">
-                <label className="text-sm font-medium flex items-center gap-1">
-                    Keywords (comma-separated) *
-                </label>
+                    <CardContent className="space-y-6">
+                        {/* Inputs */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {/* Keywords */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium flex items-center gap-1">
+                                    Keywords (comma-separated) *
+                                </label>
 
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-500" />
+                                <div className="relative group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-500" />
 
-                    <Input
-                        placeholder="e.g., software engineer, data analyst"
-                        value={keywords}
-                        onChange={(e) => setKeywords(e.target.value)}
-                        disabled={isBusy}
-                        className={`
+                                    <Input
+                                        placeholder="e.g., software engineer, data analyst"
+                                        value={keywords}
+                                        onChange={(e) => setKeywords(e.target.value)}
+                                        disabled={isBusy}
+                                        className={`
                             pl-10 py-3 rounded-xl transition-all bg-white dark:bg-gray-800
                             border shadow-sm
                             group-hover:shadow-md
                             focus:ring-2 focus:ring-teal-400
-                            ${!keywords.trim() && !includeResumeSkills ? 
-                                'border-amber-300 dark:border-amber-700' : 
-                                'border-gray-300 dark:border-gray-700'}
+                            ${!keywords.trim() && !includeResumeSkills ?
+                                                'border-amber-300 dark:border-amber-700' :
+                                                'border-gray-300 dark:border-gray-700'}
                         `}
-                    />
-                </div>
+                                    />
+                                </div>
 
-                {/* small helper */}
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Required if resume skills are not enabled
-                </p>
-            </div>
+                                {/* small helper */}
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Required if resume skills are not enabled
+                                </p>
+                            </div>
 
-            {/* Location */}
-            <div className="space-y-1.5">
-                <label className="text-sm font-medium">Location</label>
+                            {/* Location */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium">Location</label>
 
-                <Input
-                    placeholder="e.g., India, Bangalore"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    disabled={isBusy}
-                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
-                />
-            </div>
-        </div>
+                                <Input
+                                    placeholder="e.g., India, Bangalore"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    disabled={isBusy}
+                                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
+                                />
+                            </div>
+                        </div>
 
-        {/* Job Platforms */}
-        <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Job Platforms</label>
-                <div className="flex gap-2 text-xs">
-                    <button
-                        type="button"
-                        onClick={selectAllSources}
-                        disabled={isBusy}
-                        className="text-teal-600 dark:text-teal-400 hover:underline disabled:opacity-40"
-                    >
-                        Select All
-                    </button>
-                    <span className="text-gray-400">|</span>
-                    <button
-                        type="button"
-                        onClick={deselectAllSources}
-                        disabled={isBusy}
-                        className="text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-40"
-                    >
-                        Clear
-                    </button>
-                </div>
-            </div>
+                        {/* Job Platforms */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">Job Platforms</label>
+                                <div className="flex gap-2 text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={selectAllSources}
+                                        disabled={isBusy}
+                                        className="text-teal-600 dark:text-teal-400 hover:underline disabled:opacity-40"
+                                    >
+                                        Select All
+                                    </button>
+                                    <span className="text-gray-400">|</span>
+                                    <button
+                                        type="button"
+                                        onClick={deselectAllSources}
+                                        disabled={isBusy}
+                                        className="text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-40"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
 
-            {/* Tag Buttons */}
-            <div className="flex flex-wrap gap-2">
-                {[
-                    { key: "linkedin", name: "LinkedIn", icon: Briefcase, color: "from-blue-500 to-blue-600" },
-                    { key: "unstop", name: "Unstop", icon: Sparkles, color: "from-orange-500 to-orange-600" },
-                    { key: "foundit", name: "FoundIt", icon: Building, color: "from-yellow-500 to-yellow-600" },
-                    { key: "naukri", name: "Naukri", icon: Briefcase, color: "from-purple-500 to-purple-600" },
-                ].map((item) => (
-                    <button
-                        key={item.key}
-                        type="button"
-                        onClick={() => toggleSource(item.key as PlatformKey)}
-                        disabled={isBusy}
-                        className={`
+                            {/* Tag Buttons */}
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { key: "linkedin", name: "LinkedIn", icon: Briefcase, color: "from-blue-500 to-blue-600" },
+                                    { key: "unstop", name: "Unstop", icon: Sparkles, color: "from-orange-500 to-orange-600" },
+                                    { key: "foundit", name: "FoundIt", icon: Building, color: "from-yellow-500 to-yellow-600" },
+                                    { key: "naukri", name: "Naukri", icon: Briefcase, color: "from-purple-500 to-purple-600" },
+                                ].map((item) => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => toggleSource(item.key as PlatformKey)}
+                                        disabled={isBusy}
+                                        className={`
                             px-4 py-2 rounded-xl font-medium transition-all shadow-sm 
                             flex items-center gap-2 border 
                             ${selectedSources.includes(item.key as PlatformKey)
-                                ? `text-white bg-gradient-to-r ${item.color} shadow-md`
-                                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}
+                                                ? `text-white bg-gradient-to-r ${item.color} shadow-md`
+                                                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}
                         `}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                    </button>
-                ))}
-            </div>
+                                    >
+                                        <item.icon className="h-4 w-4" />
+                                        {item.name}
+                                    </button>
+                                ))}
+                            </div>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-                Select one or more platforms to search
-            </p>
-        </div>
-
-        {/* Max Jobs & Search Button */}
-        <div className="flex items-end gap-4">
-            <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">
-                    Max Jobs Per Platform (1-15)
-                </label>
-                <Input
-                    type="number"
-                    min="1"
-                    max="15"
-                    value={maxJobs}
-                    onChange={(e) => {
-                        const val = parseInt(e.target.value) || "";
-                        setMaxJobs(val === "" ? "" : Math.min(15, Math.max(1, val)));
-                    }}
-                    onBlur={() => !maxJobs && setMaxJobs(15)}
-                    disabled={isBusy}
-                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
-                />
-            </div>
-
-            <Button
-                onClick={fetchMarketJobs}
-                disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
-                size="lg"
-                className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3"
-            >
-                {loading ? (
-                    <>
-                        <Loader size="sm" className="mr-2" />
-                        Searching...
-                    </>
-                ) : (
-                    <>
-                        <Search className="mr-2 h-4 w-4" />
-                        Search Jobs
-                    </>
-                )}
-            </Button>
-        </div>
-
-        {/* Validation Message */}
-        {!keywords.trim() && !includeResumeSkills && (
-            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                <AlertCircle className="h-4 w-4" />
-                <span>Please enter keywords or enable resume skills to start searching</span>
-            </div>
-        )}
-
-        {/* Resume Skills Toggle */}
-        <div className="flex items-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-800 shadow-sm">
-            <input
-                type="checkbox"
-                id="includeResumeSkills"
-                checked={includeResumeSkills}
-                onChange={(e) => setIncludeResumeSkills(e.target.checked)}
-                disabled={isBusy}
-                className="w-4 h-4 text-teal-600 bg-white border-gray-300 rounded cursor-pointer focus:ring-teal-500 focus:ring-2"
-            />
-            <label
-                htmlFor="includeResumeSkills"
-                className="text-sm font-medium cursor-pointer"
-            >
-                Include skills extracted from my resume (Alternative to keywords)
-            </label>
-        </div>
-
-        {/* Resume Skills Display */}
-        {includeResumeSkills && (
-            <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                {loadingSkills ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Loader size="sm" />
-                        <span>Loading resume skills...</span>
-                    </div>
-                ) : hasResumeSkills && resumeSkills.length > 0 ? (
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                            <span className="text-sm font-semibold">Top 5 skills from your resume:</span>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Select one or more platforms to search
+                            </p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {resumeSkills.slice(0, 5).map((skill, i) => (
-                                <Badge
-                                    key={i}
-                                    className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl shadow"
-                                >
-                                    {skill}
-                                </Badge>
-                            ))}
+
+                        {/* Max Jobs & Search Button */}
+                        <div className="flex items-end gap-4">
+                            <div className="flex-1">
+                                <label className="text-sm font-medium mb-2 block">
+                                    Max Jobs Per Platform (1-15)
+                                </label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    max="15"
+                                    value={maxJobs}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value) || "";
+                                        setMaxJobs(val === "" ? "" : Math.min(15, Math.max(1, val)));
+                                    }}
+                                    onBlur={() => !maxJobs && setMaxJobs(15)}
+                                    disabled={isBusy}
+                                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
+                                />
+                            </div>
+
+                            <Button
+                                onClick={fetchMarketJobs}
+                                disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
+                                size="lg"
+                                className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader size="sm" className="mr-2" />
+                                        Searching...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Search className="mr-2 h-4 w-4" />
+                                        Search Jobs
+                                    </>
+                                )}
+                            </Button>
                         </div>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>No resume skills found. Upload and analyze your resume first.</span>
-                    </div>
-                )}
-            </div>
-        )}
 
-        {/* Keywords Used */}
-        {keywordsUsed.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-semibold">Searching for:</span>
-                {keywordsUsed.map((k, i) => (
-                    <Badge
-                        key={i}
-                        className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-1 rounded-xl"
-                    >
-                        {k}
-                    </Badge>
-                ))}
-            </div>
-        )}
+                        {/* Validation Message */}
+                        {!keywords.trim() && !includeResumeSkills && (
+                            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                <AlertCircle className="h-4 w-4" />
+                                <span>Please enter keywords or enable resume skills to start searching</span>
+                            </div>
+                        )}
 
-        
-    </CardContent>
-</Card>
+                        {/* Resume Skills Toggle */}
+                        <div className="flex items-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-800 shadow-sm">
+                            <input
+                                type="checkbox"
+                                id="includeResumeSkills"
+                                checked={includeResumeSkills}
+                                onChange={(e) => setIncludeResumeSkills(e.target.checked)}
+                                disabled={isBusy}
+                                className="w-4 h-4 text-teal-600 bg-white border-gray-300 rounded cursor-pointer focus:ring-teal-500 focus:ring-2"
+                            />
+                            <label
+                                htmlFor="includeResumeSkills"
+                                className="text-sm font-medium cursor-pointer"
+                            >
+                                Include skills extracted from my resume (Alternative to keywords)
+                            </label>
+                        </div>
+
+                        {/* Resume Skills Display */}
+                        {includeResumeSkills && (
+                            <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+                                {loadingSkills ? (
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <Loader size="sm" />
+                                        <span>Loading resume skills...</span>
+                                    </div>
+                                ) : hasResumeSkills && resumeSkills.length > 0 ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                                            <span className="text-sm font-semibold">Top 5 skills from your resume:</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {resumeSkills.slice(0, 5).map((skill, i) => (
+                                                <Badge
+                                                    key={i}
+                                                    className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl shadow"
+                                                >
+                                                    {skill}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <span>No resume skills found. Upload and analyze your resume first.</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Keywords Used */}
+                        {keywordsUsed.length > 0 && (
+                            <div className="flex items-center gap-2 flex-wrap p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <span className="text-sm font-semibold">Searching for:</span>
+                                {keywordsUsed.map((k, i) => (
+                                    <Badge
+                                        key={i}
+                                        className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-1 rounded-xl"
+                                    >
+                                        {k}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
+
+
+                    </CardContent>
+                </Card>
 
 
                 {/* Error Message */}
@@ -1120,53 +1156,53 @@ export default function MarketJobsPage() {
                 {jobs.length > 0 && !loading && (
                     <div className="space-y-4">
                         {/* Quick Stats */}
-{/* Quick Stats */}
-<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-    <StatCard
-        icon={LinkedinIcon}
-        label="LinkedIn"
-        value={getJobStats()?.linkedin || 0}
-        color="text-blue-600 dark:text-blue-400"
-        bgColor="bg-blue-200 dark:bg-blue-800"
-        colorClass="blue"
-    />
+                        {/* Quick Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <StatCard
+                                icon={LinkedinIcon}
+                                label="LinkedIn"
+                                value={getJobStats()?.linkedin || 0}
+                                color="text-blue-600 dark:text-blue-400"
+                                bgColor="bg-blue-200 dark:bg-blue-800"
+                                colorClass="blue"
+                            />
 
-    <StatCard
-        icon={Sparkles} // Perfect for Unstop's youthful, energetic brand
-        label="Unstop"
-        value={getJobStats()?.unstop || 0}
-        color="text-orange-600 dark:text-orange-400"
-        bgColor="bg-orange-200 dark:bg-orange-800"
-        colorClass="orange"
-    />
+                            <StatCard
+                                icon={Sparkles} // Perfect for Unstop's youthful, energetic brand
+                                label="Unstop"
+                                value={getJobStats()?.unstop || 0}
+                                color="text-orange-600 dark:text-orange-400"
+                                bgColor="bg-orange-200 dark:bg-orange-800"
+                                colorClass="orange"
+                            />
 
-    <StatCard
-        icon={Search} // Represents job search functionality
-        label="Foundit"
-        value={getJobStats()?.foundit || 0}
-        color="text-green-600 dark:text-green-400"
-        bgColor="bg-green-200 dark:bg-green-800"
-        colorClass="green"
-    />
+                            <StatCard
+                                icon={Search} // Represents job search functionality
+                                label="Foundit"
+                                value={getJobStats()?.foundit || 0}
+                                color="text-green-600 dark:text-green-400"
+                                bgColor="bg-green-200 dark:bg-green-800"
+                                colorClass="green"
+                            />
 
-    <StatCard
-        icon={Briefcase} // Classic job/career symbol
-        label="Naukri"
-        value={getJobStats()?.naukri || 0}
-        color="text-purple-600 dark:text-purple-400"
-        bgColor="bg-purple-200 dark:bg-purple-800"
-        colorClass="purple"
-    />
+                            <StatCard
+                                icon={Briefcase} // Classic job/career symbol
+                                label="Naukri"
+                                value={getJobStats()?.naukri || 0}
+                                color="text-purple-600 dark:text-purple-400"
+                                bgColor="bg-purple-200 dark:bg-purple-800"
+                                colorClass="purple"
+                            />
 
-    <StatCard
-        icon={Bookmark}
-        label="Saved"
-        value={getJobStats()?.saved || 0}
-        color="text-teal-600 dark:text-teal-400"
-        bgColor="bg-teal-200 dark:bg-teal-800"
-        colorClass="teal"
-    />
-</div>
+                            <StatCard
+                                icon={Bookmark}
+                                label="Saved"
+                                value={getJobStats()?.saved || 0}
+                                color="text-teal-600 dark:text-teal-400"
+                                bgColor="bg-teal-200 dark:bg-teal-800"
+                                colorClass="teal"
+                            />
+                        </div>
 
                         {/* Results Header with Filters */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

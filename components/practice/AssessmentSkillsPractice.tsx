@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { config } from '@/lib/config';
 
 interface Question {
     id?: string;
@@ -43,7 +44,7 @@ export default function AssessmentSkillsPractice() {
             const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/assessment?${params}`,
+                `${config.api.fullUrl}/api/v1/practice/assessment?${params}`,
                 {
                     method: 'GET',
                     headers: {
@@ -216,20 +217,20 @@ export default function AssessmentSkillsPractice() {
                                 <div
                                     key={idx}
                                     className={`p-6 border-l-4 rounded-lg shadow-sm transition-all hover:shadow-md ${isAnswered && isCorrect
-                                            ? 'border-green-600 bg-green-50'
-                                            : isAnswered && !isCorrect
-                                                ? 'border-red-600 bg-red-50'
-                                                : 'border-gray-300 bg-gray-50'
+                                        ? 'border-green-600 bg-green-50'
+                                        : isAnswered && !isCorrect
+                                            ? 'border-red-600 bg-red-50'
+                                            : 'border-gray-300 bg-gray-50'
                                         }`}
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isAnswered && isCorrect
-                                                        ? 'bg-green-600 text-white'
-                                                        : isAnswered && !isCorrect
-                                                            ? 'bg-red-600 text-white'
-                                                            : 'bg-gray-500 text-white'
+                                                    ? 'bg-green-600 text-white'
+                                                    : isAnswered && !isCorrect
+                                                        ? 'bg-red-600 text-white'
+                                                        : 'bg-gray-500 text-white'
                                                     }`}>
                                                     Question {idx + 1}
                                                 </span>
@@ -274,18 +275,18 @@ export default function AssessmentSkillsPractice() {
                                                     <div
                                                         key={optIdx}
                                                         className={`p-4 rounded-lg border-2 transition-all ${isCorrectAnswer
-                                                                ? 'border-green-600 bg-green-100 shadow-sm'
-                                                                : isUserSelected && !isCorrect
-                                                                    ? 'border-red-600 bg-red-100 shadow-sm'
-                                                                    : 'border-gray-300 bg-white'
+                                                            ? 'border-green-600 bg-green-100 shadow-sm'
+                                                            : isUserSelected && !isCorrect
+                                                                ? 'border-red-600 bg-red-100 shadow-sm'
+                                                                : 'border-gray-300 bg-white'
                                                             }`}
                                                     >
                                                         <div className="flex items-start">
                                                             <span className={`font-bold mr-3 mt-1 ${isCorrectAnswer
-                                                                    ? 'text-green-700'
-                                                                    : isUserSelected && !isCorrect
-                                                                        ? 'text-red-700'
-                                                                        : 'text-gray-600'
+                                                                ? 'text-green-700'
+                                                                : isUserSelected && !isCorrect
+                                                                    ? 'text-red-700'
+                                                                    : 'text-gray-600'
                                                                 }`}>
                                                                 {optionLetter}.
                                                             </span>
@@ -368,8 +369,8 @@ export default function AssessmentSkillsPractice() {
                         <button
                             onClick={() => setAssessmentType('aptitude')}
                             className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${assessmentType === 'aptitude'
-                                    ? 'text-white scale-105 shadow-md'
-                                    : 'text-gray-700 hover:scale-[1.02]'
+                                ? 'text-white scale-105 shadow-md'
+                                : 'text-gray-700 hover:scale-[1.02]'
                                 }`}
                         >
                             <div className="flex items-center justify-center gap-2">
@@ -382,8 +383,8 @@ export default function AssessmentSkillsPractice() {
                         <button
                             onClick={() => setAssessmentType('soft_skills')}
                             className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${assessmentType === 'soft_skills'
-                                    ? 'text-white scale-105 shadow-md'
-                                    : 'text-gray-700 hover:scale-[1.02]'
+                                ? 'text-white scale-105 shadow-md'
+                                : 'text-gray-700 hover:scale-[1.02]'
                                 }`}
                         >
                             <div className="flex items-center justify-center gap-2">
@@ -411,7 +412,7 @@ export default function AssessmentSkillsPractice() {
                                 ? "e.g., 'work and time', 'percentages' — leave empty for AI-curated mix"
                                 : "e.g., 'communication', 'leadership' — leave empty for AI-curated mix"
                         }
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm text-gray-900"
                     />
                 </div>
 
@@ -474,8 +475,8 @@ export default function AssessmentSkillsPractice() {
                                     key={level}
                                     onClick={() => setDifficulty(level)}
                                     className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize flex items-center justify-center gap-2 ${isSelected
-                                            ? 'scale-105 shadow-md'
-                                            : 'hover:scale-102'
+                                        ? 'scale-105 shadow-md'
+                                        : 'hover:scale-102'
                                         } ${colors[level]}`}
                                 >
                                     {icons[level]}
@@ -519,8 +520,8 @@ export default function AssessmentSkillsPractice() {
                     onClick={fetchQuestions}
                     disabled={loading}
                     className={`w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
                         }`}
                 >
                     {loading ? (
@@ -562,8 +563,8 @@ export default function AssessmentSkillsPractice() {
                             <div className="text-right">
                                 <p className="text-sm text-gray-500 mb-1">Difficulty</p>
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                                        difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
+                                    difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
                                     }`}>
                                     {difficulty.toUpperCase()}
                                 </span>
@@ -602,8 +603,8 @@ export default function AssessmentSkillsPractice() {
                                             key={idx}
                                             onClick={() => handleAnswer(optionLetter)}
                                             className={`w-full text-left p-4 border-2 rounded-lg transition-all duration-200 ${isSelected
-                                                    ? 'border-blue-600 bg-blue-50 shadow-md transform scale-[1.01]'
-                                                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm'
+                                                ? 'border-blue-600 bg-blue-50 shadow-md transform scale-[1.01]'
+                                                : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm'
                                                 }`}
                                         >
                                             <div className="flex items-start">
@@ -632,8 +633,15 @@ export default function AssessmentSkillsPractice() {
                                     value={userAnswers[currentQuestionIndex] || ''}
                                     onChange={(e) => handleAnswer(e.target.value)}
                                     placeholder="Type your answer here..."
-                                    className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                    className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-gray-900 placeholder:text-gray-400 text-base"
                                     rows={6}
+                                    style={{
+                                        color: '#111827',
+                                        backgroundColor: '#ffffff',
+                                        fontFamily: 'inherit',
+                                        fontSize: '16px',
+                                        lineHeight: '1.5',
+                                    }}
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
                                     {userAnswers[currentQuestionIndex]?.length || 0} characters
@@ -705,27 +713,24 @@ export default function AssessmentSkillsPractice() {
                             Progress
                         </h4>
                         <p className="text-xs text-gray-500 mb-4">
-                            {Object.keys(userAnswers).length} of {questions.length} answered
+                            {Object.keys(userAnswers).filter(idx => userAnswers[parseInt(idx)]?.trim() !== '').length} of {questions.length} answered
                         </p>
                         <div className="grid grid-cols-5 gap-2 mb-4">
                             {questions.map((_, idx) => {
                                 const isCurrent = currentQuestionIndex === idx;
-                                const isAnswered = idx in userAnswers;
-                                const isCorrect = isAnswered && questions[idx].correct_answer === userAnswers[idx];
+                                const isAnswered = idx in userAnswers && (userAnswers[idx]?.trim() !== '');
 
                                 return (
                                     <button
                                         key={idx}
                                         onClick={() => goToQuestion(idx)}
                                         className={`w-full aspect-square rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-110 ${isCurrent
-                                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
-                                                : isAnswered
-                                                    ? isCorrect
-                                                        ? 'bg-green-500 text-white shadow-md'
-                                                        : 'bg-red-500 text-white shadow-md'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
+                                            ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
+                                            : isAnswered
+                                                ? 'bg-yellow-500 text-white shadow-md'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
                                             }`}
-                                        title={isAnswered ? `Question ${idx + 1} - ${isCorrect ? 'Correct' : 'Incorrect'}` : `Question ${idx + 1} - Not answered`}
+                                        title={isAnswered ? `Question ${idx + 1} - Answered (Marked for Review)` : `Question ${idx + 1} - Not answered`}
                                     >
                                         {idx + 1}
                                     </button>
@@ -740,12 +745,8 @@ export default function AssessmentSkillsPractice() {
                                     <span className="text-gray-600">Current</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
-                                    <span className="text-gray-600">Correct</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
-                                    <span className="text-gray-600">Incorrect</span>
+                                    <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
+                                    <span className="text-gray-600">Answered (Marked for Review)</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 bg-gray-200 rounded flex-shrink-0"></div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { config } from '@/lib/config';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -33,7 +34,7 @@ interface SpeechRecognition extends EventTarget {
 
 export default function InterviewPractice() {
   const [mode, setMode] = useState<'technical' | 'hr'>('technical');
-  const [jobRole, setJobRole] = useState<string>('Software Engineer');
+  const [jobRole, setJobRole] = useState<string>('');
   const [topic, setTopic] = useState<string>('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [limit, setLimit] = useState<number>(6);
@@ -43,8 +44,6 @@ export default function InterviewPractice() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Record<number, string>>({});
-  const [feedback, setFeedback] = useState<Record<number, any>>({});
-  const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [showEvaluation, setShowEvaluation] = useState<boolean>(false);
   const [sessionEval, setSessionEval] = useState<any>(null);
@@ -89,7 +88,7 @@ export default function InterviewPractice() {
           if (isLiveTranscribing) {
             try {
               recognition.start();
-            } catch {}
+            } catch { }
           }
         };
 
@@ -101,7 +100,7 @@ export default function InterviewPractice() {
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.stop();
-        } catch {}
+        } catch { }
       }
     };
   }, [isLiveTranscribing]);
@@ -116,7 +115,7 @@ export default function InterviewPractice() {
       alert('Speech recognition not initialized. Please refresh the page.');
       return;
     }
-    
+
     if (!isLiveTranscribing) {
       try {
         // Request microphone permission first
@@ -126,7 +125,7 @@ export default function InterviewPractice() {
           alert('Microphone permission denied. Please allow microphone access in your browser settings.');
           return;
         }
-        
+
         setLiveTranscript('');
         setInterimTranscript('');
         speechRecognitionRef.current.start();
@@ -161,49 +160,6 @@ export default function InterviewPractice() {
     }
   };
 
-  const analyzeCurrentAnswer = async () => {
-    if (!currentQuestion) return;
-    const answer = responses[currentIndex] || '';
-    if (!answer.trim()) {
-      alert('Please provide an answer before requesting analysis.');
-      return;
-    }
-    setAnalyzing(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('Please log in to analyze your answer');
-
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/interview/analyze`;
-      const examType = mode === 'technical' ? 'technical' : 'hr';
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exam_type: examType,
-          question_text: currentQuestion?.question_text,
-          response_text: answer,
-          job_role: jobRole,
-          topic: topic || currentQuestion?.topic,
-          difficulty,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.error || `API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const analysis = data.analysis || data;
-      setFeedback((prev) => ({ ...prev, [currentIndex]: analysis }));
-    } catch (err: any) {
-      setError(err.message || 'Analysis failed');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
 
   const finishPracticeAndEvaluate = async () => {
     if (questions.length === 0) return;
@@ -212,7 +168,7 @@ export default function InterviewPractice() {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to evaluate your session');
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/practice/interview/evaluate`;
+      const apiUrl = `${config.api.fullUrl}/api/v1/practice/interview/evaluate`;
       const examType = mode === 'technical' ? 'technical' : 'hr';
 
       const items = questions.map((q, idx) => ({ question_text: q.question_text, response_text: responses[idx] || '' }));
@@ -269,7 +225,14 @@ export default function InterviewPractice() {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please log in to access practice questions');
 
-      const params = new URLSearchParams({ job_role: jobRole, limit: String(limit) });
+      // Validate job role is provided
+      if (!jobRole || !jobRole.trim()) {
+        setError('Please enter a target job role (e.g., Software Engineer, Data Analyst, Product Manager)');
+        setLoading(false);
+        return;
+      }
+
+      const params = new URLSearchParams({ job_role: jobRole.trim(), limit: String(limit) });
       if (topic.trim()) params.append('topic', topic.trim());
       if (difficulty) params.append('difficulty', difficulty);
 
@@ -277,7 +240,7 @@ export default function InterviewPractice() {
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const path = mode === 'technical' ? '/api/v1/practice/interview/technical' : '/api/v1/practice/interview/hr';
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}${path}?${params}`;
+      const apiUrl = `${config.api.fullUrl}${path}?${params}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -353,21 +316,19 @@ export default function InterviewPractice() {
               ></div>
               <button
                 onClick={() => setMode('technical')}
-                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  mode === 'technical'
-                    ? 'text-white scale-105 shadow-md'
-                    : 'text-gray-700 hover:scale-[1.02]'
-                }`}
+                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${mode === 'technical'
+                  ? 'text-white scale-105 shadow-md'
+                  : 'text-gray-700 hover:scale-[1.02]'
+                  }`}
               >
                 Technical Interview
               </button>
               <button
                 onClick={() => setMode('hr')}
-                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  mode === 'hr'
-                    ? 'text-white scale-105 shadow-md'
-                    : 'text-gray-700 hover:scale-[1.02]'
-                }`}
+                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${mode === 'hr'
+                  ? 'text-white scale-105 shadow-md'
+                  : 'text-gray-700 hover:scale-[1.02]'
+                  }`}
               >
                 HR Interview
               </button>
@@ -378,16 +339,20 @@ export default function InterviewPractice() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-                Target Job Role
+                Target Job Role <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={jobRole}
                 onChange={(e) => setJobRole(e.target.value)}
                 disabled={loading}
-                placeholder="e.g., Software Engineer, Data Analyst"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+                placeholder={mode === 'technical' ? 'e.g., Software Engineer, Backend Developer, Data Engineer' : 'e.g., Software Engineer, Product Manager, HR Generalist'}
+                required
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm text-gray-900 ${!jobRole.trim() ? 'border-red-300 bg-red-50/50' : 'border-gray-200'}`}
               />
+              {!jobRole.trim() && (
+                <p className="mt-1 text-xs text-red-600">Job role is required to generate relevant questions</p>
+              )}
             </div>
 
             <div>
@@ -418,21 +383,21 @@ export default function InterviewPractice() {
                 className="absolute top-1 bottom-1 rounded-lg shadow-lg transition-all duration-500 ease-out z-0"
                 style={{
                   width: 'calc(33.333% - 8px)',
-                  left: difficulty === 'easy' 
-                    ? '4px' 
-                    : difficulty === 'medium' 
-                        ? 'calc(33.333% + 4px)' 
-                        : 'calc(66.666% + 4px)',
+                  left: difficulty === 'easy'
+                    ? '4px'
+                    : difficulty === 'medium'
+                      ? 'calc(33.333% + 4px)'
+                      : 'calc(66.666% + 4px)',
                   background: difficulty === 'easy'
                     ? 'linear-gradient(to right, #3b82f6, #2563eb)'
                     : difficulty === 'medium'
-                        ? 'linear-gradient(to right, #10b981, #059669)'
-                        : 'linear-gradient(to right, #1f2937, #111827)',
+                      ? 'linear-gradient(to right, #10b981, #059669)'
+                      : 'linear-gradient(to right, #1f2937, #111827)',
                   boxShadow: difficulty === 'easy'
                     ? '0 4px 12px rgba(37, 99, 235, 0.4)'
                     : difficulty === 'medium'
-                        ? '0 4px 12px rgba(16, 185, 129, 0.4)'
-                        : '0 4px 12px rgba(31, 41, 55, 0.4)',
+                      ? '0 4px 12px rgba(16, 185, 129, 0.4)'
+                      : '0 4px 12px rgba(31, 41, 55, 0.4)',
                 }}
               ></div>
               {(['easy', 'medium', 'hard'] as const).map((level) => {
@@ -446,11 +411,10 @@ export default function InterviewPractice() {
                   <button
                     key={level}
                     onClick={() => setDifficulty(level)}
-                    className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize ${
-                      isSelected
-                        ? 'scale-105 shadow-md'
-                        : 'hover:scale-[1.02]'
-                    } ${colors[level]}`}
+                    className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize ${isSelected
+                      ? 'scale-105 shadow-md'
+                      : 'hover:scale-[1.02]'
+                      } ${colors[level]}`}
                   >
                     {level}
                   </button>
@@ -491,11 +455,10 @@ export default function InterviewPractice() {
         <button
           onClick={fetchQuestions}
           disabled={loading}
-          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${
-            loading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
-          }`}
+          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+            }`}
         >
           {loading ? (
             <>
@@ -537,11 +500,18 @@ export default function InterviewPractice() {
             </div>
             <button
               onClick={() => {
+                setQuestions([]);
+                setResponses({});
                 setShowEvaluation(false);
+                setSessionEval(null);
+                setError(null);
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 flex items-center gap-2"
             >
-              Back to Answers
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Categories
             </button>
           </div>
 
@@ -644,19 +614,12 @@ export default function InterviewPractice() {
             onClick={() => {
               setQuestions([]);
               setResponses({});
-              setFeedback({});
               setShowEvaluation(false);
               setSessionEval(null);
             }}
             className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Start New Practice
-          </button>
-          <button
-            onClick={() => setShowEvaluation(false)}
-            className="px-6 py-3 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-          >
-            Back
           </button>
         </div>
       </div>
@@ -680,11 +643,10 @@ export default function InterviewPractice() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500 mb-1">Difficulty</p>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${difficulty === 'easy' ? 'bg-green-100 text-green-800' :
                   difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
+                    'bg-red-100 text-red-800'
+                  }`}>
                   {difficulty.toUpperCase()}
                 </span>
               </div>
@@ -742,20 +704,13 @@ export default function InterviewPractice() {
                   if (isLiveTranscribing && speechRecognitionRef.current) {
                     try {
                       speechRecognitionRef.current.stop();
-                    } catch {}
+                    } catch { }
                     setIsLiveTranscribing(false);
                   }
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               >
                 🧹 Clear Response
-              </button>
-              <button
-                onClick={analyzeCurrentAnswer}
-                disabled={analyzing}
-                className={`px-4 py-2 rounded ${analyzing ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-              >
-                {analyzing ? 'Analyzing…' : '✨ Get AI Feedback'}
               </button>
             </div>
 
@@ -775,8 +730,8 @@ export default function InterviewPractice() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Your response</label>
               <textarea
                 value={
-                  isLiveTranscribing 
-                    ? (liveTranscript + ' ' + interimTranscript).trim() 
+                  isLiveTranscribing
+                    ? (liveTranscript + ' ' + interimTranscript).trim()
                     : answered
                 }
                 onChange={(e) => {
@@ -785,13 +740,20 @@ export default function InterviewPractice() {
                   if (isLiveTranscribing && speechRecognitionRef.current) {
                     try {
                       speechRecognitionRef.current.stop();
-                    } catch {}
+                    } catch { }
                     setIsLiveTranscribing(false);
                   }
                 }}
                 rows={6}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all bg-white text-gray-900 placeholder:text-gray-400 text-base"
                 placeholder="Speak your answer or type here..."
+                style={{
+                  color: '#111827',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'inherit',
+                  fontSize: '16px',
+                  lineHeight: '1.5',
+                }}
               />
               {isLiveTranscribing && (
                 <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
@@ -801,107 +763,6 @@ export default function InterviewPractice() {
               )}
             </div>
 
-            {/* AI Feedback Panel */}
-            {feedback[currentIndex] && (
-              <div className="mt-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl shadow-lg">
-                <h4 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
-                  <span>✨</span> AI Feedback
-                </h4>
-                
-                {/* Scores */}
-                {feedback[currentIndex].criteria_scores && (
-                  <div className="mb-4 p-3 bg-white rounded-lg border border-purple-100">
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-600">Score: </span>
-                        <span className="font-bold text-purple-700 text-lg">{feedback[currentIndex].score ?? 0}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Communication: </span>
-                        <span className="font-semibold text-blue-700">{feedback[currentIndex].criteria_scores.communication ?? 0}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Relevance: </span>
-                        <span className="font-semibold text-green-700">{feedback[currentIndex].criteria_scores.relevance ?? 0}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Technical Depth: </span>
-                        <span className="font-semibold text-orange-700">{feedback[currentIndex].criteria_scores.technical_depth ?? 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm font-semibold text-red-700 mb-2">Mistakes</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                      {(feedback[currentIndex].mistakes || []).length > 0 ? (
-                        feedback[currentIndex].mistakes.map((m: string, i: number) => (
-                          <li key={i}>{m}</li>
-                        ))
-                      ) : (
-                        <li className="text-gray-500 italic">No major mistakes found!</li>
-                      )}
-                    </ul>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-semibold text-blue-700 mb-2">How to fix</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                      {(feedback[currentIndex].fixes || []).length > 0 ? (
-                        feedback[currentIndex].fixes.map((m: string, i: number) => (
-                          <li key={i}>{m}</li>
-                        ))
-                      ) : (
-                        <li className="text-gray-500 italic">Keep up the good work!</li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-                
-                {/* Suggestions - What more to say */}
-                {feedback[currentIndex].suggestions && feedback[currentIndex].suggestions.length > 0 && (
-                  <div className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
-                    <p className="text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
-                      <span>💡</span> What more you can say:
-                    </p>
-                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                      {feedback[currentIndex].suggestions.map((s: string, i: number) => (
-                        <li key={i} className="font-medium">{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {feedback[currentIndex].solution_steps && feedback[currentIndex].solution_steps.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-semibold text-gray-700">Solution steps</p>
-                    <ol className="list-decimal list-inside text-sm text-gray-800">
-                      {feedback[currentIndex].solution_steps.map((s: string, i: number) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-                {feedback[currentIndex].improved_answer && (
-                  <div className="mt-3">
-                    <p className="text-sm font-semibold text-gray-700">Improved answer</p>
-                    <div className="text-sm text-gray-800 whitespace-pre-wrap bg-white border border-gray-200 rounded p-3">
-                      {feedback[currentIndex].improved_answer}
-                    </div>
-                  </div>
-                )}
-                {feedback[currentIndex].tips && feedback[currentIndex].tips.length > 0 && (
-                  <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm font-semibold text-yellow-800 mb-2">💡 Tips for improvement</p>
-                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                      {feedback[currentIndex].tips.map((t: string, i: number) => (
-                        <li key={i}>{t}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Navigation */}
@@ -961,9 +822,8 @@ export default function InterviewPractice() {
                   <button
                     key={idx}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`w-full aspect-square rounded-lg text-xs font-semibold transition-all duration-200 ${
-                      isCurrent ? 'bg-blue-600 text-white shadow-lg' : isAnswered ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className={`w-full aspect-square rounded-lg text-xs font-semibold transition-all duration-200 ${isCurrent ? 'bg-blue-600 text-white shadow-lg' : isAnswered ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
+                      }`}
                     title={isAnswered ? `Question ${idx + 1} - Answered` : `Question ${idx + 1} - Not answered`}
                   >
                     {idx + 1}
