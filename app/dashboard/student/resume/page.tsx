@@ -29,6 +29,7 @@ import {
 import { motion } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
 import { AxiosError } from 'axios'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 
 const sidebarItems = [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -86,6 +87,10 @@ export default function ResumePage() {
     const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null)
     const [loadingStatus, setLoadingStatus] = useState(true)
     const [showUploadSection, setShowUploadSection] = useState(false)
+    
+    // Subscription modal state
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+    const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
     
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -190,11 +195,15 @@ export default function ResumePage() {
             setShowUploadSection(false)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
-            setError(
-                axiosError.response?.data?.detail || 
-                axiosError.message || 
-                'Failed to upload resume'
-            )
+            const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to upload resume'
+            
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+                setSubscriptionFeature('resume uploads')
+                setShowSubscriptionModal(true)
+            } else {
+                setError(errorDetail)
+            }
             setUploadProgress(0)
         } finally {
             setIsUploading(false)
@@ -210,11 +219,15 @@ export default function ResumePage() {
             setAtsScore(result)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
-            setError(
-                axiosError.response?.data?.detail || 
-                axiosError.message || 
-                'Failed to calculate ATS score'
-            )
+            const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to calculate ATS score'
+            
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+                setSubscriptionFeature('ATS score calculation')
+                setShowSubscriptionModal(true)
+            } else {
+                setError(errorDetail)
+            }
         } finally {
             setIsCalculatingATS(false)
         }
@@ -610,8 +623,6 @@ export default function ResumePage() {
                                                 <span className="text-xl sm:text-2xl text-gray-500">/100</span>
                                             </p>
                                         </div>
-
-                                        {/* ... rest of your existing ATS display code ... */}
                                     </div>
                                 )}
                             </CardContent>
@@ -619,6 +630,13 @@ export default function ResumePage() {
                     </motion.div>
                 )}
             </div>
+            
+            {/* Subscription Required Modal */}
+            <SubscriptionRequiredModal 
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature={subscriptionFeature}
+            />
         </DashboardLayout>
     )
 }
