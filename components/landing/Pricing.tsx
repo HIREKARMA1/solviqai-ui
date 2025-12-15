@@ -79,7 +79,10 @@ export function Pricing() {
     ];
 
     return (
-        <section id="pricing" className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#FFE6DE' }}>
+        <section
+            id="pricing"
+            className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#FFE6DE] dark:bg-[#6C0C0C]"
+        >
             <div className="relative z-10 max-w-7xl mx-auto">
                 {/* Section Header */}
                 <div className="text-center mb-12">

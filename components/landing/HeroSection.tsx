@@ -33,13 +33,13 @@ export function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center overflow-hidden bg-[#F7F5EA] dark:bg-gray-900"
+      className="relative min-h-screen flex items-center overflow-hidden bg-[#F7F5EA] dark:bg-black"
       style={{
         paddingTop: '120px', // Space for navbar (56px navbar + 64px padding)
         paddingBottom: '60px',
       }}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:ml-auto lg:mr-0 lg:max-w-[90%]">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           {/* Left Column - Content */}
           <motion.div
@@ -56,19 +56,19 @@ export function HeroSection() {
                 Apply Smarter with
               </span>
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">
+              <span className="text-[#FF541F] dark:text-[#FF541F]">
                 Solviq.AI
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-xl">
+            <p className="text-lg text-gray-600 dark:text-white max-w-xl">
               AI-powered job matching, resume optimization, and one-click applications all in one platform
             </p>
 
             {/* Hero Search Bar – No Input Borders + Pixel-Perfect */}
             <div className="w-full max-w-4xl">
-              <div className="bg-white dark:bg-gray-800 rounded-full shadow-xl overflow-hidden flex flex-col sm:flex-row items-center h-auto sm:h-[68px] border border-gray-100 px-10 py-2">
+              <div className="bg-white dark:bg-gray-900 rounded-full shadow-xl overflow-hidden flex flex-col sm:flex-row items-center h-auto sm:h-[68px] border border-gray-100 dark:border-gray-800 px-10 py-2">
 
                 {/* Job Title Input */}
                 <div className="flex items-center gap-3 px-2 py-2 sm:py-0 flex-1 min-w-0">
@@ -115,8 +115,8 @@ export function HeroSection() {
             <div className="flex items-center gap-6">
               {stats.map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-orange-500 font-bold text-sm">{stat.label}</div>
-                  <div className="text-gray-900 dark:text-white font-bold text-lg">
+                  <div className="text-gray-900 dark:text-white font-bold text-sm">{stat.label}</div>
+                  <div className="text-[#FF541F] dark:text-[#FF541F] font-bold text-lg">
                     {stat.value}
                   </div>
                 </div>
@@ -137,56 +137,6 @@ export function HeroSection() {
                 <div className="relative w-[500px] h-[500px]">
 
 
-                  {/* Yellow Wavy/Curved Background Shape */}
-                  <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[320px] h-[320px] bg-gradient-to-br from-yellow-300 via-yellow-200 to-yellow-100 shadow-lg"
-                    style={{ borderRadius: '40% 60% 70% 30% / 60% 30% 70% 40%' }} />
-
-                  {/* Light Mint/Teal Background Shape - Exact Figma Specs */}
-                  <div
-                    className="absolute shadow-sm"
-                    style={{
-                      width: '542.1px',
-                      height: '410px',
-                      left: '18.35px',
-                      top: '5.9px',
-                      backgroundColor: '#00A298',
-                      opacity: 0.1,
-                      borderRadius: '200px',
-                      transform: 'rotate(-17.91deg)',
-                    }}
-                  />
-
-                  {/* Yellow Dashed Curved Line */}
-                  <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 500 500">
-                    <path
-                      d="M 100 60 Q 275 10 450 90"
-                      stroke="#F59E0B"
-                      strokeWidth="4"
-                      strokeDasharray="10,10"
-                      fill="none"
-                    />
-                  </svg>
-
-                  {/* Orange/Yellow Stars */}
-                  <div className="absolute top-4 left-16 w-16 h-16">
-                    <svg viewBox="0 0 100 100" className="w-full h-full fill-yellow-400">
-                      <polygon points="50,10 61,40 95,40 68,60 79,90 50,70 21,90 32,60 5,40 39,40" />
-                    </svg>
-                  </div>
-                  <div className="absolute top-12 right-8 w-20 h-20">
-                    <svg viewBox="0 0 100 100" className="w-full h-full fill-orange-400">
-                      <polygon points="50,10 61,40 95,40 68,60 79,90 50,70 21,90 32,60 5,40 39,40" />
-                    </svg>
-                  </div>
-
-                  {/* Small Dark Blue/Purple Circles */}
-                  <div className="absolute top-8 right-14 w-7 h-7 bg-indigo-900 rounded-full shadow" />
-                  <div className="absolute bottom-24 right-4 w-9 h-9 bg-indigo-900 rounded-full shadow" />
-
-                  {/* Large Teal/Cyan Circle (Left side) */}
-                  <div className="absolute top-1/2 -left-4 -translate-y-1/2 w-24 h-24 bg-teal-400 rounded-full shadow-lg" />
-
-
                   {/* Hero Image - Woman with Laptop */}
                   <div className="relative w-full max-w-md mx-auto sm:mx-0 sm:absolute sm:top-1/2 sm:right-4 sm:-translate-y-1/2 sm:w-[420px] lg:w-[480px] sm:h-[500px] lg:h-[560px] z-10">
                     <Image
@@ -197,35 +147,6 @@ export function HeroSection() {
                       priority
                     />
 
-                    {/* Promotional Badge - Bottom Center of Image (Matches Screenshot Perfectly) */}
-                    <motion.div
-                      initial={{ scale: 0.8, y: 20, opacity: 0 }}
-                      animate={{ scale: 1, y: 0, opacity: 1 }}
-                      transition={{ delay: 0.6, type: "spring", stiffness: 200, damping: 20 }}
-                      className="absolute bottom-4 left-1/3 -translate-x-1/3
-                bg-white dark:bg-gray-800 
-                px-4 py-2.5 rounded-full shadow-lg 
-                flex items-center gap-3 
-                border border-gray-100 
-                whitespace-nowrap
-                text-sm z-20"
-                    >
-                      {/* Teal Circle Icon with White Ring */}
-                      <div className="relative flex-shrink-0">
-                        <div className="w-9 h-9 bg-teal-500 rounded-full flex items-center justify-center">
-                          <div className="w-4 h-4 bg-white rounded-full border-2 border-teal-500" />
-                        </div>
-                      </div>
-
-                      <div className="leading-tight">
-                        <p className="font-semibold text-gray-900 dark:text-white text-xs">
-                          Get 20% off all updates
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          15th - 27th sept, 2022
-                        </p>
-                      </div>
-                    </motion.div>
                   </div>
 
 

@@ -41,10 +41,7 @@ export function HowItWorks() {
   return (
     <section 
       id="how-it-works" 
-      className="relative overflow-hidden py-16"
-      style={{ 
-        backgroundColor: '#310139',
-      }}
+      className="relative overflow-hidden py-16 bg-[#310139] dark:bg-gray-800"
     >
       <div className="w-[90vw] mx-auto px-4">
         {/* Header Section */}
@@ -89,89 +86,7 @@ export function HowItWorks() {
               ))}
             </div>
 
-            {/* Connecting Lines with Arrows and T-markers */}
-            {[0, 1, 2].map((i) => {
-              // Position between columns: after column i+1, before column i+2
-              // Each column is 25%, positioned at 0%, 25%, 50%, 75%
-              // Lines connect from right edge of column i+1 to left edge of column i+2
-              const columnRight = ((i + 1) * 25) + 12.5; // Middle of gap after column
-              const columnLeft = ((i + 2) * 25) - 12.5; // Middle of gap before next column
-              
-              return (
-                <React.Fragment key={`connector-${i}`}>
-                  {/* T-marker at start of line */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.6 + i * 0.2 }}
-                    className="absolute"
-                    style={{
-                      left: `calc(${columnRight}% - 6px)`,
-                      bottom: '0px',
-                    }}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className="w-0.5 h-4 bg-[#FF541F]" />
-                      <div className="w-3 h-0.5 bg-[#FF541F] -mt-0.5" />
-                    </div>
-                  </motion.div>
 
-                  {/* Horizontal connecting line with arrow */}
-                  <motion.div
-                    initial={{ opacity: 0, scaleX: 0 }}
-                    whileInView={{ opacity: 1, scaleX: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, delay: 0.5 + i * 0.2 }}
-                    className="absolute flex items-center"
-                    style={{
-                      left: `calc(${columnRight}% + 3px)`,
-                      bottom: '4px',
-                      width: `calc(${columnLeft}% - ${columnRight}% - 6px)`,
-                    }}
-                  >
-                    <div className="flex-1 h-0.5 bg-[#FF541F]" />
-                    <ArrowRight className="w-3 h-3 text-[#FF541F] flex-shrink-0 ml-1" />
-                  </motion.div>
-
-                  {/* T-marker at end of line */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.7 + i * 0.2 }}
-                    className="absolute"
-                    style={{
-                      left: `calc(${columnLeft}% - 6px)`,
-                      bottom: '0px',
-                    }}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className="w-0.5 h-4 bg-[#FF541F]" />
-                      <div className="w-3 h-0.5 bg-[#FF541F] -mt-0.5" />
-                    </div>
-                  </motion.div>
-                </React.Fragment>
-              );
-            })}
-
-            {/* Final T-marker after step 4 */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 1.1 }}
-              className="absolute"
-              style={{
-                right: '0%',
-                bottom: '0px',
-              }}
-            >
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-[#FF541F]" />
-                <div className="w-3 h-0.5 bg-[#FF541F] -mt-0.5" />
-              </div>
-            </motion.div>
           </div>
 
           {/* Mobile/Tablet View - Vertical Layout */}
@@ -256,30 +171,6 @@ function StepCard({ step, index, t, isFirst, isLast }: StepCardProps) {
         </p>
       </div>
 
-      {/* Bottom connector line with arrow and T-markers (steps 1-3) */}
-      {!isLast && (
-        <div className="absolute left-0 right-0 bottom-0 flex justify-center">
-          <div className="relative w-[180px] h-6">
-            {/* Left T marker */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2">
-              <div className="w-0.5 h-4 bg-[#FF541F]" />
-              <div className="w-3 h-0.5 bg-[#FF541F] -mt-0.5" />
-            </div>
-
-            {/* Horizontal line */}
-            <div className="absolute left-0 right-10 top-1/2 -translate-y-1/2 h-0.5 bg-[#FF541F]" />
-
-            {/* Arrow */}
-            <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 text-[#FF541F]" />
-
-            {/* Right T marker */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2">
-              <div className="w-0.5 h-4 bg-[#FF541F]" />
-              <div className="w-3 h-0.5 bg-[#FF541F] -mt-0.5" />
-            </div>
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }

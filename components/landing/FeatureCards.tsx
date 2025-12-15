@@ -110,7 +110,7 @@ export function FeatureCards() {
   }, [features.length]);
 
   return (
-    <section id="features" className="section-container bg-white dark:bg-gray-900 relative overflow-hidden py-16">
+    <section id="features" className="section-container bg-white dark:bg-[#2B354B] relative overflow-hidden py-16">
       <div className="text-center mb-12 relative z-10">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
