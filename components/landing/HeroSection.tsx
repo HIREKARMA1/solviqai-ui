@@ -33,13 +33,7 @@ export const HeroSection = memo(function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center overflow-hidden bg-[#F7F5EA] dark:bg-black"
-      style={{
-        paddingTop: 'clamp(80px,12.5%,8px)', // Space for navbar - responsive percentage
-        paddingBottom: 'clamp(20px,6.25%,20px)',
-        paddingLeft: 'clamp(16px,4%,16px)',
-        paddingRight: 'clamp(16px,4%,16px)',
-      }}
+      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black py-32 sm:py-8 md:py-0"
     >
       <div className="container mx-auto w-full max-w-[95%] sm:max-w-[92%] md:max-w-[90%] lg:max-w-[88%] xl:max-w-[85%] 2xl:max-w-[80%]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-[4%] lg:gap-[3%] xl:gap-[2%] items-center w-full">
@@ -51,14 +45,15 @@ export const HeroSection = memo(function HeroSection() {
             className="space-y-[4%] sm:space-y-[3.5%] md:space-y-[3%] lg:space-y-[2.5%] w-full order-1"
           >
             {/* Main Heading */}
-            <h1 className="text-[clamp(1.75rem,7vw,3.5rem)] sm:text-[clamp(2.25rem,6vw,3.75rem)] md:text-[clamp(2.75rem,5vw,4rem)] lg:text-[clamp(3.25rem,4.5vw,4.5rem)] xl:text-[clamp(3.5rem,4vw,5rem)] font-bold leading-[1.1] sm:leading-tight">
-              <span className="text-gray-900 dark:text-white">
+            <h1 className=" text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+              <span className="text-gray-900 dark:text-white block sm:inline">
                 Find the Perfect Job.
-                <br />
+                <br className="hidden sm:inline md:hidden lg:inline" />
+                <span className="hidden sm:inline md:hidden lg:hidden"> </span>
                 Apply Smarter with
               </span>
-              <br />
-              <span className="text-[#FF541F] dark:text-[#FF541F]">
+              <br className="block sm:hidden md:block" />
+              <span className="text-[#FF541F] dark:text-[#FF541F] block sm:inline mt-1 sm:mt-0 md:mt-0">
                 Solviq.AI
               </span>
             </h1>
@@ -155,7 +150,6 @@ export const HeroSection = memo(function HeroSection() {
                     />
 
                   </div>
-
 
                 </div>
               </div>

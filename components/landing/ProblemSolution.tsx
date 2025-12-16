@@ -138,7 +138,7 @@ export function ProblemSolution() {
     ];
 
     return (
-        <section id="problem-solution" className="section-container relative overflow-hidden" style={{ backgroundColor: '#2B354B' }}>
+        <section id="problem-solution" className="section-container relative overflow-hidden bg-[#786c76e9] dark:bg-[#15223e]">
             <div className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-12">
@@ -237,17 +237,17 @@ function ProblemCard({ problem, index }: ProblemCardProps) {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="group"
         >
-            <div className="bg-white rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
+            <div className="bg-white dark:bg-[#2B354B] rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
                 {/* Icon & Title */}
                 <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full flex items-center justify-center text-red-600 flex-shrink-0 group-hover:scale-110 transition-transform" style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}>
                         {problem.icon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                             {t(problem.titleKey)}
                         </h3>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">
                             {t(problem.descriptionKey)}
                         </p>
                     </div>
@@ -256,7 +256,7 @@ function ProblemCard({ problem, index }: ProblemCardProps) {
                 {/* Pain Points */}
                 <ul className="space-y-2">
                     {problem.pointKeys.map((pointKey, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
                             <X className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" style={{ color: '#FF0000' }} />
                             <span>{t(pointKey)}</span>
                         </li>
@@ -283,17 +283,17 @@ function SolutionCard({ solution, index }: SolutionCardProps) {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="group"
         >
-            <div className="bg-white rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
+            <div className="bg-white dark:bg-[#2B354B] rounded-xl p-6 h-full hover:shadow-xl transition-all duration-300">
                 {/* Icon & Title */}
                 <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform" style={{ backgroundColor: '#22C55E' }}>
                         {solution.icon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                             {t(solution.titleKey)}
                         </h3>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">
                             {t(solution.descriptionKey)}
                         </p>
                     </div>
@@ -302,7 +302,7 @@ function SolutionCard({ solution, index }: SolutionCardProps) {
                 {/* Benefits */}
                 <ul className="space-y-2">
                     {solution.benefitKeys.map((benefitKey, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
                             <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" style={{ color: '#22C55E' }} />
                             <span>{t(benefitKey)}</span>
                         </li>

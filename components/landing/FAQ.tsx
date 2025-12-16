@@ -52,7 +52,7 @@ export function FAQ() {
   return (
     <section 
       id="faq" 
-      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-transparent"
+      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#d1c88c] dark:bg-[#310139]"
     >
       {/* Gradient Background for Dark Mode */}
       <div 

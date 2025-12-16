@@ -81,7 +81,7 @@ export function Pricing() {
     return (
         <section
             id="pricing"
-            className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#FFE6DE] dark:bg-[#6C0C0C]"
+            className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#FFE6DE] dark:bg-[#815f5f]"
         >
             <div className="relative z-10 max-w-7xl mx-auto">
                 {/* Section Header */}
@@ -110,7 +110,7 @@ export function Pricing() {
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                <div className="grid text-white grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                     {plans.map((plan, index) => (
                         <PlanCard key={plan.id} plan={plan} index={index} />
                     ))}
