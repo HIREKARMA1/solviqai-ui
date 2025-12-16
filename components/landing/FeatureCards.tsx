@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ChevronLeft,
@@ -24,24 +24,8 @@ interface Feature {
   gradient: string;
 }
 
-export function FeatureCards() {
-  const { t } = useTranslation();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const features: Feature[] = [
-    {
-      id: 'job-hunter',
-      icon: (
-        <div className="relative">
-          <Briefcase className="w-8 h-8" strokeWidth={2} />
-          <DollarSign className="w-4 h-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" strokeWidth={2.5} />
-        </div>
-      ),
-      titleKey: 'feature.jobHunter.title',
-      descriptionKey: 'feature.jobHunter.description',
-      gradient: 'from-purple-200 to-orange-200',
-    },
+// Move features array outside component to prevent recreation on each render
+const FEATURES: Feature[] = [
     {
       id: 'mock-interview',
       icon: (
@@ -53,6 +37,18 @@ export function FeatureCards() {
       titleKey: 'feature.mockInterview.title',
       descriptionKey: 'feature.mockInterview.description',
       gradient: 'from-orange-200 to-purple-200',
+    },
+    {
+      id: 'job-hunter',
+      icon: (
+        <div className="relative">
+          <Briefcase className="w-8 h-8" strokeWidth={2} />
+          <DollarSign className="w-4 h-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" strokeWidth={2.5} />
+        </div>
+      ),
+      titleKey: 'feature.jobHunter.title',
+      descriptionKey: 'feature.jobHunter.description',
+      gradient: 'from-purple-200 to-orange-200',
     },
     {
       id: 'copilot',
@@ -75,7 +71,12 @@ export function FeatureCards() {
     },
   ];
 
-  const scroll = (direction: 'left' | 'right') => {
+export const FeatureCards = memo(function FeatureCards() {
+  const { t } = useTranslation();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
     
     const container = scrollContainerRef.current;
@@ -85,12 +86,12 @@ export function FeatureCards() {
     
     if (direction === 'left') {
       container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-      setCurrentIndex(Math.max(0, currentIndex - 1));
+      setCurrentIndex(prev => Math.max(0, prev - 1));
     } else {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      setCurrentIndex(Math.min(features.length - 1, currentIndex + 1));
+      setCurrentIndex(prev => Math.min(FEATURES.length - 1, prev + 1));
     }
-  };
+  }, []);
 
   // Update current index based on scroll position
   useEffect(() => {
@@ -102,12 +103,12 @@ export function FeatureCards() {
       // Calculate card width including gap (22% + gap)
       const cardWidth = container.offsetWidth * 0.22 + 24; // 22% width + 24px gap (gap-6)
       const newIndex = Math.round(scrollLeft / cardWidth);
-      setCurrentIndex(Math.max(0, Math.min(features.length - 1, newIndex)));
+      setCurrentIndex(Math.max(0, Math.min(FEATURES.length - 1, newIndex)));
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [features.length]);
+  }, []);
 
   return (
     <section id="features" className="section-container bg-white dark:bg-[#2B354B] relative overflow-hidden py-16">
@@ -140,7 +141,7 @@ export function FeatureCards() {
           className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
           style={{ scrollSnapType: 'x mandatory' }}
         >
-          {features.map((feature, index) => (
+          {FEATURES.map((feature, index) => (
             <FeatureCard
               key={feature.id}
               feature={feature}
@@ -154,6 +155,7 @@ export function FeatureCards() {
         <div className="flex justify-center items-center gap-3 mt-8">
           <button
             onClick={() => scroll('left')}
+            type="button"
             className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center transition-all",
               currentIndex === 0
@@ -166,6 +168,7 @@ export function FeatureCards() {
           </button>
           <button
             onClick={() => scroll('right')}
+            type="button"
             className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center transition-all",
               "bg-white border border-gray-300 text-gray-600 hover:border-orange-500 hover:text-orange-500"
@@ -178,7 +181,7 @@ export function FeatureCards() {
       </div>
     </section>
   );
-}
+});
 
 interface FeatureCardProps {
   feature: Feature;
