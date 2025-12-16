@@ -21,10 +21,9 @@ export default function PracticePage() {
         try {
             const user = await apiClient.getCurrentUser();
             const subscriptionType = user?.subscription_type || 'free';
-            const isAdminCreated = user?.created_by_admin || false;
             
-            // Free users who are not admin-created should be blocked
-            if (!isAdminCreated && subscriptionType === 'free') {
+            // Free users should be blocked
+            if (subscriptionType === 'free') {
                 setIsFreeUser(true);
                 setShowSubscriptionModal(true);
             }
