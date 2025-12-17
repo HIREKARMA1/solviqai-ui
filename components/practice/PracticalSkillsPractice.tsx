@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { BookOpen, Sparkles, Target, Rocket, Trophy, Award, TrendingUp } from 'lucide-react';
 import { config } from '@/lib/config';
+import PracticalSkillsQuestionsView from './PracticalSkillsQuestionsView';
 
 interface Question {
   exam_type: string;
@@ -38,10 +39,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
   const [isVisible, setIsVisible] = useState(false);
 
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [userMcqAnswers, setUserMcqAnswers] = useState<Record<number, string>>({});
   const [userWrittenAnswers, setUserWrittenAnswers] = useState<Record<number, string>>({});
 
+  const [showQuestionsView, setShowQuestionsView] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [evalLoading, setEvalLoading] = useState(false);
   const [evaluation, setEvaluation] = useState<{ score: number; feedback: string; analyses: PracticalEvalItem[] } | null>(null);
@@ -99,10 +100,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
       if (!items.length) throw new Error('No questions returned. Try different parameters.');
 
       setQuestions(items);
-      setCurrentIndex(0);
       setUserMcqAnswers({});
       setUserWrittenAnswers({});
       setShowResults(false);
+      setShowQuestionsView(true);
       setEvaluation(null);
     } catch (e: any) {
       const msg = e.name === 'AbortError' ? 'Request timed out. Try fewer questions.' : e.message || 'Failed to load questions.';
@@ -112,23 +113,17 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
     }
   };
 
-  const handleMcqSelect = (answer: string) => {
-    setUserMcqAnswers((prev) => ({ ...prev, [currentIndex]: answer }));
-  };
+  const finishAndEvaluate = async (mcqAnswers?: Record<number, string>, writtenAnswers?: Record<number, string>) => {
+    // Use provided answers or fall back to state
+    const finalMcqAnswers = mcqAnswers || userMcqAnswers;
+    const finalWrittenAnswers = writtenAnswers || userWrittenAnswers;
 
-  const handleWrittenChange = (value: string) => {
-    setUserWrittenAnswers((prev) => ({ ...prev, [currentIndex]: value }));
-  };
-
-  const goTo = (idx: number) => setCurrentIndex(idx);
-
-  const finishAndEvaluate = async () => {
     // Only written questions are evaluated by backend; MCQs are scored locally
     const writtenItems: { question_text: string; answer_text: string }[] = [];
     const writtenIndexMap: number[] = [];
     questions.forEach((q, i) => {
       if (q.question_type === 'written') {
-        writtenItems.push({ question_text: q.question_text, answer_text: userWrittenAnswers[i] || '' });
+        writtenItems.push({ question_text: q.question_text, answer_text: finalWrittenAnswers[i] || '' });
         writtenIndexMap.push(i);
       }
     });
@@ -178,16 +173,36 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
     }
   };
 
-  const calculateMcqScore = () => {
+  const calculateMcqScore = (mcqAnswers?: Record<number, string>) => {
+    const answers = mcqAnswers || userMcqAnswers;
     let correct = 0;
     questions.forEach((q, i) => {
-      if (q.question_type === 'mcq' && q.correct_answer && userMcqAnswers[i] === q.correct_answer) correct++;
+      if (q.question_type === 'mcq' && q.correct_answer && answers[i] === q.correct_answer) correct++;
     });
     return correct;
   };
 
-  const current = questions[currentIndex];
   const hasQuestions = questions.length > 0;
+
+  // Handle finish from questions view
+  const handleFinishFromQuestions = (mcqAnswers: Record<number, string>, writtenAnswers: Record<number, string>) => {
+    setUserMcqAnswers(mcqAnswers);
+    setUserWrittenAnswers(writtenAnswers);
+    setShowQuestionsView(false);
+    finishAndEvaluate(mcqAnswers, writtenAnswers);
+  };
+
+  // Show questions view
+  if (showQuestionsView && questions.length > 0) {
+    return (
+      <PracticalSkillsQuestionsView
+        questions={questions}
+        branch={branch}
+        topic={topic || 'Mixed'}
+        onFinish={handleFinishFromQuestions}
+      />
+    );
+  }
 
   if (showResults) {
     const totalMcq = mcqCount;
@@ -234,11 +249,11 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
             </div>
           </div>
 
-          {/* Written Evaluation */}
+          {/* All Questions Review */}
           <div className="mb-6">
             <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Target className="w-6 h-6 text-purple-600" />
-              Written Answers Evaluation
+              Questions Review
             </h3>
             {evalLoading && (
               <div className="flex items-center justify-center py-8">
@@ -246,53 +261,190 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
                 <span className="ml-3 text-gray-600">Evaluating answers…</span>
               </div>
             )}
-            {!evalLoading && evaluation && (
-              <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border-2 border-gray-200">
-                <div className="mb-4 p-4 bg-white rounded-xl border-2 border-blue-200">
-                  <p className="text-gray-700 text-lg">
-                    <span className="font-bold text-blue-600">Overall Score:</span>
-                    <span className="ml-2 text-2xl font-extrabold text-gray-900">{evaluation.score}/10</span>
-                  </p>
-                  <p className="text-gray-700 mt-2">
-                    <span className="font-semibold">Feedback:</span>
-                    <span className="ml-2">{evaluation.feedback || '—'}</span>
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {evaluation.analyses.length === 0 && (
-                    <p className="text-gray-600 text-center py-4">No written items were evaluated.</p>
-                  )}
-                  {evaluation.analyses.map((item) => (
-                    <div key={item.index} className="p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 transition-all duration-300">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-gray-500">Question #{item.index + 1}</p>
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${item.score >= 8 ? 'bg-green-100 text-green-700' :
-                          item.score >= 6 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                          {item.score}/10
-                        </span>
-                      </div>
-                      <p className="text-gray-700 leading-relaxed">
-                        <span className="font-semibold">Feedback:</span> {item.feedback}
+            {!evalLoading && (
+              <div className="space-y-4">
+                {/* Overall Written Evaluation Summary */}
+                {evaluation && writtenCount > 0 && (
+                  <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border-2 border-gray-200 mb-6">
+                    <div className="mb-4 p-4 bg-white rounded-xl border-2 border-blue-200">
+                      <p className="text-gray-700 text-lg">
+                        <span className="font-bold text-blue-600">Written Answers Overall Score:</span>
+                        <span className="ml-2 text-2xl font-extrabold text-gray-900">{evaluation.score}/10</span>
+                      </p>
+                      <p className="text-gray-700 mt-2">
+                        <span className="font-semibold">Feedback:</span>
+                        <span className="ml-2">{evaluation.feedback || '—'}</span>
                       </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* All Questions with Answers */}
+                {questions.map((question, idx) => {
+                  const questionNum = idx + 1;
+                  const isMcq = question.question_type === 'mcq';
+                  const userAnswer = isMcq ? userMcqAnswers[idx] : userWrittenAnswers[idx];
+                  const isCorrect = isMcq && question.correct_answer && userAnswer === question.correct_answer;
+
+                  // Find evaluation for written questions
+                  const writtenEval = !isMcq && evaluation ? evaluation.analyses.find((item) => item.index === idx) : null;
+
+                  return (
+                    <div key={idx} className="bg-white rounded-xl p-6 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300">
+                      {/* Question Header */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-bold text-sm">
+                            Question #{questionNum}
+                          </span>
+                          <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${isMcq
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-orange-100 text-orange-700'
+                            }`}>
+                            {isMcq ? 'MCQ' : 'Written'}
+                          </span>
+                          {isMcq && (
+                            <span className={`px-3 py-1 rounded-lg text-sm font-bold ${isCorrect
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                              }`}>
+                              {isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                            </span>
+                          )}
+                          {!isMcq && writtenEval && (
+                            <span className={`px-3 py-1 rounded-full text-sm font-bold ${writtenEval.score >= 8 ? 'bg-green-100 text-green-700' :
+                              writtenEval.score >= 6 ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                              Score: {writtenEval.score}/10
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Question Text */}
+                      <div className="mb-4">
+                        <p className="text-gray-900 font-semibold text-lg mb-2">Question:</p>
+                        <p className="text-gray-700 leading-relaxed">{question.question_text}</p>
+                      </div>
+
+                      {/* User's Answer */}
+                      <div className="mb-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                        <p className="text-gray-900 font-semibold mb-2">Your Answer:</p>
+                        {isMcq ? (
+                          <div className="space-y-2">
+                            {question.options?.map((opt, optIdx) => {
+                              const letter = ['A', 'B', 'C', 'D'][optIdx] || String(optIdx + 1);
+                              const isSelected = userAnswer === letter;
+                              const isCorrectOption = letter === question.correct_answer;
+                              return (
+                                <div
+                                  key={optIdx}
+                                  className={`p-3 rounded-lg border-2 ${isSelected && isCorrectOption
+                                    ? 'bg-green-50 border-green-400'
+                                    : isSelected
+                                      ? 'bg-red-50 border-red-400'
+                                      : isCorrectOption
+                                        ? 'bg-blue-50 border-blue-300'
+                                        : 'bg-white border-gray-200'
+                                    }`}
+                                >
+                                  <span className="font-bold mr-2">{letter}.</span>
+                                  <span className={isSelected || isCorrectOption ? 'font-medium' : ''}>{opt}</span>
+                                  {isCorrectOption && (
+                                    <span className="ml-2 text-green-600 font-semibold">✓ Correct Answer</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {!userAnswer && (
+                              <p className="text-gray-500 italic">No answer provided</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            {userAnswer ? (
+                              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{userAnswer}</p>
+                            ) : (
+                              <p className="text-gray-500 italic">No answer provided</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Feedback for Written Questions */}
+                      {!isMcq && writtenEval && (
+                        <div className="mb-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                          <p className="text-gray-900 font-semibold mb-2">Feedback:</p>
+                          <p className="text-gray-700 leading-relaxed">{writtenEval.feedback}</p>
+                        </div>
+                      )}
+
+                      {/* Correct Answer / Explanation / Suggestions */}
+                      <div className="mt-4 p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                        <p className="text-green-700 font-semibold mb-2">💡 Correct Answer & Explanation:</p>
+                        {isMcq ? (
+                          <div>
+                            {question.correct_answer && (
+                              <p className="text-gray-700 mb-2">
+                                <span className="font-semibold">Correct Answer: </span>
+                                <span>{question.correct_answer}</span>
+                                {question.options && (
+                                  <span className="ml-2">
+                                    - {question.options[['A', 'B', 'C', 'D'].indexOf(question.correct_answer)]}
+                                  </span>
+                                )}
+                              </p>
+                            )}
+                            {question.explanation && (
+                              <p className="text-gray-700 leading-relaxed">
+                                <span className="font-semibold">Explanation: </span>
+                                {question.explanation}
+                              </p>
+                            )}
+                            {!question.explanation && (
+                              <p className="text-gray-600 italic">No explanation available for this question.</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            {writtenEval && writtenEval.feedback ? (
+                              <div>
+                                <p className="text-gray-700 leading-relaxed mb-2">
+                                  <span className="font-semibold">Suggestions: </span>
+                                  {writtenEval.feedback}
+                                </p>
+                                {question.explanation && (
+                                  <p className="text-gray-700 leading-relaxed mt-2">
+                                    <span className="font-semibold">Explanation: </span>
+                                    {question.explanation}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                {question.explanation ? (
+                                  <p className="text-gray-700 leading-relaxed">
+                                    <span className="font-semibold">Explanation: </span>
+                                    {question.explanation}
+                                  </p>
+                                ) : (
+                                  <p className="text-gray-600 italic">No explanation or suggestions available for this question.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-8">
-            <button
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 font-semibold"
-              onClick={() => {
-                setShowResults(false);
-                setCurrentIndex(0);
-              }}
-            >
-              ← Back to Questions
-            </button>
             <button
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
               onClick={() => {
@@ -505,141 +657,6 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
         )}
       </div>
 
-      {/* Questions Display */}
-      {hasQuestions && (
-        <div className={`bg-white rounded-2xl p-6 sm:p-8 shadow-xl border-2 border-blue-200 mb-6 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} transition-all duration-700 delay-300`}>
-          {/* Question Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">{branch}</span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">{topic || `MIXED:${branch}`}</span>
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                  {questions.length} Questions (MCQ: {mcqCount}, Written: {writtenCount})
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                disabled={currentIndex === 0}
-              >
-                ← Previous
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
-                disabled={currentIndex >= questions.length - 1}
-              >
-                Next →
-              </button>
-            </div>
-          </div>
-
-          {/* Current Question Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 sm:p-8 border-2 border-blue-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-lg">
-                Question {currentIndex + 1} of {questions.length}
-              </div>
-              {current?.difficulty && (
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${current.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                  current.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                  {current.difficulty.toUpperCase()}
-                </span>
-              )}
-            </div>
-
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 leading-relaxed">{current?.question_text}</h3>
-
-            {/* MCQ Options */}
-            {current?.question_type === 'mcq' && current?.options && (
-              <div className="space-y-3 mb-6">
-                {current.options.map((opt, idx) => {
-                  const letter = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
-                  const selected = userMcqAnswers[currentIndex] === letter;
-                  return (
-                    <label
-                      key={idx}
-                      className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${selected
-                        ? 'bg-blue-100 border-blue-500 shadow-lg shadow-blue-500/20'
-                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                        }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`q-${currentIndex}`}
-                        checked={selected}
-                        onChange={() => handleMcqSelect(letter)}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="font-bold text-lg text-gray-800 mr-2">{letter}.</span>
-                        <span className="text-gray-700 text-base">{opt}</span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Written Answer */}
-            {current?.question_type === 'written' && (
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Answer:</label>
-                <textarea
-                  placeholder="Write your short explanation or calculation here…"
-                  value={userWrittenAnswers[currentIndex] || ''}
-                  onChange={(e) => handleWrittenChange(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 min-h-[180px] resize-y"
-                />
-              </div>
-            )}
-
-            {/* Explanation */}
-            {current?.explanation && (
-              <div className="mt-6 p-4 bg-white rounded-xl border-2 border-green-200">
-                <p className="text-sm font-semibold text-green-700 mb-2">💡 Explanation:</p>
-                <p className="text-gray-700 leading-relaxed">{current.explanation}</p>
-              </div>
-            )}
-
-            {/* Question Navigation & Controls */}
-            <div className="mt-6 pt-6 border-t-2 border-gray-200">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                  {Array.from({ length: questions.length }).map((_, i) => {
-                    const hasAnswer = userMcqAnswers[i] || userWrittenAnswers[i];
-                    return (
-                      <button
-                        key={i}
-                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-110 ${i === currentIndex
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-110'
-                          : hasAnswer
-                            ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                            : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
-                          }`}
-                        onClick={() => goTo(i)}
-                      >
-                        {i + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-bold hover:from-purple-700 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  onClick={finishAndEvaluate}
-                >
-                  Finish & Evaluate
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
