@@ -98,100 +98,106 @@ export default function AdminSubscriptionOverviewCard() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>System Subscription Overview</CardTitle>
+    <Card className="border-2">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl">System Subscription Overview</CardTitle>
         <CardDescription>Platform-wide subscription and revenue metrics</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Alerts */}
         {(overview.alerts.expiring_student_subscriptions > 0 || overview.alerts.expiring_college_licenses > 0) && (
-          <Alert className="border-yellow-500 bg-yellow-50">
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription>
+          <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10">
+            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
               {overview.alerts.expiring_student_subscriptions} student subscription(s) and{' '}
               {overview.alerts.expiring_college_licenses} college license(s) expiring within 30 days
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Main Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center gap-2 text-blue-600 mb-2">
-              <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">Total Students</span>
+        {/* Key Metrics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Paid Students */}
+          <div className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-2">
+              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold">Paid Students</span>
             </div>
-            <div className="text-3xl font-bold text-blue-700">
-              {overview.system_overview.total_students.toLocaleString()}
-            </div>
-            <div className="text-xs text-blue-600 mt-1">
-              {overview.system_overview.active_students} active
-            </div>
-          </div>
-
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <div className="flex items-center gap-2 text-purple-600 mb-2">
-              <Building2 className="w-5 h-5" />
-              <span className="text-sm font-medium">Total Colleges</span>
-            </div>
-            <div className="text-3xl font-bold text-purple-700">
-              {overview.system_overview.total_colleges}
-            </div>
-            <div className="text-xs text-purple-600 mt-1">
-              {overview.system_overview.active_colleges} active
-            </div>
-          </div>
-
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <div className="flex items-center gap-2 text-green-600 mb-2">
-              <DollarSign className="w-5 h-5" />
-              <span className="text-sm font-medium">Paid Students</span>
-            </div>
-            <div className="text-3xl font-bold text-green-700">
+            <div className="text-4xl font-bold text-green-800 dark:text-green-300 mb-1">
               {overview.revenue_metrics.total_paid_students.toLocaleString()}
             </div>
-            <div className="text-xs text-green-600 mt-1">
-              {overview.revenue_metrics.conversion_rate}% conversion
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <TrendingUp className="w-4 h-4" />
+              <span className="font-medium">{overview.revenue_metrics.conversion_rate}% conversion rate</span>
             </div>
           </div>
 
-          <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-            <div className="flex items-center gap-2 text-orange-600 mb-2">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm font-medium">30-Day Growth</span>
+          {/* Premium Students */}
+          <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-2">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                <Users className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold">Premium</span>
             </div>
-            <div className="text-3xl font-bold text-orange-700">
-              {overview.growth_metrics.new_students_30d}
+            <div className="text-4xl font-bold text-blue-800 dark:text-blue-300 mb-1">
+              {overview.revenue_metrics.premium_students.toLocaleString()}
             </div>
-            <div className="text-xs text-orange-600 mt-1">
-              {overview.growth_metrics.growth_rate}% growth rate
+            <div className="text-sm text-blue-600 dark:text-blue-400">
+              {overview.subscription_breakdown.premium && 
+                `${((overview.revenue_metrics.premium_students / overview.system_overview.total_students) * 100).toFixed(1)}% of total`
+              }
+            </div>
+          </div>
+
+          {/* College License Students */}
+          <div className="p-5 bg-gradient-to-br from-purple-50 to-fuchsia-50 dark:from-purple-900/20 dark:to-fuchsia-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 mb-2">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold">College License</span>
+            </div>
+            <div className="text-4xl font-bold text-purple-800 dark:text-purple-300 mb-1">
+              {overview.revenue_metrics.college_license_students.toLocaleString()}
+            </div>
+            <div className="text-sm text-purple-600 dark:text-purple-400">
+              {overview.subscription_breakdown.college_license && 
+                `${((overview.revenue_metrics.college_license_students / overview.system_overview.total_students) * 100).toFixed(1)}% of total`
+              }
             </div>
           </div>
         </div>
 
         {/* Subscription Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Subscription Distribution</h3>
-            <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          <div className="bg-gray-50 dark:bg-gray-900/20 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
+            <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+              <div className="w-1 h-5 bg-blue-500 rounded-full"></div>
+              Subscription Distribution
+            </h3>
+            <div className="space-y-3">
               {Object.entries(overview.subscription_breakdown).map(([type, count]) => {
                 const total = overview.system_overview.total_students;
                 const percentage = ((count / total) * 100).toFixed(1);
                 const colorClass = 
                   type === 'free' ? 'bg-gray-500' :
                   type === 'premium' ? 'bg-blue-500' :
-                  'bg-green-500';
+                  'bg-purple-500';
                 
                 return (
-                  <div key={type} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${colorClass}`}></div>
-                      <span className="text-sm capitalize">{type.replace('_', ' ')}</span>
+                  <div key={type} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${colorClass} shadow-sm`}></div>
+                      <span className="text-sm font-medium capitalize">{type.replace('_', ' ')}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{count.toLocaleString()}</span>
-                      <Badge variant="outline" className="text-xs">{percentage}%</Badge>
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-bold">{count.toLocaleString()}</span>
+                      <Badge variant="secondary" className="text-xs font-semibold min-w-[50px] justify-center">
+                        {percentage}%
+                      </Badge>
                     </div>
                   </div>
                 );
@@ -199,34 +205,24 @@ export default function AdminSubscriptionOverviewCard() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold mb-3">College License Types</h3>
-            <div className="space-y-2">
-              {Object.entries(overview.license_breakdown).map(([type, count]) => (
-                <div key={type} className="flex items-center justify-between">
-                  <span className="text-sm capitalize">{type === 'none' ? 'No License' : type}</span>
-                  <Badge variant="outline">{count}</Badge>
+          <div className="bg-gray-50 dark:bg-gray-900/20 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
+            <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+              <div className="w-1 h-5 bg-purple-500 rounded-full"></div>
+              College License Types
+            </h3>
+            <div className="space-y-3">
+              {Object.keys(overview.license_breakdown).length > 0 ? (
+                Object.entries(overview.license_breakdown).map(([type, count]) => (
+                  <div key={type} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-medium capitalize">{type === 'none' ? 'No License' : type}</span>
+                    <Badge variant="outline" className="font-semibold">{count}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  No license data available
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Growth Metrics */}
-        <div className="pt-4 border-t">
-          <h3 className="text-sm font-semibold mb-3">Recent Growth (Last 30 Days)</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                +{overview.growth_metrics.new_students_30d}
-              </div>
-              <div className="text-xs text-gray-600">New Students</div>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                +{overview.growth_metrics.new_colleges_30d}
-              </div>
-              <div className="text-xs text-gray-600">New Colleges</div>
+              )}
             </div>
           </div>
         </div>
