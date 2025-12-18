@@ -1,200 +1,162 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { Button } from '@/components/ui/button';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { VideoModal } from '@/components/ui/video-modal';
-import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
-export function HeroSection() {
+// Memoize stats to prevent recreation on each render
+const STATS = [
+  { label: 'Jobs', value: '120k+' },
+  { label: 'Users', value: '150k+' },
+  { label: 'Reviews', value: '32k+' },
+] as const;
+
+export const HeroSection = memo(function HeroSection() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [displayedText, setDisplayedText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const fullText = t('hero.title');
-  
-  const DEMO_VIDEO_URL = 'https://solviqai.s3.ap-south-1.amazonaws.com/SolviqDemo.mp4';
+  const [jobTitle, setJobTitle] = useState('');
+  const [location, setLocation] = useState('');
 
-  useEffect(() => {
-    if (currentIndex < fullText.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(prev => prev + fullText[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }, 80); // Speed of typing (80ms per character)
-
-      return () => clearTimeout(timeout);
+  const handleFindJob = useCallback(() => {
+    if (user) {
+      router.push(`/dashboard/${user.user_type}/jobs`);
+    } else {
+      router.push('/auth/login');
     }
-  }, [currentIndex, fullText]);
-
-  const stats = [
-    {
-      label: t('stats.jobsSecured'),
-      icon: <TrendingUp className="w-4 h-4" />
-    },
-    {
-      label: t('stats.usersActive'),
-      icon: <Sparkles className="w-4 h-4" />
-    },
-    {
-      label: t('stats.rating'),
-      icon: null
-    },
-  ];
+  }, [user, router]);
 
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-12"
+      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black py-32 sm:py-8 md:py-0"
     >
-      {/* Animated Background */}
-      <div className="absolute inset-0 gradient-bg -z-10">
-        <AnimatedBackground variant="default" />
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-20">
-        <div className="text-center max-w-5xl mx-auto">
-          {/* Stats Badges */}
+      <div className="container mx-auto w-full max-w-[95%] sm:max-w-[92%] md:max-w-[90%] lg:max-w-[88%] xl:max-w-[85%] 2xl:max-w-[80%]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-[4%] lg:gap-[3%] xl:gap-[2%] items-center w-full">
+          {/* Left Column - Content */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="space-y-[4%] sm:space-y-[3.5%] md:space-y-[3%] lg:space-y-[2.5%] w-full order-1"
           >
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="badge-primary flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm"
-              >
-                {stat.icon}
-                <span>{stat.label}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Main Heading with Typewriter Effect */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight"
-          >
-            <span className="gradient-text">
-              {displayedText}
-              <motion.span
-                animate={{ opacity: [1, 0, 1] }}
-                transition={{ duration: 0.8, repeat: Infinity }}
-                className="inline-block w-1 h-[0.9em] bg-primary-500 ml-1 align-middle"
-              />
-            </span>
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-            className="text-lg sm:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed"
-          >
-            {t('hero.subtitle')}
-          </motion.p>
-
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.6 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
-            <Button
-              size="lg"
-              className="group relative overflow-hidden bg-primary-500 hover:bg-primary-600 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
-              onClick={() => {
-                if (user) {
-                  // If logged in, navigate to assessment page
-                  router.push(`/dashboard/${user.user_type}/assessment`);
-                } else {
-                  // If not logged in, navigate to login
-                  router.push('/auth/login');
-                }
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                {t('hero.cta.primary')}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            {/* Main Heading */}
+            <h1 className=" text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+              <span className="text-gray-900 dark:text-white block sm:inline">
+                Find the Perfect Job.
+                <br className="hidden sm:inline md:hidden lg:inline" />
+                <span className="hidden sm:inline md:hidden lg:hidden"> </span>
+                Apply Smarter with
               </span>
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-primary-600 to-secondary-600"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </Button>
+              <br className="block sm:hidden md:block" />
+              <span className="text-[#FF541F] dark:text-[#FF541F] block sm:inline mt-1 sm:mt-0 md:mt-0">
+                Solviq.AI
+              </span>
+            </h1>
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-primary-500 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-lg px-8 py-6 rounded-xl transition-all"
-              onClick={() => setIsVideoModalOpen(true)}
-            >
-              {t('hero.cta.secondary')}
-            </Button>
+            {/* Subtitle */}
+            <p className="text-[clamp(0.9375rem,3.5vw,1.375rem)] sm:text-[clamp(1rem,3vw,1.5rem)] md:text-[clamp(1.125rem,2.5vw,1.625rem)] lg:text-[clamp(1.125rem,1.8vw,1.25rem)] xl:text-[clamp(1.125rem,1.5vw,1.375rem)] text-gray-600 dark:text-white max-w-[95%] sm:max-w-[92%] md:max-w-[90%] leading-relaxed">
+              AI-powered job matching, resume optimization, and one-click applications all in one platform
+            </p>
+
+            {/* Hero Search Bar – Fully Responsive Design */}
+            <div className="w-full max-w-[100%]">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-xl md:rounded-full shadow-xl overflow-hidden flex flex-col sm:flex-row items-stretch sm:items-center h-auto sm:h-[clamp(50px,8vh,70px)] md:h-[clamp(60px,8vh,75px)] border border-gray-100 dark:border-gray-800 px-[4%] sm:px-[3.5%] md:px-[3%] lg:px-[2.5%] py-[3.5%] sm:py-[2.5%] md:py-[1.5%] gap-0">
+
+                {/* Job Title Input */}
+                <div className="flex items-center gap-[3.5%] sm:gap-[2.5%] md:gap-[2%] px-[2%] sm:px-[1.5%] md:px-[1%] py-[3.5%] sm:py-[2%] md:py-0 flex-1 min-w-[120px] sm:min-w-[140px] md:min-w-[160px] border-b sm:border-b-0 border-gray-100 dark:border-gray-800 sm:border-0">
+                  <Search className="w-[clamp(1.125rem,4.5vw,1.5rem)] sm:w-[clamp(1.125rem,3.5vw,1.375rem)] md:w-[clamp(1.125rem,2.5vw,1.25rem)] h-[clamp(1.125rem,4.5vw,1.5rem)] sm:h-[clamp(1.125rem,3.5vw,1.375rem)] md:h-[clamp(1.125rem,2.5vw,1.25rem)] text-[#FF541F] flex-shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Job title, Keyword..."
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    className="w-full bg-transparent text-gray-700 dark:text-gray-200 placeholder:text-gray-400 text-[clamp(0.9375rem,3.8vw,1.125rem)] sm:text-[clamp(0.9375rem,2.8vw,1.0625rem)] md:text-[clamp(0.9375rem,2vw,1rem)] lg:text-[clamp(0.9375rem,1.5vw,1.0625rem)] xl:text-[clamp(1rem,1.2vw,1.125rem)] font-normal
+                   outline-none border-none ring-0 focus:ring-0 focus:outline-none
+                   focus:border-transparent min-w-0"
+                  />
+                </div>
+
+                {/* Thin Vertical Divider – visible only on sm+ */}
+                <div className="hidden sm:block w-[1px] sm:w-[0.5px] md:w-[0.1vw] h-[50%] sm:h-[55%] md:h-[60%] bg-gray-300 dark:bg-gray-600 mx-[1%] md:mx-0" aria-hidden="true" />
+
+                {/* Location Input */}
+                <div className="flex items-center gap-[3.5%] sm:gap-[2.5%] md:gap-[2%] px-[2%] sm:px-[1.5%] md:px-[1%] py-[3.5%] sm:py-[2%] md:py-0 flex-1 min-w-[120px] sm:min-w-[140px] md:min-w-[160px] border-b sm:border-b-0 border-gray-100 dark:border-gray-800 sm:border-0">
+                  <MapPin className="w-[clamp(1.125rem,4.5vw,1.5rem)] sm:w-[clamp(1.125rem,3.5vw,1.375rem)] md:w-[clamp(1.125rem,2.5vw,1.25rem)] h-[clamp(1.125rem,4.5vw,1.5rem)] sm:h-[clamp(1.125rem,3.5vw,1.375rem)] md:h-[clamp(1.125rem,2.5vw,1.25rem)] text-[#FF541F] flex-shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-transparent text-gray-700 dark:text-gray-200 placeholder:text-gray-400 text-[clamp(0.9375rem,3.8vw,1.125rem)] sm:text-[clamp(0.9375rem,2.8vw,1.0625rem)] md:text-[clamp(0.9375rem,2vw,1rem)] lg:text-[clamp(0.9375rem,1.5vw,1.0625rem)] xl:text-[clamp(1rem,1.2vw,1.125rem)] font-normal
+                   outline-none border-none ring-0 focus:ring-0 focus:outline-none
+                   focus:border-transparent min-w-0"
+                  />
+                </div>
+
+                {/* Find Job Button – Fully Responsive */}
+                <button
+                  onClick={handleFindJob}
+                  className="w-full sm:w-auto sm:ml-[2%] md:ml-[1.5%] bg-[#FF541F] hover:bg-[#f43e06] active:bg-[#e63905] text-white font-semibold px-[4%] sm:px-[3.5%] md:px-[2.5%] lg:px-[2%] py-[3.5%] sm:py-[2.5%] md:py-[1.5%] rounded-xl transition-all duration-200 shadow-md hover:shadow-lg active:shadow-sm text-[clamp(1rem,4.2vw,1.25rem)] sm:text-[clamp(0.9375rem,2.8vw,1.125rem)] md:text-[clamp(0.9375rem,2vw,1.0625rem)] lg:text-[clamp(0.9375rem,1.5vw,1.0625rem)] xl:text-[clamp(1rem,1.2vw,1.125rem)] whitespace-nowrap mt-[2%] sm:mt-0"
+                >
+                  Find Job
+                </button>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-[5%] sm:gap-[4%] md:gap-[3.5%] lg:gap-[3%] flex-wrap sm:flex-nowrap">
+              {STATS.map((stat, index) => (
+                <div key={index} className="text-center flex-1 sm:flex-none min-w-[30%] sm:min-w-0">
+                  <div className="text-gray-900 dark:text-white font-bold text-[clamp(0.75rem,3.2vw,1rem)] sm:text-[clamp(0.8125rem,2.5vw,0.9375rem)] md:text-[clamp(0.875rem,1.8vw,1rem)] lg:text-[clamp(0.875rem,1.2vw,1rem)] xl:text-[clamp(0.875rem,1vw,1.0625rem)]">{stat.label}</div>
+                  <div className="text-[#FF541F] dark:text-[#FF541F] font-bold text-[clamp(1rem,4.2vw,1.5rem)] sm:text-[clamp(1.125rem,3.5vw,1.375rem)] md:text-[clamp(1.25rem,2.5vw,1.5rem)] lg:text-[clamp(1.125rem,1.8vw,1.375rem)] xl:text-[clamp(1.125rem,1.5vw,1.25rem)]">
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
-          {/* Launch Message */}
+          {/* Right Column - Decorative Illustration - Hidden on mobile */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.8 }}
-            className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="relative hidden md:block w-full order-2"
           >
-            <p className="text-base text-gray-600 dark:text-gray-300 mb-2 font-medium">
-              🚀 New Platform Launch
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-              Join us as we revolutionize interview preparation with AI-powered insights and comprehensive practice tools. Start your journey today!
-            </p>
+            <div className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] lg:h-[65vh] xl:h-[70vh]">
+              {/* Main Container */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-[85%] sm:w-[80%] md:w-[75%] lg:w-[80%] h-[85%] sm:h-[80%] md:h-[75%] lg:h-[80%]">
+
+
+                  {/* Hero Image - Woman with Laptop */}
+                  <div className="relative w-full h-full mx-auto z-10">
+                    <Image
+                      src="/images/heroimg.png"
+                      alt="Woman working happily on laptop"
+                      fill
+                      className="object-contain drop-shadow-2xl"
+                      priority
+                      sizes="(max-width: 768px) 0vw, (max-width: 1024px) 50vw, 40vw"
+                      loading="eager"
+                      quality={85}
+                      placeholder="blur"
+                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjdGNUVBIi8+PC9zdmc+"
+                    />
+
+                  </div>
+
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>
-
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-      >
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-6 h-10 border-2 border-gray-400 dark:border-gray-600 rounded-full flex items-start justify-center p-2"
-        >
-          <motion.div
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-600 rounded-full"
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* Video Modal */}
-      <VideoModal
-        isOpen={isVideoModalOpen}
-        onClose={() => setIsVideoModalOpen(false)}
-        videoUrl={DEMO_VIDEO_URL}
-        title="Solviq AI Demo"
-      />
     </section>
   );
-}
-
+});

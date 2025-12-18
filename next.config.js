@@ -19,7 +19,23 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+    // Optimize images
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
   },
+  // Performance optimizations
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
+  // Optimize production builds
+  productionBrowserSourceMaps: false,
+  // Experimental features for better performance
+  // Note: `optimizeCss` was removed because it required the `critters` module at build time,
+  // which was not installed and caused Next.js prerender errors.
+  experimental: {},
   async rewrites() {
     // Get API configuration from environment variables directly (no localhost fallback)
     const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
