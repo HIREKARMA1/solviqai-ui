@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { Users, TrendingUp, Award, Target, BookOpen, Briefcase, Activity, AlertCircle } from 'lucide-react'
+import CollegeLicenseOverviewCard from '@/components/subscription/CollegeLicenseOverviewCard'
+import StudentSubscriptionDistribution from '@/components/subscription/StudentSubscriptionDistribution'
+import SubscriptionHealthAlerts from '@/components/subscription/SubscriptionHealthAlerts'
 
 export default function CollegeAnalytics() {
     const [analytics, setAnalytics] = useState<any>(null)
@@ -56,6 +59,26 @@ export default function CollegeAnalytics() {
                         Last updated: {new Date(analytics?.generated_at).toLocaleString()}
                     </p>
                 </div>
+
+                {/* Phase 2: College License & Subscription Analytics */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                        <h2 className="text-xl font-semibold">License & Subscription Management</h2>
+                    </div>
+                    
+                    {/* License Overview */}
+                    <CollegeLicenseOverviewCard />
+                    
+                    {/* Student Distribution & Health Alerts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <StudentSubscriptionDistribution />
+                        <SubscriptionHealthAlerts />
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 dark:border-gray-700"></div>
 
                 {/* Primary Metrics */}
                 <div className="grid md:grid-cols-4 gap-6">
