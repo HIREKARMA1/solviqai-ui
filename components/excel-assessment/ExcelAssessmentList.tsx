@@ -9,6 +9,8 @@ import { apiClient } from '@/lib/api'
 import { FileSpreadsheet, Clock, CheckCircle, XCircle, ArrowRight, Trophy, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
+import { AxiosError } from 'axios'
 
 interface ExcelAssessment {
   id: string
@@ -28,6 +30,8 @@ export default function ExcelAssessmentList() {
   const [assessments, setAssessments] = useState<ExcelAssessment[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+  const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
 
   useEffect(() => {
     fetchAssessments()
@@ -58,6 +62,14 @@ export default function ExcelAssessmentList() {
       window.location.href = `/dashboard/student/excel-assessment/${newAssessment.id}`
     } catch (error) {
       console.error('Error creating assessment:', error)
+      const axiosError = error as AxiosError<{ detail: string }>
+      const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to create assessment'
+      
+      // Check if it's a subscription error
+      if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+        setSubscriptionFeature('Excel assessments')
+        setShowSubscriptionModal(true)
+      }
       setCreating(false)
     }
   }
@@ -219,6 +231,13 @@ export default function ExcelAssessmentList() {
           ))}
         </div>
       )}
+      
+      {/* Subscription Required Modal */}
+      <SubscriptionRequiredModal 
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature={subscriptionFeature}
+      />
     </div>
   )
 }

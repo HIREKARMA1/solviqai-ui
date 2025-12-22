@@ -1,13 +1,16 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Home, Users, Building2, BarChart3 } from 'lucide-react'
+import { Building2, Users, GraduationCap, UserPlus, BarChart3 } from 'lucide-react'
 
 export default function AdminDashboard() {
+    const router = useRouter()
     const [stats, setStats] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
@@ -31,8 +34,8 @@ export default function AdminDashboard() {
             <div className="space-y-6">
                 {/* Welcome Section */}
                 <div>
-                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                    <p className="text-gray-600 dark:text-gray-400">Manage colleges, students, and platform analytics</p>
+                    <h1 className="text-3xl font-bold">Welcome, Admin</h1>
+                    <p className="text-gray-600 dark:text-gray-400">Platform overview and quick actions</p>
                 </div>
 
                 {loading ? (
@@ -41,76 +44,100 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <>
-                        {/* Stats Cards */}
-                        <div className="grid md:grid-cols-4 gap-6">
-                            <Card>
+                        {/* Quick Stats - Simple Overview */}
+                        <div className="grid md:grid-cols-3 gap-6">
+                            <Card className="border-l-4 border-l-blue-500">
                                 <CardHeader className="pb-3">
-                                    <CardDescription>Total Colleges</CardDescription>
-                                    <CardTitle className="text-3xl">{stats?.total_colleges || 0}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2">
+                                        <Building2 className="h-4 w-4" /> Total Colleges
+                                    </CardDescription>
+                                    <CardTitle className="text-4xl">{stats?.total_colleges || 0}</CardTitle>
                                 </CardHeader>
                             </Card>
 
-                            <Card>
+                            <Card className="border-l-4 border-l-green-500">
                                 <CardHeader className="pb-3">
-                                    <CardDescription>Total Students</CardDescription>
-                                    <CardTitle className="text-3xl">{stats?.total_students || 0}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" /> Total Students
+                                    </CardDescription>
+                                    <CardTitle className="text-4xl">{stats?.total_students || 0}</CardTitle>
                                 </CardHeader>
                             </Card>
 
-                            <Card>
+                            <Card className="border-l-4 border-l-purple-500">
                                 <CardHeader className="pb-3">
-                                    <CardDescription>Active Users</CardDescription>
-                                    <CardTitle className="text-3xl">{stats?.active_users || 0}</CardTitle>
-                                </CardHeader>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Total Assessments</CardDescription>
-                                    <CardTitle className="text-3xl">{stats?.total_assessments || 0}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2">
+                                        <GraduationCap className="h-4 w-4" /> Total Assessments
+                                    </CardDescription>
+                                    <CardTitle className="text-4xl">{stats?.total_assessments || 0}</CardTitle>
                                 </CardHeader>
                             </Card>
                         </div>
 
-                        {/* Recent Activity */}
+                        {/* Quick Actions */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Platform Overview</CardTitle>
-                                <CardDescription>Key metrics and statistics</CardDescription>
+                                <CardTitle>Quick Actions</CardTitle>
+                                <CardDescription>Manage platform and view insights</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Active Colleges</span>
-                                        <span className="font-medium">{stats?.active_colleges || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Active Students</span>
-                                        <span className="font-medium">{stats?.active_students || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Assessments This Month</span>
-                                        <span className="font-medium">{stats?.assessments_this_month || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Average Completion Rate</span>
-                                        <span className="font-medium">{stats?.average_completion_rate || 0}%</span>
-                                    </div>
+                                <div className="grid md:grid-cols-4 gap-4">
+                                    <Button 
+                                        onClick={() => router.push('/dashboard/admin/colleges')}
+                                        className="h-24 flex flex-col items-center justify-center gap-2"
+                                        variant="outline"
+                                    >
+                                        <Building2 className="h-8 w-8" />
+                                        <span>Manage Colleges</span>
+                                    </Button>
+                                    
+                                    <Button 
+                                        onClick={() => router.push('/dashboard/admin/students')}
+                                        className="h-24 flex flex-col items-center justify-center gap-2"
+                                        variant="outline"
+                                    >
+                                        <Users className="h-8 w-8" />
+                                        <span>Manage Students</span>
+                                    </Button>
+
+                                    <Button 
+                                        onClick={() => router.push('/dashboard/admin/analytics')}
+                                        className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                                    >
+                                        <BarChart3 className="h-8 w-8" />
+                                        <span>View Analytics</span>
+                                    </Button>
+
+                                    <Button 
+                                        onClick={() => router.push('/dashboard/admin/colleges')}
+                                        className="h-24 flex flex-col items-center justify-center gap-2"
+                                        variant="outline"
+                                    >
+                                        <UserPlus className="h-8 w-8" />
+                                        <span>Add College</span>
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Analytics Placeholder */}
-                        <Card>
+                        {/* Info Card */}
+                        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
                             <CardHeader>
-                                <CardTitle>Advanced Analytics</CardTitle>
-                                <CardDescription>Detailed analytics will be developed by AI team</CardDescription>
+                                <CardTitle className="flex items-center gap-2">
+                                    <BarChart3 className="h-5 w-5" />
+                                    Need Detailed Platform Insights?
+                                </CardTitle>
+                                <CardDescription>
+                                    View comprehensive analytics including universities, admins, verifications, and complete platform metrics
+                                </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-center py-12 text-gray-500">
-                                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>Advanced analytics coming soon</p>
-                                </div>
+                                <Button 
+                                    onClick={() => router.push('/dashboard/admin/analytics')}
+                                    className="bg-purple-600 hover:bg-purple-700"
+                                >
+                                    Go to Analytics Dashboard
+                                </Button>
                             </CardContent>
                         </Card>
                     </>

@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import ExcelInterface from '@/components/excel-assessment/ExcelInterface'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
+import { AxiosError } from 'axios'
 
 interface ExcelAssessment {
     id: string
@@ -54,6 +56,8 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
     const [practiceLoading, setPracticeLoading] = useState(false)
     const [evaluation, setEvaluation] = useState<any>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+    const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
 
     useEffect(() => {
         fetchAssessments()
@@ -85,7 +89,16 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
             window.location.href = `/dashboard/student/excel-assessment/${newAssessment.id}`
         } catch (error) {
             console.error('Error creating assessment:', error)
-            toast.error('Failed to create assessment')
+            const axiosError = error as AxiosError<{ detail: string }>
+            const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to create assessment'
+            
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+                setSubscriptionFeature('Excel assessments')
+                setShowSubscriptionModal(true)
+            } else {
+                toast.error('Failed to create assessment')
+            }
             setCreating(false)
         }
     }
@@ -130,7 +143,16 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
             }
         } catch (error: any) {
             console.error('Error starting practice:', error)
-            toast.error(error.response?.data?.detail || error.message || 'Failed to start practice session')
+            const axiosError = error as AxiosError<{ detail: string }>
+            const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to start practice session'
+            
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+                setSubscriptionFeature('Excel assessments')
+                setShowSubscriptionModal(true)
+            } else {
+                toast.error(errorDetail)
+            }
         } finally {
             setPracticeLoading(false)
         }
@@ -558,6 +580,13 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
                     </div>
                 )}
             </div>
+            
+            {/* Subscription Required Modal */}
+            <SubscriptionRequiredModal 
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature={subscriptionFeature}
+            />
         </div>
     )
 }

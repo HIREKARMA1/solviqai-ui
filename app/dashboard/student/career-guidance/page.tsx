@@ -25,6 +25,8 @@ import CareerTreeVisualization from '@/components/career-guidance/CareerTreeVisu
 import CareerPlaylistTab from '@/components/career-guidance/CareerPlaylistTab';
 import CareerCalendarTab from '@/components/career-guidance/CareerCalendarTab';
 import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModal';
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
+import { AxiosError } from 'axios';
 
 interface Message {
   role: 'ai' | 'user';
@@ -46,6 +48,8 @@ export default function CareerGuidancePage() {
   const [activeTab, setActiveTab] = useState('playlist');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const [error, setError] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState('this feature');
 
   // Flowchart state
   const [nodes, setNodes] = useState<any[]>([]);
@@ -181,9 +185,26 @@ export default function CareerGuidancePage() {
     } catch (error: any) {
       clearInterval(initProgressInterval);
       setLoadingPercentage(0);
-      const errorMessage = error.response?.data?.detail || 'Failed to start session. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const axiosError = error as AxiosError<{ detail: string }>;
+      const errorMessage = axiosError.response?.data?.detail || 'Failed to start session. Please try again.';
+      
+      // Check if it's a subscription error - be more specific with checks
+      const isSubscriptionError = 
+        axiosError.response?.status === 403 || 
+        (errorMessage && (
+          errorMessage.toLowerCase().includes('contact hirekarma') || 
+          errorMessage.toLowerCase().includes('subscription') ||
+          errorMessage.toLowerCase().includes('free plan')
+        ));
+      
+      if (isSubscriptionError) {
+        setSubscriptionFeature('AI Career Guidance');
+        setShowSubscriptionModal(true);
+        // Don't set error state or show toast for subscription errors
+      } else {
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
       console.error('Session start error:', error);
     } finally {
       setIsLoading(false);
@@ -387,9 +408,26 @@ export default function CareerGuidancePage() {
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Failed to send message. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const axiosError = error as AxiosError<{ detail: string }>;
+      const errorMessage = axiosError.response?.data?.detail || 'Failed to send message. Please try again.';
+      
+      // Check if it's a subscription error - be more specific with checks
+      const isSubscriptionError = 
+        axiosError.response?.status === 403 || 
+        (errorMessage && (
+          errorMessage.toLowerCase().includes('contact hirekarma') || 
+          errorMessage.toLowerCase().includes('subscription') ||
+          errorMessage.toLowerCase().includes('free plan')
+        ));
+      
+      if (isSubscriptionError) {
+        setSubscriptionFeature('AI Career Guidance');
+        setShowSubscriptionModal(true);
+        // Don't set error state or show toast for subscription errors
+      } else {
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
       console.error('Send message error:', error);
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -867,6 +905,13 @@ export default function CareerGuidancePage() {
         </div>
       </div>
       <SessionHistoryModal open={showHistory} onClose={() => setShowHistory(false)} onLoadSession={loadSession} />
+      
+      {/* Subscription Required Modal */}
+      <SubscriptionRequiredModal 
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature={subscriptionFeature}
+      />
     </DashboardLayout>
   );
 }

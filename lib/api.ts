@@ -252,6 +252,18 @@ class ApiClient {
     return response.data;
   }
 
+  async updateCollegeLicense(id: string, data: {
+    license_type: string;
+    license_expiry?: string;
+    total_students?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/admin/colleges/${id}/license`,
+      data,
+    );
+    return response.data;
+  }
+
   async getStudents(params?: any): Promise<any> {
     const response: AxiosResponse = await this.client.get("/admin/students", {
       params,
@@ -296,6 +308,17 @@ class ApiClient {
     return response.data;
   }
 
+  async updateStudentSubscription(id: string, data: {
+    subscription_type: 'free' | 'premium' | 'college_license';
+    subscription_expiry?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/admin/students/${id}/subscription`,
+      data,
+    );
+    return response.data;
+  }
+
   async uploadStudentsCSV(file: File, collegeId?: string): Promise<any> {
     const formData = new FormData();
     formData.append("file", file);
@@ -320,6 +343,11 @@ class ApiClient {
   // College endpoints
   async getCollegeDashboard(): Promise<any> {
     const response: AxiosResponse = await this.client.get("/college/dashboard");
+    return response.data;
+  }
+
+  async getCollegeAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get("/college/analytics");
     return response.data;
   }
 
@@ -366,9 +394,27 @@ class ApiClient {
     return response.data;
   }
 
+  async getCollegeStudentAnalytics(studentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/college/students/${studentId}/analytics`
+    );
+    return response.data;
+  }
+
   async activateCollegeStudent(id: string): Promise<any> {
     const response: AxiosResponse = await this.client.put(
       `/college/students/${id}/activate`,
+    );
+    return response.data;
+  }
+
+  async updateCollegeStudentSubscription(id: string, data: {
+    subscription_type: 'free' | 'premium' | 'college_license';
+    subscription_expiry?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/college/students/${id}/subscription`,
+      data,
     );
     return response.data;
   }

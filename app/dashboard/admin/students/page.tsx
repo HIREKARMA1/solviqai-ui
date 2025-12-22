@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Loader } from '@/components/ui/loader'
 import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
-import { Home, Users, Building2, BarChart3, Plus, Search, UserX, Trash2, Pencil, FileText, Eye, ChevronDown, ChevronUp } from 'lucide-react'
+import { Home, Users, Building2, BarChart3, Plus, Search, UserX, Trash2, Pencil, FileText, Eye, ChevronDown, ChevronUp, CreditCard, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function AdminStudents() {
@@ -35,6 +35,15 @@ export default function AdminStudents() {
     const [selectedReport, setSelectedReport] = useState<any>(null)
     const [showReportModal, setShowReportModal] = useState(false)
     const [loadingReport, setLoadingReport] = useState(false)
+    
+    // Subscription management state
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+    const [selectedStudent, setSelectedStudent] = useState<any>(null)
+    const [subscriptionData, setSubscriptionData] = useState({
+        subscription_type: 'premium' as 'free' | 'premium' | 'college_license',
+        subscription_expiry: ''
+    })
+    const [updatingSubscription, setUpdatingSubscription] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -240,6 +249,55 @@ export default function AdminStudents() {
         }
     }
 
+    const handleOpenSubscriptionModal = (student: any) => {
+        setSelectedStudent(student)
+        setSubscriptionData({
+            subscription_type: student.subscription_type || 'premium',
+            subscription_expiry: ''
+        })
+        setShowSubscriptionModal(true)
+    }
+
+    const handleUpdateSubscription = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedStudent) return
+
+        setUpdatingSubscription(true)
+        try {
+            const payload: any = {
+                subscription_type: subscriptionData.subscription_type
+            }
+            
+            // Only include expiry date if it's set
+            if (subscriptionData.subscription_expiry) {
+                payload.subscription_expiry = new Date(subscriptionData.subscription_expiry).toISOString()
+            }
+
+            const response = await apiClient.updateStudentSubscription(selectedStudent.id, payload)
+            
+            toast.success(`Subscription updated! ${selectedStudent.name} is now on ${response.new_subscription} plan`)
+            setShowSubscriptionModal(false)
+            setSelectedStudent(null)
+            fetchData() // Refresh the student list
+        } catch (error: any) {
+            console.error('Error updating subscription:', error)
+            const errorDetail = error.response?.data?.detail
+            let errorMessage = 'Failed to update subscription'
+            
+            if (typeof errorDetail === 'string') {
+                errorMessage = errorDetail
+            } else if (Array.isArray(errorDetail)) {
+                errorMessage = errorDetail.map((err: any) => err.msg || JSON.stringify(err)).join(', ')
+            } else if (typeof errorDetail === 'object' && errorDetail !== null) {
+                errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
+            }
+            
+            toast.error(errorMessage)
+        } finally {
+            setUpdatingSubscription(false)
+        }
+    }
+
     const filteredStudents = students.filter(student =>
         student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -349,10 +407,32 @@ export default function AdminStudents() {
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
-                                                    <Badge variant={student.status === 'ACTIVE' ? 'success' : 'secondary'}>
-                                                        {student.status}
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant={student.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                                                            {student.status}
+                                                        </Badge>
+                                                        <Badge 
+                                                            variant={
+                                                                student.subscription_type === 'premium' ? 'default' :
+                                                                student.subscription_type === 'college_license' ? 'success' :
+                                                                'outline'
+                                                            }
+                                                            className="capitalize"
+                                                        >
+                                                            {student.subscription_type || 'free'}
+                                                        </Badge>
+                                                    </div>
                                                     <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleOpenSubscriptionModal(student)}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            title="Manage subscription plan"
+                                                        >
+                                                            <CreditCard className="h-4 w-4 mr-1" />
+                                                            Subscription
+                                                        </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
@@ -790,6 +870,152 @@ export default function AdminStudents() {
                                         </Button>
                                         <Button type="submit" disabled={creating}>
                                             {creating ? 'Creating...' : 'Create Student'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Subscription Management Modal */}
+                {showSubscriptionModal && selectedStudent && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-lg">
+                            <CardHeader>
+                                <CardTitle>Manage Subscription</CardTitle>
+                                <CardDescription>
+                                    Update subscription plan for {selectedStudent.name}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleUpdateSubscription} className="space-y-4">
+                                    {/* Current Plan Info */}
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium">Current Plan:</span>
+                                            <Badge 
+                                                variant={
+                                                    selectedStudent.subscription_type === 'premium' ? 'default' :
+                                                    selectedStudent.subscription_type === 'college_license' ? 'success' :
+                                                    'outline'
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {selectedStudent.subscription_type || 'free'}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                                            <p><strong>Email:</strong> {selectedStudent.email}</p>
+                                            {selectedStudent.free_tests_used !== undefined && (
+                                                <p><strong>Free Tests Used:</strong> {selectedStudent.free_tests_used}/1</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* New Subscription Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            New Subscription Plan <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            required
+                                            value={subscriptionData.subscription_type}
+                                            onChange={(e) => setSubscriptionData({
+                                                ...subscriptionData,
+                                                subscription_type: e.target.value as 'free' | 'premium' | 'college_license'
+                                            })}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                                        >
+                                            <option value="free">Free - Limited (1 assessment, 30% career guidance)</option>
+                                            <option value="premium">Premium - Unlimited access</option>
+                                            <option value="college_license">College License - Unlimited access</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Expiry Date (Optional) */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <Calendar className="h-4 w-4 inline mr-1" />
+                                            Subscription Expiry Date (Optional)
+                                        </label>
+                                        <Input
+                                            type="date"
+                                            value={subscriptionData.subscription_expiry}
+                                            onChange={(e) => setSubscriptionData({
+                                                ...subscriptionData,
+                                                subscription_expiry: e.target.value
+                                            })}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            placeholder="Leave empty for no expiry"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Leave empty for lifetime access. Recommended for premium plans.
+                                        </p>
+                                    </div>
+
+                                    {/* Plan Features Info */}
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-2">
+                                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                            {subscriptionData.subscription_type === 'free' && '📋 Free Plan Features:'}
+                                            {subscriptionData.subscription_type === 'premium' && '⭐ Premium Plan Features:'}
+                                            {subscriptionData.subscription_type === 'college_license' && '🎓 College License Features:'}
+                                        </p>
+                                        <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1 ml-4 list-disc">
+                                            {subscriptionData.subscription_type === 'free' && (
+                                                <>
+                                                    <li>1 assessment only</li>
+                                                    <li>Career guidance up to 30%</li>
+                                                    <li>Basic features</li>
+                                                </>
+                                            )}
+                                            {(subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
+                                                <>
+                                                    <li>Unlimited assessments</li>
+                                                    <li>Full career guidance (100%)</li>
+                                                    <li>All platform features</li>
+                                                    <li>Usage counters reset automatically</li>
+                                                </>
+                                            )}
+                                        </ul>
+                                    </div>
+
+                                    {/* Important Note */}
+                                    {selectedStudent.subscription_type === 'free' && 
+                                     (subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
+                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                <strong>✓ Upgrading:</strong> This will reset the student's usage counters and grant immediate unlimited access.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 justify-end pt-4">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setShowSubscriptionModal(false)
+                                                setSelectedStudent(null)
+                                            }}
+                                            disabled={updatingSubscription}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button 
+                                            type="submit" 
+                                            disabled={updatingSubscription}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            {updatingSubscription ? (
+                                                <>
+                                                    <Loader size="sm" className="mr-2" />
+                                                    Updating...
+                                                </>
+                                            ) : (
+                                                'Update Subscription'
+                                            )}
                                         </Button>
                                     </div>
                                 </form>

@@ -32,6 +32,7 @@ import { AxiosError } from 'axios'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { AnimatedBackground } from '@/components/ui/animated-background'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 
 const sidebarItems = [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -77,6 +78,10 @@ export default function JobRecommendationsPage() {
     const [generatedAt, setGeneratedAt] = useState<string | null>(null)
     const [startingAssessment, setStartingAssessment] = useState<number | null>(null)
     const [activeAssessment, setActiveAssessment] = useState<any>(null)
+    
+    // Subscription modal state
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+    const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
 
     useEffect(() => {
         fetchJobRecommendations()
@@ -116,7 +121,16 @@ export default function JobRecommendationsPage() {
             router.push(`/dashboard/student/assessment?id=${data.assessment_id}`)
         } catch (err) {
             console.error('Failed to start assessment:', err)
-            toast.error('Failed to start assessment. Please try again.')
+            const axiosError = err as AxiosError<{ detail: string }>
+            const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to start assessment'
+            
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || (axiosError.response?.status === 400 && errorDetail.includes('Contact HireKarma')) || errorDetail.includes('subscription')) {
+                setSubscriptionFeature('assessments')
+                setShowSubscriptionModal(true)
+            } else {
+                toast.error('Failed to start assessment. Please try again.')
+            }
         } finally {
             setStartingAssessment(null)
         }
@@ -174,7 +188,11 @@ export default function JobRecommendationsPage() {
                 message: axiosError.message
             })
 
-            if (axiosError.response?.status === 400) {
+            // Check if it's a subscription error
+            if (axiosError.response?.status === 403 || errorMessage.includes('Contact HireKarma') || errorMessage.includes('subscription')) {
+                setSubscriptionFeature('job recommendations')
+                setShowSubscriptionModal(true)
+            } else if (axiosError.response?.status === 400) {
                 setHasResume(false)
                 setError('No resume uploaded. Please upload your resume first to get personalized job recommendations.')
             } else if (axiosError.response?.status === 401) {
@@ -553,6 +571,13 @@ export default function JobRecommendationsPage() {
                     </>
                 )}
             </div>
+            
+            {/* Subscription Required Modal */}
+            <SubscriptionRequiredModal 
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature={subscriptionFeature}
+            />
         </DashboardLayout>
     )
 }

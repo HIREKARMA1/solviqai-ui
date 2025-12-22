@@ -117,29 +117,26 @@ export default function AdminAnalytics() {
 
     const handleExport = async (format: string) => {
         try {
-            const token = localStorage.getItem('token')
-            if (!token) {
-                alert('Please login to export data')
-                return
+            setLoading(true)
+            
+            // Check authentication first
+            if (!apiClient.isAuthenticated()) {
+                throw new Error('Please login to export data')
             }
-
-            const API_BASE_URL = config.api.baseUrl.replace(/\/+$/, '')
+            
+            // Calculate current date range for export
+            const endDate = new Date()
+            const startDate = new Date()
+            startDate.setDate(startDate.getDate() - parseInt(dateRange))
             
             if (format === 'json') {
-                // For JSON, fetch and download as file
-                const response = await fetch(`${API_BASE_URL}/api/v1/admin/analytics/export?format=json`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                })
+                // Use API client for JSON export
+                const data = await apiClient.exportAnalytics(
+                    'json',
+                    startDate.toISOString(),
+                    endDate.toISOString()
+                )
                 
-                if (!response.ok) {
-                    throw new Error(`Export failed: ${response.statusText}`)
-                }
-                
-                const data = await response.json()
                 const dataStr = JSON.stringify(data, null, 2)
                 const dataBlob = new Blob([dataStr], { type: 'application/json' })
                 const url = window.URL.createObjectURL(dataBlob)
@@ -152,8 +149,20 @@ export default function AdminAnalytics() {
                 window.URL.revokeObjectURL(url)
                 
             } else if (format === 'csv') {
-                // For CSV, make direct request to get the file
-                const response = await fetch(`${API_BASE_URL}/api/v1/admin/analytics/export?format=csv`, {
+                // For CSV, we need to make a direct request to get the file blob
+                const token = apiClient.getAccessToken()
+                if (!token) {
+                    throw new Error('Authentication token not available. Please login again.')
+                }
+
+                const API_BASE_URL = config.api.baseUrl.replace(/\/+$/, '')
+                const params = new URLSearchParams({
+                    format: 'csv',
+                    start_date: startDate.toISOString(),
+                    end_date: endDate.toISOString()
+                })
+                
+                const response = await fetch(`${API_BASE_URL}/api/v1/admin/analytics/export?${params}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -162,7 +171,14 @@ export default function AdminAnalytics() {
                 })
                 
                 if (!response.ok) {
-                    throw new Error(`Export failed: ${response.statusText}`)
+                    if (response.status === 401) {
+                        throw new Error('Session expired. Please login again.')
+                    } else if (response.status === 403) {
+                        throw new Error('Access denied. Admin privileges required.')
+                    } else {
+                        const errorText = await response.text()
+                        throw new Error(`Export failed: ${errorText || response.statusText}`)
+                    }
                 }
                 
                 const blob = await response.blob()
@@ -178,9 +194,12 @@ export default function AdminAnalytics() {
             
             console.log(`✅ Successfully exported analytics as ${format.toUpperCase()}`)
             
-        } catch (error) {
+        } catch (error: any) {
             console.error('Export failed:', error)
-            alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            const errorMessage = error.message || 'Export failed due to an unexpected error'
+            alert(errorMessage)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -251,10 +270,6 @@ export default function AdminAnalytics() {
                                 <Download className="h-4 w-4 mr-2" />
                                 Export CSV
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Export JSON
-                            </Button>
                         </div>
                     </div>
                 </div>
@@ -277,21 +292,18 @@ export default function AdminAnalytics() {
                                 title="Total Students"
                                 value={platformOverview.total_metrics?.students || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                trend={{ value: 5.2, label: "vs last month" }}
                                 description="Registered students"
                             />
                             <MetricCard
                                 title="Total Colleges"
                                 value={platformOverview.total_metrics?.colleges || 0}
                                 icon={<Building2 className="h-5 w-5" />}
-                                trend={{ value: 2.1, label: "vs last month" }}
                                 description="Partner institutions"
                             />
                             <MetricCard
                                 title="Total Assessments"
                                 value={platformOverview.total_metrics?.assessments || 0}
                                 icon={<FileText className="h-5 w-5" />}
-                                trend={{ value: -1.5, label: "vs last month" }}
                                 description="Completed assessments"
                             />
                             {(platformOverview.total_metrics?.job_applications || 0) > 0 && (
@@ -299,7 +311,6 @@ export default function AdminAnalytics() {
                                     title="Job Applications"
                                     value={platformOverview.total_metrics?.job_applications || 0}
                                     icon={<Briefcase className="h-5 w-5" />}
-                                    trend={{ value: 8.3, label: "vs last month" }}
                                     description="Total applications"
                                 />
                             )}
@@ -311,21 +322,18 @@ export default function AdminAnalytics() {
                                 title="Daily Active Users"
                                 value={userEngagement.activity_metrics?.dau || 0}
                                 icon={<Activity className="h-5 w-5" />}
-                                trend={{ value: 3.2, label: "vs yesterday" }}
                                 description="Users active today"
                             />
                             <MetricCard
                                 title="Weekly Active Users"
                                 value={userEngagement.activity_metrics?.wau || 0}
                                 icon={<TrendingUp className="h-5 w-5" />}
-                                trend={{ value: 1.8, label: "vs last week" }}
                                 description="Users active this week"
                             />
                             <MetricCard
                                 title="Monthly Active Users"
                                 value={userEngagement.activity_metrics?.mau || 0}
                                 icon={<Users className="h-5 w-5" />}
-                                trend={{ value: 4.5, label: "vs last month" }}
                                 description="Users active this month"
                             />
                         </div>
@@ -365,14 +373,12 @@ export default function AdminAnalytics() {
                                 title="Average Overall Score"
                                 value={`${studentPerformance.academic_performance?.avg_overall_score || 0}%`}
                                 icon={<Award className="h-5 w-5" />}
-                                trend={{ value: 2.3, label: "vs last month" }}
                                 description="Platform average"
                             />
                             <MetricCard
                                 title="Average Readiness Index"
                                 value={`${studentPerformance.academic_performance?.avg_readiness_index || 0}%`}
                                 icon={<TrendingUp className="h-5 w-5" />}
-                                trend={{ value: 1.8, label: "vs last month" }}
                                 description="Job readiness score"
                             />
                         </div>
@@ -741,7 +747,6 @@ export default function AdminAnalytics() {
                                         title="Success Rate"
                                         value={`${jobApplications.application_metrics?.success_rate || 0}%`}
                                         icon={<Award className="h-5 w-5" />}
-                                        trend={{ value: 3.2, label: "vs last month" }}
                                         description="Successful applications"
                                     />
                                     <MetricCard
