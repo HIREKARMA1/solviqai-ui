@@ -3,14 +3,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { getErrorMessage } from '@/lib/utils';
-import { Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Check } from 'lucide-react';
+import { Mail, Lock, ArrowRight, KeyRound, Check } from 'lucide-react';
 import { config } from '@/lib/config';
 
 const API_BASE_URL = config.api.baseUrl;
@@ -268,26 +267,6 @@ export default function ForgotPasswordPage() {
                 >
                   <div className="space-y-2">
                     <label
-                      htmlFor="user-type"
-                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      I am a
-                    </label>
-                    <select
-                      id="user-type"
-                      value={userType}
-                      onChange={(e) => setUserType(e.target.value as any)}
-                      className="w-full h-12 px-4 bg-white/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                      disabled={loading}
-                    >
-                      <option value="student">Student</option>
-                      <option value="college">College</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label
                       htmlFor="email"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
                     >
@@ -320,16 +299,6 @@ export default function ForgotPasswordPage() {
                       </span>
                     )}
                   </Button>
-
-                  <div className="text-center pt-4">
-                    <Link
-                      href="/auth/login"
-                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-1"
-                    >
-                      <ArrowLeft className="w-3 h-3" />
-                      Back to Login
-                    </Link>
-                  </div>
                 </motion.form>
               )}
 
@@ -381,7 +350,7 @@ export default function ForgotPasswordPage() {
                     )}
                   </Button>
 
-                  <div className="text-center pt-4 space-y-2">
+                  <div className="text-center pt-4">
                     <button
                       type="button"
                       onClick={handleSendOTP}
@@ -390,16 +359,6 @@ export default function ForgotPasswordPage() {
                     >
                       Resend OTP
                     </button>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setStep('email')}
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-1"
-                      >
-                        <ArrowLeft className="w-3 h-3" />
-                        Change Email
-                      </button>
-                    </div>
                   </div>
                 </motion.form>
               )}
