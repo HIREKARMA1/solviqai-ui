@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Loader } from '@/components/ui/loader'
 import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
-import { Home, Users, Building2, BarChart3, Plus, Search, Pencil, Trash2, Upload, UserX, UserPlus } from 'lucide-react'
+import { Home, Users, Building2, BarChart3, Plus, Search, Pencil, Trash2, Upload, UserX, UserPlus, CreditCard, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BulkUploadModal } from '@/components/BulkUploadModal'
 
@@ -27,6 +27,15 @@ export default function AdminColleges() {
     const [selectedStudent, setSelectedStudent] = useState<any>(null)
     const [collegeStudents, setCollegeStudents] = useState<any[]>([])
     const [loadingStudents, setLoadingStudents] = useState(false)
+    
+    // License management state
+    const [showLicenseModal, setShowLicenseModal] = useState(false)
+    const [licenseData, setLicenseData] = useState({
+        license_type: 'premium',
+        license_expiry: '',
+        total_students: 500
+    })
+    const [updatingLicense, setUpdatingLicense] = useState(false)
     const [formData, setFormData] = useState({
         college_name: '',
         email: '',
@@ -233,6 +242,59 @@ export default function AdminColleges() {
             }
             
             toast.error(errorMessage)
+        }
+    }
+
+    const handleOpenLicenseModal = (college: any) => {
+        setSelectedCollege(college)
+        setLicenseData({
+            license_type: college.license_type || 'premium',
+            license_expiry: '',
+            total_students: college.total_students || 500
+        })
+        setShowLicenseModal(true)
+    }
+
+    const handleUpdateLicense = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedCollege) return
+
+        setUpdatingLicense(true)
+        try {
+            const payload: any = {
+                license_type: licenseData.license_type,
+                total_students: licenseData.total_students
+            }
+            
+            // Only include expiry date if it's set
+            if (licenseData.license_expiry) {
+                payload.license_expiry = new Date(licenseData.license_expiry).toISOString()
+            }
+
+            const response = await apiClient.updateCollegeLicense(selectedCollege.id, payload)
+            
+            // Refresh the college list to show updated data
+            await fetchColleges()
+            
+            toast.success(`License updated! ${selectedCollege.college_name} is now on ${response.new_license} plan`)
+            setShowLicenseModal(false)
+            setSelectedCollege(null)
+        } catch (error: any) {
+            console.error('Error updating license:', error)
+            const errorDetail = error.response?.data?.detail
+            let errorMessage = 'Failed to update license'
+            
+            if (typeof errorDetail === 'string') {
+                errorMessage = errorDetail
+            } else if (Array.isArray(errorDetail)) {
+                errorMessage = errorDetail.map((err: any) => err.msg || JSON.stringify(err)).join(', ')
+            } else if (typeof errorDetail === 'object' && errorDetail !== null) {
+                errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
+            }
+            
+            toast.error(errorMessage)
+        } finally {
+            setUpdatingLicense(false)
         }
     }
 
@@ -605,16 +667,38 @@ export default function AdminColleges() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <Badge variant={college.status === 'active' ? 'success' : 'secondary'}>
-                                                    {college.status?.toUpperCase() || 'ACTIVE'}
-                                                </Badge>
+                                                <div className="flex flex-col gap-1">
+                                                    <Badge variant={college.status === 'active' ? 'success' : 'secondary'}>
+                                                        {college.status?.toUpperCase() || 'ACTIVE'}
+                                                    </Badge>
+                                                    <Badge 
+                                                        variant={
+                                                            college.license_type === 'premium' ? 'default' :
+                                                            college.license_type === 'enterprise' ? 'success' :
+                                                            'outline'
+                                                        }
+                                                        className="capitalize text-xs"
+                                                    >
+                                                        {college.license_type || 'free'} ({college.total_students || 100} students)
+                                                    </Badge>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleOpenLicenseModal(college)}
+                                                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                    title="Manage license plan"
+                                                >
+                                                    <CreditCard className="h-4 w-4 mr-1" />
+                                                    License
+                                                </Button>
                                                 <Button 
                                                     variant="outline" 
                                                     size="sm"
                                                     onClick={() => handleViewStudents(college)}
                                                 >
                                                     <Users className="h-4 w-4 mr-2" />
-                                                    View Students
+                                                    Students
                                                 </Button>
                                                 <Button
                                                     size="sm"
@@ -1318,6 +1402,181 @@ export default function AdminColleges() {
                                         </Button>
                                         <Button type="submit" disabled={updating}>
                                             {updating ? 'Updating...' : 'Update College'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* License Management Modal */}
+                {showLicenseModal && selectedCollege && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-lg">
+                            <CardHeader>
+                                <CardTitle>Manage College License</CardTitle>
+                                <CardDescription>
+                                    Update license plan for {selectedCollege.college_name}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleUpdateLicense} className="space-y-4">
+                                    {/* Current License Info */}
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium">Current License:</span>
+                                            <Badge 
+                                                variant={
+                                                    selectedCollege.license_type === 'premium' ? 'default' :
+                                                    selectedCollege.license_type === 'enterprise' ? 'success' :
+                                                    'outline'
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {selectedCollege.license_type || 'free'}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                                            <p><strong>Email:</strong> {selectedCollege.email}</p>
+                                            <p><strong>Current Capacity:</strong> {selectedCollege.total_students || 100} students</p>
+                                        </div>
+                                    </div>
+
+                                    {/* New License Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            New License Plan <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            required
+                                            value={licenseData.license_type}
+                                            onChange={(e) => setLicenseData({
+                                                ...licenseData,
+                                                license_type: e.target.value
+                                            })}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                                        >
+                                            <option value="free">Free - Basic features (100 students)</option>
+                                            <option value="premium">Premium - Enhanced features (500-1000 students)</option>
+                                            <option value="enterprise">Enterprise - Full features (unlimited students)</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Student Capacity */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Maximum Students Allowed <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            type="number"
+                                            required
+                                            min={1}
+                                            max={100000}
+                                            value={licenseData.total_students}
+                                            onChange={(e) => setLicenseData({
+                                                ...licenseData,
+                                                total_students: parseInt(e.target.value) || 100
+                                            })}
+                                            placeholder="500"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Recommended: Free (100), Premium (500-1000), Enterprise (unlimited)
+                                        </p>
+                                    </div>
+
+                                    {/* Expiry Date (Optional) */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <Calendar className="h-4 w-4 inline mr-1" />
+                                            License Expiry Date (Optional)
+                                        </label>
+                                        <Input
+                                            type="date"
+                                            value={licenseData.license_expiry}
+                                            onChange={(e) => setLicenseData({
+                                                ...licenseData,
+                                                license_expiry: e.target.value
+                                            })}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            placeholder="Leave empty for no expiry"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Leave empty for lifetime access. Recommended for paid plans.
+                                        </p>
+                                    </div>
+
+                                    {/* Plan Features Info */}
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-2">
+                                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                            {licenseData.license_type === 'free' && '📋 Free Plan Features:'}
+                                            {licenseData.license_type === 'premium' && '⭐ Premium Plan Features:'}
+                                            {licenseData.license_type === 'enterprise' && '🏢 Enterprise Plan Features:'}
+                                        </p>
+                                        <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1 ml-4 list-disc">
+                                            {licenseData.license_type === 'free' && (
+                                                <>
+                                                    <li>Up to 100 students</li>
+                                                    <li>Basic features</li>
+                                                    <li>Standard support</li>
+                                                </>
+                                            )}
+                                            {licenseData.license_type === 'premium' && (
+                                                <>
+                                                    <li>Up to 1000 students</li>
+                                                    <li>Advanced analytics</li>
+                                                    <li>Priority support</li>
+                                                    <li>Custom branding</li>
+                                                </>
+                                            )}
+                                            {licenseData.license_type === 'enterprise' && (
+                                                <>
+                                                    <li>Unlimited students</li>
+                                                    <li>All premium features</li>
+                                                    <li>Dedicated support</li>
+                                                    <li>Custom integrations</li>
+                                                    <li>SLA guarantees</li>
+                                                </>
+                                            )}
+                                        </ul>
+                                    </div>
+
+                                    {/* Upgrade Notice */}
+                                    {selectedCollege.license_type === 'free' && 
+                                     licenseData.license_type !== 'free' && (
+                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                <strong>✓ Upgrading:</strong> This will increase the college's capacity and unlock additional features immediately.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 justify-end pt-4">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setShowLicenseModal(false)
+                                                setSelectedCollege(null)
+                                            }}
+                                            disabled={updatingLicense}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button 
+                                            type="submit" 
+                                            disabled={updatingLicense}
+                                            className="bg-purple-600 hover:bg-purple-700"
+                                        >
+                                            {updatingLicense ? (
+                                                <>
+                                                    <Loader size="sm" className="mr-2" />
+                                                    Updating...
+                                                </>
+                                            ) : (
+                                                'Update License'
+                                            )}
                                         </Button>
                                     </div>
                                 </form>
