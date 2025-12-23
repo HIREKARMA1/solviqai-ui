@@ -771,6 +771,84 @@ class ApiClient {
     return response.data;
   }
 
+  async getStudentSubscriptionStatus(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/subscription-status",
+    );
+    return response.data;
+  }
+
+  async getStudentUsageAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/usage-analytics",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 2: COLLEGE SUBSCRIPTION & LICENSE ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getCollegeLicenseOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/license-overview",
+    );
+    return response.data;
+  }
+
+  async getStudentSubscriptionDistribution(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-distribution",
+    );
+    return response.data;
+  }
+
+  async getUsageAnalyticsBySubscription(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/usage-analytics-by-subscription",
+    );
+    return response.data;
+  }
+
+  async getSubscriptionHealth(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-health",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 3: ADMIN SUBSCRIPTION & BUSINESS ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getAdminSubscriptionOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-overview",
+    );
+    return response.data;
+  }
+
+  async getAdminCollegeLicenses(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/college-licenses",
+    );
+    return response.data;
+  }
+
+  async getAdminSubscriptionTrends(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-trends",
+    );
+    return response.data;
+  }
+
+  async getAdminRevenueMetrics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/revenue-metrics",
+    );
+    return response.data;
+  }
+
   // Career Guidance API
   careerGuidance = {
     startSession: async (data: {
@@ -1032,3 +1110,22 @@ class ApiClient {
 export const apiClient = new ApiClient();
 export const api = apiClient; // Export as 'api' for cleaner imports
 export default apiClient;
+
+// ============================================================================
+// STANDALONE EXPORT FUNCTIONS FOR CONVENIENCE
+// ============================================================================
+
+// Phase 1: Student Subscription Analytics
+export const getStudentSubscriptionStatus = () => apiClient.getStudentSubscriptionStatus();
+export const getStudentUsageAnalytics = () => apiClient.getStudentUsageAnalytics();
+
+// Phase 2: College Subscription Analytics
+export const getCollegeLicenseOverview = () => apiClient.getCollegeLicenseOverview();
+export const getStudentSubscriptionDistribution = () => apiClient.getStudentSubscriptionDistribution();
+export const getUsageAnalyticsBySubscription = () => apiClient.getUsageAnalyticsBySubscription();
+export const getSubscriptionHealth = () => apiClient.getSubscriptionHealth();
+// Phase 3: Admin Subscription & Business Analytics
+export const getAdminSubscriptionOverview = () => apiClient.getAdminSubscriptionOverview();
+export const getAdminCollegeLicenses = () => apiClient.getAdminCollegeLicenses();
+export const getAdminSubscriptionTrends = () => apiClient.getAdminSubscriptionTrends();
+export const getAdminRevenueMetrics = () => apiClient.getAdminRevenueMetrics();
