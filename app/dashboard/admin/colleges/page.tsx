@@ -276,7 +276,11 @@ export default function AdminColleges() {
             // Refresh the college list to show updated data
             await fetchColleges()
             
-            toast.success(`License updated! ${selectedCollege.college_name} is now on ${response.new_license} plan`)
+            // Show success message with cascade info
+            const studentsUpdatedMsg = response.students_updated > 0 
+                ? ` (${response.students_updated} student subscriptions updated)` 
+                : ''
+            toast.success(`License updated! ${selectedCollege.college_name} is now on ${response.new_license} plan${studentsUpdatedMsg}`)
             setShowLicenseModal(false)
             setSelectedCollege(null)
         } catch (error: any) {
@@ -1547,6 +1551,22 @@ export default function AdminColleges() {
                                         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                                             <p className="text-sm text-green-700 dark:text-green-300">
                                                 <strong>✓ Upgrading:</strong> This will increase the college's capacity and unlock additional features immediately.
+                                            </p>
+                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                                <strong>Smart Restore:</strong> Only students who had premium BEFORE the previous downgrade will be restored to premium. New students remain on their current tier.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Downgrade Warning */}
+                                    {selectedCollege.license_type !== 'free' && 
+                                     licenseData.license_type === 'free' && (
+                                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                                            <p className="text-sm text-orange-700 dark:text-orange-300">
+                                                <strong>⚠️ Downgrade Warning:</strong> This will reduce capacity and limit features.
+                                            </p>
+                                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                                All students with "college_license" subscription will be downgraded to free tier. Their premium status will be saved for future restore if you upgrade again. Students with individual premium subscriptions will NOT be affected.
                                             </p>
                                         </div>
                                     )}
