@@ -1027,6 +1027,41 @@ class ApiClient {
       return response.data;
     },
   };
+
+  // Disha Assessment endpoints
+  async getDishaPackageStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageQuestions(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/questions`
+    );
+    return response.data;
+  }
+
+  async triggerDishaQuestionGeneration(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/generate-questions`
+    );
+    return response.data;
+  }
+
+  async getAllDishaPackages(params?: {
+    status?: string;
+    mode?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages`,
+      { params }
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
