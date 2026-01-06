@@ -1036,6 +1036,13 @@ class ApiClient {
     return response.data;
   }
 
+  async getDishaGenerationStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/generation-status`
+    );
+    return response.data;
+  }
+
   async getDishaPackageQuestions(packageId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/assessments/${packageId}/questions`
@@ -1053,12 +1060,20 @@ class ApiClient {
   async getAllDishaPackages(params?: {
     status?: string;
     mode?: string;
+    include_expired?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/admin/packages`,
       { params }
+    );
+    return response.data;
+  }
+
+  async deleteDishaPackage(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/disha/admin/packages/${packageId}`
     );
     return response.data;
   }

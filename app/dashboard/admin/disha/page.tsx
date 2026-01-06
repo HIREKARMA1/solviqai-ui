@@ -20,7 +20,8 @@ import {
     XCircle,
     Loader2,
     AlertCircle,
-    Package
+    Package,
+    Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -31,6 +32,8 @@ interface DishaPackage {
     status: string
     time_window_start: string
     time_window_end: string
+    is_expired?: boolean
+    time_remaining_seconds?: number | null
     rounds_count: number
     questions_count: number
     attempts_count: number
@@ -50,15 +53,51 @@ export default function AdminDishaPage() {
     const [showQuestions, setShowQuestions] = useState(false)
     const [generating, setGenerating] = useState(false)
     const [autoRefresh, setAutoRefresh] = useState(false)
+    const [generationStatus, setGenerationStatus] = useState<Record<string, any>>({})
 
     useEffect(() => {
         fetchPackages()
     }, [statusFilter])
 
+    // Poll for generation status on packages that are generating
+    useEffect(() => {
+        const generatingPackages = packages.filter(p => p.status === 'GENERATING')
+        if (generatingPackages.length === 0) return
+
+        const interval = setInterval(async () => {
+            for (const pkg of generatingPackages) {
+                try {
+                    // Try to get detailed generation status first
+                    let newStatus: any
+                    try {
+                        newStatus = await apiClient.getDishaGenerationStatus(pkg.package_id)
+                    } catch {
+                        // Fallback to regular status if generation-status endpoint fails
+                        newStatus = await apiClient.getDishaPackageStatus(pkg.package_id)
+                    }
+
+                    setGenerationStatus(prev => ({
+                        ...prev,
+                        [pkg.package_id]: newStatus
+                    }))
+
+                    // If status changed from GENERATING, refresh packages list
+                    if (newStatus.status && newStatus.status !== 'GENERATING') {
+                        fetchPackages()
+                    }
+                } catch (error) {
+                    console.error(`Error fetching generation status for ${pkg.package_id}:`, error)
+                }
+            }
+        }, 2000) // Poll every 2 seconds
+
+        return () => clearInterval(interval)
+    }, [packages])
+
     const fetchPackages = async () => {
         try {
             setLoading(true)
-            const params: any = { limit: 100 }
+            const params: any = { limit: 100, include_expired: true } // Include expired packages
             if (statusFilter) {
                 params.status = statusFilter
             }
@@ -82,6 +121,39 @@ export default function AdminDishaPage() {
         } finally {
             setRefreshing(false)
         }
+    }
+
+    const deletePackage = async (packageId: string, packageName: string) => {
+        if (!confirm(`Are you sure you want to delete "${packageName}"?\n\nThis will permanently delete the package and all associated data (rounds, questions, attempts). This action cannot be undone.`)) {
+            return
+        }
+
+        try {
+            await apiClient.deleteDishaPackage(packageId)
+            toast.success('Package deleted successfully')
+            // Refresh the list
+            await fetchPackages()
+            // Close details if this package was selected
+            if (selectedPackage?.package_id === packageId) {
+                setSelectedPackage(null)
+                setPackageDetails(null)
+            }
+        } catch (error: any) {
+            console.error('Error deleting package:', error)
+            toast.error(error?.response?.data?.detail || 'Failed to delete package')
+        }
+    }
+
+    const formatTimeRemaining = (seconds: number | null | undefined): string => {
+        if (!seconds || seconds < 0) return 'Expired'
+
+        const days = Math.floor(seconds / 86400)
+        const hours = Math.floor((seconds % 86400) / 3600)
+        const minutes = Math.floor((seconds % 3600) / 60)
+
+        if (days > 0) return `${days}d ${hours}h`
+        if (hours > 0) return `${hours}h ${minutes}m`
+        return `${minutes}m`
     }
 
     const fetchPackageDetails = async (packageId: string) => {
@@ -290,6 +362,14 @@ export default function AdminDishaPage() {
                                                         Questions
                                                     </Button>
                                                 )}
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => deletePackage(pkg.package_id, pkg.assessment_name)}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -304,8 +384,21 @@ export default function AdminDishaPage() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <FileText className="h-4 w-4 text-gray-400" />
-                                                <div>
-                                                    <p className="text-sm font-medium">{pkg.questions_count}</p>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">
+                                                        {pkg.status === 'GENERATING' && generationStatus[pkg.package_id]
+                                                            ? (
+                                                                <>
+                                                                    {generationStatus[pkg.package_id].total_questions || 0} / {generationStatus[pkg.package_id].total_expected_questions || 0}
+                                                                    {generationStatus[pkg.package_id].overall_completion_percent !== undefined && (
+                                                                        <span className="ml-1 text-blue-600 dark:text-blue-400">
+                                                                            ({generationStatus[pkg.package_id].overall_completion_percent.toFixed(0)}%)
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            )
+                                                            : pkg.questions_count}
+                                                    </p>
                                                     <p className="text-xs text-gray-500">Questions</p>
                                                 </div>
                                             </div>
@@ -326,13 +419,127 @@ export default function AdminDishaPage() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {/* Generation Progress Bar */}
+                                        {pkg.status === 'GENERATING' && generationStatus[pkg.package_id] && (
+                                            <div className="mt-4 pt-4 border-t">
+                                                <div className="mb-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                                            Generating Questions...
+                                                        </span>
+                                                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                                    </div>
+
+                                                    {/* Overall Progress */}
+                                                    {generationStatus[pkg.package_id].total_expected_questions && (
+                                                        <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                                                    Overall Progress
+                                                                </span>
+                                                                <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                                                                    {generationStatus[pkg.package_id].total_questions || 0} / {generationStatus[pkg.package_id].total_expected_questions} questions
+                                                                    {generationStatus[pkg.package_id].overall_completion_percent !== undefined && (
+                                                                        <span className="ml-1">
+                                                                            ({generationStatus[pkg.package_id].overall_completion_percent.toFixed(1)}%)
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                                                <div
+                                                                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                                                                    style={{
+                                                                        width: `${Math.min(
+                                                                            generationStatus[pkg.package_id].overall_completion_percent || 0,
+                                                                            100
+                                                                        )}%`
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Per-Round Progress */}
+                                                    {generationStatus[pkg.package_id].rounds_progress && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                                                                Round Progress ({generationStatus[pkg.package_id].rounds_progress.filter((r: any) => r.is_complete).length} / {generationStatus[pkg.package_id].rounds_progress.length} complete)
+                                                            </p>
+                                                            {generationStatus[pkg.package_id].rounds_progress.map((round: any, idx: number) => {
+                                                                // Support both field names for compatibility
+                                                                const generated = round.questions_generated ?? round.generated_questions ?? 0
+                                                                const expected = round.expected_questions ?? 0
+
+                                                                const progress = round.completion_percent !== undefined
+                                                                    ? round.completion_percent
+                                                                    : expected > 0
+                                                                        ? (generated / expected) * 100
+                                                                        : generated > 0 ? 100 : 0
+                                                                const isComplete = round.is_complete !== undefined
+                                                                    ? round.is_complete
+                                                                    : (generated >= expected * 0.9 && expected > 0)  // 90% tolerance
+
+                                                                return (
+                                                                    <div key={idx} className="space-y-1 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                                Round {round.round_number}/{generationStatus[pkg.package_id].rounds_progress.length}: {round.round_name || round.round_type}
+                                                                            </span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                                                    {generated} / {expected}
+                                                                                    {round.completion_percent !== undefined && (
+                                                                                        <span className="ml-1 text-blue-600 dark:text-blue-400">
+                                                                                            ({round.completion_percent.toFixed(1)}%)
+                                                                                        </span>
+                                                                                    )}
+                                                                                </span>
+                                                                                {isComplete ? (
+                                                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                                ) : (
+                                                                                    <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                                                            <div
+                                                                                className={`h-2 rounded-full transition-all duration-300 ${isComplete
+                                                                                    ? 'bg-green-600'
+                                                                                    : 'bg-blue-600'
+                                                                                    }`}
+                                                                                style={{ width: `${Math.min(progress, 100)}%` }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {pkg.time_window_start && pkg.time_window_end && (
-                                            <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                <Clock className="h-4 w-4" />
-                                                <span>
-                                                    {new Date(pkg.time_window_start).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} -
-                                                    {' '}{new Date(pkg.time_window_end).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                                            <div className={`mt-4 pt-4 border-t ${pkg.status === 'GENERATING' ? '' : 'mt-4'}`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                        <Clock className="h-4 w-4" />
+                                                        <span>
+                                                            {new Date(pkg.time_window_start).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} -
+                                                            {' '}{new Date(pkg.time_window_end).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                    {pkg.is_expired ? (
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            Expired
+                                                        </Badge>
+                                                    ) : pkg.time_remaining_seconds !== null && pkg.time_remaining_seconds !== undefined ? (
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            {formatTimeRemaining(pkg.time_remaining_seconds)} remaining
+                                                        </Badge>
+                                                    ) : null}
+                                                </div>
                                             </div>
                                         )}
                                     </CardContent>
@@ -452,44 +659,122 @@ export default function AdminDishaPage() {
                                     {packageDetails.rounds_progress && packageDetails.rounds_progress.length > 0 && (
                                         <div className="pt-4 border-t">
                                             <p className="text-sm font-medium text-gray-500 mb-3">Generation Progress</p>
+
+                                            {/* Overall Progress Summary */}
+                                            {(packageDetails.total_expected_questions || packageDetails.overall_completion_percent !== undefined) && (
+                                                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                                            Overall Progress
+                                                        </span>
+                                                        <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                                                            {packageDetails.total_questions || 0} / {packageDetails.total_expected_questions || 0} questions
+                                                            {packageDetails.overall_completion_percent !== undefined && (
+                                                                <span className="ml-1">
+                                                                    ({packageDetails.overall_completion_percent.toFixed(1)}%)
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                                                        <div
+                                                            className={`h-3 rounded-full transition-all ${packageDetails.is_complete
+                                                                ? 'bg-green-600'
+                                                                : 'bg-blue-600'
+                                                                }`}
+                                                            style={{
+                                                                width: `${Math.min(
+                                                                    packageDetails.overall_completion_percent || 0,
+                                                                    100
+                                                                )}%`
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    {packageDetails.is_generating && (
+                                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                            Generating in parallel...
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Per-Round Progress */}
                                             <div className="space-y-2">
-                                                {packageDetails.rounds_progress.map((round: any) => (
-                                                    <div key={round.round_number} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded">
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-medium">
-                                                                Round {round.round_number}: {round.round_name || round.round_type}
-                                                            </p>
-                                                            <div className="mt-1 flex items-center gap-2">
-                                                                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                                                    Round Details ({packageDetails.rounds_progress.filter((r: any) => r.is_complete).length} / {packageDetails.rounds_progress.length} complete)
+                                                </p>
+                                                {packageDetails.rounds_progress.map((round: any) => {
+                                                    // Support both field names for compatibility
+                                                    const generated = round.questions_generated ?? round.generated_questions ?? 0
+                                                    const expected = round.expected_questions ?? 0
+
+                                                    const progress = round.completion_percent !== undefined
+                                                        ? round.completion_percent
+                                                        : expected > 0
+                                                            ? (generated / expected) * 100
+                                                            : generated > 0 ? 100 : 0
+                                                    const isComplete = round.is_complete !== undefined
+                                                        ? round.is_complete
+                                                        : (generated >= expected * 0.9 && expected > 0)  // 90% tolerance
+
+                                                    return (
+                                                        <div key={round.round_number} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                        Round {round.round_number}/{packageDetails.rounds_progress.length}: {round.round_name || round.round_type}
+                                                                    </p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                                            {generated} / {expected || '?'}
+                                                                            {round.completion_percent !== undefined && (
+                                                                                <span className="ml-1 text-blue-600 dark:text-blue-400">
+                                                                                    ({round.completion_percent.toFixed(1)}%)
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                        {isComplete ? (
+                                                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                        ) : (
+                                                                            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                                                                     <div
-                                                                        className="bg-blue-600 h-2 rounded-full transition-all"
+                                                                        className={`h-2.5 rounded-full transition-all ${isComplete
+                                                                            ? 'bg-green-600'
+                                                                            : 'bg-blue-600'
+                                                                            }`}
                                                                         style={{
-                                                                            width: `${round.expected_questions > 0
-                                                                                ? (round.questions_generated / round.expected_questions) * 100
-                                                                                : round.questions_generated > 0 ? 100 : 0}%`
+                                                                            width: `${Math.min(progress, 100)}%`
                                                                         }}
                                                                     />
                                                                 </div>
-                                                                <span className="text-xs text-gray-600 dark:text-gray-400">
-                                                                    {round.questions_generated} / {round.expected_questions || '?'}
-                                                                </span>
                                                             </div>
                                                         </div>
-                                                        {round.questions_generated > 0 ? (
-                                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                        ) : (
-                                                            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    )
+                                                })}
                                             </div>
                                         </div>
                                     )}
 
                                     <div className="flex gap-2 mt-4">
+                                        {/* Show Preview Questions if any questions exist, regardless of status */}
+                                        {packageDetails.total_questions > 0 && (
+                                            <Button
+                                                onClick={() => fetchPackageQuestions(selectedPackage.package_id)}
+                                                variant="default"
+                                            >
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                Preview Questions ({packageDetails.total_questions})
+                                            </Button>
+                                        )}
+                                        {/* Show Generate/Retry button if generation is incomplete or failed */}
                                         {packageDetails.status !== 'READY' && packageDetails.status !== 'GENERATING' && (
                                             <Button
-                                                variant="default"
+                                                variant={packageDetails.total_questions > 0 ? "outline" : "default"}
                                                 onClick={() => triggerQuestionGeneration(selectedPackage.package_id)}
                                                 disabled={generating}
                                             >
@@ -501,18 +786,17 @@ export default function AdminDishaPage() {
                                                 ) : (
                                                     <>
                                                         <RefreshCw className="h-4 w-4 mr-2" />
-                                                        Generate Questions
+                                                        {packageDetails.total_questions > 0 ? 'Retry Generation' : 'Generate Questions'}
                                                     </>
                                                 )}
                                             </Button>
                                         )}
-                                        {packageDetails.status === 'READY' && (
-                                            <Button
-                                                onClick={() => fetchPackageQuestions(selectedPackage.package_id)}
-                                            >
-                                                <FileText className="h-4 w-4 mr-2" />
-                                                Preview Questions
-                                            </Button>
+                                        {/* Show status message if generation is incomplete */}
+                                        {packageDetails.status === 'CREATED' && packageDetails.total_questions > 0 && (
+                                            <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                                <AlertCircle className="h-4 w-4" />
+                                                Some rounds failed. Click "Retry Generation" to complete.
+                                            </p>
                                         )}
                                     </div>
                                 </div>
