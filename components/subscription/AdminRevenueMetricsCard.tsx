@@ -174,7 +174,7 @@ export default function AdminRevenueMetricsCard() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number | undefined) => `₹${(value ?? 0).toLocaleString()}`} />
+                  <Tooltip formatter={(value: any) => `₹${(value ?? 0).toLocaleString()}`} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
