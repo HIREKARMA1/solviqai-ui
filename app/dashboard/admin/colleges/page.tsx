@@ -27,7 +27,7 @@ export default function AdminColleges() {
     const [selectedStudent, setSelectedStudent] = useState<any>(null)
     const [collegeStudents, setCollegeStudents] = useState<any[]>([])
     const [loadingStudents, setLoadingStudents] = useState(false)
-    
+
     // License management state
     const [showLicenseModal, setShowLicenseModal] = useState(false)
     const [licenseData, setLicenseData] = useState({
@@ -103,7 +103,7 @@ export default function AdminColleges() {
         setSelectedCollege(college)
         setShowStudentsModal(true)
         setLoadingStudents(true)
-        
+
         try {
             const data = await apiClient.getStudents({ college_id: college.id })
             setCollegeStudents(data.students || [])
@@ -136,7 +136,7 @@ export default function AdminColleges() {
                 branch: '',
                 graduation_year: '',
             })
-            
+
             // Refresh the student list
             if (selectedCollege) {
                 const data = await apiClient.getStudents({ college_id: selectedCollege.id })
@@ -146,7 +146,7 @@ export default function AdminColleges() {
             console.error('Error creating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to create student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -154,7 +154,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setCreatingStudent(false)
@@ -189,7 +189,7 @@ export default function AdminColleges() {
             toast.success('Student updated successfully!')
             setShowEditStudentModal(false)
             setSelectedStudent(null)
-            
+
             // Refresh the student list
             if (selectedCollege) {
                 const data = await apiClient.getStudents({ college_id: selectedCollege.id })
@@ -199,7 +199,7 @@ export default function AdminColleges() {
             console.error('Error updating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -207,7 +207,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdatingStudent(false)
@@ -222,7 +222,7 @@ export default function AdminColleges() {
         try {
             await apiClient.deactivateStudent(studentId)
             toast.success('Student marked as inactive successfully!')
-            
+
             // Refresh the student list
             if (selectedCollege) {
                 const data = await apiClient.getStudents({ college_id: selectedCollege.id })
@@ -232,7 +232,7 @@ export default function AdminColleges() {
             console.error('Error deactivating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to deactivate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -240,16 +240,21 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
 
     const handleOpenLicenseModal = (college: any) => {
         setSelectedCollege(college)
+        // Load existing license data including expiry date
+        const existingExpiry = college.license_expiry
+            ? new Date(college.license_expiry).toISOString().split('T')[0]
+            : ''
+
         setLicenseData({
             license_type: college.license_type || 'premium',
-            license_expiry: '',
+            license_expiry: existingExpiry,
             total_students: college.total_students || 500
         })
         setShowLicenseModal(true)
@@ -265,20 +270,20 @@ export default function AdminColleges() {
                 license_type: licenseData.license_type,
                 total_students: licenseData.total_students
             }
-            
+
             // Only include expiry date if it's set
             if (licenseData.license_expiry) {
                 payload.license_expiry = new Date(licenseData.license_expiry).toISOString()
             }
 
             const response = await apiClient.updateCollegeLicense(selectedCollege.id, payload)
-            
+
             // Refresh the college list to show updated data
             await fetchColleges()
-            
+
             // Show success message with cascade info
-            const studentsUpdatedMsg = response.students_updated > 0 
-                ? ` (${response.students_updated} student subscriptions updated)` 
+            const studentsUpdatedMsg = response.students_updated > 0
+                ? ` (${response.students_updated} student subscriptions updated)`
                 : ''
             toast.success(`License updated! ${selectedCollege.college_name} is now on ${response.new_license} plan${studentsUpdatedMsg}`)
             setShowLicenseModal(false)
@@ -287,7 +292,7 @@ export default function AdminColleges() {
             console.error('Error updating license:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update license'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -295,7 +300,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdatingLicense(false)
@@ -310,7 +315,7 @@ export default function AdminColleges() {
         try {
             await apiClient.activateStudent(studentId)
             toast.success('Student activated successfully!')
-            
+
             // Refresh the student list
             if (selectedCollege) {
                 const data = await apiClient.getStudents({ college_id: selectedCollege.id })
@@ -320,7 +325,7 @@ export default function AdminColleges() {
             console.error('Error activating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to activate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -328,7 +333,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -348,7 +353,7 @@ export default function AdminColleges() {
         try {
             await apiClient.deleteStudent(studentId)
             toast.success('Student permanently deleted!')
-            
+
             // Refresh the student list
             if (selectedCollege) {
                 const data = await apiClient.getStudents({ college_id: selectedCollege.id })
@@ -358,7 +363,7 @@ export default function AdminColleges() {
             console.error('Error deleting student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to delete student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -366,7 +371,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -384,7 +389,7 @@ export default function AdminColleges() {
             console.error('Error deactivating college:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to deactivate college'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -392,7 +397,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -410,7 +415,7 @@ export default function AdminColleges() {
             console.error('Error activating college:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to activate college'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -418,7 +423,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -439,16 +444,16 @@ export default function AdminColleges() {
             const result = await apiClient.deleteCollege(collegeId)
             console.log('✅ Delete result:', result)
             toast.success('College permanently deleted!')
-            
+
             // Force refresh the list
             await fetchColleges()
-            
+
             console.log('✅ List refreshed after deletion')
         } catch (error: any) {
             console.error('❌ Error deleting college:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to delete college'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -456,7 +461,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -498,7 +503,7 @@ export default function AdminColleges() {
             console.error('Error updating college:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update college'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -506,7 +511,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdating(false)
@@ -522,27 +527,27 @@ export default function AdminColleges() {
         try {
             console.log('🏫 Bulk uploading students to college:', selectedCollege.college_name, 'ID:', selectedCollege.id)
             const result = await apiClient.uploadStudentsCSV(file, selectedCollege.id)
-            
+
             console.log('✅ Upload result:', result)
-            
+
             // Show success message with details
-            const successMessage = result.successful 
+            const successMessage = result.successful
                 ? `✅ Success! ${result.successful} student${result.successful > 1 ? 's' : ''} created for ${selectedCollege.college_name}`
                 : 'Upload completed'
-            
+
             if (result.failed && result.failed > 0) {
                 toast.error(`⚠️ ${result.failed} student${result.failed > 1 ? 's' : ''} failed to upload. Check the errors.`)
             } else {
                 toast.success(successMessage)
             }
-            
+
             // Close modal
             setShowBulkUploadModal(false)
-            
+
             // Refresh the student list
             const data = await apiClient.getStudents({ college_id: selectedCollege.id })
             setCollegeStudents(data.students || [])
-            
+
         } catch (error: any) {
             console.error('❌ Error uploading CSV:', error)
             const errorMessage = error.response?.data?.detail || error.message || 'Failed to upload students'
@@ -584,7 +589,7 @@ export default function AdminColleges() {
             console.error('Error creating college:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to create college'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -592,7 +597,7 @@ export default function AdminColleges() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setCreating(false)
@@ -675,16 +680,22 @@ export default function AdminColleges() {
                                                     <Badge variant={college.status === 'active' ? 'success' : 'secondary'}>
                                                         {college.status?.toUpperCase() || 'ACTIVE'}
                                                     </Badge>
-                                                    <Badge 
+                                                    <Badge
                                                         variant={
                                                             college.license_type === 'premium' ? 'default' :
-                                                            college.license_type === 'enterprise' ? 'success' :
-                                                            'outline'
+                                                                college.license_type === 'enterprise' ? 'success' :
+                                                                    'outline'
                                                         }
                                                         className="capitalize text-xs"
                                                     >
                                                         {college.license_type || 'free'} ({college.total_students || 100} students)
                                                     </Badge>
+                                                    {college.license_expiry && (
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            <Calendar className="h-3 w-3 inline mr-1" />
+                                                            Expires: {new Date(college.license_expiry).toLocaleDateString()}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <Button
                                                     size="sm"
@@ -696,8 +707,8 @@ export default function AdminColleges() {
                                                     <CreditCard className="h-4 w-4 mr-1" />
                                                     License
                                                 </Button>
-                                                <Button 
-                                                    variant="outline" 
+                                                <Button
+                                                    variant="outline"
                                                     size="sm"
                                                     onClick={() => handleViewStudents(college)}
                                                 >
@@ -782,14 +793,14 @@ export default function AdminColleges() {
                                         </CardDescription>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button 
+                                        <Button
                                             size="sm"
                                             onClick={() => setShowCreateStudentModal(true)}
                                         >
                                             <Plus className="h-4 w-4 mr-2" />
                                             Create Student
                                         </Button>
-                                        <Button 
+                                        <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => setShowBulkUploadModal(true)}
@@ -797,7 +808,7 @@ export default function AdminColleges() {
                                             <Upload className="h-4 w-4 mr-2" />
                                             Bulk Upload
                                         </Button>
-                                        <Button 
+                                        <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => {
@@ -820,7 +831,7 @@ export default function AdminColleges() {
                                     <div className="text-center py-12 text-gray-500">
                                         <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                         <p>No students found in this college</p>
-                                        <Button 
+                                        <Button
                                             className="mt-4"
                                             onClick={() => setShowCreateStudentModal(true)}
                                         >
@@ -987,7 +998,7 @@ export default function AdminColleges() {
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                                         <p className="text-sm text-blue-600 dark:text-blue-400">
                                             <strong>College:</strong> {selectedCollege.college_name}
@@ -1253,7 +1264,7 @@ export default function AdminColleges() {
                                         </Button>
                                         <Button type="submit" disabled={creating}>
                                             {creating ? 'Creating...' : 'Create College'}
-                                </Button>
+                                        </Button>
                                     </div>
                                 </form>
                             </CardContent>
@@ -1430,20 +1441,28 @@ export default function AdminColleges() {
                                     <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm font-medium">Current License:</span>
-                                            <Badge 
+                                            <Badge
                                                 variant={
                                                     selectedCollege.license_type === 'premium' ? 'default' :
-                                                    selectedCollege.license_type === 'enterprise' ? 'success' :
-                                                    'outline'
+                                                        selectedCollege.license_type === 'enterprise' ? 'success' :
+                                                            'outline'
                                                 }
                                                 className="capitalize"
                                             >
                                                 {selectedCollege.license_type || 'free'}
                                             </Badge>
                                         </div>
-                                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                                             <p><strong>Email:</strong> {selectedCollege.email}</p>
                                             <p><strong>Current Capacity:</strong> {selectedCollege.total_students || 100} students</p>
+                                            {selectedCollege.license_expiry && (
+                                                <p>
+                                                    <strong><Calendar className="h-3 w-3 inline mr-1" />Current Expiry:</strong>
+                                                    <span className="text-blue-600 dark:text-blue-400 ml-1">
+                                                        {new Date(selectedCollege.license_expiry).toLocaleDateString()}
+                                                    </span>
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1546,30 +1565,30 @@ export default function AdminColleges() {
                                     </div>
 
                                     {/* Upgrade Notice */}
-                                    {selectedCollege.license_type === 'free' && 
-                                     licenseData.license_type !== 'free' && (
-                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                            <p className="text-sm text-green-700 dark:text-green-300">
-                                                <strong>✓ Upgrading:</strong> This will increase the college's capacity and unlock additional features immediately.
-                                            </p>
-                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                                <strong>Smart Restore:</strong> Only students who had premium BEFORE the previous downgrade will be restored to premium. New students remain on their current tier.
-                                            </p>
-                                        </div>
-                                    )}
+                                    {selectedCollege.license_type === 'free' &&
+                                        licenseData.license_type !== 'free' && (
+                                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                                <p className="text-sm text-green-700 dark:text-green-300">
+                                                    <strong>✓ Upgrading:</strong> This will increase the college's capacity and unlock additional features immediately.
+                                                </p>
+                                                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                                    <strong>Smart Restore:</strong> Only students who had premium BEFORE the previous downgrade will be restored to premium. New students remain on their current tier.
+                                                </p>
+                                            </div>
+                                        )}
 
                                     {/* Downgrade Warning */}
-                                    {selectedCollege.license_type !== 'free' && 
-                                     licenseData.license_type === 'free' && (
-                                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                                            <p className="text-sm text-orange-700 dark:text-orange-300">
-                                                <strong>⚠️ Downgrade Warning:</strong> This will reduce capacity and limit features.
-                                            </p>
-                                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                                All students with "college_license" subscription will be downgraded to free tier. Their premium status will be saved for future restore if you upgrade again. Students with individual premium subscriptions will NOT be affected.
-                                            </p>
-                                        </div>
-                                    )}
+                                    {selectedCollege.license_type !== 'free' &&
+                                        licenseData.license_type === 'free' && (
+                                            <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                                                <p className="text-sm text-orange-700 dark:text-orange-300">
+                                                    <strong>⚠️ Downgrade Warning:</strong> This will reduce capacity and limit features.
+                                                </p>
+                                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                                    All students with "college_license" subscription will be downgraded to free tier. Their premium status will be saved for future restore if you upgrade again. Students with individual premium subscriptions will NOT be affected.
+                                                </p>
+                                            </div>
+                                        )}
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-2 justify-end pt-4">
@@ -1584,8 +1603,8 @@ export default function AdminColleges() {
                                         >
                                             Cancel
                                         </Button>
-                                        <Button 
-                                            type="submit" 
+                                        <Button
+                                            type="submit"
                                             disabled={updatingLicense}
                                             className="bg-purple-600 hover:bg-purple-700"
                                         >
