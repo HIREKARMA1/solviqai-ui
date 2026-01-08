@@ -340,7 +340,7 @@ export default function AdminDishaPage() {
                                                     Package ID: <code className="text-xs">{pkg.package_id}</code>
                                                 </CardDescription>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 flex-wrap">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -353,14 +353,30 @@ export default function AdminDishaPage() {
                                                     Details
                                                 </Button>
                                                 {pkg.status === 'READY' && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => fetchPackageQuestions(pkg.package_id)}
-                                                    >
-                                                        <FileText className="h-4 w-4 mr-2" />
-                                                        Questions
-                                                    </Button>
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => fetchPackageQuestions(pkg.package_id)}
+                                                        >
+                                                            <FileText className="h-4 w-4 mr-2" />
+                                                            Questions
+                                                        </Button>
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            onClick={() => window.location.href = `/dashboard/admin/disha/${pkg.package_id}/exam`}
+                                                        >
+                                                            Take Exam
+                                                        </Button>
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            onClick={() => window.location.href = `/dashboard/admin/disha/${pkg.package_id}/reports`}
+                                                        >
+                                                            View Reports
+                                                        </Button>
+                                                    </>
                                                 )}
                                                 <Button
                                                     variant="outline"
