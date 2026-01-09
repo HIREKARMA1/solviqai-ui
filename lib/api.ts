@@ -1077,6 +1077,72 @@ class ApiClient {
     );
     return response.data;
   }
+
+  // DISHA Exam APIs
+  async startDishaAssessment(packageId: string, dishaStudentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/start`,
+      { disha_student_id: dishaStudentId }
+    );
+    return response.data;
+  }
+
+  async getDishaRoundQuestions(
+    packageId: string,
+    roundId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/rounds/${roundId}`,
+      { params: { attempt_id: attemptId } }
+    );
+    return response.data;
+  }
+
+  async submitDishaRound(
+    packageId: string,
+    roundId: string,
+    attemptId: string,
+    answers: Record<string, any>
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/submit`,
+      {
+        attempt_id: attemptId,
+        answers: answers
+      }
+    );
+    return response.data;
+  }
+
+  async getDishaAttemptStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/status`
+    );
+    return response.data;
+  }
+
+  async getDishaReport(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  // Admin DISHA APIs
+  async getDishaPackageAttempts(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageReport(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
