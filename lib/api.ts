@@ -1143,6 +1143,15 @@ class ApiClient {
     );
     return response.data;
   }
+
+  async validateDishaToken(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/sso/validate-token`,
+      null,
+      { params: { token } }
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
