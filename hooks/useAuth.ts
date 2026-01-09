@@ -23,6 +23,37 @@ export function useAuth() {
         return
       }
 
+      // Check if this is a Disha SSO session
+      const dishaStudentId = localStorage.getItem('disha_student_id')
+      if (dishaStudentId) {
+        // For Disha SSO students, decode the token to get user info
+        // instead of calling /auth/me (which would fail since they don't exist in SOLVIQ DB)
+        try {
+          // Decode JWT to get user info (without verification since we already validated it)
+          const tokenParts = token.split('.')
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]))
+
+            // Reconstruct user object from token payload
+            const dishaUser = {
+              id: payload.sub || payload.disha_student_id,
+              email: payload.email,
+              name: payload.name,
+              user_type: 'student',
+              is_disha_student: true
+            }
+
+            setUser(dishaUser as User)
+            setLoading(false)
+            return
+          }
+        } catch (decodeError) {
+          console.error('Failed to decode Disha token:', decodeError)
+          // Fall through to normal auth check
+        }
+      }
+
+      // Normal authentication flow for regular SOLVIQ users
       const response = await apiClient.getCurrentUser()
       setUser(response)
     } catch (error: any) {
@@ -47,24 +78,24 @@ export function useAuth() {
         email,
         user_type
       });
-      
+
       const response = await apiClient.login({
         email,
         password,
         user_type,
       })
-      
+
       console.log('✅ Login successful');
-      
+
       apiClient.setAuthTokens(response.access_token, response.refresh_token)
       // Store token expiry (30 minutes from now)
       localStorage.setItem('token_expiry', String(Date.now() + 30 * 60 * 1000))
-      
+
       await checkAuth()
-      
+
       // Redirect based on user type
       router.push(`/dashboard/${user_type}`)
-      
+
       toast.success('Login successful!')
     } catch (error: any) {
       console.error('❌ Login failed:', error);
@@ -77,25 +108,25 @@ export function useAuth() {
     try {
       // Register the student
       await apiClient.registerStudent(data)
-      
+
       // Automatically log in the user after successful registration
       const loginResponse = await apiClient.login({
         email: data.email,
         password: data.password,
         user_type: 'student',
       })
-      
+
       // Set auth tokens
       apiClient.setAuthTokens(loginResponse.access_token, loginResponse.refresh_token)
       // Store token expiry (30 minutes from now)
       localStorage.setItem('token_expiry', String(Date.now() + 30 * 60 * 1000))
-      
+
       // Update user state
       await checkAuth()
-      
+
       // Redirect to student dashboard
       router.push('/dashboard/student')
-      
+
       toast.success('Registration successful! Welcome to Saksham AI!')
     } catch (error: any) {
       // Don't show toast for errors - they're displayed in the form
