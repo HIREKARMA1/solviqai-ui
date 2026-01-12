@@ -1140,9 +1140,9 @@ export default function AssessmentRoundPage() {
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
     return (
         <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-            <div className="min-h-screen bg-gray-100 select-none flex flex-col font-sans">
+            <div className="h-screen overflow-hidden bg-gray-100 select-none flex flex-col font-sans">
                 {/* Header */}
-                <div className="bg-[#2563EB] text-white h-16 flex items-center px-6 justify-between shadow-md z-20 relative">
+                <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
                     <h1 className="text-xl font-bold truncate">
                         {(() => {
                             const typeDisplayMap: Record<string, string> = {
@@ -1171,7 +1171,7 @@ export default function AssessmentRoundPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full flex overflow-hidden h-[calc(100vh-64px)]">
+                <div className="flex-1 w-full flex overflow-hidden">
 
                     {/* Main Content Area */}
                     <div className="flex-1 bg-white flex flex-col min-h-0 relative transition-all duration-300 z-40">
