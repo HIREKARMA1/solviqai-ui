@@ -945,30 +945,25 @@ export default function AssessmentRoundPage() {
     if (isCodingRound) {
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="min-h-screen bg-gray-100">
-                    {/* Header */}
-                    <div className="bg-indigo-600 text-white p-3 sm:p-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-2 sm:gap-0">
-                            <h1 className="text-base sm:text-lg md:text-xl font-semibold">Round {roundNumber}: Coding Challenge</h1>
-                            <div className="text-xs sm:text-sm">Time Left: {formatTime(timeLeft)}</div>
+                <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
+                    {/* Header - Matching Screenshot */}
+                    <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
+                        <h1 className="text-xl font-bold tracking-tight">Round {roundNumber}: Coding Challenge</h1>
+                        <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{timeLeft !== null ? `${Math.floor(timeLeft / 60)}m ${(timeLeft % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
                         </div>
                     </div>
 
                     {/* Full-height Coding Workspace */}
-                    <div className="flex-1 overflow-hidden">
-                        <div className="h-full w-full px-3">
-                            <div className="h-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm shadow-sm p-0 md:p-0">
-                                <div className="h-full">
-                                    <CodingRound
-                                        assessmentId={assessmentId!}
-                                        roundData={roundData}
-                                        onSubmitted={() => {
-                                            router.push(`/dashboard/student/assessment?id=${assessmentId}`)
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                    <div className="flex-1 overflow-hidden relative">
+                        <CodingRound
+                            assessmentId={assessmentId!}
+                            roundData={roundData}
+                            onSubmitted={() => {
+                                router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                            }}
+                        />
                     </div>
                 </div>
             </DashboardLayout>
