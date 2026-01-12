@@ -1174,7 +1174,7 @@ export default function AssessmentRoundPage() {
                 <div className="flex-1 w-full flex overflow-hidden h-[calc(100vh-64px)]">
 
                     {/* Main Content Area */}
-                    <div className="flex-1 bg-white flex flex-col h-full relative transition-all duration-300 z-40">
+                    <div className="flex-1 bg-white flex flex-col min-h-0 relative transition-all duration-300 z-40">
 
                         {/* Sidebar Toggle Button - Attached to the right edge */}
                         <button
@@ -1186,7 +1186,7 @@ export default function AssessmentRoundPage() {
                         </button>
 
                         {/* Scrollable Content Wrapper */}
-                        <div className="flex-1 flex flex-col p-6 overflow-hidden h-full">
+                        <div className="flex-1 flex flex-col p-6 overflow-hidden min-h-0">
                             {/* Question Header */}
                             <div className="mb-4 flex-shrink-0">
                                 <h2 className="text-lg font-bold text-gray-800">
@@ -1196,10 +1196,10 @@ export default function AssessmentRoundPage() {
                             </div>
 
                             {/* Unified Question Card Container */}
-                            <div className="flex-1 flex flex-col border border-gray-300 rounded-sm overflow-hidden min-h-0 bg-white shadow-sm relative z-10 h-full">
+                            <div className="flex-1 flex flex-col border border-gray-300 rounded-sm overflow-hidden min-h-0 bg-white shadow-sm relative z-10">
 
                                 {/* Split Pane Content */}
-                                <div className="flex-1 flex flex-col md:flex-row min-h-0 pb-16">
+                                <div className="flex-1 flex flex-col md:flex-row min-h-0">
                                     {/* Left Pane: Question Text */}
                                     <div className="flex-1 p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-300 bg-white">
                                         {currentQ.question_type !== 'dictation' ? (
@@ -1326,8 +1326,8 @@ export default function AssessmentRoundPage() {
                                     </div>
                                 </div>
 
-                                {/* Bottom Footer: Action Buttons (Inside Card, Absolute at Bottom) */}
-                                <div className="absolute bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-300 flex items-center justify-between px-6 z-20">
+                                {/* Bottom Footer: Action Buttons (Sticky at Bottom) */}
+                                <div className="shrink-0 h-16 bg-white border-t border-gray-300 flex items-center justify-between px-6 z-20">
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={handleMarkForReview}
