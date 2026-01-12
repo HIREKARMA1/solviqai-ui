@@ -138,7 +138,7 @@ export function ProblemSolution() {
     ];
 
     return (
-        <section id="problem-solution" className="section-container relative overflow-hidden bg-[#786c76e9] dark:bg-[#15223e]">
+        <section id="problem-solution" className="section-container relative overflow-hidden bg-[#2B354B] dark:bg-[#2A2C38]">
             <div className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-12">

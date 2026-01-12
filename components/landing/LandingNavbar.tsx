@@ -72,23 +72,38 @@ export function LandingNavbar({
           className
         )}
         style={{
-          width: '1168px',
-          maxWidth: 'calc(100vw - 48px)',
+          width: '90%',
+          maxWidth: '1400px',
         }}
       >
         {/* Navbar Container with Gradient Border */}
         <div
           className={cn(
             'relative rounded-[24px] h-[72px] px-8',
-            'bg-white/80 dark:bg-[#191818]/80 backdrop-blur-xl',
+            'backdrop-blur-xl',
             'transition-all duration-300',
-            scrolled && 'shadow-xl'
+            scrolled && 'shadow-xl',
+            theme === 'dark'
+              ? 'bg-[#191818]/80 border border-white/10'
+              : 'bg-[#02040E0D]'
           )}
-          style={{
-            border: '1px solid rgba(25, 24, 24, 0.1)',
-          }}
         >
-          <div className="flex items-center justify-between h-full">
+          {/* Gradient Border for Light Mode */}
+          {theme !== 'dark' && (
+            <div
+              className="absolute inset-0 rounded-[24px] pointer-events-none"
+              style={{
+                padding: '1px',
+                background: 'radial-gradient(95.16% 139.58% at 4.84% 0%, #112C96 0%, rgba(9, 23, 78, 0) 100%)',
+                mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                maskComposite: 'exclude',
+                WebkitMaskComposite: 'xor',
+              }}
+            />
+          )}
+
+          <div className="relative z-10 flex items-center justify-between h-full">
             {/* Logo */}
             <Link href="/" className="flex items-center group flex-shrink-0">
               <div className="relative w-[100px] h-8 transition-transform group-hover:scale-105">

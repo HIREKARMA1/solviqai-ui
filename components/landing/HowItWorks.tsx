@@ -39,9 +39,9 @@ export function HowItWorks() {
   ];
 
   return (
-    <section 
-      id="how-it-works" 
-      className="relative overflow-hidden py-16 bg-[#6c6e9a] dark:bg-[#310139]"
+    <section
+      id="how-it-works"
+      className="relative overflow-hidden py-16 bg-[#6c6e9a] dark:bg-[#310139] lg:py-32"
     >
       <div className="w-[90vw] mx-auto px-4">
         {/* Header Section */}
@@ -57,7 +57,7 @@ export function HowItWorks() {
             <span className="text-[#FF541F]">Solviq</span>
             <span className="text-white">.AI Works</span>
           </motion.h2>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
