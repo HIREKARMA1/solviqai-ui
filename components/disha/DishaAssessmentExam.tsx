@@ -261,31 +261,55 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         fetchRoundDetails();
     }, [examState, attemptId, packageInfo?.current_round, packageId]);
 
+    // Refs for timer logic to avoid dependency cycles
+    const overallTimeRef = useRef<number | null>(null);
+    const timeWindowRef = useRef<number | null>(null);
+    const isSubmittingRef = useRef(isSubmitting);
+
+    // Update refs when state changes
+    useEffect(() => {
+        overallTimeRef.current = overallTimeRemaining;
+    }, [overallTimeRemaining]);
+
+    useEffect(() => {
+        timeWindowRef.current = timeWindowRemaining;
+    }, [timeWindowRemaining]);
+
+    useEffect(() => {
+        isSubmittingRef.current = isSubmitting;
+    }, [isSubmitting]);
+
     // Round timer countdown
     useEffect(() => {
         if (examState === 'exam' && currentRound && roundStartTimeRef.current) {
-            const updateTimer = async () => {
+            const updateTimer = () => {
                 const now = new Date();
                 const elapsed = Math.floor((now.getTime() - roundStartTimeRef.current!.getTime()) / 1000);
                 const remaining = (currentRound.duration_minutes * 60) - elapsed;
 
-                // Also check overall time
+                // Check overall time using refs to avoid re-triggering effect
                 let shouldAutoSubmit = remaining <= 0;
-                if (attemptId && (overallTimeRemaining !== null || timeWindowRemaining !== null)) {
-                    const effectiveRemaining = overallTimeRemaining !== null
-                        ? Math.min(overallTimeRemaining, timeWindowRemaining || Infinity)
-                        : timeWindowRemaining;
-                    if (effectiveRemaining !== null && effectiveRemaining <= 0) {
-                        shouldAutoSubmit = true;
+
+                if (attemptId) {
+                    const overall = overallTimeRef.current;
+                    const window = timeWindowRef.current;
+
+                    if (overall !== null || window !== null) {
+                        const effectiveRemaining = overall !== null
+                            ? Math.min(overall, window || Infinity)
+                            : window;
+
+                        if (effectiveRemaining !== null && effectiveRemaining <= 0) {
+                            shouldAutoSubmit = true;
+                        }
                     }
                 }
 
                 if (shouldAutoSubmit) {
-                    setTimeRemaining(0);
-                    if (remaining <= 0) {
+                    // Prevent duplicate submission calls
+                    if (!isSubmittingRef.current) {
+                        isSubmittingRef.current = true; // Local lock
                         setTimeRemaining(0);
-                    }
-                    if (!isSubmitting) {
                         handleAutoSubmit();
                     }
                 } else {
@@ -306,7 +330,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 clearInterval(timerIntervalRef.current);
             }
         }
-    }, [examState, currentRound, attemptId, overallTimeRemaining, timeWindowRemaining, isSubmitting]);
+    }, [examState, currentRound, attemptId]); // Removed unstable dependencies
 
     // Overall attempt timer countdown
     useEffect(() => {
@@ -323,17 +347,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 if (status.time_window_remaining_seconds !== null && status.time_window_remaining_seconds !== undefined) {
                     setTimeWindowRemaining(status.time_window_remaining_seconds);
                 }
-
-                // Check if overall time expired
-                const effectiveRemaining = status.overall_time_remaining_seconds !== null
-                    ? Math.min(
-                        status.overall_time_remaining_seconds,
-                        status.time_window_remaining_seconds !== null ? status.time_window_remaining_seconds : Infinity
-                    )
-                    : status.time_window_remaining_seconds;
-
-                // Note: Auto-submit is handled by the round timer or manual submit
-                // This just updates the display
             } catch (error) {
                 console.error('Failed to update overall timer:', error);
             }
@@ -342,15 +355,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         // Update immediately
         updateOverallTimer();
 
-        // Then update every 5 seconds (less frequent than round timer)
-        overallTimerIntervalRef.current = setInterval(updateOverallTimer, 5000);
+        // Then update every 10 seconds (reduced frequency)
+        overallTimerIntervalRef.current = setInterval(updateOverallTimer, 10000);
 
         return () => {
             if (overallTimerIntervalRef.current) {
                 clearInterval(overallTimerIntervalRef.current);
             }
         };
-    }, [attemptId, examState, packageId, currentRound, isSubmitting]);
+    }, [attemptId, examState, packageId]); // Removed currentRound and isSubmitting to prevent spam
 
     const startAssessment = async () => {
         try {
