@@ -40,7 +40,10 @@ export function useAuth() {
               email: payload.email,
               name: payload.name,
               user_type: 'student',
-              is_disha_student: true
+              is_disha_student: true,
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }
 
             setUser(dishaUser as User)

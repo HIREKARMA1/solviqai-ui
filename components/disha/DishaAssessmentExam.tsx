@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, CheckCircle2, AlertCircle, Loader2, Mic, Square, Volume2 } from 'lucide-react';
+import {
+    Clock, CheckCircle2, AlertCircle, Loader2, Mic, Square, Volume2,
+    Home, User, FileText, Briefcase, ClipboardList, Send, Edit3, Zap
+} from 'lucide-react';
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound';
+import CodingRound from '@/components/assessment/CodingRound';
 import { apiClient } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { Button } from "@/components/ui/button";
 
 interface Question {
     question_id: string;
@@ -74,7 +79,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [attemptId, setAttemptId] = useState<string | null>(null);
     const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
-    const [rounds, setRounds] = useState<any[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
     const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -83,6 +87,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [timeWindowRemaining, setTimeWindowRemaining] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [roundScore, setRoundScore] = useState<number | null>(null);
+
+    // UI State
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [markedQuestions, setMarkedQuestions] = useState<Set<number>>(new Set());
+    const [visitedQuestions, setVisitedQuestions] = useState<Set<number>>(new Set([0]));
 
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const overallTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -167,7 +176,64 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 } catch (e) { }
             }
         };
-    }, [currentRound, currentQuestionIndex]); // Re-bind when question changes to ensure handleAnswer has correct context
+    }, [currentRound, currentQuestionIndex]);
+
+    // Normalize options from various backend formats
+    const normalizeMcqOptions = (q: any): string[] => {
+        if (!q) return []
+        // 1) Array of strings/objects
+        if (Array.isArray(q.options)) {
+            return q.options.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
+        }
+        // 2) 'choices' array
+        if (Array.isArray(q.choices)) {
+            return q.choices.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
+        }
+        // 3) JSON string in options/options_json
+        const jsonCandidate = q.options_json || q.options
+        if (typeof jsonCandidate === 'string') {
+            try {
+                const parsed = JSON.parse(jsonCandidate)
+                if (Array.isArray(parsed)) {
+                    return parsed.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
+                }
+                if (parsed && typeof parsed === 'object') {
+                    const vals = Object.values(parsed as Record<string, any>)
+                    return vals.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
+                }
+            } catch { }
+        }
+        // 4) option_a/option_b/option_c/option_d fields
+        const keySet = ['option_a', 'option_b', 'option_c', 'option_d']
+        const fromFields = keySet.map(k => q[k]).filter(Boolean)
+        if (fromFields.length > 0) return fromFields
+        // 5) options as object {A: '...', B: '...'}
+        if (q.options && typeof q.options === 'object') {
+            return Object.values(q.options)
+        }
+        return []
+    }
+
+    // Fullscreen toggle
+    const toggleFullscreen = async () => {
+        try {
+            if (!isFullscreen) {
+                const elem: any = document.documentElement;
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) await document.exitFullscreen();
+                else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+            }
+            // Update state slightly delayed to catch the change
+            setTimeout(() => {
+                const fs = !!document.fullscreenElement;
+                setIsFullscreen(fs);
+            }, 100);
+        } catch (e) {
+            console.error('Fullscreen toggle failed', e);
+        }
+    };
 
     const startLiveTranscription = () => {
         if (!speechRecognitionRef.current) {
@@ -414,6 +480,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             setCurrentRound(response);
             setTimeRemaining(response.duration_minutes * 60);
             setCurrentQuestionIndex(0);
+            // Reset visited/marked questions for new round
+            setVisitedQuestions(new Set([0]));
+            setMarkedQuestions(new Set());
             setUserAnswers({});
             setExamState('exam');
         } catch (error: any) {
@@ -485,6 +554,22 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             toast.error(error.response?.data?.detail || 'Failed to submit round');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Explicit submit handler for button click
+    const handleSubmitWithConfirmation = () => {
+        const stats = getQuestionCounts();
+        const unansweredCount = stats.notVisited + stats.notAnswered + stats.marked;
+
+        if (unansweredCount > 0) {
+            const message = `⚠️ You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`;
+
+            if (window.confirm(message)) {
+                submitRound();
+            }
+        } else {
+            submitRound();
         }
     };
 
@@ -566,24 +651,97 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
             utterance.rate = 0.9; // Slightly slower for dictation
             window.speechSynthesis.speak(utterance);
-            setAudioPlayed(true);
+            // setAudioPlayed(true); // Allow replaying safely
         } else {
             toast.error('Audio not supported');
         }
     };
 
-    // Reset audio state on question change
-    useEffect(() => {
-        setAudioPlayed(false);
-    }, [currentQuestionIndex]);
-
-    const formatTime = (seconds: number): string => {
+    // UI Helpers
+    const formatTime = (seconds: number | null): string => {
+        if (seconds === null) return '--:--';
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const currentQuestion = currentRound?.questions[currentQuestionIndex];
+    const splitTime = (seconds: number | null) => {
+        if (seconds === null) {
+            return { hours: '--', minutes: '--', seconds: '--' };
+        }
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return {
+            hours: hours.toString().padStart(2, '0'),
+            minutes: minutes.toString().padStart(2, '0'),
+            seconds: secs.toString().padStart(2, '0')
+        };
+    };
+
+    const navigateToQuestion = (index: number) => {
+        setCurrentQuestionIndex(index);
+        setVisitedQuestions(prev => new Set([...Array.from(prev), index]));
+    };
+
+    const handleMarkForReview = () => {
+        setMarkedQuestions(prev => {
+            const newMarked = new Set(prev);
+            if (newMarked.has(currentQuestionIndex)) {
+                newMarked.delete(currentQuestionIndex);
+            } else {
+                newMarked.add(currentQuestionIndex);
+            }
+            return newMarked;
+        });
+        // Auto advance if not last
+        if (currentRound && currentQuestionIndex < currentRound.questions.length - 1) {
+            navigateToQuestion(currentQuestionIndex + 1);
+        }
+    };
+
+    const handleClearResponse = () => {
+        const currentQ = currentRound?.questions[currentQuestionIndex];
+        if (!currentQ) return;
+
+        setUserAnswers(prev => {
+            const newAnswers = { ...prev };
+            delete newAnswers[currentQ.question_id];
+            return newAnswers;
+        });
+    };
+
+    const getQuestionStatus = (index: number) => {
+        if (!currentRound?.questions[index]) return 'notVisited';
+
+        const questionId = currentRound.questions[index].question_id;
+        const isAnswered = !!userAnswers[questionId];
+        const isMarked = markedQuestions.has(index);
+        const isVisited = visitedQuestions.has(index);
+
+        if (isAnswered && !isMarked) return 'answered';
+        if (isMarked) return 'marked';
+        if (isVisited) return 'notAnswered';
+        return 'notVisited';
+    };
+
+    const getQuestionCounts = () => {
+        let answered = 0;
+        let notAnswered = 0;
+        let marked = 0;
+        let notVisited = 0;
+
+        if (currentRound?.questions) {
+            currentRound.questions.forEach((_, index) => {
+                const status = getQuestionStatus(index);
+                if (status === 'answered') answered++;
+                else if (status === 'marked') marked++;
+                else if (status === 'notAnswered') notAnswered++;
+                else notVisited++;
+            });
+        }
+        return { answered, notAnswered, marked, notVisited };
+    };
 
     // Instructions Screen
     if (examState === 'instructions') {
@@ -721,290 +879,338 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     }
 
     // Exam View
-    if (examState === 'exam' && currentRound && currentQuestion) {
-        // Special Handling for Group Discussion Round
+    if (examState === 'exam' && currentRound) {
+        // Special Round: Group Discussion
         if (currentRound.round_type === 'group_discussion') {
             return (
                 <div className="w-full max-w-7xl mx-auto px-4 py-8">
                     <GroupDiscussionRound
                         roundId={currentRound.round_id}
                         assessmentId={packageId}
-                    // The component handles submission and redirection internally
                     />
                 </div>
             );
         }
 
-        const isRoundTimeUp = timeRemaining !== null && timeRemaining <= 0;
-        const isOverallTimeUp = overallTimeRemaining !== null && overallTimeRemaining <= 0;
-        const isTimeWindowUp = timeWindowRemaining !== null && timeWindowRemaining <= 0;
-        const isTimeUp = isRoundTimeUp || isOverallTimeUp || isTimeWindowUp;
+        // Special Round: Coding
+        if (currentRound.round_type === 'coding') {
+            // Map Disha round data to CodingRound format
+            const codingRoundData = {
+                ...currentRound,
+                questions: currentRound.questions.map(q => ({
+                    id: q.question_id,
+                    question_text: q.question_text,
+                    metadata: q.question_metadata || {},
+                }))
+            };
 
-        // Check if it's a listening question
-        const isListening = currentQuestion.question_text.includes("Listen and write down");
-        const isSpeaking = currentQuestion.question_text.includes("Read aloud") || currentQuestion.question_text.includes("Speak about") || currentQuestion.question_text.includes("Describe the");
-        let displayText = currentQuestion.question_text;
-        let textToSpeak = currentQuestion.question_text;
+            const handleCodingSubmit = async (responses: any[]) => {
+                await submitRound();
+            };
 
-        if (isListening) {
-            // Hide the quoted sentence from display
-            const match = currentQuestion.question_text.match(/(Listen and write down.*:)\s*['"](.*)['"]/);
-            if (match) {
-                displayText = match[1]; // Just the instruction
-                // We keep the original text to speak so user hears "Listen and... 'Sentence'"
-                textToSpeak = currentQuestion.question_text;
-            }
-        }
+            const handleCodingChange = (qid: string, code: string, language: string) => {
+                const payload = JSON.stringify({ language, code });
+                handleAnswer(qid, payload);
+            };
 
-        return (
-            <div className="w-full max-w-7xl mx-auto px-4">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Main Content */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {/* Header with Timer */}
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg sticky top-0 z-10">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                                        {currentRound.round_name || `Round ${currentRound.round_number}`}
-                                    </h2>
-                                    <p className="text-gray-600 dark:text-gray-400">
-                                        Question <span className="font-semibold text-blue-600">{currentQuestionIndex + 1}</span> of{' '}
-                                        <span className="font-semibold">{currentRound.questions.length}</span>
-                                    </p>
+            return (
+                <div className="min-h-screen bg-gray-100 flex flex-col">
+                    <div className="bg-indigo-600 text-white p-3 sm:p-4 shadow-md z-10">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-2 sm:gap-0">
+                            <h1 className="text-lg font-semibold">
+                                Round {packageInfo?.current_round}: Coding Challenge
+                            </h1>
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm font-medium bg-indigo-700 px-3 py-1 rounded-full border border-indigo-500">
+                                    Time Left: <span className="font-bold">{formatTime(timeRemaining)}</span>
                                 </div>
-                                <div className="flex gap-2">
-                                    {/* Round Timer */}
-                                    <div className={`text-right px-4 py-2 rounded-lg ${isRoundTimeUp ? 'bg-red-100 dark:bg-red-900/20' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Round Time</p>
-                                        <div className="flex items-center gap-2">
-                                            <Clock className={`h-5 w-5 ${isRoundTimeUp ? 'text-red-600' : 'text-blue-600'}`} />
-                                            <span className={`text-xl font-bold ${isRoundTimeUp ? 'text-red-600' : 'text-blue-600'}`}>
-                                                {timeRemaining !== null ? formatTime(timeRemaining) : '--:--'}
-                                            </span>
-                                        </div>
-                                        {isRoundTimeUp && (
-                                            <p className="text-xs text-red-600 mt-1">Round Time Up!</p>
-                                        )}
-                                    </div>
-                                    {/* Overall Timer */}
-                                    {overallTimeRemaining !== null && (
-                                        <div className={`text-right px-4 py-2 rounded-lg ${isOverallTimeUp ? 'bg-red-100 dark:bg-red-900/20' : 'bg-purple-100 dark:bg-purple-900/20'}`}>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Overall Time</p>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className={`h-5 w-5 ${isOverallTimeUp ? 'text-red-600' : 'text-purple-600'}`} />
-                                                <span className={`text-xl font-bold ${isOverallTimeUp ? 'text-red-600' : 'text-purple-600'}`}>
-                                                    {formatTime(overallTimeRemaining)}
-                                                </span>
-                                            </div>
-                                            {isOverallTimeUp && (
-                                                <p className="text-xs text-red-600 mt-1">Assessment Time Up!</p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                                <div
-                                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-                                    style={{ width: `${((currentQuestionIndex + 1) / currentRound.questions.length) * 100}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Question Display */}
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <div className="mb-6">
-                                <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-xs font-semibold rounded-full mb-4">
-                                    Question {currentQuestionIndex + 1} ({currentQuestion.points} pts)
-                                </span>
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white leading-relaxed">
-                                    {displayText}
-                                </h3>
-
-                                {isListening && (
-                                    <div className="mt-4">
-                                        <button
-                                            onClick={() => playQuestionAudio(textToSpeak)}
-                                            disabled={audioPlayed}
-                                            className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition ${audioPlayed
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                                                }`}
-                                        >
-                                            <Volume2 className="w-5 h-5" />
-                                            {audioPlayed ? 'Audio Played' : 'Play Audio (Once)'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* MCQ Options */}
-                            {currentQuestion.question_type === 'mcq' && currentQuestion.options ? (
-                                <div className="space-y-3">
-                                    {currentQuestion.options.map((option, idx) => {
-                                        const optionLetter = String.fromCharCode(65 + idx);
-                                        const isSelected = userAnswers[currentQuestion.question_id] === optionLetter;
-
-                                        let cleanOption = String(option).trim();
-                                        const letterPrefixPattern = /^[A-Z]\.?\s*/i;
-                                        if (letterPrefixPattern.test(cleanOption)) {
-                                            cleanOption = cleanOption.replace(letterPrefixPattern, '').trim();
-                                        }
-
-                                        return (
-                                            <button
-                                                key={idx}
-                                                onClick={() => !isTimeUp && handleAnswer(currentQuestion.question_id, optionLetter)}
-                                                disabled={isTimeUp}
-                                                className={`w-full text-left p-4 border-2 rounded-lg transition-all duration-200 ${isSelected
-                                                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md'
-                                                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                                                    } ${isTimeUp ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            >
-                                                <div className="flex items-start">
-                                                    <span className={`font-bold mr-3 mt-1 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
-                                                        {optionLetter}.
-                                                    </span>
-                                                    <span className="flex-1 text-gray-800 dark:text-gray-200">{cleanOption}</span>
-                                                    {isSelected && (
-                                                        <CheckCircle2 className="w-5 h-5 text-blue-600 ml-2 flex-shrink-0" />
-                                                    )}
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                // Text Answer
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Your Answer
-                                    </label>
-
-                                    {isSpeaking ? (
-                                        <div className={`w-full p-4 border-2 rounded-lg min-h-[160px] transition-all ${isLiveTranscribing
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
-                                            : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'
-                                            }`}>
-                                            {userAnswers[currentQuestion.question_id] ? (
-                                                <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed">
-                                                    {userAnswers[currentQuestion.question_id]}
-                                                </p>
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                                                    <Mic className="w-8 h-8 mb-2 opacity-50" />
-                                                    <p className="text-sm italic">Click "Start Speaking" to record your answer...</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <textarea
-                                            value={userAnswers[currentQuestion.question_id] || ''}
-                                            onChange={(e) => {
-                                                !isTimeUp && handleAnswer(currentQuestion.question_id, e.target.value);
-                                                if (!isListening) setLiveTranscript(e.target.value);
-                                            }}
-                                            disabled={isTimeUp}
-                                            placeholder="Type your answer here..."
-                                            className="w-full p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400"
-                                            rows={6}
-                                        />
-                                    )}
-
-                                    {/* Speech Controls - Show ONLY for Speaking Questions */}
-                                    {isSpeaking && (
-                                        <div className="mt-4 flex items-center gap-4">
-                                            {!isLiveTranscribing ? (
-                                                <button
-                                                    onClick={startLiveTranscription}
-                                                    disabled={isTimeUp}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition disabled:opacity-50"
-                                                >
-                                                    <Mic className="w-5 h-5" />
-                                                    <span>Start Speaking</span>
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={stopLiveTranscription}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition animate-pulse"
-                                                >
-                                                    <Square className="w-5 h-5 fill-current" />
-                                                    <span>Stop Recording</span>
-                                                </button>
-                                            )}
-                                            {isLiveTranscribing && (
-                                                <span className="text-sm text-gray-500 animate-pulse">
-                                                    Listening... (Speak clearly)
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Navigation */}
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
-                            <div className="flex flex-wrap gap-3">
                                 <button
-                                    onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-                                    disabled={currentQuestionIndex === 0 || isTimeUp}
-                                    className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
+                                    onClick={toggleFullscreen}
+                                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded text-sm transition"
                                 >
-                                    Previous
-                                </button>
-                                <button
-                                    onClick={() => setCurrentQuestionIndex(Math.min(currentRound.questions.length - 1, currentQuestionIndex + 1))}
-                                    disabled={currentQuestionIndex === currentRound.questions.length - 1 || isTimeUp}
-                                    className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
-                                >
-                                    Next
-                                </button>
-                                <button
-                                    onClick={submitRound}
-                                    disabled={isSubmitting || isTimeUp}
-                                    className="px-6 py-3 bg-green-600 text-white rounded-lg ml-auto hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="h-5 w-5 animate-spin" />
-                                            <span>Submitting...</span>
-                                        </>
-                                    ) : (
-                                        <span>Submit Round</span>
-                                    )}
+                                    {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                                 </button>
                             </div>
                         </div>
                     </div>
+                    <div className="flex-1 overflow-hidden relative">
+                        <div className="absolute inset-0 overflow-y-auto">
+                            <CodingRound
+                                assessmentId={packageId}
+                                roundData={codingRoundData}
+                                submitFn={handleCodingSubmit}
+                                onChange={handleCodingChange}
+                                showSubmitButton={true}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
-                    {/* Question Navigator Sidebar */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg sticky top-6">
-                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Questions</h4>
-                            <div className="grid grid-cols-5 gap-2">
-                                {currentRound.questions.map((q, idx) => {
-                                    const isCurrent = currentQuestionIndex === idx;
-                                    const isAnswered = q.question_id in userAnswers && userAnswers[q.question_id]?.trim() !== '';
+        // Generic Round (MCQ, Aptitude, Soft Skills, etc.) - Uses New UI
+        const currentQuestion = currentRound.questions[currentQuestionIndex];
+        const counts = getQuestionCounts();
+        const t = splitTime(timeRemaining);
+        const isTimeUp = timeRemaining !== null && timeRemaining <= 0;
+
+        return (
+            <div className="min-h-screen bg-gray-100 select-none flex flex-col">
+                {/* Header */}
+                <div className="bg-blue-600 text-white p-3 sm:p-4">
+                    <div className="flex justify-between items-center w-full px-3 sm:px-6 gap-2 sm:gap-3">
+                        <h1 className="text-base sm:text-lg md:text-xl font-semibold truncate">
+                            Round {packageInfo?.current_round}: {currentRound.round_name || 'Assessment'}
+                        </h1>
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <button
+                                onClick={toggleFullscreen}
+                                className="bg-white/15 hover:bg-white/25 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm whitespace-nowrap"
+                                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                            >
+                                <span className="hidden sm:inline">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+                                <span className="sm:hidden">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 w-full flex flex-col lg:flex-row overflow-hidden">
+                    {/* Main Question Area */}
+                    <div className="flex-1 bg-white p-3 sm:p-4 md:p-6 flex flex-col overflow-y-auto">
+                        <div className="max-w-none">
+                            <div className="mb-4 sm:mb-6">
+                                <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+                                    Question No {currentQuestionIndex + 1}
+                                </h2>
+
+                                <div className="bg-gray-50 p-3 sm:p-4 border rounded mb-4 sm:mb-6">
+                                    {/* Question Text */}
+                                    <p className="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4 select-none" onCopy={(e) => e.preventDefault()}>
+                                        {currentQuestion.question_text}
+                                    </p>
+
+                                    {/* MCQ Options */}
+                                    {/* MCQ / Aptitude / Soft Skills / Technical MCQ */}
+                                    {['mcq', 'aptitude', 'technical_mcq', 'soft_skills'].includes(String(currentQuestion.question_type || '').toLowerCase()) && (
+                                        (() => {
+                                            const mcqOptions = normalizeMcqOptions(currentQuestion);
+                                            if (!mcqOptions || mcqOptions.length === 0) {
+                                                return <div className="text-sm text-gray-500">No options available for this question.</div>;
+                                            }
+                                            return (
+                                                <div className="space-y-2">
+                                                    {mcqOptions.map((option: any, index: number) => {
+                                                        const optionLetter = String.fromCharCode(65 + index);
+                                                        const optionText = typeof option === 'string'
+                                                            ? option
+                                                            : (option?.text ?? option?.label ?? JSON.stringify(option));
+
+                                                        const isSelected = userAnswers[currentQuestion.question_id] === optionText;
+
+                                                        return (
+                                                            <label
+                                                                key={index}
+                                                                className={`flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-300' : 'bg-white border-gray-200'}`}
+                                                            >
+                                                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
+                                                                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                                </div>
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`question-${currentQuestion.question_id}`}
+                                                                    value={optionText}
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                                    className="hidden"
+                                                                />
+                                                                <span className="flex-1 select-none text-sm sm:text-base text-gray-800" onCopy={(e) => e.preventDefault()}>
+                                                                    {optionLetter}) {optionText}
+                                                                </span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })()
+                                    )}
+
+                                    {/* Text Input */}
+                                    {currentQuestion.question_type === 'text' && (
+                                        <div className="space-y-2 sm:space-y-3">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                                                <p className="text-xs sm:text-sm text-blue-800 flex items-center gap-2">
+                                                    <Edit3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                                    Write your answer below:
+                                                </p>
+                                            </div>
+                                            <textarea
+                                                className="w-full h-24 sm:h-32 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="Type your answer here..."
+                                                value={userAnswers[currentQuestion.question_id] || ''}
+                                                onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                            />
+                                            <p className="text-xs text-gray-500">
+                                                Word count: {(userAnswers[currentQuestion.question_id] || '').split(/\s+/).filter(Boolean).length} words
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Dictation / Voice Types handles */}
+                                    {currentQuestion.question_type === 'dictation' && (
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                                                <button
+                                                    onClick={() => playQuestionAudio(currentQuestion.question_text)}
+                                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                                                >
+                                                    <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                    <span>Play Audio</span>
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                className="w-full h-20 sm:h-24 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                                                placeholder="Type what you hear..."
+                                                value={userAnswers[currentQuestion.question_id] || ''}
+                                                onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Sidebar - Question Palette */}
+                    <div className="w-full lg:w-80 bg-white border-l border-t lg:border-t-0 p-3 sm:p-4 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-64px)]">
+                        <div className="mb-4 sm:mb-6">
+                            <div className="mt-1">
+                                <div className="text-xs font-semibold text-gray-600 text-center mb-2">Time Left</div>
+                                <div className="flex justify-center gap-3 sm:gap-6">
+                                    <div className="text-center">
+                                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.hours}</div>
+                                        <div className="text-[10px] sm:text-[11px] text-gray-500">hours</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.minutes}</div>
+                                        <div className="text-[10px] sm:text-[11px] text-gray-500">minutes</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className={`text-xl sm:text-2xl lg:text-3xl font-bold ${isTimeUp ? 'text-red-600' : 'text-gray-900'}`}>{t.seconds}</div>
+                                        <div className="text-[10px] sm:text-[11px] text-gray-500">seconds</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-left justify-left gap-2 mt-4 sm:mt-6 text-left border-t pt-4">
+                                <span className="text-xs sm:text-sm text-gray-600 font-bold">Candidate: {packageInfo?.assessment_name || 'Student'}</span>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2 sm:mb-3">Legend</h3>
+                            <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                                <div className="flex items-center space-x-2 sm:space-x-3">
+                                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-green-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                                        {counts.answered}
+                                    </div>
+                                    <span className="text-gray-700 font-medium">Answered</span>
+                                </div>
+                                <div className="flex items-center space-x-2 sm:space-x-3">
+                                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-red-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                                        {counts.notAnswered}
+                                    </div>
+                                    <span className="text-gray-700 font-medium">Not Answered</span>
+                                </div>
+                                <div className="flex items-center space-x-2 sm:space-x-3">
+                                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-purple-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                                        {counts.marked}
+                                    </div>
+                                    <span className="text-gray-700 font-medium">Marked</span>
+                                </div>
+                                <div className="flex items-center space-x-2 sm:space-x-3">
+                                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gray-400 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
+                                        {counts.notVisited}
+                                    </div>
+                                    <span className="text-gray-700 font-medium">Not Visited</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 sm:mb-6">
+                            <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Question Palette:</p>
+                            <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                                {currentRound.questions.map((q, index) => {
+                                    const status = getQuestionStatus(index);
+                                    const isCurrent = index === currentQuestionIndex;
+                                    let bgColor = 'bg-gray-300 text-gray-700';
+
+                                    if (isCurrent) bgColor = 'bg-blue-600 text-white border-2 border-blue-900';
+                                    else if (status === 'answered') bgColor = 'bg-green-600 text-white';
+                                    else if (status === 'marked') bgColor = 'bg-purple-600 text-white';
+                                    else if (status === 'notAnswered') bgColor = 'bg-red-600 text-white';
 
                                     return (
                                         <button
-                                            key={q.question_id}
-                                            onClick={() => !isTimeUp && setCurrentQuestionIndex(idx)}
-                                            disabled={isTimeUp}
-                                            className={`w-full aspect-square rounded-lg text-xs font-semibold transition-all ${isCurrent
-                                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
-                                                : isAnswered
-                                                    ? 'bg-yellow-500 text-white'
-                                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                                                } ${isTimeUp ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
+                                            key={index}
+                                            onClick={() => navigateToQuestion(index)}
+                                            className={`w-8 h-8 text-xs font-medium rounded flex items-center justify-center ${bgColor}`}
                                         >
-                                            {idx + 1}
+                                            {index + 1}
                                         </button>
                                     );
                                 })}
                             </div>
+                        </div>
+
+                        <div className="space-y-3 mt-auto">
+                            <button
+                                onClick={handleSubmitWithConfirmation}
+                                disabled={isSubmitting}
+                                className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all shadow-sm ${!isSubmitting
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                {isSubmitting ? 'Submitting...' : 'Submit Round'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="w-full border-t bg-gray-50 sticky bottom-0 z-10 p-3 sm:px-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleMarkForReview}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition"
+                            >
+                                {markedQuestions.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
+                            </button>
+                            <button
+                                onClick={handleClearResponse}
+                                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded text-sm transition"
+                            >
+                                Clear
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => navigateToQuestion(Math.max(0, currentQuestionIndex - 1))}
+                                disabled={currentQuestionIndex === 0}
+                                className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm transition"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => navigateToQuestion(Math.min(currentRound.questions.length - 1, currentQuestionIndex + 1))}
+                                disabled={currentQuestionIndex === currentRound.questions.length - 1}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded text-sm transition"
+                            >
+                                Next
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1012,6 +1218,5 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         );
     }
 
-    return <div>Loading...</div>;
+    return null;
 }
-

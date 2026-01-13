@@ -247,164 +247,165 @@ export default function StudentDishaReportPage() {
                             <div className="text-2xl font-bold">
                                 {report.time_analytics?.total_time_seconds !== undefined ? formatTime(report.time_analytics.total_time_seconds) : 'N/A'}
                             </div>
-                            Avg. per question: {report.time_analytics?.avg_time_per_question !== undefined ? report.time_analytics.avg_time_per_question.toFixed(1) : '0.0'}s
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Award className="h-5 w-5 text-yellow-500" />
-                            Performance
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Rounds Completed</span>
-                                <span className="font-semibold">{report.completed_rounds} / {report.total_rounds}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Correct Answers</span>
-                                <span className="font-semibold text-green-600">
-                                    {report.rounds.reduce((acc, r) => acc + r.questions.filter(q => q.is_correct).length, 0)}
-                                </span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Insights */}
-            {report.performance_insights && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base text-green-700 dark:text-green-400 flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5" />
-                                Strengths
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {report.performance_insights.strengths.length > 0 ? (
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {report.performance_insights.strengths.map((s, i) => (
-                                        <li key={i}>{s}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-gray-500">No specific strengths identified yet.</p>
-                            )}
+                            <p className="text-sm text-gray-500 mt-1">
+                                Avg. per question: {report.time_analytics?.avg_time_per_question !== undefined ? report.time_analytics.avg_time_per_question.toFixed(1) : '0.0'}s
+                            </p>
                         </CardContent>
                     </Card>
+
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base text-orange-700 dark:text-orange-400 flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5" />
-                                Areas for Improvement
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Award className="h-5 w-5 text-yellow-500" />
+                                Performance
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {report.performance_insights.weaknesses.length > 0 ? (
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {report.performance_insights.weaknesses.map((w, i) => (
-                                        <li key={i}>{w}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-gray-500">Good job! No major weaknesses identified.</p>
-                            )}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Rounds Completed</span>
+                                    <span className="font-semibold">{report.completed_rounds} / {report.total_rounds}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Correct Answers</span>
+                                    <span className="font-semibold text-green-600">
+                                        {report.rounds.reduce((acc, r) => acc + r.questions.filter(q => q.is_correct).length, 0)}
+                                    </span>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
-            )}
 
-            {/* Round Details */}
-            <h2 className="text-2xl font-bold mt-8 mb-4">Round Results</h2>
-            <div className="space-y-4">
-                {report.rounds.map((round) => (
-                    <Card key={round.round_number} className="overflow-hidden">
-                        <CardHeader className="bg-gray-50 dark:bg-gray-800/50 py-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-lg">
-                                        Round {round.round_number}: {round.round_name}
-                                    </CardTitle>
-                                    <CardDescription className="capitalize">
-                                        {round.round_type.replace('_', ' ')}
-                                    </CardDescription>
+                {/* Insights */}
+                {report.performance_insights && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base text-green-700 dark:text-green-400 flex items-center gap-2">
+                                    <CheckCircle2 className="h-5 w-5" />
+                                    Strengths
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {report.performance_insights.strengths.length > 0 ? (
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {report.performance_insights.strengths.map((s, i) => (
+                                            <li key={i}>{s}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-gray-500">No specific strengths identified yet.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base text-orange-700 dark:text-orange-400 flex items-center gap-2">
+                                    <AlertCircle className="h-5 w-5" />
+                                    Areas for Improvement
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {report.performance_insights.weaknesses.length > 0 ? (
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {report.performance_insights.weaknesses.map((w, i) => (
+                                            <li key={i}>{w}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-gray-500">Good job! No major weaknesses identified.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Round Details */}
+                <h2 className="text-2xl font-bold mt-8 mb-4">Round Results</h2>
+                <div className="space-y-4">
+                    {report.rounds.map((round) => (
+                        <Card key={round.round_number} className="overflow-hidden">
+                            <CardHeader className="bg-gray-50 dark:bg-gray-800/50 py-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-lg">
+                                            Round {round.round_number}: {round.round_name}
+                                        </CardTitle>
+                                        <CardDescription className="capitalize">
+                                            {round.round_type.replace('_', ' ')}
+                                        </CardDescription>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-bold">{round.percentage.toFixed(0)}%</p>
+                                        <p className="text-sm text-gray-500">
+                                            {round.score} / {round.max_score} pts
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-2xl font-bold">{round.percentage.toFixed(0)}%</p>
-                                    <p className="text-sm text-gray-500">
-                                        {round.score} / {round.max_score} pts
-                                    </p>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <Accordion type="single" collapsible>
-                                <AccordionItem value="details" className="border-b-0">
-                                    <AccordionTrigger className="px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                                        View Question Breakdown ({round.questions.length})
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-6 pt-2 pb-6">
-                                        <div className="space-y-4">
-                                            {round.questions.map((q, idx) => (
-                                                <div key={q.question_id} className="border rounded-lg p-4">
-                                                    <div className="flex justify-between items-start gap-4">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <span className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
-                                                                    Q{idx + 1}
-                                                                </span>
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {q.question_type}
-                                                                </Badge>
-                                                            </div>
-                                                            <p className="font-medium text-base mb-3">{q.question_text}</p>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Accordion type="single" collapsible>
+                                    <AccordionItem value="details" className="border-b-0">
+                                        <AccordionTrigger className="px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                            View Question Breakdown ({round.questions.length})
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-6 pt-2 pb-6">
+                                            <div className="space-y-4">
+                                                {round.questions.map((q, idx) => (
+                                                    <div key={q.question_id} className="border rounded-lg p-4">
+                                                        <div className="flex justify-between items-start gap-4">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <span className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                                                        Q{idx + 1}
+                                                                    </span>
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {q.question_type}
+                                                                    </Badge>
+                                                                </div>
+                                                                <p className="font-medium text-base mb-3">{q.question_text}</p>
 
-                                                            <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm">
-                                                                <p className="text-xs text-gray-500 mb-1">Your Answer:</p>
-                                                                <p className="font-medium break-words">
-                                                                    {q.student_answer ||
-                                                                        <span className="italic text-gray-400">No answer provided</span>}
-                                                                </p>
-                                                            </div>
+                                                                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm">
+                                                                    <p className="text-xs text-gray-500 mb-1">Your Answer:</p>
+                                                                    <p className="font-medium break-words">
+                                                                        {q.student_answer ||
+                                                                            <span className="italic text-gray-400">No answer provided</span>}
+                                                                    </p>
+                                                                </div>
 
-                                                            {q.feedback && (
-                                                                <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded text-sm text-blue-800 dark:text-blue-300">
-                                                                    <p className="text-xs font-semibold mb-1">Feedback:</p>
-                                                                    {q.feedback}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-right min-w-[80px]">
-                                                            {q.is_correct ? (
-                                                                <div className="flex flex-col items-end text-green-600">
-                                                                    <CheckCircle2 className="h-6 w-6 mb-1" />
-                                                                    <span className="font-bold">+{q.points_earned}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex flex-col items-end text-red-600">
-                                                                    <XCircle className="h-6 w-6 mb-1" />
-                                                                    <span className="font-medium">{q.points_earned} / {q.max_points}</span>
-                                                                </div>
-                                                            )}
+                                                                {q.feedback && (
+                                                                    <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded text-sm text-blue-800 dark:text-blue-300">
+                                                                        <p className="text-xs font-semibold mb-1">Feedback:</p>
+                                                                        {q.feedback}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right min-w-[80px]">
+                                                                {q.is_correct ? (
+                                                                    <div className="flex flex-col items-end text-green-600">
+                                                                        <CheckCircle2 className="h-6 w-6 mb-1" />
+                                                                        <span className="font-bold">+{q.points_earned}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex flex-col items-end text-red-600">
+                                                                        <XCircle className="h-6 w-6 mb-1" />
+                                                                        <span className="font-medium">{q.points_earned} / {q.max_points}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                        </CardContent>
-                    </Card>
-                ))}
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                </Accordion>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             </div>
-        </div>
-        </DashboardLayout >
+        </DashboardLayout>
     );
 }
