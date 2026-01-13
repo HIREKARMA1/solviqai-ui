@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 interface LoaderProps extends React.HTMLAttributes<HTMLDivElement> {
-    size?: "sm" | "md" | "lg"
+    size?: "sm" | "md" | "lg" | "xl"
     variant?: "spinner" | "dots" | "pulse"
 }
 
@@ -14,6 +14,7 @@ const Loader = React.forwardRef<HTMLDivElement, LoaderProps>(
             sm: "h-4 w-4",
             md: "h-8 w-8",
             lg: "h-12 w-12",
+            xl: "h-16 w-16",
         }
 
         if (variant === "spinner") {
