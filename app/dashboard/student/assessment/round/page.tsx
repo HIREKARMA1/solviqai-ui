@@ -6,9 +6,9 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { 
+import {
     Home, User, FileText, Briefcase, ClipboardList,
-    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap
+    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap, ChevronsRight, ChevronsLeft
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
@@ -55,7 +55,7 @@ const extractErrorMessage = (error: any): string => {
 // Default labels by round number (used only as a fallback)
 const roundNames = {
     1: "Aptitude Test",
-    2: "Soft Skills Assessment", 
+    2: "Soft Skills Assessment",
     3: "Group Discussion",
     4: "Technical MCQ",
     5: "Coding Challenge",
@@ -86,15 +86,16 @@ export default function AssessmentRoundPage() {
     const [submitting, setSubmitting] = useState(false)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const autoFullscreenAttemptedRef = useRef(false)
-    
+
     // Live Transcription States
     const [isLiveTranscribing, setIsLiveTranscribing] = useState(false)
     const [liveTranscript, setLiveTranscript] = useState("")
     const [interimTranscript, setInterimTranscript] = useState("")
     const speechRecognitionRef = useRef<SpeechRecognition | null>(null)
     const chatEndRef = useRef<HTMLDivElement>(null)
-    
+
     const router = useRouter()
     const searchParams = useSearchParams()
     const assessmentId = searchParams?.get('assessment_id')
@@ -123,10 +124,10 @@ export default function AssessmentRoundPage() {
                     const vals = Object.values(parsed as Record<string, any>)
                     return vals.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
                 }
-            } catch {}
+            } catch { }
         }
         // 4) option_a/option_b/option_c/option_d fields
-        const keySet = ['option_a','option_b','option_c','option_d']
+        const keySet = ['option_a', 'option_b', 'option_c', 'option_d']
         const fromFields = keySet.map(k => q[k]).filter(Boolean)
         if (fromFields.length > 0) return fromFields
         // 5) options as object {A: '...', B: '...'}
@@ -144,7 +145,7 @@ export default function AssessmentRoundPage() {
     const currentQ = roundData?.questions?.[currentQuestion]
     const counts = roundData ? getCounts() : { answered: 0, notAnswered: 0, marked: 0, notVisited: 0 }
     const canSubmit = roundData && !submitting
-    
+
     const responsesRef = useRef(responses)
     const roundDataRef = useRef(roundData)
     const submittingRef = useRef(submitting)
@@ -167,34 +168,34 @@ export default function AssessmentRoundPage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-            
+
             if (SpeechRecognition) {
                 const recognition = new SpeechRecognition()
                 recognition.continuous = true
                 recognition.interimResults = true
                 recognition.lang = 'en-US'
-                
+
                 recognition.onresult = (event: any) => {
                     let interim = ""
                     let final = ""
-                    
+
                     for (let i = event.resultIndex; i < event.results.length; i++) {
                         const transcript = event.results[i][0].transcript
-                        
+
                         if (event.results[i].isFinal) {
                             final += transcript + " "
                         } else {
                             interim += transcript
                         }
                     }
-                    
+
                     setInterimTranscript(interim)
-                    
+
                     if (final) {
                         setLiveTranscript(prev => prev + final)
                     }
                 }
-                
+
                 recognition.onerror = (event: any) => {
                     console.error('Speech recognition error:', event.error)
                     if (event.error === 'no-speech') {
@@ -205,7 +206,7 @@ export default function AssessmentRoundPage() {
                         toast.error('Microphone permission denied. Please allow access.')
                     }
                 }
-                
+
                 recognition.onend = () => {
                     if (isLiveTranscribing) {
                         try {
@@ -215,13 +216,13 @@ export default function AssessmentRoundPage() {
                         }
                     }
                 }
-                
+
                 speechRecognitionRef.current = recognition
             } else {
                 console.warn('Web Speech API not supported in this browser')
             }
         }
-        
+
         return () => {
             if (speechRecognitionRef.current) {
                 try {
@@ -236,27 +237,27 @@ export default function AssessmentRoundPage() {
     // Track fullscreen changes
     useEffect(() => {
         if (typeof document === 'undefined') return
-        
+
         // Initial check
         const checkFullscreen = () => {
             const fs = Boolean(
-                document.fullscreenElement || 
+                document.fullscreenElement ||
                 (document as any).webkitFullscreenElement ||
                 (document as any).mozFullScreenElement ||
                 (document as any).msFullscreenElement
             )
             setIsFullscreen(fs)
         }
-        
+
         // Check immediately
         checkFullscreen()
-        
+
         // Listen for changes
         const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
         events.forEach(event => {
             document.addEventListener(event, checkFullscreen)
         })
-        
+
         return () => {
             events.forEach(event => {
                 document.removeEventListener(event, checkFullscreen)
@@ -291,7 +292,7 @@ export default function AssessmentRoundPage() {
             // Force state update after a brief delay to ensure browser has processed
             setTimeout(() => {
                 const fs = Boolean(
-                    document.fullscreenElement || 
+                    document.fullscreenElement ||
                     (document as any).webkitFullscreenElement ||
                     (document as any).mozFullScreenElement ||
                     (document as any).msFullscreenElement
@@ -392,7 +393,7 @@ export default function AssessmentRoundPage() {
 
     const loadRoundData = async () => {
         let isMounted = true
-        
+
         try {
             console.log(`🔄 Loading round ${roundNumber} for assessment ${assessmentId}...`)
             const data = await apiClient.getAssessmentRound(assessmentId!, roundNumber)
@@ -400,7 +401,7 @@ export default function AssessmentRoundPage() {
                 console.log('📥 Round data loaded successfully:', data)
                 console.log('Round type:', data.round_type)
                 console.log('Questions count:', data.questions?.length || 0)
-                
+
                 // Validate that we have questions (skip for group_discussion as it only has a topic)
                 const isGD = data.round_type === 'group_discussion'
                 if (!isGD && (!data.questions || data.questions.length === 0)) {
@@ -409,7 +410,7 @@ export default function AssessmentRoundPage() {
                     router.push(`/dashboard/student/assessment?id=${assessmentId}`)
                     return
                 }
-                
+
                 setRoundData(data)
                 toast.success('Assessment loaded successfully!')
             }
@@ -417,7 +418,7 @@ export default function AssessmentRoundPage() {
             if (isMounted) {
                 console.error('❌ Error loading round data:', error)
                 const errorMsg = extractErrorMessage(error)
-                
+
                 // Provide specific error messages for common issues
                 if (error.code === 'ECONNABORTED' || errorMsg.includes('timeout')) {
                     toast.error('⏰ Request timed out. The AI is taking longer than expected. Please try again.')
@@ -426,7 +427,7 @@ export default function AssessmentRoundPage() {
                 } else {
                     toast.error(`Failed to load assessment: ${errorMsg}`)
                 }
-                
+
                 router.push(`/dashboard/student/assessment?id=${assessmentId}`)
             }
         } finally {
@@ -434,7 +435,7 @@ export default function AssessmentRoundPage() {
                 setLoading(false)
             }
         }
-        
+
         return () => { isMounted = false }
     }
 
@@ -443,18 +444,18 @@ export default function AssessmentRoundPage() {
             console.log('⚠️ Already submitting, skipping...')
             return
         }
-        
+
         if (isLiveTranscribing) {
             stopLiveTranscription()
         }
-        
+
         console.log('📤 Submitting round...')
         setSubmitting(true)
-        
+
         try {
             const currentResponses = responsesRef.current
             const currentRoundData = roundDataRef.current
-            
+
             if (!currentRoundData) {
                 throw new Error('Round data not available')
             }
@@ -469,16 +470,16 @@ export default function AssessmentRoundPage() {
             console.log(`Submitting ${responseData.length} responses`)
 
             await apiClient.submitRoundResponses(
-                assessmentId!, 
-                currentRoundData.round_id, 
+                assessmentId!,
+                currentRoundData.round_id,
                 responseData
             )
-            
+
             toast.success('Round submitted successfully!')
             router.push(`/dashboard/student/assessment?id=${assessmentId}`)
         } catch (error: any) {
             console.error('Error submitting round:', error)
-            
+
             // Check if it's an authentication error
             if (error.response?.status === 401 || error.response?.status === 403) {
                 toast.error('Session expired. Please login again.')
@@ -493,7 +494,7 @@ export default function AssessmentRoundPage() {
             } else {
                 toast.error(extractErrorMessage(error))
             }
-            
+
             setSubmitting(false)
             hasAutoSubmitted.current = false
         }
@@ -512,10 +513,10 @@ export default function AssessmentRoundPage() {
 
     const handleSubmitWithConfirmation = () => {
         const unansweredCount = counts.notVisited + counts.notAnswered + counts.marked
-        
+
         if (unansweredCount > 0) {
             const message = `⚠️ You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`
-            
+
             if (window.confirm(message)) {
                 handleSubmitRound()
             }
@@ -524,14 +525,14 @@ export default function AssessmentRoundPage() {
             handleSubmitRound()
         }
     }
-    
+
 
     const startLiveTranscription = () => {
         if (!speechRecognitionRef.current) {
             toast.error('Speech recognition not available. Use Chrome or Edge browser.')
             return
         }
-        
+
         if (!isLiveTranscribing) {
             try {
                 setLiveTranscript("")
@@ -554,15 +555,15 @@ export default function AssessmentRoundPage() {
                 console.log('Already stopped')
             }
             setIsLiveTranscribing(false)
-            
+
             const fullTranscript = (liveTranscript + " " + interimTranscript).trim()
-            
+
             if (fullTranscript) {
                 const currentQ = roundData.questions[currentQuestion]
                 handleAnswerChange(currentQ.id, fullTranscript)
                 toast.success('✅ Response saved!')
             }
-            
+
             // Clear transcripts after saving
             setLiveTranscript("")
             setInterimTranscript("")
@@ -571,54 +572,54 @@ export default function AssessmentRoundPage() {
 
     const playDictationAudio = (text: string, retryCount: number = 0) => {
         console.log('🔊 TTS called with text:', text)
-        
+
         if (!text || text.trim() === '') {
             console.error('❌ Empty or undefined text')
             toast.error('No text to play!')
             return
         }
-        
+
         if (!('speechSynthesis' in window)) {
             console.error('❌ Speech synthesis not supported')
             toast.error('Text-to-speech not supported. Try Chrome or Edge.')
             return
         }
-        
+
         if (retryCount >= 3) {
             console.error('❌ Max retries reached')
             toast.error('Unable to play audio. Please try refreshing the page.')
             return
         }
-        
+
         // Cancel any ongoing speech first
         window.speechSynthesis.cancel()
-        
+
         // Small delay to ensure cancellation completes
         setTimeout(() => {
             try {
                 // Get available voices and prefer high-quality ones
                 const voices = window.speechSynthesis.getVoices()
-                const preferredVoice = voices.find(v => 
-                    v.lang.startsWith('en') && 
-                    (v.name.toLowerCase().includes('neural') || 
-                     v.name.toLowerCase().includes('premium') ||
-                     v.name.toLowerCase().includes('enhanced'))
+                const preferredVoice = voices.find(v =>
+                    v.lang.startsWith('en') &&
+                    (v.name.toLowerCase().includes('neural') ||
+                        v.name.toLowerCase().includes('premium') ||
+                        v.name.toLowerCase().includes('enhanced'))
                 ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'))
-                
+
                 const utterance = new SpeechSynthesisUtterance(text.trim())
-                
+
                 if (preferredVoice) {
                     utterance.voice = preferredVoice
                     utterance.lang = preferredVoice.lang
                 } else {
                     utterance.lang = 'en-US'
                 }
-                
+
                 // Optimized settings for clarity
                 utterance.rate = 0.88  // Slightly slower for better comprehension
                 utterance.pitch = 1.0
                 utterance.volume = 1.0  // Maximum volume
-                
+
                 let hasStarted = false
                 const timeout = setTimeout(() => {
                     if (!hasStarted && retryCount < 2) {
@@ -627,27 +628,27 @@ export default function AssessmentRoundPage() {
                         playDictationAudio(text, retryCount + 1)
                     }
                 }, 2000)
-                
+
                 utterance.onstart = () => {
                     hasStarted = true
                     clearTimeout(timeout)
                     console.log('✅ Speech STARTED')
                     toast.success('🔊 Audio playing...', { duration: 2000 })
                 }
-                
+
                 utterance.onend = () => {
                     clearTimeout(timeout)
                     console.log('✅ Speech ENDED')
                 }
-                
+
                 utterance.onerror = (event: any) => {
                     clearTimeout(timeout)
                     console.error('❌ TTS Error:', event.error, event)
-                    
+
                     // Retry on certain errors
-                    if ((event.error === 'synthesis-failed' || 
-                         event.error === 'synthesis-unavailable' ||
-                         event.error === 'audio-busy') && retryCount < 2) {
+                    if ((event.error === 'synthesis-failed' ||
+                        event.error === 'synthesis-unavailable' ||
+                        event.error === 'audio-busy') && retryCount < 2) {
                         console.log('Retrying TTS...')
                         setTimeout(() => {
                             playDictationAudio(text, retryCount + 1)
@@ -656,7 +657,7 @@ export default function AssessmentRoundPage() {
                         toast.error(`Audio error: ${event.error || 'Unknown error'}`)
                     }
                 }
-                
+
                 console.log('📢 Calling speak()...')
                 window.speechSynthesis.speak(utterance)
                 console.log('📢 speak() called successfully')
@@ -672,7 +673,7 @@ export default function AssessmentRoundPage() {
             }
         }, 150)
     }
-    
+
 
     const handleNextQuestion = () => {
         if (currentQuestion < roundData.questions.length - 1) {
@@ -687,7 +688,7 @@ export default function AssessmentRoundPage() {
         if (isLiveTranscribing) {
             stopLiveTranscription()
         }
-        
+
         setCurrentQuestion(index)
         setVisitedQuestions(prev => new Set([...Array.from(prev), index]))
         setLiveTranscript("")
@@ -741,7 +742,7 @@ export default function AssessmentRoundPage() {
 
     function getQuestionStatus(index: number) {
         if (!roundData?.questions[index]) return 'notVisited'
-        
+
         const questionId = roundData.questions[index].id
         const isAnswered = responses[questionId]?.response_text !== undefined
         const isMarked = markedQuestions.has(index)
@@ -802,7 +803,7 @@ export default function AssessmentRoundPage() {
 
     // ========== TALLY/EXCEL PRACTICAL ROUND ==========
     const isTallyExcelRound = roundType === 'tally_excel_practical' || roundType === 'TALLY_EXCEL_PRACTICAL'
-    
+
     if (isTallyExcelRound) {
         if (!roundData || (!roundData.round_id && !roundData.id)) {
             return (
@@ -896,7 +897,7 @@ export default function AssessmentRoundPage() {
                 </DashboardLayout>
             )
         }
-        
+
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
                 <GroupDiscussionRound
@@ -918,7 +919,7 @@ export default function AssessmentRoundPage() {
                             router.push(`/dashboard/student/assessment?id=${assessmentId}`);
                         } catch (error: any) {
                             console.error('Error submitting discussion responses:', error);
-                            
+
                             // Check if it's an authentication error
                             if (error.response?.status === 401 || error.response?.status === 403) {
                                 toast.error('Session expired. Please login again.')
@@ -931,7 +932,7 @@ export default function AssessmentRoundPage() {
                             } else {
                                 toast.error('Failed to submit discussion responses');
                             }
-                            
+
                             setSubmitting(false);
                         }
                     }}
@@ -944,31 +945,26 @@ export default function AssessmentRoundPage() {
     if (isCodingRound) {
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="min-h-screen bg-gray-100">
-                    {/* Header */}
-                    <div className="bg-indigo-600 text-white p-3 sm:p-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-2 sm:gap-0">
-                            <h1 className="text-base sm:text-lg md:text-xl font-semibold">Round {roundNumber}: Coding Challenge</h1>
-                            <div className="text-xs sm:text-sm">Time Left: {formatTime(timeLeft)}</div>
+                <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
+                    {/* Header - Matching Screenshot */}
+                    <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
+                        <h1 className="text-xl font-bold tracking-tight">Round {roundNumber}: Coding Challenge</h1>
+                        <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{timeLeft !== null ? `${Math.floor(timeLeft / 60)}m ${(timeLeft % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
                         </div>
                     </div>
 
-                {/* Full-height Coding Workspace */}
-                <div className="flex-1 overflow-hidden">
-                    <div className="h-full w-full px-3">
-                        <div className="h-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm shadow-sm p-0 md:p-0">
-                            <div className="h-full">
-                                <CodingRound
-                                    assessmentId={assessmentId!}
-                                    roundData={roundData}
-                                    onSubmitted={() => {
-                                        router.push(`/dashboard/student/assessment?id=${assessmentId}`)
-                                    }}
-                                />
-                            </div>
-                        </div>
+                    {/* Full-height Coding Workspace */}
+                    <div className="flex-1 overflow-hidden relative">
+                        <CodingRound
+                            assessmentId={assessmentId!}
+                            roundData={roundData}
+                            onSubmitted={() => {
+                                router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                            }}
+                        />
                     </div>
-                </div>
                 </div>
             </DashboardLayout>
         )
@@ -1028,108 +1024,108 @@ export default function AssessmentRoundPage() {
                         </div>
                     </div>
 
-                {/* Chat Area */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
-                    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-                        {currentQ && (
-                            <div className={`bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border ${cardBorder}`}>
-                                <div className="flex items-start gap-3 sm:gap-4">
-                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${aiBadgeGrad} flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0`}>AI</div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs sm:text-sm text-gray-500 mb-2">Interviewer</p>
-                                        <p className="text-gray-800 text-sm sm:text-base md:text-lg leading-relaxed break-words">{currentQ.question_text}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {responses[currentQ?.id]?.response_text && (
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border border-emerald-100">
-                                <div className="flex items-start gap-3 sm:gap-4">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0">You</div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs sm:text-sm text-gray-500 mb-2">Your Answer</p>
-                                        <p className="text-gray-800 text-sm sm:text-base leading-relaxed break-words">{responses[currentQ.id].response_text}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {isLiveTranscribing && (liveTranscript || interimTranscript) && (
-                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border-2 border-dashed" style={{ borderColor: 'transparent' }}>
-                                <div className={`border-2 ${liveBorder} rounded-xl p-3 sm:p-4 bg-opacity-50 bg-blue-50`}>
+                    {/* Chat Area */}
+                    <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+                        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+                            {currentQ && (
+                                <div className={`bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border ${cardBorder}`}>
                                     <div className="flex items-start gap-3 sm:gap-4">
-                                        <Mic className={`h-5 w-5 sm:h-6 sm:w-6 ${liveText} animate-pulse flex-shrink-0`} />
+                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${aiBadgeGrad} flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0`}>AI</div>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text-xs sm:text-sm ${liveText} font-semibold mb-2`}>Speaking... (Live)</p>
-                                        <p className="text-sm sm:text-base text-gray-800 break-words">
-                                            {liveTranscript}
-                                            {interimTranscript && (
-                                                <span className="text-gray-500 italic"> {interimTranscript}</span>
-                                            )}
-                                        </p>
+                                            <p className="text-xs sm:text-sm text-gray-500 mb-2">Interviewer</p>
+                                            <p className="text-gray-800 text-sm sm:text-base md:text-lg leading-relaxed break-words">{currentQ.question_text}</p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-
-                        <div ref={chatEndRef} />
-                    </div>
-                </div>
-
-                {/* Bottom Controls */}
-                <div className="bg-white/90 backdrop-blur border-t shadow-lg p-3 sm:p-4">
-                    <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
-                        <div className="flex gap-2 sm:gap-3">
-                            {!isLiveTranscribing ? (
-                                <button onClick={startLiveTranscription} className={`flex-1 bg-gradient-to-r ${primaryGrad} hover:opacity-95 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all flex items-center justify-center gap-2 sm:gap-3`}>
-                                    <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    <span>Start Speaking</span>
-                                </button>
-                            ) : (
-                                <button onClick={stopLiveTranscription} className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all animate-pulse flex items-center justify-center gap-2 sm:gap-3">
-                                    <Square className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    <span className="hidden sm:inline">Stop & Save Answer</span>
-                                    <span className="sm:hidden">Stop & Save</span>
-                                </button>
                             )}
-                        </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                            <button
-                                onClick={() => {
-                                    if (currentQuestion < roundData.questions.length - 1) {
-                                        navigateToQuestion(currentQuestion + 1)
-                                    }
-                                }}
-                                disabled={currentQuestion >= roundData.questions.length - 1}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all"
-                            >
-                                <span className="hidden sm:inline">Next Question →</span>
-                                <span className="sm:hidden">Next →</span>
-                            </button>
-
-                            <button onClick={handleSubmitWithConfirmation} disabled={submitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg">
-                                {submitting ? (
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Loader size="sm" />
-                                        <span>Submitting...</span>
+                            {responses[currentQ?.id]?.response_text && (
+                                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border border-emerald-100">
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0">You</div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs sm:text-sm text-gray-500 mb-2">Your Answer</p>
+                                            <p className="text-gray-800 text-sm sm:text-base leading-relaxed break-words">{responses[currentQ.id].response_text}</p>
+                                        </div>
                                     </div>
-                                ) : (
-                                    <span>✓ Submit Interview</span>
-                                )}
-                            </button>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 text-xs sm:text-sm text-gray-600">
-                            <span>Progress: {currentQuestion + 1} / {roundData?.questions?.length || 0}</span>
-                            {counts.notVisited + counts.notAnswered + counts.marked > 0 && (
-                                <span className="text-orange-600">⚠️ {counts.notVisited + counts.notAnswered + counts.marked} unanswered</span>
+                                </div>
                             )}
+
+                            {isLiveTranscribing && (liveTranscript || interimTranscript) && (
+                                <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border-2 border-dashed" style={{ borderColor: 'transparent' }}>
+                                    <div className={`border-2 ${liveBorder} rounded-xl p-3 sm:p-4 bg-opacity-50 bg-blue-50`}>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <Mic className={`h-5 w-5 sm:h-6 sm:w-6 ${liveText} animate-pulse flex-shrink-0`} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-xs sm:text-sm ${liveText} font-semibold mb-2`}>Speaking... (Live)</p>
+                                                <p className="text-sm sm:text-base text-gray-800 break-words">
+                                                    {liveTranscript}
+                                                    {interimTranscript && (
+                                                        <span className="text-gray-500 italic"> {interimTranscript}</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div ref={chatEndRef} />
                         </div>
                     </div>
-                </div>
+
+                    {/* Bottom Controls */}
+                    <div className="bg-white/90 backdrop-blur border-t shadow-lg p-3 sm:p-4">
+                        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+                            <div className="flex gap-2 sm:gap-3">
+                                {!isLiveTranscribing ? (
+                                    <button onClick={startLiveTranscription} className={`flex-1 bg-gradient-to-r ${primaryGrad} hover:opacity-95 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all flex items-center justify-center gap-2 sm:gap-3`}>
+                                        <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
+                                        <span>Start Speaking</span>
+                                    </button>
+                                ) : (
+                                    <button onClick={stopLiveTranscription} className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all animate-pulse flex items-center justify-center gap-2 sm:gap-3">
+                                        <Square className="h-5 w-5 sm:h-6 sm:w-6" />
+                                        <span className="hidden sm:inline">Stop & Save Answer</span>
+                                        <span className="sm:hidden">Stop & Save</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                <button
+                                    onClick={() => {
+                                        if (currentQuestion < roundData.questions.length - 1) {
+                                            navigateToQuestion(currentQuestion + 1)
+                                        }
+                                    }}
+                                    disabled={currentQuestion >= roundData.questions.length - 1}
+                                    className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all"
+                                >
+                                    <span className="hidden sm:inline">Next Question →</span>
+                                    <span className="sm:hidden">Next →</span>
+                                </button>
+
+                                <button onClick={handleSubmitWithConfirmation} disabled={submitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg">
+                                    {submitting ? (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Loader size="sm" />
+                                            <span>Submitting...</span>
+                                        </div>
+                                    ) : (
+                                        <span>✓ Submit Interview</span>
+                                    )}
+                                </button>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 text-xs sm:text-sm text-gray-600">
+                                <span>Progress: {currentQuestion + 1} / {roundData?.questions?.length || 0}</span>
+                                {counts.notVisited + counts.notAnswered + counts.marked > 0 && (
+                                    <span className="text-orange-600">⚠️ {counts.notVisited + counts.notAnswered + counts.marked} unanswered</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </DashboardLayout>
         )
@@ -1139,12 +1135,10 @@ export default function AssessmentRoundPage() {
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
     return (
         <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-            <div className="min-h-screen bg-gray-100 select-none flex flex-col">
-            {/* Header */}
-            <div className="bg-blue-600 text-white p-3 sm:p-4">
-                <div className="flex justify-between items-center w-full px-3 sm:px-6 gap-2 sm:gap-3">
-                    <h1 className="text-base sm:text-lg md:text-xl font-semibold truncate">
-                        {/* Use the backend type for correct naming in non-tech vs tech flows */}
+            <div className="h-screen overflow-hidden bg-gray-100 select-none flex flex-col font-sans">
+                {/* Header */}
+                <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
+                    <h1 className="text-xl font-bold truncate">
                         {(() => {
                             const typeDisplayMap: Record<string, string> = {
                                 aptitude: 'Aptitude Test',
@@ -1162,459 +1156,357 @@ export default function AssessmentRoundPage() {
                             return <>Round {roundNumber}: {title}</>
                         })()}
                     </h1>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={toggleFullscreen}
-                            className="bg-white/15 hover:bg-white/25 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm whitespace-nowrap"
-                            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                         >
-                            <span className="hidden sm:inline">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
-                            <span className="sm:hidden">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+                            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex-1 w-full flex flex-col lg:flex-row">
+                <div className="flex-1 w-full flex overflow-hidden">
 
-                {/* Main Content - Question Display with All Types */}
-                <div className="flex-1 bg-white p-3 sm:p-4 md:p-6 flex flex-col">
-                    <div className="max-w-none">
-                        <div className="mb-4 sm:mb-6">
-                            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-                                Question No {currentQuestion + 1}
-                            </h2>
+                    {/* Main Content Area */}
+                    <div className="flex-1 bg-white flex flex-col min-h-0 relative transition-all duration-300 z-40">
 
-                            <div className="bg-gray-50 p-3 sm:p-4 border rounded mb-4 sm:mb-6">
-                                {/* Hide question text for DICTATION - it's the answer! */}
-                                {currentQ.question_type !== 'dictation' ? (
-                                    <p className="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4 select-none" onCopy={(e) => e.preventDefault()}>
-                                        {currentQ.question_text}
-                                    </p>
-                                ) : (
-                                    <p className="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4 select-none">
-                                        🎧 Listening Exercise - Type What You Hear
-                                    </p>
-                                )}
+                        {/* Sidebar Toggle Button - Attached to the right edge */}
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-300 rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-gray-50 focus:outline-none transition-transform duration-300 ${isSidebarOpen ? 'translate-x-1/2' : '-translate-x-2'}`}
+                            title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                        >
+                            {isSidebarOpen ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
+                        </button>
 
-                                {/* ========== MCQ QUESTIONS ========== */}
-                                {String(currentQ.question_type || '').toLowerCase() === 'mcq' && (
-                                    (() => {
-                                        const mcqOptions = normalizeMcqOptions(currentQ)
-                                        if (!mcqOptions || mcqOptions.length === 0) {
-                                            return <div className="text-sm text-gray-500">No options available for this question.</div>
-                                        }
-                                        return (
-                                            <div className="space-y-2">
-                                                {mcqOptions.map((option: any, index: number) => {
+                        {/* Scrollable Content Wrapper */}
+                        <div className="flex-1 flex flex-col p-6 overflow-hidden min-h-0">
+                            {/* Question Header */}
+                            <div className="mb-4 flex-shrink-0">
+                                <h2 className="text-lg font-bold text-gray-800">
+                                    Question {currentQuestion + 1} of {roundData?.questions?.length || 0}
+                                </h2>
+                                <div className="h-px bg-gray-200 mt-2 w-full"></div>
+                            </div>
+
+                            {/* Unified Question Card Container */}
+                            <div className="flex-1 flex flex-col border border-gray-300 rounded-sm overflow-hidden min-h-0 bg-white shadow-sm relative z-10">
+
+                                {/* Split Pane Content */}
+                                <div className="flex-1 flex flex-col md:flex-row min-h-0">
+                                    {/* Left Pane: Question Text */}
+                                    <div className="flex-1 p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-300 bg-white">
+                                        {currentQ.question_type !== 'dictation' ? (
+                                            <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
+                                                {currentQ.question_text}
+                                            </p>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <p className="text-lg font-bold text-blue-600">
+                                                    🎧 Listening Exercise
+                                                </p>
+                                                <p className="text-gray-700">
+                                                    Click the button below to hear a sentence. Listen carefully and type exactly what you hear in the box.
+                                                </p>
+                                                <button
+                                                    onClick={() => {
+                                                        const textToSpeak = currentQ.question_text || currentQ.correct_answer
+                                                        playDictationAudio(textToSpeak)
+                                                    }}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
+                                                >
+                                                    <Volume2 className="h-5 w-5" />
+                                                    <span>Play Audio</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right Pane: Options / Input */}
+                                    <div className="flex-1 p-6 overflow-y-auto bg-gray-50/50">
+                                        {/* MCQ Options */}
+                                        {String(currentQ.question_type || '').toLowerCase() === 'mcq' && (
+                                            <div className="space-y-4">
+                                                {normalizeMcqOptions(currentQ).map((option: any, index: number) => {
                                                     const optionLetter = String.fromCharCode(65 + index)
-                                                    const optionText = typeof option === 'string' 
-                                                        ? option 
+                                                    const optionText = typeof option === 'string'
+                                                        ? option
                                                         : (option?.text ?? option?.label ?? JSON.stringify(option))
+                                                    const isSelected = responses[currentQ.id]?.response_text === optionLetter
+
                                                     return (
-                                                        <label 
+                                                        <label
                                                             key={index}
-                                                            className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                                            className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer transition-all border ${isSelected
+                                                                ? 'bg-blue-50 border-blue-500 shadow-sm'
+                                                                : 'bg-white border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                                                                }`}
                                                         >
-                                                            <input
-                                                                type="radio"
-                                                                name={`question-${currentQ.id}`}
-                                                                value={optionLetter}
-                                                                checked={responses[currentQ.id]?.response_text === optionLetter}
-                                                                onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                                                                className="w-4 h-4 text-blue-600 flex-shrink-0"
-                                                            />
-                                                            <span className="flex-1 select-none text-sm sm:text-base text-gray-800" onCopy={(e) => e.preventDefault()}>
-                                                                {optionLetter}) {optionText}
-                                                            </span>
+                                                            <div className="relative flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`question-${currentQ.id}`}
+                                                                    value={optionLetter}
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                                                                    className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white"
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <span className="font-bold text-gray-700 mr-2">{optionLetter})</span>
+                                                                <span className="text-gray-800 text-base">{optionText}</span>
+                                                            </div>
                                                         </label>
                                                     )
                                                 })}
                                             </div>
-                                        )
-                                    })()
-                                )}
-
-                                {/* ========== TEXT QUESTION - Short Writing ========== */}
-                                {currentQ.question_type === 'text' && (
-                                    <div className="space-y-2 sm:space-y-3">
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
-                                            <p className="text-xs sm:text-sm text-blue-800 flex items-center gap-2">
-                                                <Edit3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                                Write your answer below (2-3 sentences):
-                                            </p>
-                                        </div>
-                                        <textarea
-                                            className="w-full h-24 sm:h-32 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Type your answer here..."
-                                            value={responses[currentQ.id]?.response_text || ''}
-                                            onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                                        />
-                                        <p className="text-xs text-gray-500">
-                                            Word count: {(responses[currentQ.id]?.response_text || '').split(/\s+/).filter(Boolean).length} words
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* ========== DICTATION QUESTION - Listen and Type ========== */}
-                                {currentQ.question_type === 'dictation' && (
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                                            <p className="text-xs sm:text-sm text-blue-800 mb-2 sm:mb-3 flex items-center gap-2">
-                                                🎧 Click the button below to hear a sentence. Listen carefully and type exactly what you hear.
-                                            </p>
-                                            <p className="text-xs text-blue-700 mb-2 sm:mb-3">
-                                                You can play the audio multiple times. Type every word correctly, including punctuation.
-                                            </p>
-                                            
-                                            
-                                            
-                                            <button
-                                                onClick={() => {
-                                                    // Use question_text (the sentence) for TTS
-                                                    const textToSpeak = currentQ.question_text || currentQ.correct_answer
-                                                    console.log('Playing dictation:', textToSpeak)
-                                                    playDictationAudio(textToSpeak)
-                                                }}
-                                                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                                            >
-                                                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                <span>Play Audio</span>
-                                            </button>
-                                        </div>
-                                        
-                                        <textarea
-                                            className="w-full h-20 sm:h-24 p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                                            placeholder="Type the sentence you heard here..."
-                                            value={responses[currentQ.id]?.response_text || ''}
-                                            onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                                        />
-                                        
-                                        {responses[currentQ.id]?.response_text && (
-                                            <p className="text-xs text-gray-500">
-                                                Characters typed: {responses[currentQ.id].response_text.length}
-                                            </p>
                                         )}
-                                    </div>
-                                )}
 
-                                {/* ========== VOICE_READING QUESTION - Read Aloud ========== */}
-                                {currentQ.question_type === 'voice_reading' && (
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
-                                            <p className="text-xs sm:text-sm text-purple-800 mb-2 sm:mb-3">
-                                                📖 Read the text above aloud clearly. Click "Start Recording" when ready.
-                                            </p>
-                                        </div>
-                                        
-                                        {!isLiveTranscribing ? (
-                                            <button
-                                                onClick={startLiveTranscription}
-                                                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
-                                            >
-                                                <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                <span>Start Recording</span>
-                                            </button>
-                                        ) : (
-                                            <div className="space-y-2 sm:space-y-3">
-                                                <button
-                                                    onClick={stopLiveTranscription}
-                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
-                                                >
-                                                    <Square className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                    <span>Stop Recording</span>
-                                                </button>
-                                                
-                                                {/* Live Transcription Display */}
-                                                <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[60px]">
-                                                    <p className="text-xs sm:text-sm text-gray-600 mb-2">Recording... (Live transcription):</p>
-                                                    <p className="text-sm sm:text-base text-gray-800">
-                                                        {liveTranscript}
-                                                        {interimTranscript && (
-                                                            <span className="text-gray-500 italic"> {interimTranscript}</span>
-                                                        )}
-                                                    </p>
+                                        {/* Text Input */}
+                                        {currentQ.question_type === 'text' && (
+                                            <div className="h-full flex flex-col">
+                                                <label className="text-sm font-semibold text-gray-600 mb-2">Your Answer:</label>
+                                                <textarea
+                                                    className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
+                                                    placeholder="Type your answer here..."
+                                                    value={responses[currentQ.id]?.response_text || ''}
+                                                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                                                />
+                                                <div className="text-right text-xs text-gray-500 mt-2">
+                                                    {(responses[currentQ.id]?.response_text || '').length} characters
                                                 </div>
                                             </div>
                                         )}
-                                        
-                                        {responses[currentQ.id]?.response_text && (
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-                                                <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
-                                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                                    Your recorded response:
-                                                </p>
-                                                <p className="text-sm sm:text-base text-gray-800">{responses[currentQ.id].response_text}</p>
+
+                                        {/* Dictation Input */}
+                                        {currentQ.question_type === 'dictation' && (
+                                            <div className="h-full flex flex-col">
+                                                <label className="text-sm font-semibold text-gray-600 mb-2">Type what you hear:</label>
+                                                <textarea
+                                                    className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-base"
+                                                    placeholder="Type here..."
+                                                    value={responses[currentQ.id]?.response_text || ''}
+                                                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                                                />
                                             </div>
                                         )}
-                                    </div>
-                                )}
 
-                                {/* ========== VOICE_SPEAKING QUESTION - Spontaneous Speech ========== */}
-                                {currentQ.question_type === 'voice_speaking' && (
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
-                                            <p className="text-xs sm:text-sm text-orange-800 mb-2">
-                                                🎤 Speak for 45-60 seconds on the topic above. Click "Start Speaking" when ready.
-                                            </p>
-                                            <p className="text-xs text-orange-700">
-                                                Tip: Organize your thoughts, speak clearly, and use relevant examples.
-                                            </p>
-                                        </div>
-                                        
-                                        {!isLiveTranscribing ? (
-                                            <button
-                                                onClick={startLiveTranscription}
-                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
-                                            >
-                                                <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                <span>Start Speaking</span>
-                                            </button>
-                                        ) : (
-                                            <div className="space-y-2 sm:space-y-3">
-                                                <button
-                                                    onClick={stopLiveTranscription}
-                                                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
-                                                >
-                                                    <Square className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                    <span>Stop & Save</span>
-                                                </button>
-                                                
-                                                {/* Live Transcription Display */}
-                                                <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[80px] sm:min-h-[100px]">
-                                                    <p className="text-xs sm:text-sm text-gray-600 mb-2">Speaking... (Live transcription):</p>
-                                                    <p className="text-sm sm:text-base text-gray-800">
-                                                        {liveTranscript}
-                                                        {interimTranscript && (
-                                                            <span className="text-gray-500 italic"> {interimTranscript}</span>
-                                                        )}
-                                                    </p>
+                                        {/* Voice Reading / Speaking place holders */}
+                                        {(currentQ.question_type === 'voice_reading' || currentQ.question_type === 'voice_speaking') && (
+                                            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                                                <div className="bg-purple-100 p-4 rounded-full mb-4">
+                                                    <Mic className="h-8 w-8 text-purple-600" />
                                                 </div>
-                                            </div>
-                                        )}
-                                        
-                                        {responses[currentQ.id]?.response_text && (
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-                                                <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
-                                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                                    Your recorded response:
+                                                <p className="text-gray-600 mb-4">
+                                                    This question requires voice interaction. Please use the controls above/below to record your answer.
                                                 </p>
-                                                <p className="text-sm sm:text-base text-gray-800">{responses[currentQ.id].response_text}</p>
+                                                {!isLiveTranscribing ? (
+                                                    <Button onClick={startLiveTranscription} className="bg-purple-600 hover:bg-purple-700">
+                                                        Start Recording
+                                                    </Button>
+                                                ) : (
+                                                    <Button onClick={stopLiveTranscription} variant="destructive">
+                                                        Stop Recording
+                                                    </Button>
+                                                )}
+                                                {liveTranscript && (
+                                                    <div className="mt-4 p-3 bg-gray-100 rounded text-sm text-left w-full">
+                                                        <p className="font-semibold text-xs text-gray-500 mb-1">Transcript:</p>
+                                                        {liveTranscript}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                </div>
 
-                        {/* Spacer before sticky bar */}
-                        <div className="mt-10" />
-                    </div>
-                </div>
-
-                {/* Right Sidebar - Question Palette (Keep existing code with optional icon additions) */}
-                <div className="w-full lg:w-80 bg-white border-l border-t lg:border-t-0 p-3 sm:p-4 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-64px)]">
-                    <div className="mb-4 sm:mb-6">
-                        <div className="mt-1">
-                            <div className="text-xs font-semibold text-gray-600 text-center mb-2">Time Left</div>
-                            {(() => {
-                                const t = splitTime(timeLeft)
-                                return (
-                                    <div className="flex justify-center gap-3 sm:gap-6">
-                                        <div className="text-center">
-                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.hours}</div>
-                                            <div className="text-[10px] sm:text-[11px] text-gray-500">hours</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.minutes}</div>
-                                            <div className="text-[10px] sm:text-[11px] text-gray-500">minutes</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{t.seconds}</div>
-                                            <div className="text-[10px] sm:text-[11px] text-gray-500">seconds</div>
-                                        </div>
+                                {/* Bottom Footer: Action Buttons (Sticky at Bottom) */}
+                                <div className="shrink-0 h-16 bg-white border-t border-gray-300 flex items-center justify-between px-6 z-20">
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={handleMarkForReview}
+                                            className="bg-[#DC2626] hover:bg-red-700 text-white px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                        >
+                                            Mark for review & Next
+                                        </button>
+                                        <button
+                                            onClick={handleClearResponse}
+                                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                        >
+                                            Clear Response
+                                        </button>
                                     </div>
-                                )
-                            })()}
-                            {timeLeft !== null && timeLeft <= 60 && timeLeft > 0 && (
-                                <div className="text-center text-yellow-600 font-semibold text-xs mt-1">Last minute!</div>
-                            )}
-                        </div>
-                        <div className="flex items-left justify-left gap-2 mt-4 sm:mt-6 text-left">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-medium">👤</span>
-                            </div>
-                            <span className="text-xs sm:text-sm text-gray-600 font-bold">Test Profile</span>
-                        </div>
-                    </div>
 
-                    <div className="mb-4 sm:mb-6">
-                        <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2 sm:mb-3">Legend</h3>
-                        <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-green-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
-                                    {counts.answered}
-                                </div>
-                                <span className="text-gray-700 font-medium">Answered</span>
-                            </div>
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-red-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
-                                    {counts.notAnswered}
-                                </div>
-                                <span className="text-gray-700 font-medium">Not Answered</span>
-                            </div>
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-purple-600 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
-                                    {counts.marked}
-                                </div>
-                                <span className="text-gray-700 font-medium">Marked</span>
-                            </div>
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gray-400 text-white rounded flex items-center justify-center text-xs font-medium flex-shrink-0">
-                                    {counts.notVisited}
-                                </div>
-                                <span className="text-gray-700 font-medium">Not Visited</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mb-4 sm:mb-6">
-                        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Question Palette:</p>
-
-                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2">
-                            {roundData.questions.map((_: any, index: number) => {
-                                const status = getQuestionStatus(index)
-                                const isCurrent = index === currentQuestion
-                                const questionType = roundData.questions[index].question_type
-
-                                let bgColor = ''
-                                if (isCurrent) {
-                                    bgColor = 'bg-blue-600 text-white border-2 border-blue-800'
-                                } else if (status === 'answered') {
-                                    bgColor = 'bg-green-600 text-white'
-                                } else if (status === 'marked') {
-                                    bgColor = 'bg-purple-600 text-white'
-                                } else if (status === 'notAnswered') {
-                                    bgColor = 'bg-red-600 text-white'
-                                } else {
-                                    bgColor = 'bg-gray-300 text-gray-700'
-                                }
-
-                                return (
                                     <button
-                                        key={index}
-                                        onClick={() => navigateToQuestion(index)}
-                                        className={`w-7 h-7 sm:w-8 sm:h-8 text-[10px] sm:text-xs font-medium rounded relative ${bgColor}`}
-                                        title={`Q${index + 1} - ${questionType}`}
+                                        onClick={handleNextQuestion}
+                                        className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
                                     >
-                                        {index + 1}
-                                        {/* Optional: Add type indicator icons */}
-                                        {questionType === 'text' && (
-                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">✍️</span>
-                                        )}
-                                        {questionType === 'dictation' && (
-                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">🎧</span>
-                                        )}
-                                        {questionType === 'voice_reading' && (
-                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">📖</span>
-                                        )}
-                                        {questionType === 'voice_speaking' && (
-                                            <span className="absolute -top-1 -right-1 text-[7px] sm:text-[8px]">🎤</span>
-                                        )}
+                                        Save & Next
                                     </button>
-                                )
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <button
-                            onClick={handleSubmitWithConfirmation}  // ✅ Use new handler
-                            disabled={submitting}
-                            className={`w-full py-2 px-3 sm:px-4 rounded text-xs sm:text-sm font-medium transition-all ${
-                                !submitting
-                                    ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                            title="Submit the test"
-                        >
-                            {submitting ? (
-                                <div className="flex items-center justify-center space-x-2">
-                                    <Loader size="sm" />
-                                    <span>Submitting...</span>
                                 </div>
-                            ) : (
-                                'Submit Section'
-                            )}
-                        </button>
-                        
-                        {/* Show warning if there are unanswered questions */}
-                        {counts.notVisited + counts.notAnswered + counts.marked > 0 && (
-                            <p className="text-xs text-orange-600 text-center">
-                                ⚠️ {counts.notVisited + counts.notAnswered + counts.marked} question(s) unanswered
-                            </p>
-                        )}
+                            </div>
+                        </div>
                     </div>
 
-                </div>
-            </div>
+                    {/* Right Sidebar */}
+                    <div className={`${isSidebarOpen ? 'w-80 border-l' : 'w-0 border-l-0'} bg-[#E6F3FF] border-gray-200 flex flex-col h-full overflow-hidden flex-shrink-0 font-sans transition-all duration-300`}>
 
-            {/* Full-width Bottom Action Bar */}
-            <div className="w-full border-t bg-gray-50 sticky bottom-0 z-10">
-                <div className="w-full px-2 sm:px-4 md:px-6 py-2 sm:py-3">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
-                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                            <button
-                                onClick={handleMarkForReview}
-                                className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
-                            >
-                                <span className="hidden sm:inline">Mark for review</span>
-                                <span className="sm:hidden">Mark</span>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (currentQuestion > 0) {
-                                        navigateToQuestion(currentQuestion - 1)
-                                    }
-                                }}
-                                disabled={currentQuestion <= 0}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (currentQuestion < roundData.questions.length - 1) {
-                                        navigateToQuestion(currentQuestion + 1)
-                                    }
-                                }}
-                                disabled={currentQuestion >= roundData.questions.length - 1}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm"
-                            >
-                                Next
-                            </button>
+                        {/* Profile & Timer Section */}
+                        <div className="p-4 border-b border-gray-200 border-dashed border-blue-300 m-2 rounded-lg relative">
+                            <div className="flex items-start gap-4">
+                                {/* Large Black User Silhouette */}
+                                <div className="w-20 h-20 bg-black rounded-xl overflow-hidden shadow-sm flex items-end justify-center flex-shrink-0">
+                                    <User className="w-16 h-16 text-gray-400 mb-[-4px]" fill="currentColor" />
+                                </div>
+
+                                <div className="flex-1 text-center">
+                                    <div className="text-lg font-bold text-gray-900 mb-1">Time Left</div>
+                                    <div className="flex justify-center gap-2 items-start">
+                                        {(() => {
+                                            const t = splitTime(timeLeft)
+                                            return (
+                                                <>
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="text-2xl font-bold leading-none text-black">{t.hours}</div>
+                                                        <div className="text-xs text-black font-medium mt-1">Hr</div>
+                                                    </div>
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="text-2xl font-bold leading-none text-black">{t.minutes}</div>
+                                                        <div className="text-xs text-black font-medium mt-1">Min</div>
+                                                    </div>
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="text-2xl font-bold leading-none text-black">{t.seconds}</div>
+                                                        <div className="text-xs text-black font-medium mt-1">Sec</div>
+                                                    </div>
+                                                </>
+                                            )
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-4">
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <User className="w-3 h-3 text-gray-500" />
+                                </div>
+                                <span className="font-normal text-gray-700 text-sm">Test Profile</span>
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:gap-3">
-                            <button
-                                onClick={handleClearResponse}
-                                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded border text-xs sm:text-sm"
-                            >
-                                <span className="hidden sm:inline">Clear Response</span>
-                                <span className="sm:hidden">Clear</span>
-                            </button>
+                        {/* Legend section */}
+                        <div className="px-6 py-4">
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-4">
+                                {/* Answered - Green Rounded Square */}
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#16A34A] text-white text-sm font-bold flex items-center justify-center rounded-md shadow-sm">
+                                        {counts.answered}
+                                    </div>
+                                    <span className="text-sm font-medium text-black">Answered</span>
+                                </div>
+
+                                {/* Not Answered - Red Banner Shape */}
+                                <div className="flex items-center gap-2">
+                                    <div
+                                        className="w-8 h-8 bg-[#DC2626] text-white text-sm font-bold flex items-center justify-center shadow-sm"
+                                        style={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 75%, 50% 100%, 0% 75%)' }}
+                                    >
+                                        <span className="-mt-1">{counts.notAnswered}</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-black">Not Answered</span>
+                                </div>
+
+                                {/* Marked - Purple Circle */}
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#9333EA] text-white text-sm font-bold flex items-center justify-center rounded-full shadow-sm">
+                                        {counts.marked}
+                                    </div>
+                                    <span className="text-sm font-medium text-black">Marked</span>
+                                </div>
+
+                                {/* Not Visited - Gray Rounded Square */}
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-gray-200 text-gray-600 text-sm font-bold flex items-center justify-center rounded-md shadow-sm">
+                                        {counts.notVisited}
+                                    </div>
+                                    <span className="text-sm font-medium text-black">Not Visited</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Palette Section */}
+                        <div className="flex-1 px-6 overflow-y-auto">
+                            <h3 className="font-bold text-black mb-4 text-base">Question Palette:</h3>
+                            <div className="grid grid-cols-5 gap-3 content-start pb-4">
+                                {roundData.questions.map((_: any, index: number) => {
+                                    const status = getQuestionStatus(index)
+                                    const isCurrent = index === currentQuestion
+
+                                    // Base styles
+                                    let baseClasses = "w-9 h-9 flex items-center justify-center text-sm font-bold shadow-sm transition-all"
+                                    let style = {}
+                                    let content = <span className={status === 'notAnswered' ? "-mt-1" : ""}>{index + 1}</span>
+
+                                    // Shape and Color Logic matching the legend
+                                    if (status === 'answered') {
+                                        baseClasses += " bg-[#16A34A] text-white rounded-md"
+                                    } else if (status === 'notAnswered') {
+                                        baseClasses += " bg-[#DC2626] text-white"
+                                        style = { clipPath: 'polygon(0% 0%, 100% 0%, 100% 75%, 50% 100%, 0% 75%)' }
+                                        // If current, adds a border? Clip-path cuts borders. 
+                                        // We might need a wrapper if we want to highlight current on this shape, 
+                                        // but for now let's stick to the shape.
+                                    } else if (status === 'marked') {
+                                        baseClasses += " bg-[#9333EA] text-white rounded-full"
+                                    } else {
+                                        // Not Visited / Default
+                                        baseClasses += " bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                    }
+
+                                    // Current Question Indicator
+                                    // Since shapes vary, a ring might look weird on the shield. 
+                                    // Let's use opacity or scale for current.
+                                    if (isCurrent) {
+                                        baseClasses += " ring-2 ring-offset-1 ring-blue-600 transform scale-105 z-10"
+                                    }
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => navigateToQuestion(index)}
+                                            className={baseClasses}
+                                            style={style}
+                                            title={`Q${index + 1}`}
+                                        >
+                                            {content}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Submit Section */}
+                        <div className="p-6 bg-[#E6F3FF]">
                             <button
                                 onClick={handleSubmitWithConfirmation}
                                 disabled={submitting}
-                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium"
+                                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded shadow-md transition-colors text-base"
                             >
-                                {submitting ? 'Submitting...' : 'Submit Section'}
+                                {submitting ? (
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Loader size="sm" color="white" />
+                                        <span>Submitting...</span>
+                                    </div>
+                                ) : (
+                                    'Submit Section'
+                                )}
                             </button>
                         </div>
+
                     </div>
                 </div>
             </div>
-        </div>
         </DashboardLayout>
     )
+
 }
