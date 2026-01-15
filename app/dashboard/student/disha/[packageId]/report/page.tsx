@@ -245,10 +245,10 @@ export default function StudentDishaReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {report.time_analytics ? formatTime(report.time_analytics.total_time_seconds) : 'N/A'}
+                                {report.time_analytics?.total_time_seconds !== undefined ? formatTime(report.time_analytics.total_time_seconds) : 'N/A'}
                             </div>
                             <p className="text-sm text-gray-500 mt-1">
-                                Avg. per question: {report.time_analytics ? report.time_analytics.avg_time_per_question.toFixed(1) : 0}s
+                                Avg. per question: {report.time_analytics?.avg_time_per_question !== undefined ? report.time_analytics.avg_time_per_question.toFixed(1) : '0.0'}s
                             </p>
                         </CardContent>
                     </Card>

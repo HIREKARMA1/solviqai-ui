@@ -17,6 +17,7 @@ export type CodingRoundProps = {
   executeCodeFn?: (payload: { question_id: string; language: string; code: string; stdin?: string }) => Promise<any>
   submitFn?: (responses: any[]) => Promise<any>
   showSubmitButton?: boolean
+  onChange?: (questionId: string, code: string, language: string) => void
 }
 
 const LANGS = [
@@ -46,7 +47,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -80,13 +81,20 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
       const next = { ...prev }
       const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
       const starter = (meta.starter_code || {}) as Record<string, string>
-      next[qid] = { language: lang, code: starter[lang] || next[qid]?.code || '' }
+      const newCode = starter[lang] || next[qid]?.code || ''
+      next[qid] = { language: lang, code: newCode }
+      onChange?.(qid, newCode, lang)
       return next
     })
   }
 
   const setCode = (qid: string, code: string) => {
-    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid] || { language: 'python', code: '' }), code } }))
+    setEditors(prev => {
+      const current = prev[qid] || { language: 'python', code: '' }
+      const next = { ...prev, [qid]: { ...current, code } }
+      onChange?.(qid, code, current.language)
+      return next
+    })
   }
 
   const handleSubmit = async () => {
