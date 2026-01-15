@@ -143,6 +143,7 @@ export function GroupDiscussionRound({
     const inFlightRef = useRef(false);
     const [isCamOn, setIsCamOn] = useState(true);
     const [isChatOpen, setIsChatOpen] = useState(true);
+    const [isUserManualSubmit, setIsUserManualSubmit] = useState(false);
 
     // Refs
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -587,8 +588,8 @@ export function GroupDiscussionRound({
                             utterance.lang = 'en-US';
                         }
 
-                        // Optimized settings for clarity
-                        utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
+                        // Optimized settings for clarity - FASTER
+                        utterance.rate = agentName.includes('Aarav') ? 1.4 : agentName.includes('Meera') ? 1.5 : 1.45;
                         utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
                         utterance.volume = 1.0; // Maximum volume
 
@@ -807,10 +808,8 @@ export function GroupDiscussionRound({
                 const finalTranscript = transcriptRef.current.trim();
 
                 if (finalTranscript && finalTranscript.length > 0) {
-                    handleUserResponse(finalTranscript);
-                    setTranscript('');
-                    transcriptRef.current = '';
-                    setInterimTranscript('');
+                    setIsUserManualSubmit(true);
+                    // Do NOT auto-submit. Wait for user to click "Send"
                 }
             }, 500);
         }
@@ -1222,6 +1221,27 @@ export function GroupDiscussionRound({
                                     <div className="flex gap-2 items-center text-purple-500 text-sm">
                                         <span className="font-bold">{typingAgent.split(' ')[0]}</span>
                                         <span className="italic">is typing...</span>
+                                    </div>
+                                )}
+
+                                {isUserManualSubmit && (
+                                    <div className="flex justify-end mt-2 sticky bottom-0 bg-white dark:bg-gray-800/80 p-2 backdrop-blur-sm rounded-lg border border-blue-100 dark:border-blue-900 shadow-lg">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                if (transcriptRef.current.trim()) {
+                                                    handleUserResponse(transcriptRef.current);
+                                                    setIsUserManualSubmit(false);
+                                                    setTranscript('');
+                                                    transcriptRef.current = '';
+                                                    setInterimTranscript('');
+                                                }
+                                            }}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all shadow-md animate-in slide-in-from-right-5 fade-in duration-300"
+                                        >
+                                            <MessageCircle className="w-4 h-4" />
+                                            Send Response
+                                        </Button>
                                     </div>
                                 )}
                             </div>
