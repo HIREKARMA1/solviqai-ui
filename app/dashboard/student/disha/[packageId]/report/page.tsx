@@ -30,10 +30,11 @@ interface QuestionResult {
     question_id: string;
     question_text: string;
     question_type: string;
-    student_answer: string;
+    student_answer: string | null;
+    correct_answer: string | null;
     is_correct: boolean;
-    points_earned: number;
-    max_points: number;
+    points_earned: number | null;
+    points_max: number | null;
     feedback?: string;
 }
 
@@ -337,7 +338,7 @@ export default function StudentDishaReportPage() {
                                         </CardDescription>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-2xl font-bold">{round.percentage.toFixed(0)}%</p>
+                                        <p className="text-2xl font-bold">{(round.percentage ?? 0).toFixed(0)}%</p>
                                         <p className="text-sm text-gray-500">
                                             {round.score} / {round.max_score} pts
                                         </p>
@@ -366,31 +367,54 @@ export default function StudentDishaReportPage() {
                                                                 </div>
                                                                 <p className="font-medium text-base mb-3">{q.question_text}</p>
 
-                                                                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm">
-                                                                    <p className="text-xs text-gray-500 mb-1">Your Answer:</p>
-                                                                    <p className="font-medium break-words">
-                                                                        {q.student_answer ||
-                                                                            <span className="italic text-gray-400">No answer provided</span>}
-                                                                    </p>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                                                                        <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">Correct Answer:</p>
+                                                                        <p className="text-sm font-medium text-red-900 dark:text-red-100 break-words">
+                                                                            {q.correct_answer || <span className="italic text-gray-400">N/A</span>}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className={`border rounded-lg p-3 ${
+                                                                        q.is_correct 
+                                                                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                                                                            : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+                                                                    }`}>
+                                                                        <p className={`text-xs font-semibold mb-1 ${
+                                                                            q.is_correct 
+                                                                                ? 'text-green-700 dark:text-green-300' 
+                                                                                : 'text-gray-700 dark:text-gray-300'
+                                                                        }`}>
+                                                                            Your Answer:
+                                                                        </p>
+                                                                        <p className={`text-sm font-medium break-words ${
+                                                                            q.is_correct 
+                                                                                ? 'text-green-900 dark:text-green-100' 
+                                                                                : 'text-gray-900 dark:text-gray-100'
+                                                                        }`}>
+                                                                            {q.student_answer || <span className="italic text-gray-400">No answer provided</span>}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
 
                                                                 {q.feedback && (
-                                                                    <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded text-sm text-blue-800 dark:text-blue-300">
+                                                                    <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300">
                                                                         <p className="text-xs font-semibold mb-1">Feedback:</p>
                                                                         {q.feedback}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div className="text-right min-w-[80px]">
+                                                            <div className="text-right min-w-[100px]">
                                                                 {q.is_correct ? (
-                                                                    <div className="flex flex-col items-end text-green-600">
+                                                                    <div className="flex flex-col items-end text-green-600 dark:text-green-400">
                                                                         <CheckCircle2 className="h-6 w-6 mb-1" />
-                                                                        <span className="font-bold">+{q.points_earned}</span>
+                                                                        <span className="font-bold text-lg">+{(q.points_earned ?? 0).toFixed(1)}</span>
+                                                                        <span className="text-xs text-gray-500">/ {(q.points_max ?? 0).toFixed(1)}</span>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="flex flex-col items-end text-red-600">
+                                                                    <div className="flex flex-col items-end text-red-600 dark:text-red-400">
                                                                         <XCircle className="h-6 w-6 mb-1" />
-                                                                        <span className="font-medium">{q.points_earned} / {q.max_points}</span>
+                                                                        <span className="font-bold text-lg">{(q.points_earned ?? 0).toFixed(1)}</span>
+                                                                        <span className="text-xs text-gray-500">/ {(q.points_max ?? 0).toFixed(1)}</span>
                                                                     </div>
                                                                 )}
                                                             </div>

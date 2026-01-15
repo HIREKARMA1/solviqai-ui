@@ -956,8 +956,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     };
 
     const playQuestionAudio = (text: string) => {
-        if (audioPlayed) return;
-
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
             const voices = window.speechSynthesis.getVoices();
@@ -966,12 +964,53 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 voices.find(v => v.lang.startsWith('en'));
             if (preferred) utterance.voice = preferred;
 
-            utterance.rate = 0.9; // Slightly slower for dictation
+            utterance.rate = 0.9; // Slightly slower for dictation/listening
             window.speechSynthesis.speak(utterance);
-            // setAudioPlayed(true); // Allow replaying safely
         } else {
             toast.error('Audio not supported');
         }
+    };
+
+    // Extract sentence from listening question text (for audio playback)
+    // Example: "Listen and write down the following sentence: 'Clear communication is essential...'"
+    const extractSentenceFromListeningQuestion = (questionText: string): string => {
+        // Try to find text inside quotes
+        const singleQuoteMatch = questionText.match(/'([^']+)'/);
+        const doubleQuoteMatch = questionText.match(/"([^"]+)"/);
+        const colonMatch = questionText.match(/:\s*(.+?)(?:\.|$)/);
+        
+        if (singleQuoteMatch) return singleQuoteMatch[1].trim();
+        if (doubleQuoteMatch) return doubleQuoteMatch[1].trim();
+        if (colonMatch) return colonMatch[1].trim();
+        
+        // If no quotes found, return the text after the colon or the whole text
+        return questionText;
+    };
+
+    // Hide sentence from question display (show only instructions)
+    // Example: "Listen and write down the following sentence: 'Clear communication is essential...'" -> "Listen and write down the following sentence:"
+    const hideSentenceFromDisplay = (questionText: string): string => {
+        // Remove text inside single quotes (including the quotes)
+        let displayText = questionText.replace(/'[^']+'/g, '');
+        // Remove text inside double quotes (including the quotes)
+        displayText = displayText.replace(/"[^"]+"/g, '');
+        // Remove trailing periods and extra spaces after colon
+        displayText = displayText.replace(/:\s*\.+$/, ':');
+        displayText = displayText.replace(/:\s+$/, ':');
+        // Clean up extra spaces
+        displayText = displayText.replace(/\s+/g, ' ').trim();
+        
+        // Ensure it ends with colon or period for proper formatting
+        if (!displayText.endsWith(':') && !displayText.endsWith('.')) {
+            displayText += ':';
+        }
+        
+        // If nothing meaningful left, return a generic instruction
+        if (!displayText || displayText.length < 10 || displayText === ':') {
+            return "Listen and write down the sentence you hear:";
+        }
+        
+        return displayText;
     };
 
     // UI Helpers
@@ -999,6 +1038,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const navigateToQuestion = (index: number) => {
         setCurrentQuestionIndex(index);
         setVisitedQuestions(prev => new Set([...Array.from(prev), index]));
+        // Reset audio played state when navigating to a new question
+        setAudioPlayed(false);
     };
 
     const handleMarkForReview = () => {
@@ -1302,28 +1343,27 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             return (
                 <div className="fullscreen-exam">
                     <GroupDiscussionRound
-                        roundId={currentRound.round_id || currentRound.id}
+                        roundId={currentRound.round_id}
                         assessmentId={packageId}
                         mode="assessment"
                         isDisha={true}
                         attemptId={attemptId || undefined}
+                        packageId={packageId}
+                        onNextRound={async () => {
+                            // Advance to next round
+                            await continueToNextRound();
+                        }}
                         onComplete={async (responses) => {
                             try {
                                 setIsSubmitting(true);
-                                await apiClient.submitRoundResponses(
-                                    packageId,
-                                    currentRound.round_id || currentRound.id,
-                                    responses.map(response => ({
-                                        response_text: response.response_text,
-                                        time_taken: response.time_taken || 0,
-                                        score: response.score || 0
-                                    }))
-                                );
+                                // For Disha GD, submission is handled internally in GroupDiscussionRound
+                                // This onComplete is just for cleanup/notification
                                 toast.success('Discussion round completed successfully!');
-                                await loadPackage();
+                                // Refresh package info to get updated status
+                                await continueToNextRound();
                             } catch (error: any) {
-                                console.error('Error submitting discussion responses:', error);
-                                toast.error('Failed to submit discussion responses');
+                                console.error('Error completing discussion round:', error);
+                                toast.error('Failed to complete discussion round');
                                 setIsSubmitting(false);
                             }
                         }}
@@ -1671,11 +1711,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 <p className="font-medium">No active question found</p>
                                                 <p className="text-xs mt-1">Please try refreshing or contact support.</p>
                                             </div>
-                                        ) : currentQuestion.question_type !== 'dictation' ? (
-                                            <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
-                                                {currentQuestion.question_text}
-                                            </p>
-                                        ) : (
+                                        ) : currentQuestion.question_type === 'dictation' ? (
                                             <div className="space-y-4">
                                                 <p className="text-lg font-bold text-blue-600">
                                                     ?? Listening Exercise
@@ -1691,19 +1727,185 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                     <span>Play Audio</span>
                                                 </button>
                                             </div>
-                                        )}
+                                        ) : (() => {
+                                            // Check if this is a listening question (by type or question text pattern)
+                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const questionText = currentQuestion?.question_text || '';
+                                            const isListeningQuestion = questionType === 'listening' || 
+                                                questionType === 'listening_question' ||
+                                                questionText.toLowerCase().includes('listen and write') ||
+                                                questionText.toLowerCase().includes('listen and write down');
+                                            
+                                            if (isListeningQuestion) {
+                                                const sentenceToPlay = extractSentenceFromListeningQuestion(questionText);
+                                                const displayText = hideSentenceFromDisplay(questionText);
+                                                
+                                                return (
+                                                    <div className="space-y-4">
+                                                        <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
+                                                            {displayText}
+                                                        </p>
+                                                        <div className="flex items-center gap-4">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (!audioPlayed) {
+                                                                        setAudioPlayed(true);
+                                                                        playQuestionAudio(sentenceToPlay);
+                                                                    }
+                                                                }}
+                                                                disabled={audioPlayed}
+                                                                className={`px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-all shadow-md ${
+                                                                    audioPlayed 
+                                                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                                                                        : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg'
+                                                                }`}
+                                                            >
+                                                                <Volume2 className="h-5 w-5" />
+                                                                <span>{audioPlayed ? 'Audio Played' : 'Play Audio'}</span>
+                                                            </button>
+                                                            {audioPlayed && (
+                                                                <span className="text-sm text-gray-500 italic">
+                                                                    Audio has been played. Type your answer in the box below.
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            // Default: show question text normally
+                                            return (
+                                                <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
+                                                    {currentQuestion.question_text}
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
 
                                     {/* Right Pane: Options / Input */}
                                     <div className="flex-1 p-6 overflow-y-auto bg-gray-50/50">
+                                        {/* Speaking Questions for Soft Skills */}
+                                        {(() => {
+                                            // Detect if this is a speaking question (check for keywords in question text or if no options available)
+                                            const questionText = (currentQuestion?.question_text || '').toLowerCase();
+                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const mcqOptions = normalizeMcqOptions(currentQuestion);
+                                            const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
+                                            
+                                            // Check if it's a soft skills question and has speaking keywords OR has no options (likely a speaking question)
+                                            const isSpeakingQuestion = questionType === 'soft_skills' && (
+                                                hasNoOptions || // No options usually means speaking question
+                                                questionText.includes('speak') || 
+                                                questionText.includes('read aloud') || 
+                                                questionText.includes('read the following') ||
+                                                questionText.includes('read out') ||
+                                                questionText.includes('verbal') || 
+                                                questionText.includes('tell us') || 
+                                                questionText.includes('describe') ||
+                                                questionText.includes('explain verbally')
+                                            );
+                                            
+                                            if (isSpeakingQuestion) {
+                                                // Show speaking interface for soft skills speaking questions
+                                                return (
+                                                    <div className="h-full flex flex-col space-y-4">
+                                                        {/* Instruction Box */}
+                                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                                            <p className="text-sm text-gray-700 mb-2">
+                                                                <strong>Instructions:</strong> Click "Start Speaking" when ready. Speak clearly and organize your thoughts.
+                                                            </p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Tip: Organize your thoughts, speak clearly, and use relevant examples.
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Mic Button */}
+                                                        <div className="flex justify-center">
+                                                            {!isLiveTranscribing ? (
+                                                                <button
+                                                                    onClick={startLiveTranscription}
+                                                                    className="bg-[#EF4444] hover:bg-red-600 text-white px-8 py-4 rounded-lg font-bold flex items-center gap-3 transition-all shadow-lg hover:shadow-xl"
+                                                                >
+                                                                    <div className="w-4 h-4 bg-white rounded-full"></div>
+                                                                    <span>Start Speaking</span>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={stopLiveTranscription}
+                                                                    className="bg-[#EF4444] hover:bg-red-700 text-white px-8 py-4 rounded-lg font-bold flex items-center gap-3 transition-all animate-pulse shadow-lg"
+                                                                >
+                                                                    <div className="w-4 h-4 bg-white rounded-full animate-pulse"></div>
+                                                                    <span>Stop & Save</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Live Transcript Display */}
+                                                        {(isLiveTranscribing || liveTranscript) && (
+                                                            <div className="flex-1 flex flex-col bg-[#ECFDF5] border border-green-200 rounded-lg p-4 min-h-[200px]">
+                                                                <h3 className="text-[#10B981] font-bold text-sm uppercase tracking-wide mb-3">
+                                                                    Speaking... (Live transcription):
+                                                                </h3>
+                                                                <div className="flex-1 overflow-y-auto bg-white rounded p-4 border border-green-100">
+                                                                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                                                        {liveTranscript}
+                                                                        {interimTranscript && (
+                                                                            <span className="text-gray-500 italic">
+                                                                                {interimTranscript}
+                                                                            </span>
+                                                                        )}
+                                                                        {!liveTranscript && !interimTranscript && "Listening..."}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Read-only Transcript Display (when not recording) */}
+                                                        {!isLiveTranscribing && (liveTranscript || userAnswers[currentQuestion.question_id]) && (
+                                                            <div className="flex-1 flex flex-col bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                                                <label className="text-sm font-semibold text-gray-700 mb-2">Your Response:</label>
+                                                                <div className="flex-1 w-full p-4 border border-gray-300 rounded-lg bg-white resize-none text-base overflow-y-auto min-h-[200px] text-gray-700 whitespace-pre-wrap">
+                                                                    {userAnswers[currentQuestion.question_id] || liveTranscript || ''}
+                                                                </div>
+                                                                <div className="text-right text-xs text-gray-500 mt-2">
+                                                                    {(userAnswers[currentQuestion.question_id] || liveTranscript || '').length} characters
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            return null; // Continue with MCQ rendering
+                                        })()}
+
                                         {/* MCQ Options */}
-                                        {['mcq', 'aptitude', 'technical_mcq', 'soft_skills'].includes(String(currentQuestion.question_type || '').toLowerCase()) && (
-                                            <div className="space-y-4">
-                                                {(() => {
-                                                    const mcqOptions = normalizeMcqOptions(currentQuestion);
-                                                    if (!mcqOptions || mcqOptions.length === 0) {
-                                                        return <div className="text-sm text-gray-500">No options available.</div>;
-                                                    }
+                                        {['mcq', 'aptitude', 'technical_mcq', 'soft_skills'].includes(String(currentQuestion.question_type || '').toLowerCase()) && (() => {
+                                            // Skip MCQ rendering if this is a speaking question
+                                            const questionText = (currentQuestion?.question_text || '').toLowerCase();
+                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const mcqOptions = normalizeMcqOptions(currentQuestion);
+                                            const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
+                                            
+                                            const isSpeakingQuestion = questionType === 'soft_skills' && (
+                                                hasNoOptions ||
+                                                questionText.includes('speak') || 
+                                                questionText.includes('read aloud') || 
+                                                questionText.includes('read the following') ||
+                                                questionText.includes('read out') ||
+                                                questionText.includes('verbal') || 
+                                                questionText.includes('tell us') || 
+                                                questionText.includes('describe') ||
+                                                questionText.includes('explain verbally')
+                                            );
+                                            if (isSpeakingQuestion) return null; // Already rendered as speaking question
+                                            
+                                            return (
+                                                <div className="space-y-4">
+                                                    {(() => {
+                                                        const mcqOptions = normalizeMcqOptions(currentQuestion);
+                                                        if (!mcqOptions || mcqOptions.length === 0) {
+                                                            return <div className="text-sm text-gray-500">No options available.</div>;
+                                                        }
                                                     
                                                     // Sort options to ensure A, B, C, D order (remove randomization)
                                                     // Extract option letter from option text and remove the prefix
@@ -1782,8 +1984,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                         );
                                                     });
                                                 })()}
-                                            </div>
-                                        )}
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Text Input */}
                                         {currentQuestion.question_type === 'text' && (
@@ -1813,6 +2016,34 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 />
                                             </div>
                                         )}
+
+                                        {/* Listening Question Input */}
+                                        {(() => {
+                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const questionText = currentQuestion?.question_text || '';
+                                            const isListeningQuestion = questionType === 'listening' || 
+                                                questionType === 'listening_question' ||
+                                                questionText.toLowerCase().includes('listen and write') ||
+                                                questionText.toLowerCase().includes('listen and write down');
+                                            
+                                            if (isListeningQuestion) {
+                                                return (
+                                                    <div className="h-full flex flex-col">
+                                                        <label className="text-sm font-semibold text-gray-600 mb-2">Type what you heard:</label>
+                                                        <textarea
+                                                            className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
+                                                            placeholder="Listen to the audio and type the sentence here..."
+                                                            value={userAnswers[currentQuestion.question_id] || ''}
+                                                            onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                        />
+                                                        <div className="text-right text-xs text-gray-500 mt-2">
+                                                            {(userAnswers[currentQuestion.question_id] || '').length} characters
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </div>
                                 </div>
 
