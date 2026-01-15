@@ -649,7 +649,7 @@ export default function AdminDishaPage() {
                                         <div>
                                             <p className="text-sm font-medium text-gray-500">Questions Generated</p>
                                             <p className="mt-1 text-lg font-semibold">
-                                                {packageDetails.total_questions || 0} / {packageDetails.rounds_count * 20 || '?'}
+                                                {packageDetails.total_questions || 0} / {packageDetails.total_expected_questions ?? (packageDetails.rounds_count * 20) ?? '?'}
                                             </p>
                                             {packageDetails.status === 'GENERATING' && (
                                                 <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
