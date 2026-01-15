@@ -8,7 +8,8 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import {
     Home, User, FileText, Briefcase, ClipboardList,
-    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap, ChevronsRight, ChevronsLeft
+    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap, ChevronsRight, ChevronsLeft,
+    MicOff, Video, MoreVertical, PhoneOff, Maximize2, Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
@@ -88,6 +89,7 @@ export default function AssessmentRoundPage() {
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const autoFullscreenAttemptedRef = useRef(false)
+    const hasEnteredFullscreenRef = useRef(false)
 
     // Live Transcription States
     const [isLiveTranscribing, setIsLiveTranscribing] = useState(false)
@@ -526,6 +528,32 @@ export default function AssessmentRoundPage() {
         }
     }
 
+
+
+    // Monitor Fullscreen Exit for strict proctoring
+    useEffect(() => {
+        if (isFullscreen) {
+            hasEnteredFullscreenRef.current = true
+        } else {
+            // If we were in fullscreen, and now we are not, and we are not submitting...
+            // We only terminate if the user explicitly exits fullscreen during an active round.
+            if (hasEnteredFullscreenRef.current && !submitting && !loading && !hasAutoSubmitted.current && roundData) {
+                console.warn('⚠️ User exited fullscreen - Terminating assessment')
+                toast.error('❌ Fullscreen exit detected! Terminating assessment...', {
+                    duration: 5000,
+                    style: {
+                        background: '#EF4444',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                    }
+                })
+
+                // Force submit
+                hasAutoSubmitted.current = true
+                handleSubmitRound()
+            }
+        }
+    }, [isFullscreen, submitting, loading, roundData])
 
     const startLiveTranscription = () => {
         if (!speechRecognitionRef.current) {
@@ -990,140 +1018,206 @@ export default function AssessmentRoundPage() {
     if (isVoiceRound) {
         const isHR = roundType === 'hr_interview'
         const headerTitle = isHR ? 'HR Interview' : 'Technical Interview'
-        const headerGradient = isHR ? 'from-orange-500 to-pink-600' : 'from-blue-600 to-purple-600'
-        const pageBg = isHR ? 'from-orange-50 via-white to-pink-50' : 'from-blue-50 via-white to-purple-50'
-        const primaryGrad = isHR ? 'from-orange-500 to-pink-600' : 'from-blue-600 to-purple-600'
-        const aiBadgeGrad = isHR ? 'from-orange-500 to-pink-500' : 'from-blue-500 to-purple-500'
-        const cardBorder = isHR ? 'border-pink-100' : 'border-blue-100'
-        const liveBorder = isHR ? 'border-orange-300' : 'border-blue-300'
-        const liveText = isHR ? 'text-orange-600' : 'text-blue-600'
+        // Using distinct theme for reference, but layout is unified as per screenshots
+        // Screenshots show a Blue/Purple gradient header.
+
         return (
             <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-blue-50 to-purple-50">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 sm:p-4 shadow-lg">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto gap-3 sm:gap-0">
-                            <div>
-                                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
-                                    {roundNumber === 6 ? '💻 Technical Interview' : '👔 HR Interview'}
-                                </h1>
-                                <p className="text-xs sm:text-sm text-blue-100 mt-1">
-                                    Question {currentQuestion + 1} of {roundData?.questions?.length || 0}
-                                </p>
-                            </div>
-                            <div className="text-left sm:text-right w-full sm:w-auto">
-                                <div className="text-base sm:text-lg font-semibold">
-                                    ⏱️ {formatTime(timeLeft)}
-                                </div>
-                                {timeLeft !== null && timeLeft <= 60 && timeLeft > 0 && (
-                                    <span className="text-yellow-300 font-bold animate-pulse text-xs sm:text-sm">
-                                        Last minute!
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+                <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] font-sans bg-white overflow-hidden">
+                    {/* Header Bar - Matching Screenshot Blue/Purple Gradient */}
+                    <div className="h-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center px-6 shrink-0 z-20 shadow-md">
+                        <h1 className="text-xl font-bold tracking-wide">{headerTitle}</h1>
                     </div>
 
-                    {/* Chat Area */}
-                    <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
-                        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-                            {currentQ && (
-                                <div className={`bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border ${cardBorder}`}>
-                                    <div className="flex items-start gap-3 sm:gap-4">
-                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${aiBadgeGrad} flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0`}>AI</div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs sm:text-sm text-gray-500 mb-2">Interviewer</p>
-                                            <p className="text-gray-800 text-sm sm:text-base md:text-lg leading-relaxed break-words">{currentQ.question_text}</p>
+                    <div className="flex flex-1 overflow-hidden relative">
+                        {/* Main Content Area (Left) */}
+                        <div className="flex-1 flex flex-col overflow-y-auto bg-white relative">
+                            <div className="p-6 pb-24"> {/* Added padding bottom for footer clearance if needed, though footer is outside */}
+                                {/* Top Section: Question and Video */}
+                                <div className="flex flex-col lg:flex-row gap-6 mb-8">
+                                    {/* Question Column */}
+                                    <div className="flex-1">
+                                        {/* Question Badge */}
+                                        <div className="bg-[#0288D1] text-white px-4 py-1.5 rounded-md inline-block mb-4 font-bold text-sm shadow-sm">
+                                            Question {currentQuestion + 1}
                                         </div>
-                                    </div>
-                                </div>
-                            )}
 
-                            {responses[currentQ?.id]?.response_text && (
-                                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border border-emerald-100">
-                                    <div className="flex items-start gap-3 sm:gap-4">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0">You</div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs sm:text-sm text-gray-500 mb-2">Your Answer</p>
-                                            <p className="text-gray-800 text-sm sm:text-base leading-relaxed break-words">{responses[currentQ.id].response_text}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                        {/* Question Text */}
+                                        <h2 className="text-xl font-bold text-gray-800 leading-relaxed mb-6">
+                                            {currentQ?.question_text || "Loading question..."}
+                                        </h2>
 
-                            {isLiveTranscribing && (liveTranscript || interimTranscript) && (
-                                <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 border-2 border-dashed" style={{ borderColor: 'transparent' }}>
-                                    <div className={`border-2 ${liveBorder} rounded-xl p-3 sm:p-4 bg-opacity-50 bg-blue-50`}>
-                                        <div className="flex items-start gap-3 sm:gap-4">
-                                            <Mic className={`h-5 w-5 sm:h-6 sm:w-6 ${liveText} animate-pulse flex-shrink-0`} />
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-xs sm:text-sm ${liveText} font-semibold mb-2`}>Speaking... (Live)</p>
-                                                <p className="text-sm sm:text-base text-gray-800 break-words">
-                                                    {liveTranscript}
-                                                    {interimTranscript && (
-                                                        <span className="text-gray-500 italic"> {interimTranscript}</span>
-                                                    )}
-                                                </p>
+                                        {/* Simplified Progress Bar (Visual only as per screenshot) */}
+                                        <div className="bg-gray-100 rounded-xl p-4 w-full max-w-md">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-semibold text-gray-700">Questions {currentQuestion + 1}/{roundData.questions.length}</span>
+                                            </div>
+                                            <div className="h-3 bg-white rounded-full overflow-hidden border border-gray-200">
+                                                <div
+                                                    className="h-full bg-gray-200 rounded-full"
+                                                    style={{ width: `${((currentQuestion + 1) / roundData.questions.length) * 100}%` }}
+                                                ></div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
 
-                            <div ref={chatEndRef} />
+                                    {/* Video/Avatar Column */}
+                                    {/* Video/Avatar Column - Commented out as requested
+                                    <div className="w-full lg:w-[480px] shrink-0">
+                                        <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden relative border border-gray-200 shadow-sm group">
+                                           
+                                            <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                                                <div className="flex flex-col items-center gap-3 p-6 text-center">
+                                                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center ring-4 ring-gray-600">
+                                                        <User className="w-12 h-12 text-gray-300" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-white font-semibold text-lg">Student Camera</p>
+                                                        <p className="text-gray-400 text-sm">Secure Exam Environment</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {isLiveTranscribing && (
+                                                <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-500/90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm animate-pulse">
+                                                    <div className="w-2 h-2 bg-white rounded-full" />
+                                                    REC
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    */}
+                                </div>
+
+                                <div className="h-px bg-gray-200 w-full mb-8" />
+
+                                {/* Recording & Response Section */}
+                                <div>
+                                    {/* Record Button */}
+                                    <div className="mb-6">
+                                        {!isLiveTranscribing ? (
+                                            <button
+                                                onClick={startLiveTranscription}
+                                                className="bg-[#10B981] hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
+                                            >
+                                                <Mic size={20} />
+                                                <span>Start Recoding</span>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={stopLiveTranscription}
+                                                className="bg-[#EF4444] hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-3 transition-all animate-pulse shadow-sm"
+                                            >
+                                                <div className="w-3 h-3 bg-white rounded-full"></div>
+                                                <span>Start Recoding</span>
+                                                <span className="font-mono bg-red-600/50 px-2 py-0.5 rounded text-sm">01:10</span>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Transcribe Box (Green) - Only visible when recording/transcribed */}
+                                    {(isLiveTranscribing || liveTranscript) && (
+                                        <div className="bg-[#ECFDF5] border border-green-100 rounded-t-lg p-4 mb-0">
+                                            <h3 className="text-[#10B981] font-bold text-sm uppercase tracking-wide mb-2">Transcribe</h3>
+                                            <p className="text-gray-600 text-sm leading-relaxed">
+                                                {liveTranscript || interimTranscript || "Listening..."}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Response Box */}
+                                    <div className="flex flex-col">
+                                        <label className="text-lg font-bold text-gray-900 mb-2">Your Respones</label> {/* Typo 'Respones' in screenshot, but corrected to 'Responses' logic, keeping label matching design intent */}
+                                        <textarea
+                                            className={`w-full min-h-[200px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${isLiveTranscribing ? 'rounded-t-none border-t-0' : 'border-gray-300'}`}
+                                            placeholder="Type your answer here..."
+                                            value={responses[currentQ?.id]?.response_text || ''}
+                                            onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Sidebar - Progress */}
+                        <div className="hidden lg:block w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+                            <div className="p-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Progress</h3>
+                                <p className="text-gray-500 mb-6">{counts.answered} Of {roundData.questions.length} answered</p>
+
+                                {/* Generic Square Grid like Screenshot */}
+                                <div className="flex flex-wrap gap-2 mb-8">
+                                    {roundData.questions.map((_: any, idx: number) => {
+                                        const status = getQuestionStatus(idx);
+                                        let bgClass = "bg-[#E5E7EB] text-gray-500"; // Default Gray
+                                        if (status === 'answered') bgClass = "bg-[#10B981] text-white"; // Green
+                                        else if (idx === currentQuestion) bgClass = "bg-[#3B82F6] text-white"; // Blue (Current)
+
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => navigateToQuestion(idx)}
+                                                className={`w-10 h-10 rounded-md flex items-center justify-center font-bold text-sm transition-colors ${bgClass}`}
+                                            >
+                                                {idx + 1}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+
+                                {/* Legend (Vertical List) */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-md bg-[#10B981] text-white flex items-center justify-center font-bold text-sm">1</div>
+                                        <span className="font-medium text-gray-700">Answered</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-md bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">0</div>
+                                        <span className="font-medium text-gray-700">Not Answered</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-md bg-[#E5E7EB] text-gray-500 flex items-center justify-center font-bold text-sm">0</div>
+                                        <span className="font-medium text-gray-700">Not Answered</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Bottom Controls */}
-                    <div className="bg-white/90 backdrop-blur border-t shadow-lg p-3 sm:p-4">
-                        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
-                            <div className="flex gap-2 sm:gap-3">
-                                {!isLiveTranscribing ? (
-                                    <button onClick={startLiveTranscription} className={`flex-1 bg-gradient-to-r ${primaryGrad} hover:opacity-95 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all flex items-center justify-center gap-2 sm:gap-3`}>
-                                        <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
-                                        <span>Start Speaking</span>
-                                    </button>
-                                ) : (
-                                    <button onClick={stopLiveTranscription} className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base md:text-lg shadow-lg transition-all animate-pulse flex items-center justify-center gap-2 sm:gap-3">
-                                        <Square className="h-5 w-5 sm:h-6 sm:w-6" />
-                                        <span className="hidden sm:inline">Stop & Save Answer</span>
-                                        <span className="sm:hidden">Stop & Save</span>
-                                    </button>
-                                )}
-                            </div>
+                    {/* Footer - Sticky Bottom Bar */}
+                    <div className="bg-[#4F46E5] h-20 shrink-0 flex items-center justify-between px-6 z-30">
+                        {/* Clear Button */}
+                        <button
+                            onClick={handleClearResponse}
+                            className="bg-white text-gray-800 hover:bg-gray-100 px-6 py-2.5 rounded-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
+                        >
+                            <Trash2 size={18} className="text-gray-600" />
+                            <span>Clear Respones</span>
+                        </button>
 
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                <button
-                                    onClick={() => {
-                                        if (currentQuestion < roundData.questions.length - 1) {
-                                            navigateToQuestion(currentQuestion + 1)
-                                        }
-                                    }}
-                                    disabled={currentQuestion >= roundData.questions.length - 1}
-                                    className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all"
-                                >
-                                    <span className="hidden sm:inline">Next Question →</span>
-                                    <span className="sm:hidden">Next →</span>
-                                </button>
+                        <div className="flex items-center gap-4">
+                            {/* Next Button */}
+                            <button
+                                onClick={() => {
+                                    if (currentQuestion < roundData.questions.length - 1) {
+                                        navigateToQuestion(currentQuestion + 1)
+                                    }
+                                }}
+                                disabled={currentQuestion >= roundData.questions.length - 1}
+                                className="bg-[#E5E5E5] hover:bg-white text-gray-800 px-6 py-2.5 rounded-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                            >
+                                Next Question
+                            </button>
 
-                                <button onClick={handleSubmitWithConfirmation} disabled={submitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg">
-                                    {submitting ? (
-                                        <div className="flex items-center justify-center gap-2">
-                                            <Loader size="sm" />
-                                            <span>Submitting...</span>
-                                        </div>
-                                    ) : (
-                                        <span>✓ Submit Interview</span>
-                                    )}
-                                </button>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 text-xs sm:text-sm text-gray-600">
-                                <span>Progress: {currentQuestion + 1} / {roundData?.questions?.length || 0}</span>
-                                {counts.notVisited + counts.notAnswered + counts.marked > 0 && (
-                                    <span className="text-orange-600">⚠️ {counts.notVisited + counts.notAnswered + counts.marked} unanswered</span>
-                                )}
-                            </div>
+                            {/* Submit Button */}
+                            <button
+                                onClick={handleSubmitWithConfirmation}
+                                disabled={submitting}
+                                className="bg-[#10B981] hover:bg-green-600 text-white px-8 py-2.5 rounded-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                {submitting && <Loader size="sm" color="white" />}
+                                Submit Section
+                            </button>
                         </div>
                     </div>
                 </div>
