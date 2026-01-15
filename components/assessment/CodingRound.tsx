@@ -18,6 +18,8 @@ export type CodingRoundProps = {
   submitFn?: (responses: any[]) => Promise<any>
   showSubmitButton?: boolean
   onChange?: (questionId: string, code: string, language: string) => void
+  activeQuestionId?: string
+  hideFooter?: boolean
 }
 
 const LANGS = [
@@ -47,7 +49,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange, activeQuestionId, hideFooter = false }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -253,203 +255,205 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
     <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-hidden p-4">
         <div className="h-full flex flex-col gap-6">
-          {(roundData?.questions || []).map((q: any, idx: number) => {
-            const editor = editors[q.id] || { language: 'python', code: '' }
-            const meta = q.metadata || {}
-            const isFullscreen = fullscreen === q.id
-            const currentTab = activeTab[q.id] || 'problem'
+          {(roundData?.questions || [])
+            .filter((q: any) => !activeQuestionId || q.id === activeQuestionId)
+            .map((q: any, idx: number) => {
+              const editor = editors[q.id] || { language: 'python', code: '' }
+              const meta = q.metadata || {}
+              const isFullscreen = fullscreen === q.id
+              const currentTab = activeTab[q.id] || 'problem'
 
-            return (
-              <div key={q.id} className="flex-1 flex flex-col min-h-0 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-0">
+              return (
+                <div key={q.id} className="flex-1 flex flex-col min-h-0 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-0">
 
-                  {/* LEFT PANEL: Problem Description */}
-                  <div className="flex flex-col min-h-0 bg-white">
-                    {/* Tabs Row */}
-                    <div className="flex border-b border-gray-100">
-                      {['problem', 'tests', 'submissions'].map(tab => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab as any }))}
-                          className={`px-6 py-3 text-sm font-semibold capitalize transition-all border-b-2 ${currentTab === tab
-                            ? 'text-blue-600 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-500 border-transparent hover:text-gray-800'
-                            }`}
-                        >
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
+                    {/* LEFT PANEL: Problem Description */}
+                    <div className="flex flex-col min-h-0 bg-white">
+                      {/* Tabs Row */}
+                      <div className="flex border-b border-gray-100">
+                        {['problem', 'tests', 'submissions'].map(tab => (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab as any }))}
+                            className={`px-6 py-3 text-sm font-semibold capitalize transition-all border-b-2 ${currentTab === tab
+                              ? 'text-blue-600 border-blue-600 bg-blue-50/50'
+                              : 'text-gray-500 border-transparent hover:text-gray-800'
+                              }`}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-                      {currentTab === 'problem' && (
-                        <>
-                          <div>
-                            <h2 className="text-xl font-bold text-gray-900 mb-2">{meta.title || q.question_text.slice(0, 50)}</h2>
-                            <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed">
-                              {/* Create a cleaner text display */}
-                              <p>{q.question_text}</p>
+                      <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+                        {currentTab === 'problem' && (
+                          <>
+                            <div>
+                              <h2 className="text-xl font-bold text-gray-900 mb-2">{meta.title || q.question_text.slice(0, 50)}</h2>
+                              <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed">
+                                {/* Create a cleaner text display */}
+                                <p>{q.question_text}</p>
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Examples Section */}
-                          {meta.examples?.length > 0 ? (
-                            meta.examples.map((ex: any, i: number) => (
-                              <div key={i} className="space-y-2">
-                                <h3 className="font-bold text-gray-900 text-sm">Example {i + 1}:</h3>
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700 space-y-1">
-                                  <div><span className="font-semibold text-gray-900">Input:</span> {ex.input}</div>
-                                  <div><span className="font-semibold text-gray-900">Output:</span> {ex.output}</div>
-                                  {ex.explanation && <div><span className="font-semibold text-gray-900">Explanation:</span> {ex.explanation}</div>}
+                            {/* Examples Section */}
+                            {meta.examples?.length > 0 ? (
+                              meta.examples.map((ex: any, i: number) => (
+                                <div key={i} className="space-y-2">
+                                  <h3 className="font-bold text-gray-900 text-sm">Example {i + 1}:</h3>
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700 space-y-1">
+                                    <div><span className="font-semibold text-gray-900">Input:</span> {ex.input}</div>
+                                    <div><span className="font-semibold text-gray-900">Output:</span> {ex.output}</div>
+                                    {ex.explanation && <div><span className="font-semibold text-gray-900">Explanation:</span> {ex.explanation}</div>}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              // Fallback UI if no structured examples
+                              <div className="space-y-2">
+                                <h3 className="font-bold text-gray-900 text-sm">Example:</h3>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700">
+                                  Input: nums = [2,7,11,15], target = 9 <br />
+                                  Output: [0,1]
                                 </div>
                               </div>
-                            ))
-                          ) : (
-                            // Fallback UI if no structured examples
-                            <div className="space-y-2">
-                              <h3 className="font-bold text-gray-900 text-sm">Example:</h3>
-                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700">
-                                Input: nums = [2,7,11,15], target = 9 <br />
-                                Output: [0,1]
-                              </div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Constraints */}
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
-                              {meta.constraints?.map((c: string, i: number) => (
-                                <li key={i}>{c}</li>
-                              )) || (
-                                  <>
-                                    <li>2 &lt;= nums.length &lt;= 10^4</li>
-                                    <li>-10^9 &lt;= nums[i] &lt;= 10^9</li>
-                                  </>
-                                )}
-                            </ul>
+                            {/* Constraints */}
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
+                              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
+                                {meta.constraints?.map((c: string, i: number) => (
+                                  <li key={i}>{c}</li>
+                                )) || (
+                                    <>
+                                      <li>2 &lt;= nums.length &lt;= 10^4</li>
+                                      <li>-10^9 &lt;= nums[i] &lt;= 10^9</li>
+                                    </>
+                                  )}
+                              </ul>
+                            </div>
+                          </>
+                        )}
+
+                        {/* RE-USE EXISTING TABS LOGIC FOR TESTS & SUBMISSIONS (SIMPLIFIED) */}
+                        {currentTab === 'tests' && (
+                          <div className="space-y-4">
+                            <h3 className="font-bold text-gray-900">Test Cases</h3>
+                            {results[q.id]?.results?.map((r: any, i: number) => (
+                              <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                <div className="flex justify-between mb-2">
+                                  <span className="font-semibold text-sm">Case {i + 1}</span>
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${r.passed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                                    {r.passed ? 'PASSED' : 'FAILED'}
+                                  </span>
+                                </div>
+                                <div className="font-mono text-xs space-y-1">
+                                  <div>In: {String(r.input)}</div>
+                                  <div>Exp: {String(r.expected)}</div>
+                                  <div>Out: {String(r.stdout || r.stderr)}</div>
+                                </div>
+                              </div>
+                            )) || <div className="text-gray-500 text-sm">Run your code to see results.</div>}
                           </div>
-                        </>
-                      )}
+                        )}
 
-                      {/* RE-USE EXISTING TABS LOGIC FOR TESTS & SUBMISSIONS (SIMPLIFIED) */}
-                      {currentTab === 'tests' && (
-                        <div className="space-y-4">
-                          <h3 className="font-bold text-gray-900">Test Cases</h3>
-                          {results[q.id]?.results?.map((r: any, i: number) => (
-                            <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                              <div className="flex justify-between mb-2">
-                                <span className="font-semibold text-sm">Case {i + 1}</span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${r.passed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                                  {r.passed ? 'PASSED' : 'FAILED'}
-                                </span>
+                        {currentTab === 'submissions' && (
+                          <div className="space-y-2">
+                            {submissionHistory[q.id]?.map((sub) => (
+                              <div key={sub.id} className="border p-3 rounded bg-gray-50 text-sm flex justify-between">
+                                <span>{new Date(sub.timestamp).toLocaleTimeString()}</span>
+                                <span className={sub.status === 'success' ? 'text-green-600' : 'text-red-600'}>{sub.status}</span>
                               </div>
-                              <div className="font-mono text-xs space-y-1">
-                                <div>In: {String(r.input)}</div>
-                                <div>Exp: {String(r.expected)}</div>
-                                <div>Out: {String(r.stdout || r.stderr)}</div>
-                              </div>
+                            )) || <div className="text-gray-500">No history.</div>}
+                          </div>
+                        )}
+
+                        {/* Test Cases Summary - Moved inside scrollable area */}
+                        <div className="mt-8 pt-6 border-t border-gray-200">
+                          <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
+                          <div className="space-y-2">
+                            <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-800">
+                              <span className="font-bold">Test Case 1:</span> Failed
                             </div>
-                          )) || <div className="text-gray-500 text-sm">Run your code to see results.</div>}
+                            <div className="bg-green-50 border border-green-100 rounded p-2 text-xs text-green-800">
+                              <span className="font-bold">Test Case 2:</span> Passed
+                            </div>
+                          </div>
                         </div>
-                      )}
 
-                      {currentTab === 'submissions' && (
-                        <div className="space-y-2">
-                          {submissionHistory[q.id]?.map((sub) => (
-                            <div key={sub.id} className="border p-3 rounded bg-gray-50 text-sm flex justify-between">
-                              <span>{new Date(sub.timestamp).toLocaleTimeString()}</span>
-                              <span className={sub.status === 'success' ? 'text-green-600' : 'text-red-600'}>{sub.status}</span>
-                            </div>
-                          )) || <div className="text-gray-500">No history.</div>}
+                      </div>
+                    </div>
+
+                    {/* RIGHT PANEL: Code Editor */}
+                    <div className="flex flex-col min-h-0 bg-[#1e1e1e]">
+                      {/* Toolbar */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#3e3e3e]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 text-sm font-medium">Language:</span>
+                          <select
+                            value={editor.language}
+                            onChange={(e) => setLang(q.id, e.target.value)}
+                            className="bg-[#3e3e3e] text-white text-sm rounded px-2 py-1 outline-none border border-transparent focus:border-blue-500"
+                          >
+                            {LANGS.map(l => (
+                              <option key={l.key} value={l.key}>{l.label}</option>
+                            ))}
+                          </select>
                         </div>
-                      )}
-
-                      {/* Test Cases Summary - Moved inside scrollable area */}
-                      <div className="mt-8 pt-6 border-t border-gray-200">
-                        <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
-                        <div className="space-y-2">
-                          <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-800">
-                            <span className="font-bold">Test Case 1:</span> Failed
-                          </div>
-                          <div className="bg-green-50 border border-green-100 rounded p-2 text-xs text-green-800">
-                            <span className="font-bold">Test Case 2:</span> Passed
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setFullscreen(isFullscreen ? null : q.id)}
+                            className="p-1.5 hover:bg-[#3e3e3e] rounded text-gray-400"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                          </button>
+                          <Button
+                            onClick={() => runTests(q.id)}
+                            disabled={running[q.id]}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 h-auto rounded flex items-center gap-2"
+                          >
+                            {running[q.id] ? <Loader size="sm" className="w-3 h-3 text-white" /> : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                            Run Code
+                          </Button>
                         </div>
                       </div>
 
+                      {/* Editor Area */}
+                      <div className="flex-1 relative">
+                        {MonacoEditor ? (
+                          <MonacoEditor
+                            height="100%"
+                            language={editor.language === 'cpp' ? 'cpp' : editor.language}
+                            value={editor.code}
+                            onChange={(v: string) => setCode(q.id, v || '')}
+                            theme="vs-dark"
+                            options={{
+                              minimap: { enabled: false },
+                              fontSize: 14,
+                              padding: { top: 16 },
+                              fontFamily: "'Fira Code', monospace",
+                            }}
+                          />
+                        ) : (
+                          <textarea
+                            className="w-full h-full bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none"
+                            value={editor.code}
+                            onChange={(e) => setCode(q.id, e.target.value)}
+                          />
+                        )}
+                      </div>
                     </div>
+
                   </div>
-
-                  {/* RIGHT PANEL: Code Editor */}
-                  <div className="flex flex-col min-h-0 bg-[#1e1e1e]">
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#3e3e3e]">
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-400 text-sm font-medium">Language:</span>
-                        <select
-                          value={editor.language}
-                          onChange={(e) => setLang(q.id, e.target.value)}
-                          className="bg-[#3e3e3e] text-white text-sm rounded px-2 py-1 outline-none border border-transparent focus:border-blue-500"
-                        >
-                          {LANGS.map(l => (
-                            <option key={l.key} value={l.key}>{l.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setFullscreen(isFullscreen ? null : q.id)}
-                          className="p-1.5 hover:bg-[#3e3e3e] rounded text-gray-400"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                        </button>
-                        <Button
-                          onClick={() => runTests(q.id)}
-                          disabled={running[q.id]}
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 h-auto rounded flex items-center gap-2"
-                        >
-                          {running[q.id] ? <Loader size="sm" className="w-3 h-3 text-white" /> : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                          Run Code
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Editor Area */}
-                    <div className="flex-1 relative">
-                      {MonacoEditor ? (
-                        <MonacoEditor
-                          height="100%"
-                          language={editor.language === 'cpp' ? 'cpp' : editor.language}
-                          value={editor.code}
-                          onChange={(v: string) => setCode(q.id, v || '')}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            padding: { top: 16 },
-                            fontFamily: "'Fira Code', monospace",
-                          }}
-                        />
-                      ) : (
-                        <textarea
-                          className="w-full h-full bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none"
-                          value={editor.code}
-                          onChange={(e) => setCode(q.id, e.target.value)}
-                        />
-                      )}
-                    </div>
-                  </div>
-
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </div>
       </div>
 
       {/* Footer Submit Bar */}
-      {showSubmitButton && (
+      {showSubmitButton && !hideFooter && (
         <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
           <div>
             <h3 className="font-bold text-gray-900">Ready to Submit?</h3>

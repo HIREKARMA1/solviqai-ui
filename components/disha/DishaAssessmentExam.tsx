@@ -4,14 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Clock, CheckCircle2, AlertCircle, Loader2, Mic, Square, Volume2,
-    Home, User, FileText, Briefcase, ClipboardList, Send, Edit3, Zap
+    Home, User, FileText, Briefcase, ClipboardList, Send, Edit3, Zap, Trash2,
+    Video, MessageCircle, MoreVertical, Users, MicOff, PhoneOff
 } from 'lucide-react';
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound';
 import CodingRound from '@/components/assessment/CodingRound';
 import { apiClient } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Maximize2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import {
+    ArrowLeft, Maximize2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+    Shield, Wifi, MonitorX, Timer, MousePointerClick, AlertTriangle, MonitorPlay
+} from 'lucide-react';
 
 const fullscreenExamStyle = `
 /* CSS Variables for theme colors - aligned with StudentProfile's primary, gradients, and dark mode */
@@ -338,6 +342,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [isExitingFullscreen, setIsExitingFullscreen] = useState(false);
     const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [showTerminationModal, setShowTerminationModal] = useState(false);
     // Helper to add/remove a class to body for hiding sidebar
     function setSidebarHidden(hidden: boolean) {
         if (typeof document !== 'undefined') {
@@ -355,6 +360,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [interimTranscript, setInterimTranscript] = useState('');
     const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
     const isTranscribingRef = useRef(false);
+    const hasEnteredFullscreenRef = useRef(false);
 
     // Initialize Web Speech API
     useEffect(() => {
@@ -466,15 +472,25 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             const fs = !!document.fullscreenElement;
             setIsFullscreen(fs);
             setSidebarHidden(fs);
-            if (!fs && examState === 'exam') {
-                // If exited fullscreen manually
-                // You might want to warn or auto-submit here
-            }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    }, [examState]);
+    }, []);
+
+    // Monitor Fullscreen Exit for strict proctoring
+    useEffect(() => {
+        if (isFullscreen) {
+            hasEnteredFullscreenRef.current = true;
+        } else {
+            // If we were in fullscreen, and now we are not, and we are not submitting...
+            // We only terminate if the user explicitly exits fullscreen during an active exam.
+            if (examState === 'exam' && hasEnteredFullscreenRef.current && !isSubmitting && !loading && !showTerminationModal) {
+                console.warn('?? User exited fullscreen - Warning User');
+                setShowTerminationModal(true);
+            }
+        }
+    }, [isFullscreen, examState, isSubmitting, loading, showTerminationModal]);
 
     // Normalize options from various backend formats
     const normalizeMcqOptions = (q: any): string[] => {
@@ -861,7 +877,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         const unansweredCount = stats.notVisited + stats.notAnswered + stats.marked;
 
         if (unansweredCount > 0) {
-            const message = `⚠️ You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`;
+            const message = `?? You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`;
 
             if (window.confirm(message)) {
                 submitRound();
@@ -925,6 +941,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         } : null);
                         setExamState('round_instructions');
                         setRoundScore(null);
+                        // Reset fullscreen trigger strictness for the new round
+                        hasEnteredFullscreenRef.current = false;
+                        setShowTerminationModal(false);
                     }
                 }
             } catch (error) {
@@ -1044,34 +1063,117 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     // Instructions Screen
     if (examState === 'instructions') {
         return (
-            <div className="w-full max-w-4xl mx-auto p-6">
-                <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
-                    <h2 className="text-3xl font-bold mb-4">Assessment Instructions</h2>
-                    <div className="space-y-4 text-gray-700 dark:text-gray-300">
-                        <p>Please read the following instructions carefully before starting:</p>
-                        <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>This assessment consists of multiple rounds that must be completed sequentially.</li>
-                            <li>Each round has a specific time limit. The timer starts when you click "Start Round".</li>
-                            <li>You can submit a round before the time expires.</li>
-                            <li>If time runs out, your answers will be automatically submitted.</li>
-                            <li>You cannot go back to previous rounds once submitted.</li>
-                            <li>Make sure you have a stable internet connection.</li>
-                        </ul>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+                <div className="w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+
+                    {/* Header Banner */}
+                    <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-8 text-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                        <div className="relative z-10">
+                            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Assessment Protocol</h2>
+                            <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+                                Please review the following guidelines carefully to ensure a secure and smooth examination process.
+                            </p>
+                        </div>
                     </div>
-                    <button
-                        onClick={startAssessment}
-                        disabled={loading}
-                        className="mt-6 w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                                <span>Starting...</span>
-                            </>
-                        ) : (
-                            <span>Start Assessment</span>
-                        )}
-                    </button>
+
+                    <div className="p-8 md:p-10">
+                        {/* Key Instructions Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-10">
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
+                                <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-lg shrink-0">
+                                    <MonitorPlay className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Sequential Rounds</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        This assessment consists of multiple rounds. You must complete them in the specified order and cannot return to a previous round once submitted.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30">
+                                <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2.5 rounded-lg shrink-0">
+                                    <Timer className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Timed Assessment</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        Each round has a strict time limit. The timer starts immediately upon clicking "Start". Answers are auto-submitted when time expires.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30">
+                                <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-lg shrink-0">
+                                    <CheckCircle2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Proctored Environment</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        We monitor your tab activity and full-screen status. Ensure your environment is quiet and free from distractions.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30">
+                                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2.5 rounded-lg shrink-0">
+                                    <Wifi className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Stable Connection</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        A stable internet connection is required. We recommend using Chrome or Edge for the best compatibility.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Critical Warning */}
+                        <div className="mb-10 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-5 md:p-6 flex items-start md:items-center gap-5">
+                            <div className="bg-red-100 dark:bg-red-900/50 p-3 rounded-full shrink-0 animate-pulse">
+                                <MonitorX className="w-8 h-8 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">
+                                    <AlertTriangle className="w-5 h-5" />
+                                    Security Violation Policy
+                                </h3>
+                                <p className="text-red-800/80 dark:text-red-300">
+                                    Strict full-screen mode is enforced. <strong className="text-red-900 dark:text-red-200">If you attempt to exit full-screen mode or switch tabs, your test will be automatically submitted</strong> and this round will be terminated immediately.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Action Area */}
+                        <div className="flex flex-col items-center gap-4">
+                            <button
+                                onClick={startAssessment}
+                                disabled={loading}
+                                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full md:w-auto min-w-[300px] py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                <div className="relative flex items-center justify-center gap-3">
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="h-6 w-6 animate-spin" />
+                                            <span>Initializing Environment...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Begin Assessment</span>
+                                            <div className="bg-white/20 p-1 rounded-md">
+                                                <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </button>
+                            <p className="text-xs text-gray-400 mt-2">
+                                By clicking above, you agree to our proctoring and data terms.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -1092,8 +1194,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         }
 
         return (
-            <div className="w-full max-w-4xl mx-auto p-6">
-                <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
+            <div className="fixed inset-0 z-[9999] bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
+                <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
                     <h2 className="text-3xl font-bold mb-4">
                         Round {packageInfo.current_round} of {packageInfo.total_rounds}
                     </h2>
@@ -1179,45 +1281,61 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     // Exam View
     if (examState === 'exam' && currentRound) {
         // Special Round: Group Discussion
-        if (currentRound.round_type === 'group_discussion') {
+        console.log('━'.repeat(100));
+        console.log('🔍 [GD DETECTION] Starting Group Discussion round check...');
+        console.log('📦 [GD DETECTION] Full currentRound object:', JSON.stringify(currentRound, null, 2));
+        console.log('📌 [GD DETECTION] round_type:', currentRound.round_type);
+        console.log('📌 [GD DETECTION] round_name:', currentRound.round_name);
+        console.log('📌 [GD DETECTION] questions count:', currentRound.questions?.length);
+
+        const roundType = currentRound.round_type?.toLowerCase() || '';
+        const roundName = currentRound.round_name?.toLowerCase() || '';
+        const isGroupDiscussion = roundType === 'group_discussion' || roundType.includes('group') || roundType.includes('discussion') || roundName.includes('gd') || roundName.includes('group discussion');
+
+        console.log('🎯 [GD DETECTION] roundType (lowercase):', roundType);
+        console.log('🎯 [GD DETECTION] roundName (lowercase):', roundName);
+        console.log('✅ [GD DETECTION] Is Group Discussion?', isGroupDiscussion);
+        console.log('━'.repeat(100));
+
+
+        if (isGroupDiscussion) {
             return (
                 <div className="fullscreen-exam">
-                    {/* Header */}
-                    <div className="exam-header p-4 shadow-sm">
-                        <div className="flex items-center justify-between max-w-7xl mx-auto">
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                                    Round {packageInfo?.current_round || 1}: {currentRound.round_name} (Group Discussion)
-                                </h1>
-                            </div>
-                            <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                    <div className="text-xs text-gray-500 mb-1">Time Remaining</div>
-                                    <div className={`text-xl font-mono font-bold ${timeRemaining !== null && timeRemaining <= 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                        {formatTime(timeRemaining)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="exam-content">
-                        <div className="question-container">
-                            <div className="question-content">
-                                <GroupDiscussionRound
-                                    roundId={currentRound.round_id}
-                                    assessmentId={packageId}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <GroupDiscussionRound
+                        roundId={currentRound.round_id || currentRound.id}
+                        assessmentId={packageId}
+                        mode="assessment"
+                        isDisha={true}
+                        attemptId={attemptId || undefined}
+                        onComplete={async (responses) => {
+                            try {
+                                setIsSubmitting(true);
+                                await apiClient.submitRoundResponses(
+                                    packageId,
+                                    currentRound.round_id || currentRound.id,
+                                    responses.map(response => ({
+                                        response_text: response.response_text,
+                                        time_taken: response.time_taken || 0,
+                                        score: response.score || 0
+                                    }))
+                                );
+                                toast.success('Discussion round completed successfully!');
+                                await loadPackage();
+                            } catch (error: any) {
+                                console.error('Error submitting discussion responses:', error);
+                                toast.error('Failed to submit discussion responses');
+                                setIsSubmitting(false);
+                            }
+                        }}
+                    />
                 </div>
             );
         }
 
         // Special Round: Coding
-        if (currentRound.round_type === 'coding') {
-            // Map Disha round data to CodingRound format
+        console.log('[DEBUG] Round type:', currentRound.round_type, 'Round name:', currentRound.round_name);
+        if (currentRound.round_type?.toLowerCase() === 'coding' || currentRound.round_name?.toLowerCase().includes('coding')) {
+            const currentCodingQuestion = currentRound.questions[currentQuestionIndex];
             const codingRoundData = {
                 ...currentRound,
                 questions: currentRound.questions.map(q => ({
@@ -1238,35 +1356,258 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
             return (
                 <div className="fullscreen-exam">
-                    {/* Header */}
-                    <div className="exam-header p-4 shadow-sm">
-                        <div className="flex items-center justify-between max-w-7xl mx-auto">
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                                    Round {packageInfo?.current_round || 1}: {currentRound.round_name} (Coding)
-                                </h1>
-                            </div>
-                            <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                    <div className="text-xs text-gray-500 mb-1">Time Remaining</div>
-                                    <div className={`text-xl font-mono font-bold ${timeRemaining !== null && timeRemaining <= 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                        {formatTime(timeRemaining)}
-                                    </div>
-                                </div>
+                    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
+                            <h1 className="text-xl font-bold tracking-tight">
+                                Round {packageInfo?.current_round || 1}: {currentRound.round_name} - Question {currentQuestionIndex + 1} of {currentRound.questions.length}
+                            </h1>
+                            <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
+                                <Clock className="w-4 h-4" />
+                                <span>{formatTime(timeRemaining)}</span>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="exam-content p-0">
-                        {/* Coding round takes full space, no palette/padding needed usually as it has its own panels */}
-                        <div className="flex-1 w-full h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+                        {/* Coding Question Workspace */}
+                        <div className="flex-1 overflow-hidden relative flex flex-col">
                             <CodingRound
                                 assessmentId={packageId}
                                 roundData={codingRoundData}
                                 submitFn={handleCodingSubmit}
                                 onChange={handleCodingChange}
-                                showSubmitButton={true}
+                                showSubmitButton={false}
+                                activeQuestionId={currentCodingQuestion?.question_id}
+                                hideFooter={true}
                             />
+
+                            {/* Navigation Footer */}
+                            <div className="shrink-0 bg-white border-t border-gray-300 p-4 flex items-center justify-between shadow-md z-30">
+                                <button
+                                    onClick={() => {
+                                        if (currentQuestionIndex > 0) {
+                                            navigateToQuestion(currentQuestionIndex - 1);
+                                        }
+                                    }}
+                                    disabled={currentQuestionIndex === 0}
+                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded font-semibold shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Previous Question
+                                </button>
+
+                                <div className="flex items-center gap-3">
+                                    {currentQuestionIndex < currentRound.questions.length - 1 ? (
+                                        <button
+                                            onClick={() => navigateToQuestion(currentQuestionIndex + 1)}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded font-semibold shadow-sm transition-colors"
+                                        >
+                                            Next Question
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleSubmitWithConfirmation}
+                                            disabled={isSubmitting}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded font-bold shadow-sm transition-colors flex items-center gap-2"
+                                        >
+                                            {isSubmitting && <Loader2 size="sm" color="white" />}
+                                            Submit Round
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Voice/Interview Round (HR/Technical)
+        const isVoiceRound = currentRound.round_type === 'technical_interview' || currentRound.round_type === 'hr_interview';
+        if (isVoiceRound) {
+            const isHR = currentRound.round_type === 'hr_interview';
+            const headerTitle = isHR ? 'HR Interview' : 'Technical Interview';
+            const currentQ = currentRound.questions[currentQuestionIndex];
+            const counts = getQuestionCounts();
+
+            return (
+                <div className="fullscreen-exam">
+                    <div className="flex flex-col h-screen font-sans bg-white overflow-hidden">
+                        {/* Header Bar - Matching Screenshot Blue/Purple Gradient */}
+                        <div className="h-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center px-6 shrink-0 z-20 shadow-md justify-between">
+                            <h1 className="text-xl font-bold tracking-wide">
+                                Round {packageInfo?.current_round || 1}: {headerTitle}
+                            </h1>
+                            <div className="items-center gap-6 hidden md:flex">
+                                <div className="text-right">
+                                    <div className="text-xs text-blue-100 mb-1">Time Remaining</div>
+                                    <div className="text-xl font-mono font-bold text-white">
+                                        {formatTime(timeRemaining)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-1 overflow-hidden relative">
+                            {/* Main Content Area (Left) */}
+                            <div className="flex-1 flex flex-col overflow-y-auto bg-white relative">
+                                <div className="p-6 pb-24">
+                                    {/* Top Section: Question */}
+                                    <div className="flex flex-col lg:flex-row gap-6 mb-8">
+                                        {/* Question Column */}
+                                        <div className="flex-1">
+                                            {/* Question Badge */}
+                                            <div className="bg-[#0288D1] text-white px-4 py-1.5 rounded-md inline-block mb-4 font-bold text-sm shadow-sm">
+                                                Question {currentQuestionIndex + 1}
+                                            </div>
+
+                                            {/* Question Text */}
+                                            <h2 className="text-xl font-bold text-gray-800 leading-relaxed mb-6">
+                                                {currentQ?.question_text || "Loading question..."}
+                                            </h2>
+
+                                            {/* Progress Bar */}
+                                            <div className="bg-gray-100 rounded-xl p-4 w-full max-w-md">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-sm font-semibold text-gray-700">Questions {currentQuestionIndex + 1}/{currentRound.questions.length}</span>
+                                                </div>
+                                                <div className="h-3 bg-white rounded-full overflow-hidden border border-gray-200">
+                                                    <div
+                                                        className="h-full bg-gray-200 rounded-full"
+                                                        style={{ width: `${((currentQuestionIndex + 1) / currentRound.questions.length) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="h-px bg-gray-200 w-full mb-8" />
+
+                                    {/* Recording & Response Section */}
+                                    <div>
+                                        {/* Record Button */}
+                                        <div className="mb-6">
+                                            {!isLiveTranscribing ? (
+                                                <button
+                                                    onClick={startLiveTranscription}
+                                                    className="bg-[#10B981] hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
+                                                >
+                                                    <Mic size={20} />
+                                                    <span>Start Recording</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={stopLiveTranscription}
+                                                    className="bg-[#EF4444] hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-3 transition-all animate-pulse shadow-sm"
+                                                >
+                                                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                                                    <span>Stop Recording</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Transcribe Box */}
+                                        {(isLiveTranscribing || liveTranscript) && (
+                                            <div className="bg-[#ECFDF5] border border-green-100 rounded-t-lg p-4 mb-0">
+                                                <h3 className="text-[#10B981] font-bold text-sm uppercase tracking-wide mb-2">Transcribe</h3>
+                                                <p className="text-gray-600 text-sm leading-relaxed">
+                                                    {liveTranscript || interimTranscript || "Listening..."}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Response Box */}
+                                        <div className="flex flex-col">
+                                            <label className="text-lg font-bold text-gray-900 mb-2">Your Response</label>
+                                            <textarea
+                                                className={`w-full min-h-[200px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${isLiveTranscribing ? 'rounded-t-none border-t-0' : 'border-gray-300'}`}
+                                                placeholder="Type your answer here..."
+                                                value={userAnswers[currentQ?.question_id] || ''}
+                                                onChange={(e) => handleAnswer(currentQ.question_id, e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Sidebar - Progress */}
+                            <div className="hidden lg:block w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+                                <div className="p-6">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-2">Progress</h3>
+                                    <p className="text-gray-500 mb-6">{counts.answered} Of {currentRound.questions.length} answered</p>
+
+                                    {/* Grid */}
+                                    <div className="flex flex-wrap gap-2 mb-8">
+                                        {currentRound.questions.map((_: any, idx: number) => {
+                                            const status = getQuestionStatus(idx);
+                                            let bgClass = "bg-[#E5E7EB] text-gray-500";
+                                            if (status === 'answered') bgClass = "bg-[#10B981] text-white";
+                                            else if (idx === currentQuestionIndex) bgClass = "bg-[#3B82F6] text-white";
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => navigateToQuestion(idx)}
+                                                    className={`w-10 h-10 rounded-md flex items-center justify-center font-bold text-sm transition-colors ${bgClass}`}
+                                                >
+                                                    {idx + 1}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Legend */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-md bg-[#10B981] text-white flex items-center justify-center font-bold text-sm">1</div>
+                                            <span className="font-medium text-gray-700">Answered</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-md bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">0</div>
+                                            <span className="font-medium text-gray-700">Not Answered</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-md bg-[#E5E7EB] text-gray-500 flex items-center justify-center font-bold text-sm">0</div>
+                                            <span className="font-medium text-gray-700">Not Answered</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer - Sticky Bottom Bar */}
+                        <div className="bg-[#4F46E5] h-20 shrink-0 flex items-center justify-between px-6 z-30">
+                            {/* Clear Button */}
+                            <button
+                                onClick={handleClearResponse}
+                                className="bg-white text-gray-800 hover:bg-gray-100 px-6 py-2.5 rounded-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
+                            >
+                                <Trash2 size={18} className="text-gray-600" />
+                                <span>Clear Response</span>
+                            </button>
+
+                            <div className="flex items-center gap-4">
+                                {/* Next Button */}
+                                <button
+                                    onClick={() => {
+                                        if (currentQuestionIndex < currentRound.questions.length - 1) {
+                                            navigateToQuestion(currentQuestionIndex + 1);
+                                        }
+                                    }}
+                                    disabled={currentQuestionIndex >= currentRound.questions.length - 1}
+                                    className="bg-[#E5E5E5] hover:bg-white text-gray-800 px-6 py-2.5 rounded-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                                >
+                                    Next Question
+                                </button>
+
+                                {/* Submit Button */}
+                                <button
+                                    onClick={handleSubmitWithConfirmation}
+                                    disabled={isSubmitting}
+                                    className="bg-[#10B981] hover:bg-green-600 text-white px-8 py-2.5 rounded-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+                                >
+                                    {isSubmitting && <Loader2 size="sm" color="white" />}
+                                    Submit Section
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1324,14 +1665,20 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                 <div className="flex-1 flex flex-col md:flex-row min-h-0">
                                     {/* Left Pane: Question Text */}
                                     <div className="flex-1 p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-300 bg-white">
-                                        {currentQuestion.question_type !== 'dictation' ? (
+                                        {!currentQuestion ? (
+                                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+                                                <AlertTriangle className="w-12 h-12 mb-2 text-yellow-500" />
+                                                <p className="font-medium">No active question found</p>
+                                                <p className="text-xs mt-1">Please try refreshing or contact support.</p>
+                                            </div>
+                                        ) : currentQuestion.question_type !== 'dictation' ? (
                                             <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
                                                 {currentQuestion.question_text}
                                             </p>
                                         ) : (
                                             <div className="space-y-4">
                                                 <p className="text-lg font-bold text-blue-600">
-                                                    🎧 Listening Exercise
+                                                    ?? Listening Exercise
                                                 </p>
                                                 <p className="text-gray-700">
                                                     Click the button below to hear a sentence. Listen carefully and type exactly what you hear in the box.
@@ -1652,5 +1999,33 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         );
     }
 
-    return null;
+    return (
+        <>
+            {showTerminationModal && (
+                <div className="fixed inset-0 z-[10000] bg-gray-900/95 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 border-red-500 animate-in fade-in zoom-in duration-300">
+                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <AlertCircle className="w-10 h-10 text-red-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            Fullscreen Violation
+                        </h2>
+                        <p className="text-gray-600 dark:text-gray-300 mb-8">
+                            You have exited fullscreen mode. As per the strict assessment protocol, this action requires your exam session to be terminated.
+                        </p>
+                        <button
+                            onClick={() => {
+                                setShowTerminationModal(false);
+                                submitRound();
+                            }}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-red-500/30 flex items-center justify-center gap-2"
+                        >
+                            <span>I Understand, Terminate Exam</span>
+                            <ChevronsRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 }
