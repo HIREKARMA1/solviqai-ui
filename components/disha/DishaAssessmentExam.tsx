@@ -1357,12 +1357,57 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                     if (!mcqOptions || mcqOptions.length === 0) {
                                                         return <div className="text-sm text-gray-500">No options available.</div>;
                                                     }
-                                                    return mcqOptions.map((option: any, index: number) => {
-                                                        const optionLetter = String.fromCharCode(65 + index);
+                                                    
+                                                    // Sort options to ensure A, B, C, D order (remove randomization)
+                                                    // Extract option letter from option text and remove the prefix
+                                                    const extractOptionLetterAndText = (optionText: string, index: number): { letter: string; cleanText: string } => {
+                                                        // Match patterns like "A. ", "A) ", "A ", etc. at the START of the string
+                                                        // Only match A-D letters to avoid false matches (e.g., "SELECT" starting with S)
+                                                        const match = optionText.match(/^([A-D])[\.\)\s]+\s*(.+)$/i);
+                                                        if (match) {
+                                                            const matchedLetter = match[1].toUpperCase();
+                                                            // Double-check it's A, B, C, or D
+                                                            if (['A', 'B', 'C', 'D'].includes(matchedLetter)) {
+                                                                return {
+                                                                    letter: matchedLetter,
+                                                                    cleanText: match[2].trim() // Remove the letter prefix
+                                                                };
+                                                            }
+                                                        }
+                                                        // If no A-D prefix found, assign letter based on index position (A=0, B=1, C=2, D=3)
+                                                        // This ensures we always get A, B, C, D even if option text doesn't have prefix
+                                                        const letter = String.fromCharCode(65 + Math.min(index, 3)); // A=65, B=66, C=67, D=68
+                                                        return {
+                                                            letter: letter,
+                                                            cleanText: optionText.trim() // Keep original text if no prefix found
+                                                        };
+                                                    };
+                                                    
+                                                    // First, try to extract letters from option text and sort by extracted letter
+                                                    // If extraction fails, use index-based assignment
+                                                    const optionsWithLetters = mcqOptions.map((option: any, index: number) => {
                                                         const optionText = typeof option === 'string'
                                                             ? option
                                                             : (option?.text ?? option?.label ?? JSON.stringify(option));
-                                                        const isSelected = userAnswers[currentQuestion.question_id] === optionText;
+                                                        const { letter, cleanText } = extractOptionLetterAndText(optionText, index);
+                                                        return {
+                                                            letter: letter,
+                                                            text: cleanText, // Use cleaned text without letter prefix
+                                                            originalIndex: index
+                                                        };
+                                                    });
+                                                    
+                                                    // Sort by option letter (A, B, C, D) to ensure consistent order
+                                                    // This handles cases where backend sends randomized options
+                                                    optionsWithLetters.sort((a, b) => {
+                                                        return a.letter.localeCompare(b.letter);
+                                                    });
+                                                    
+                                                    return optionsWithLetters.map((optionData, index: number) => {
+                                                        const optionLetter = optionData.letter;
+                                                        const optionText = optionData.text; // Already cleaned (no letter prefix)
+                                                        // Store answer as option letter (A, B, C, D) not full text
+                                                        const isSelected = userAnswers[currentQuestion.question_id] === optionLetter;
 
                                                         return (
                                                             <label
@@ -1376,9 +1421,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                                     <input
                                                                         type="radio"
                                                                         name={`question-${currentQuestion.question_id}`}
-                                                                        value={optionText}
+                                                                        value={optionLetter}
                                                                         checked={isSelected}
-                                                                        onChange={() => handleAnswer(currentQuestion.question_id, optionText)}
+                                                                        onChange={() => handleAnswer(currentQuestion.question_id, optionLetter)}
                                                                         className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white"
                                                                     />
                                                                 </div>
