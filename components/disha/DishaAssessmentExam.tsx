@@ -1372,14 +1372,17 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         onComplete={async (responses) => {
                             try {
                                 setIsSubmitting(true);
-                                // For Disha GD, submission is handled internally in GroupDiscussionRound
-                                // This onComplete is just for cleanup/notification
+                                // GD Round calls its own evaluate endpoint which handles submission
+                                // We just need to refresh the package status
                                 toast.success('Discussion round completed successfully!');
-                                // Refresh package info to get updated status
+
+                                // Wait briefly for user to see success message
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+
                                 await continueToNextRound();
                             } catch (error: any) {
-                                console.error('Error completing discussion round:', error);
-                                toast.error('Failed to complete discussion round');
+                                console.error('Error submitting discussion responses:', error);
+                                toast.error('Failed to submit discussion responses');
                                 setIsSubmitting(false);
                             }
                         }}
