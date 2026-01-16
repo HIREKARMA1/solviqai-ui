@@ -345,8 +345,118 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [clearSignal, setClearSignal] = useState<number>(0);
     const hasEnteredFullscreenRef = useRef(false);
 
+    // Speech Recognition State
+    const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
+    const [liveTranscript, setLiveTranscript] = useState('');
+    const [interimTranscript, setInterimTranscript] = useState('');
+    const recognitionRef = useRef<any>(null);
+    const isLiveTranscribingRef = useRef(false);
 
+    // Initialize Speech Recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event: any) => {
+                    let interim = '';
+                    let final = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            final += transcript + ' ';
+                        } else {
+                            interim += transcript;
+                        }
+                    }
+
+                    if (final) {
+                        setLiveTranscript(prev => prev + final);
+                        setInterimTranscript('');
+                    } else {
+                        setInterimTranscript(interim);
+                    }
+                };
+
+                recognition.onerror = (event: any) => {
+                    // console.error("Speech recognition error", event.error);
+                    if (event.error === 'not-allowed') {
+                        toast.error('Microphone access denied');
+                        setIsLiveTranscribing(false);
+                        isLiveTranscribingRef.current = false;
+                    }
+                };
+
+                recognition.onend = () => {
+                    if (isLiveTranscribingRef.current) {
+                        try {
+                            recognition.start();
+                        } catch (e) { }
+                    } else {
+                        setIsLiveTranscribing(false);
+                    }
+                };
+
+                recognitionRef.current = recognition;
+            }
+        }
+
+        return () => {
+            if (recognitionRef.current) {
+                try { recognitionRef.current.stop(); } catch (e) { }
+            }
+        };
+    }, []);
+
+    const startLiveTranscription = () => {
+        if (!recognitionRef.current) {
+            toast.error('Speech recognition is not supported in this browser.');
+            return;
+        }
+
+        try {
+            recognitionRef.current.start();
+            setIsLiveTranscribing(true);
+            isLiveTranscribingRef.current = true;
+            toast.success('Listening... Speak clearly.');
+        } catch (e) {
+            console.error(e);
+            toast.error('Could not start microphone.');
+        }
+    };
+
+    const stopLiveTranscription = () => {
+        if (recognitionRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+        }
+        setIsLiveTranscribing(false);
+        isLiveTranscribingRef.current = false;
+
+        // Combine final transcript with any remaining interim
+        const finalContent = liveTranscript + interimTranscript;
+
+        // Save to current question answer
+        if (currentRound && currentRound.questions[currentQuestionIndex]) {
+            const qId = currentRound.questions[currentQuestionIndex].question_id;
+
+            // Append to existing answer if any, or separate? 
+            // We'll append for now to not lose data
+            const currentAns = userAnswers[qId] || '';
+            const newAnswer = currentAns ? (currentAns + ' ' + finalContent) : finalContent;
+
+            handleAnswer(qId, newAnswer);
+
+            setLiveTranscript('');
+            setInterimTranscript('');
+            toast.success('Response saved.');
+        }
+    };
     // Add styles to head
     useEffect(() => {
         let styleTag: HTMLStyleElement | null = null;
@@ -883,11 +993,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         const singleQuoteMatch = questionText.match(/'([^']+)'/);
         const doubleQuoteMatch = questionText.match(/"([^"]+)"/);
         const colonMatch = questionText.match(/:\s*(.+?)(?:\.|$)/);
-        
+
         if (singleQuoteMatch) return singleQuoteMatch[1].trim();
         if (doubleQuoteMatch) return doubleQuoteMatch[1].trim();
         if (colonMatch) return colonMatch[1].trim();
-        
+
         // If no quotes found, return the text after the colon or the whole text
         return questionText;
     };
@@ -904,17 +1014,17 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         displayText = displayText.replace(/:\s+$/, ':');
         // Clean up extra spaces
         displayText = displayText.replace(/\s+/g, ' ').trim();
-        
+
         // Ensure it ends with colon or period for proper formatting
         if (!displayText.endsWith(':') && !displayText.endsWith('.')) {
             displayText += ':';
         }
-        
+
         // If nothing meaningful left, return a generic instruction
         if (!displayText || displayText.length < 10 || displayText === ':') {
             return "Listen and write down the sentence you hear:";
         }
-        
+
         return displayText;
     };
 
@@ -1582,7 +1692,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 <p className="font-medium">No active question found</p>
                                                 <p className="text-xs mt-1">Please try refreshing or contact support.</p>
                                             </div>
-<<<<<<< HEAD
                                         ) : currentQuestion.question_type === 'dictation' ? (
                                             <div className="space-y-4">
                                                 <p className="text-lg font-bold text-blue-600">
@@ -1603,15 +1712,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             // Check if this is a listening question (by type or question text pattern)
                                             const questionType = String(currentQuestion?.question_type || '').toLowerCase();
                                             const questionText = currentQuestion?.question_text || '';
-                                            const isListeningQuestion = questionType === 'listening' || 
+                                            const isListeningQuestion = questionType === 'listening' ||
                                                 questionType === 'listening_question' ||
                                                 questionText.toLowerCase().includes('listen and write') ||
                                                 questionText.toLowerCase().includes('listen and write down');
-                                            
+
                                             if (isListeningQuestion) {
                                                 const sentenceToPlay = extractSentenceFromListeningQuestion(questionText);
                                                 const displayText = hideSentenceFromDisplay(questionText);
-                                                
+
                                                 return (
                                                     <div className="space-y-4">
                                                         <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
@@ -1626,11 +1735,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                                     }
                                                                 }}
                                                                 disabled={audioPlayed}
-                                                                className={`px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-all shadow-md ${
-                                                                    audioPlayed 
-                                                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                                                                        : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg'
-                                                                }`}
+                                                                className={`px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-all shadow-md ${audioPlayed
+                                                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                                    : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg'
+                                                                    }`}
                                                             >
                                                                 <Volume2 className="h-5 w-5" />
                                                                 <span>{audioPlayed ? 'Audio Played' : 'Play Audio'}</span>
@@ -1644,7 +1752,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                     </div>
                                                 );
                                             }
-                                            
+
                                             // Default: show question text normally
                                             return (
                                                 <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
@@ -1652,48 +1760,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 </p>
                                             );
                                         })()}
-                                        ) : currentQuestion.question_type === 'dictation' ||
-                                            String(currentQuestion.question_text || '').toLowerCase().includes('listen') ||
-                                            String(currentQuestion.question_text || '').toLowerCase().includes('announcement') ? (
-                                            <div className="space-y-4">
 
-                                                {currentQuestion.question_type === 'dictation' || (currentQuestion.question_text || '').toLowerCase().includes('listen and write') ? (
-                                                    <p className="text-lg font-medium text-gray-800 leading-relaxed select-none italic">
-                                                        Please listen to the audio and write the response.
-                                                    </p>
-                                                ) : (
-                                                    <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
-                                                        {currentQuestion.question_text}
-                                                    </p>
-                                                )}
-
-                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                                                    <p className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                                        <Volume2 className="w-4 h-4" />
-                                                        Audio Question
-                                                    </p>
-                                                    <p className="text-sm text-blue-600 mb-3">
-                                                        Click below to listen to the question content.
-                                                    </p>
-                                                    <button
-                                                        onClick={() => playQuestionAudio(currentQuestion.question_text)}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-md flex items-center gap-2 font-medium text-sm transition-colors shadow-sm"
-                                                    >
-                                                        <Volume2 className="h-4 w-4" />
-                                                        <span>Play Audio</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p className="text-lg font-medium text-gray-800 leading-relaxed select-none">
-                                                {currentQuestion.question_text}
-                                            </p>
-                                        )}
                                     </div>
 
                                     {/* Right Pane: Options / Input */}
                                     <div className="flex-1 p-6 overflow-y-auto bg-gray-50/50">
-<<<<<<< HEAD
                                         {/* Speaking Questions for Soft Skills */}
                                         {(() => {
                                             // Detect if this is a speaking question (check for keywords in question text or if no options available)
@@ -1701,20 +1772,20 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             const questionType = String(currentQuestion?.question_type || '').toLowerCase();
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
-                                            
+
                                             // Check if it's a soft skills question and has speaking keywords OR has no options (likely a speaking question)
                                             const isSpeakingQuestion = questionType === 'soft_skills' && (
                                                 hasNoOptions || // No options usually means speaking question
-                                                questionText.includes('speak') || 
-                                                questionText.includes('read aloud') || 
+                                                questionText.includes('speak') ||
+                                                questionText.includes('read aloud') ||
                                                 questionText.includes('read the following') ||
                                                 questionText.includes('read out') ||
-                                                questionText.includes('verbal') || 
-                                                questionText.includes('tell us') || 
+                                                questionText.includes('verbal') ||
+                                                questionText.includes('tell us') ||
                                                 questionText.includes('describe') ||
                                                 questionText.includes('explain verbally')
                                             );
-                                            
+
                                             if (isSpeakingQuestion) {
                                                 // Show speaking interface for soft skills speaking questions
                                                 return (
@@ -1758,13 +1829,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                                 </h3>
                                                                 <div className="flex-1 overflow-y-auto bg-white rounded p-4 border border-green-100">
                                                                     <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                                                        {liveTranscript}
-                                                                        {interimTranscript && (
+                                                                        {liveTranscript ? (
+                                                                            liveTranscript
+                                                                        ) : interimTranscript ? (
                                                                             <span className="text-gray-500 italic">
                                                                                 {interimTranscript}
                                                                             </span>
+                                                                        ) : (
+                                                                            "Listening..."
                                                                         )}
-                                                                        {!liveTranscript && !interimTranscript && "Listening..."}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -1795,20 +1868,20 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             const questionType = String(currentQuestion?.question_type || '').toLowerCase();
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
-                                            
+
                                             const isSpeakingQuestion = questionType === 'soft_skills' && (
                                                 hasNoOptions ||
-                                                questionText.includes('speak') || 
-                                                questionText.includes('read aloud') || 
+                                                questionText.includes('speak') ||
+                                                questionText.includes('read aloud') ||
                                                 questionText.includes('read the following') ||
                                                 questionText.includes('read out') ||
-                                                questionText.includes('verbal') || 
-                                                questionText.includes('tell us') || 
+                                                questionText.includes('verbal') ||
+                                                questionText.includes('tell us') ||
                                                 questionText.includes('describe') ||
                                                 questionText.includes('explain verbally')
                                             );
                                             if (isSpeakingQuestion) return null; // Already rendered as speaking question
-                                            
+
                                             return (
                                                 <div className="space-y-4">
                                                     {(() => {
@@ -1816,84 +1889,84 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                         if (!mcqOptions || mcqOptions.length === 0) {
                                                             return <div className="text-sm text-gray-500">No options available.</div>;
                                                         }
-                                                    
-                                                    // Sort options to ensure A, B, C, D order (remove randomization)
-                                                    // Extract option letter from option text and remove the prefix
-                                                    const extractOptionLetterAndText = (optionText: string, index: number): { letter: string; cleanText: string } => {
-                                                        // Match patterns like "A. ", "A) ", "A ", etc. at the START of the string
-                                                        // Only match A-D letters to avoid false matches (e.g., "SELECT" starting with S)
-                                                        const match = optionText.match(/^([A-D])[\.\)\s]+\s*(.+)$/i);
-                                                        if (match) {
-                                                            const matchedLetter = match[1].toUpperCase();
-                                                            // Double-check it's A, B, C, or D
-                                                            if (['A', 'B', 'C', 'D'].includes(matchedLetter)) {
-                                                                return {
-                                                                    letter: matchedLetter,
-                                                                    cleanText: match[2].trim() // Remove the letter prefix
-                                                                };
-                                                            }
-                                                        }
-                                                        // If no A-D prefix found, assign letter based on index position (A=0, B=1, C=2, D=3)
-                                                        // This ensures we always get A, B, C, D even if option text doesn't have prefix
-                                                        const letter = String.fromCharCode(65 + Math.min(index, 3)); // A=65, B=66, C=67, D=68
-                                                        return {
-                                                            letter: letter,
-                                                            cleanText: optionText.trim() // Keep original text if no prefix found
-                                                        };
-                                                    };
-                                                    
-                                                    // First, try to extract letters from option text and sort by extracted letter
-                                                    // If extraction fails, use index-based assignment
-                                                    const optionsWithLetters = mcqOptions.map((option: any, index: number) => {
-                                                        const optionText = typeof option === 'string'
-                                                            ? option
-                                                            : (option?.text ?? option?.label ?? JSON.stringify(option));
-                                                        const { letter, cleanText } = extractOptionLetterAndText(optionText, index);
-                                                        return {
-                                                            letter: letter,
-                                                            text: cleanText, // Use cleaned text without letter prefix
-                                                            originalIndex: index
-                                                        };
-                                                    });
-                                                    
-                                                    // Sort by option letter (A, B, C, D) to ensure consistent order
-                                                    // This handles cases where backend sends randomized options
-                                                    optionsWithLetters.sort((a, b) => {
-                                                        return a.letter.localeCompare(b.letter);
-                                                    });
-                                                    
-                                                    return optionsWithLetters.map((optionData, index: number) => {
-                                                        const optionLetter = optionData.letter;
-                                                        const optionText = optionData.text; // Already cleaned (no letter prefix)
-                                                        // Store answer as option letter (A, B, C, D) not full text
-                                                        const isSelected = userAnswers[currentQuestion.question_id] === optionLetter;
 
-                                                        return (
-                                                            <label
-                                                                key={index}
-                                                                className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer transition-all border ${isSelected
-                                                                    ? 'bg-blue-50 border-blue-500 shadow-sm'
-                                                                    : 'bg-white border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                                                                    }`}
-                                                            >
-                                                                <div className="relative flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`question-${currentQuestion.question_id}`}
-                                                                        value={optionLetter}
-                                                                        checked={isSelected}
-                                                                        onChange={() => handleAnswer(currentQuestion.question_id, optionLetter)}
-                                                                        className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <span className="font-bold text-gray-700 mr-2">{optionLetter})</span>
-                                                                    <span className="text-gray-800 text-base">{optionText}</span>
-                                                                </div>
-                                                            </label>
-                                                        );
-                                                    });
-                                                })()}
+                                                        // Sort options to ensure A, B, C, D order (remove randomization)
+                                                        // Extract option letter from option text and remove the prefix
+                                                        const extractOptionLetterAndText = (optionText: string, index: number): { letter: string; cleanText: string } => {
+                                                            // Match patterns like "A. ", "A) ", "A ", etc. at the START of the string
+                                                            // Only match A-D letters to avoid false matches (e.g., "SELECT" starting with S)
+                                                            const match = optionText.match(/^([A-D])[\.\)\s]+\s*(.+)$/i);
+                                                            if (match) {
+                                                                const matchedLetter = match[1].toUpperCase();
+                                                                // Double-check it's A, B, C, or D
+                                                                if (['A', 'B', 'C', 'D'].includes(matchedLetter)) {
+                                                                    return {
+                                                                        letter: matchedLetter,
+                                                                        cleanText: match[2].trim() // Remove the letter prefix
+                                                                    };
+                                                                }
+                                                            }
+                                                            // If no A-D prefix found, assign letter based on index position (A=0, B=1, C=2, D=3)
+                                                            // This ensures we always get A, B, C, D even if option text doesn't have prefix
+                                                            const letter = String.fromCharCode(65 + Math.min(index, 3)); // A=65, B=66, C=67, D=68
+                                                            return {
+                                                                letter: letter,
+                                                                cleanText: optionText.trim() // Keep original text if no prefix found
+                                                            };
+                                                        };
+
+                                                        // First, try to extract letters from option text and sort by extracted letter
+                                                        // If extraction fails, use index-based assignment
+                                                        const optionsWithLetters = mcqOptions.map((option: any, index: number) => {
+                                                            const optionText = typeof option === 'string'
+                                                                ? option
+                                                                : (option?.text ?? option?.label ?? JSON.stringify(option));
+                                                            const { letter, cleanText } = extractOptionLetterAndText(optionText, index);
+                                                            return {
+                                                                letter: letter,
+                                                                text: cleanText, // Use cleaned text without letter prefix
+                                                                originalIndex: index
+                                                            };
+                                                        });
+
+                                                        // Sort by option letter (A, B, C, D) to ensure consistent order
+                                                        // This handles cases where backend sends randomized options
+                                                        optionsWithLetters.sort((a, b) => {
+                                                            return a.letter.localeCompare(b.letter);
+                                                        });
+
+                                                        return optionsWithLetters.map((optionData, index: number) => {
+                                                            const optionLetter = optionData.letter;
+                                                            const optionText = optionData.text; // Already cleaned (no letter prefix)
+                                                            // Store answer as option letter (A, B, C, D) not full text
+                                                            const isSelected = userAnswers[currentQuestion.question_id] === optionLetter;
+
+                                                            return (
+                                                                <label
+                                                                    key={index}
+                                                                    className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer transition-all border ${isSelected
+                                                                        ? 'bg-blue-50 border-blue-500 shadow-sm'
+                                                                        : 'bg-white border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                                                                        }`}
+                                                                >
+                                                                    <div className="relative flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`question-${currentQuestion.question_id}`}
+                                                                            value={optionLetter}
+                                                                            checked={isSelected}
+                                                                            onChange={() => handleAnswer(currentQuestion.question_id, optionLetter)}
+                                                                            className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <span className="font-bold text-gray-700 mr-2">{optionLetter})</span>
+                                                                        <span className="text-gray-800 text-base">{optionText}</span>
+                                                                    </div>
+                                                                </label>
+                                                            );
+                                                        });
+                                                    })()}
                                                 </div>
                                             );
                                         })()}
@@ -1933,11 +2006,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             // Handle listening questions
                                             const questionType = String(currentQuestion?.question_type || '').toLowerCase();
                                             const questionText = currentQuestion?.question_text || '';
-                                            const isListeningQuestion = questionType === 'listening' || 
+                                            const isListeningQuestion = questionType === 'listening' ||
                                                 questionType === 'listening_question' ||
                                                 questionText.toLowerCase().includes('listen and write') ||
                                                 questionText.toLowerCase().includes('listen and write down');
-                                            
+
                                             if (isListeningQuestion) {
                                                 return (
                                                     <div className="h-full flex flex-col">
