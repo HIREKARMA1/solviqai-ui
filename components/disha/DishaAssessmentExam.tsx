@@ -1381,8 +1381,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
                                 await continueToNextRound();
                             } catch (error: any) {
-                                console.error('Error submitting discussion responses:', error);
-                                toast.error('Failed to submit discussion responses');
+                                console.error('Error completing discussion round:', error);
+                                toast.error('Failed to update status');
                                 setIsSubmitting(false);
                             }
                         }}
