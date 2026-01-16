@@ -1216,20 +1216,17 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         onComplete={async (responses) => {
                             try {
                                 setIsSubmitting(true);
-                                await apiClient.submitRoundResponses(
-                                    packageId,
-                                    currentRound.round_id || currentRound.id,
-                                    responses.map(response => ({
-                                        response_text: response.response_text,
-                                        time_taken: response.time_taken || 0,
-                                        score: response.score || 0
-                                    }))
-                                );
+                                // GD Round calls its own evaluate endpoint which handles submission
+                                // We just need to refresh the package status
                                 toast.success('Discussion round completed successfully!');
-                                await loadPackage();
+
+                                // Wait briefly for user to see success message
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                                await continueToNextRound();
                             } catch (error: any) {
-                                console.error('Error submitting discussion responses:', error);
-                                toast.error('Failed to submit discussion responses');
+                                console.error('Error completing discussion round:', error);
+                                toast.error('Failed to update status');
                                 setIsSubmitting(false);
                             }
                         }}

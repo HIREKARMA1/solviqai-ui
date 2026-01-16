@@ -46,6 +46,7 @@ export const VoiceResponseArea = ({
     const isListeningRef = useRef(false);
     const onAnswerChangeRef = useRef(onAnswerChange);
     const localAnswerRef = useRef(localAnswer);
+    const lastTranscriptUpdateRef = useRef(0);
 
     // Sync refs
     useEffect(() => {
@@ -129,12 +130,17 @@ export const VoiceResponseArea = ({
                     if (final) {
                         setLocalAnswer(prev => {
                             const newVal = (prev || '') + final;
-                            // We don't bubble up immediately, strict debounce handles it
                             return newVal;
                         });
-                        setInterimTranscript(interim); // Likely empty now
+                        setInterimTranscript('');
+                        lastTranscriptUpdateRef.current = Date.now();
                     } else {
-                        setInterimTranscript(interim);
+                        // Throttle interim updates to avoid aggressive UI flashing
+                        const now = Date.now();
+                        if (now - lastTranscriptUpdateRef.current > 100) {
+                            setInterimTranscript(interim);
+                            lastTranscriptUpdateRef.current = now;
+                        }
                     }
                 };
 
