@@ -297,7 +297,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                             </div>
 
                             {/* Examples Section */}
-                            {meta.examples?.length > 0 ? (
+                            {meta.examples?.length > 0 && (
                               meta.examples.map((ex: any, i: number) => (
                                 <div key={i} className="space-y-2">
                                   <h3 className="font-bold text-gray-900 text-sm">Example {i + 1}:</h3>
@@ -308,31 +308,19 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                   </div>
                                 </div>
                               ))
-                            ) : (
-                              // Fallback UI if no structured examples
-                              <div className="space-y-2">
-                                <h3 className="font-bold text-gray-900 text-sm">Example:</h3>
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700">
-                                  Input: nums = [2,7,11,15], target = 9 <br />
-                                  Output: [0,1]
-                                </div>
-                              </div>
                             )}
 
                             {/* Constraints */}
-                            <div>
-                              <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
-                              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
-                                {meta.constraints?.map((c: string, i: number) => (
-                                  <li key={i}>{c}</li>
-                                )) || (
-                                    <>
-                                      <li>2 &lt;= nums.length &lt;= 10^4</li>
-                                      <li>-10^9 &lt;= nums[i] &lt;= 10^9</li>
-                                    </>
-                                  )}
-                              </ul>
-                            </div>
+                            {meta.constraints?.length > 0 && (
+                              <div>
+                                <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
+                                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
+                                  {meta.constraints.map((c: string, i: number) => (
+                                    <li key={i}>{c}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </>
                         )}
 
@@ -450,32 +438,34 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
               )
             })}
         </div>
-      </div>
+      </div >
 
       {/* Footer Submit Bar */}
-      {showSubmitButton && !hideFooter && (
-        <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-          <div>
-            <h3 className="font-bold text-gray-900">Ready to Submit?</h3>
-            <p className="text-sm text-gray-500">Make sure you've tested all solutions before submitting.</p>
+      {
+        showSubmitButton && !hideFooter && (
+          <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <div>
+              <h3 className="font-bold text-gray-900">Ready to Submit?</h3>
+              <p className="text-sm text-gray-500">Make sure you've tested all solutions before submitting.</p>
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={busy}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-sm transition-all text-sm"
+            >
+              {busy ? (
+                <span className="flex items-center gap-2"><Loader size="sm" /> Submitting...</span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  Submit
+                </span>
+              )}
+            </Button>
           </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={busy}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-sm transition-all text-sm"
-          >
-            {busy ? (
-              <span className="flex items-center gap-2"><Loader size="sm" /> Submitting...</span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                Submit
-              </span>
-            )}
-          </Button>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 

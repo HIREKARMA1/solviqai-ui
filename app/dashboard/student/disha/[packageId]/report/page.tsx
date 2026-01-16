@@ -288,9 +288,9 @@ export default function StudentDishaReportPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {report.performance_insights.strengths.length > 0 ? (
+                                {(report.performance_insights?.strengths?.length ?? 0) > 0 ? (
                                     <ul className="list-disc list-inside space-y-1 text-sm">
-                                        {report.performance_insights.strengths.map((s, i) => (
+                                        {report.performance_insights.strengths?.map((s, i) => (
                                             <li key={i}>{s}</li>
                                         ))}
                                     </ul>
@@ -307,9 +307,9 @@ export default function StudentDishaReportPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {report.performance_insights.weaknesses.length > 0 ? (
+                                {(report.performance_insights?.weaknesses?.length ?? 0) > 0 ? (
                                     <ul className="list-disc list-inside space-y-1 text-sm">
-                                        {report.performance_insights.weaknesses.map((w, i) => (
+                                        {report.performance_insights.weaknesses?.map((w, i) => (
                                             <li key={i}>{w}</li>
                                         ))}
                                     </ul>
