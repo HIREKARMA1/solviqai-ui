@@ -158,8 +158,11 @@ export function GroupDiscussionRound({
     // Refs
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const transcriptRef = useRef('');
+    const speechRecognition = useRef<any>(null);
+    const audioContext = useRef<AudioContext | null>(null);
+    const audioAnalyser = useRef<AnalyserNode | null>(null);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Auto-scroll to bottom of chat
     useEffect(() => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTo({
@@ -167,7 +170,7 @@ export function GroupDiscussionRound({
                 behavior: 'smooth'
             });
         }
-    }, [gdTurns, typingAgent]);
+    }, [gdTurns, transcript, interimTranscript, typingAgent]);
 
     // Initialize voices
     useEffect(() => {
@@ -203,14 +206,14 @@ export function GroupDiscussionRound({
 
     // Handle initial bot speech when topic loads and voices are ready (for Disha)
     useEffect(() => {
-        if (isDisha && topic && voicesLoaded && !hasInitialBotSpoken && currentStep === 'topic') {
+        if (isDisha && topic && voicesLoaded && !hasInitialBotSpoken && currentStep === 'discussion') {
             // Wait a bit for topic to fully render, then have bot speak question
             const timer = setTimeout(() => {
                 const questionText = `${topic.title}. ${topic.content}`;
                 setHasInitialBotSpoken(true);
                 setIsTopicAnnounced(true);
                 setCurrentStep('discussion');
-                
+
                 // Add initial bot message about the question
                 const initialTurn: Turn = {
                     user: '',
@@ -221,7 +224,7 @@ export function GroupDiscussionRound({
                     timestamp: Date.now()
                 };
                 setGDTurns([initialTurn]);
-                
+
                 // Speak the question, then trigger bots to speak first
                 speakAgentText(personas[0].name, questionText).then(() => {
                     // After question is spoken, have all bots speak first in the round
@@ -230,7 +233,7 @@ export function GroupDiscussionRound({
                     handleBotsSpeakFirst();
                 });
             }, 1000);
-            
+
             return () => clearTimeout(timer);
         }
     }, [topic, voicesLoaded, hasInitialBotSpoken, isDisha, currentStep]);
@@ -288,7 +291,7 @@ export function GroupDiscussionRound({
 
             setTopic(processedTopicData);
             setFetchAttempt(0);
-            
+
             // For non-Disha: proceed normally
             if (!isDisha) {
                 setIsTopicAnnounced(true);
@@ -383,7 +386,7 @@ export function GroupDiscussionRound({
                         })),
                         responses: gdResponses
                     };
-                    
+
                     await apiClient.submitDishaRound(
                         packageId,
                         roundId,
@@ -427,24 +430,43 @@ export function GroupDiscussionRound({
             // STEP 2: Call evaluate endpoint to complete the round and get score
             let evalScore = 0;
             try {
+                toast.dismiss('submitting'); // Dismiss submitting toast first
                 toast.loading('Evaluating your discussion...', { id: 'evaluating' });
+
                 const endpoint = isDisha
                     ? `/disha/assessments/${assessmentId}/rounds/${roundId}/evaluate-discussion`
                     : `/assessments/rounds/${roundId}/evaluate-discussion`;
 
-                const evalResponse = await apiClient.client.post(endpoint, {
-                    conversation: gdTurns
+                console.log('🔍 Calling evaluation endpoint:', endpoint);
+                console.log('📊 Conversation data being sent:', {
+                    totalTurns: gdTurns.length,
+                    turnsPreview: gdTurns.map((t, idx) => ({
+                        turn: idx + 1,
+                        userText: t.user?.substring(0, 50) || '(empty)',
+                        agentCount: t.agents?.length || 0
+                    }))
                 });
-                console.log('Evaluation complete:', evalResponse.data);
+
+                const evalResponse = await apiClient.client.post(endpoint, {
+                    conversation: gdTurns,
+                    attempt_id: attemptId  // Pass attempt_id for reliable DB lookup
+                });
+
+                console.log('✅ Evaluation complete:', evalResponse.data);
                 evalScore = evalResponse.data?.score || 0;
 
-                toast.dismiss('submitting');
                 toast.dismiss('evaluating');
                 toast.success('Discussion evaluated successfully!');
-            } catch (evalError) {
-                console.error('Evaluation failed:', evalError);
+            } catch (evalError: any) {
+                console.error('❌ Evaluation failed:', evalError);
+                console.error('Error details:', {
+                    message: evalError.message,
+                    response: evalError.response?.data,
+                    status: evalError.response?.status
+                });
                 toast.dismiss('evaluating');
-                toast.error('Evaluation failed. Please contact support.', { id: 'evaluating' });
+                toast.dismiss('submitting'); // Make sure submitting is also dismissed
+                toast.error('Evaluation failed. Please contact support.');
             }
 
             // Redirect to assessment page and force a fresh fetch of statuses
@@ -470,10 +492,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    // Speech recognition setup
-    const speechRecognition = useRef<any>(null);
-    const audioContext = useRef<AudioContext | null>(null);
-    const audioAnalyser = useRef<AnalyserNode | null>(null);
+
 
     // Voice selection function
     const getVoiceForAgent = (agentName: string): SpeechSynthesisVoice | null => {
@@ -663,8 +682,8 @@ export function GroupDiscussionRound({
                             utterance.lang = 'en-US';
                         }
 
-                        // Optimized settings for clarity - FASTER
-                        utterance.rate = agentName.includes('Aarav') ? 1.4 : agentName.includes('Meera') ? 1.5 : 1.45;
+                        // Optimized settings for clarity and comprehension
+                        utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
                         utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
                         utterance.volume = 1.0; // Maximum volume
 
@@ -841,12 +860,21 @@ export function GroupDiscussionRound({
             return;
         }
 
+        // Check if there was existing text that wasn't submitted
+        const existingText = transcriptRef.current.trim();
+        if (existingText && !isListening && isUserManualSubmit) {
+            handleUserResponse(existingText);
+            setIsUserManualSubmit(false);
+        }
+
         setIsListening(true);
         setTranscript('');
         transcriptRef.current = '';
         setInterimTranscript('');
         setSpeakingTime(0);
         setWordCount(0);
+        setConfidenceScore(0);
+
 
         const timerId = setInterval(() => {
             setSpeakingTime(prevTime => {
@@ -880,13 +908,36 @@ export function GroupDiscussionRound({
             }
 
             setTimeout(() => {
-                const finalTranscript = transcriptRef.current.trim();
+                let finalTranscript = transcriptRef.current.trim();
+
+                // Fallback: If final transcript is empty but we have an interim one, use it
+                // This happens often if recognition is stopped before the browser sends isFinal
+                if (!finalTranscript && interimTranscript.trim()) {
+                    console.log('Using interim transcript as fallback:', interimTranscript);
+                    finalTranscript = interimTranscript.trim();
+                    setTranscript(finalTranscript);
+                    transcriptRef.current = finalTranscript;
+                }
 
                 if (finalTranscript && finalTranscript.length > 0) {
                     setIsUserManualSubmit(true);
-                    // Do NOT auto-submit. Wait for user to click "Send"
+
+                    // Auto-submit after 1.5 seconds if it's DISHA
+                    if (isDisha) {
+                        toast.success('Capturing response...', { duration: 1000 });
+                        setTimeout(() => {
+                            // Check if still in manual submit mode (hasn't been submitted yet)
+                            if (transcriptRef.current.trim()) {
+                                handleUserResponse(transcriptRef.current);
+                                setIsUserManualSubmit(false);
+                                setTranscript('');
+                                transcriptRef.current = '';
+                                setInterimTranscript('');
+                            }
+                        }, 1500);
+                    }
                 }
-            }, 500);
+            }, 800); // Increased timeout slightly to allow more results to come in
         }
     };
 
@@ -896,10 +947,10 @@ export function GroupDiscussionRound({
     // Function to have bots speak first in a round
     const handleBotsSpeakFirst = async () => {
         if (!topic || waitingForBots || currentRoundTurn !== 'bots') return;
-        
+
         setWaitingForBots(true);
         setLoading(true);
-        
+
         try {
             // Generate initial bot responses for the round start
             let responseData: any;
@@ -1010,7 +1061,7 @@ export function GroupDiscussionRound({
             // After bots speak, switch to user's turn
             setCurrentRoundTurn('user');
             setWaitingForBots(false);
-            
+
         } catch (error) {
             console.error('Error in handleBotsSpeakFirst:', error);
             setWaitingForBots(false);
@@ -1020,7 +1071,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    const handleUserResponse = async (text: string) => {
+    const handleUserResponse = async (text: string, isRetry: boolean = false) => {
         const trimmedText = text.trim();
 
         if (!trimmedText || trimmedText.length === 0) {
@@ -1031,25 +1082,36 @@ export function GroupDiscussionRound({
             return;
         }
 
-        // For Disha: Check if it's bots' turn first
+        // For Disha: If it's bots' turn to start but user spoke, capture it and move on
         if (isDisha && currentRoundTurn === 'bots' && !waitingForBots) {
-            // Bots haven't spoken yet in this round - trigger bots to speak first
-            await handleBotsSpeakFirst();
-            // After bots speak, user can respond, but we need to wait
-            // The user response will be processed after bots finish
-            return;
+            setCurrentRoundTurn('user'); // Switch to user turn immediately since they spoke
         }
 
-        // If waiting for bots to finish speaking, queue the user response
+        // If waiting for bots but user spoke, we should still capture it to avoid data loss
+        // The user turn will show up in the UI, and we'll process it
         if (isDisha && waitingForBots) {
-            // Store the user response and process it after bots finish
-            // For now, just return and wait for bots to complete
-            return;
+            // We'll let it proceed but it might have a slight delay or concurrent API call
+            console.log('User spoke while bots were preparing. Capturing anyway...');
+            setWaitingForBots(false); // Force stop waiting to allow user turn
         }
 
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
             return;
+        }
+
+        const turnTimestamp = Date.now();
+
+        // Add user message to UI immediately (only on first attempt, not on retries)
+        if (!isRetry) {
+            setGDTurns(prev => [...prev, {
+                user: trimmedText,
+                agents: [],
+                timestamp: turnTimestamp
+            }]);
+
+            // Show typing indicator
+            setTypingAgent(personas[0].name);
         }
 
         try {
@@ -1071,7 +1133,7 @@ export function GroupDiscussionRound({
                         }
                     }),
                     new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timeout')), 15000)
+                        setTimeout(() => reject(new Error('API Timeout - Backend took too long')), 45000)
                     )
                 ]) as any;
 
@@ -1084,7 +1146,7 @@ export function GroupDiscussionRound({
                 if (responseAttempt < maxResponseRetries) {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     setLoading(false);
-                    handleUserResponse(trimmedText);
+                    handleUserResponse(trimmedText, true); // Mark as retry
                     return;
                 }
 
@@ -1111,14 +1173,8 @@ export function GroupDiscussionRound({
                     { name: personas[2].name, text: "A middle path might work." }
                 ];
 
-            // Add user message first (without agents yet)
-            const turnTimestamp = Date.now();
-            setGDTurns(prev => [...prev, {
-                user: trimmedText,
-                agents: [],
-                timestamp: turnTimestamp
-            }]);
-
+            // Store responses for evaluation but don't add agents to GDTurns yet
+            // (they will be added one-by-one with typing animation in the loop below)
             setGDResponses(prev => [...prev, {
                 userResponse: trimmedText,
                 aiQuestion: agents.map(a => a.text).join('\n')
@@ -1189,7 +1245,9 @@ export function GroupDiscussionRound({
                 setCurrentRoundTurn('bots');
             }
 
-            if ((gdTurns.length + 1) >= maxResponses) {
+            // Check if discussion is complete AFTER bots finish speaking
+            // Uses +1 because gdTurns variable in closure might not have updated yet
+            if ((gdTurns.length + (isRetry ? 0 : 1)) >= maxResponses) {
                 setDiscussionComplete(true);
             }
 
@@ -1425,10 +1483,13 @@ export function GroupDiscussionRound({
                                 )}
 
                                 {gdTurns.map((turn, tIdx) => (
-                                    <div key={tIdx} className="space-y-2">
+                                    <div key={tIdx} className="space-y-2 border-l-2 border-gray-100 dark:border-gray-800 pl-3 py-1">
                                         <div className="flex gap-2">
-                                            <span className="font-bold text-blue-600 text-sm whitespace-nowrap">You:</span>
-                                            <p className="text-gray-700 dark:text-gray-300 text-sm">{turn.user}</p>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Turn {tIdx + 1}</span>
+                                                <span className="font-bold text-blue-600 text-sm whitespace-nowrap">You:</span>
+                                            </div>
+                                            <p className="text-gray-700 dark:text-gray-300 text-sm pt-4">{turn.user || <span className="italic opacity-50 text-xs">Starting discussion...</span>}</p>
                                         </div>
                                         {turn.agents.map((agent, aIdx) => (
                                             <div key={`${tIdx}-${aIdx}`} className="flex gap-2">
@@ -1439,10 +1500,13 @@ export function GroupDiscussionRound({
                                     </div>
                                 ))}
 
-                                {interimTranscript && (
-                                    <div className="flex gap-2 opacity-70">
-                                        <span className="font-bold text-blue-600 text-sm whitespace-nowrap">You (speaking):</span>
-                                        <p className="text-gray-600 dark:text-gray-400 text-sm italic">{interimTranscript}</p>
+                                {isListening && (transcript || interimTranscript) && (
+                                    <div className="flex gap-2 bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                                        <span className="font-bold text-blue-600 text-sm whitespace-nowrap shrink-0">You (speaking):</span>
+                                        <p className="text-gray-700 dark:text-gray-200 text-sm italic leading-relaxed">
+                                            {transcript}
+                                            <span className="text-gray-500 dark:text-gray-400 animate-pulse">{interimTranscript}</span>
+                                        </p>
                                     </div>
                                 )}
                                 {typingAgent && (
