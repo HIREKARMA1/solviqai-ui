@@ -1141,6 +1141,13 @@ class ApiClient {
     return response.data;
   }
 
+  async getDishaEvaluationStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/evaluation-status`
+    );
+    return response.data;
+  }
+
   async getDishaReport(attemptId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/assessments/${attemptId}/report`
@@ -1159,6 +1166,16 @@ class ApiClient {
   async getDishaPackageReport(packageId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
+
+  async getDishaIndividualStudentReport(
+    packageId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts/${attemptId}/report`
     );
     return response.data;
   }

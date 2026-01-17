@@ -16,8 +16,32 @@ import {
     XCircle,
     Download,
     Eye,
-    ArrowLeft
+    ArrowLeft,
+    MessageSquare,
+    UserCircle,
+    Bot
 } from 'lucide-react';
+
+interface QuestionDetail {
+    question_order: number;
+    question_text: string;
+    question_type: string;
+    student_answer: string | null;
+    correct_answer: string | null;
+    points_earned: number | null;
+    points_max: number | null;
+    is_correct: boolean;
+    feedback?: string;
+    is_gd_turn?: boolean;  // Flag for GD conversation turns
+    is_gd_summary?: boolean;  // Flag for GD evaluation summary
+}
+
+interface RoundDetail {
+    round_number: number;
+    round_name: string;
+    round_type: string;
+    questions: QuestionDetail[];
+}
 
 interface StudentData {
     attempt_id: string;
@@ -37,6 +61,18 @@ interface StudentData {
     }>;
     started_at: string | null;
     completed_at: string | null;
+}
+
+interface DetailedReport {
+    question_breakdown: RoundDetail[];
+    rounds: Array<{
+        round_number: number;
+        round_name: string;
+        round_type: string;
+        score: number;
+        max_score: number;
+        percentage: number;
+    }>;
 }
 
 interface PackageReport {
@@ -298,7 +334,23 @@ export default function AdminDishaReportsPage() {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => setSelectedStudent(student)}
+                                                    onClick={async () => {
+                                                        setSelectedStudent(student);
+                                                        // Fetch detailed report
+                                                        try {
+                                                            setLoadingDetails(true);
+                                                            const details = await apiClient.getDishaIndividualStudentReport(
+                                                                packageId,
+                                                                student.attempt_id
+                                                            );
+                                                            setDetailedReport(details);
+                                                        } catch (error: any) {
+                                                            console.error('Failed to load detailed report:', error);
+                                                            toast.error('Failed to load detailed report');
+                                                        } finally {
+                                                            setLoadingDetails(false);
+                                                        }
+                                                    }}
                                                 >
                                                     <Eye className="h-4 w-4 mr-2" />
                                                     View Details
@@ -322,7 +374,10 @@ export default function AdminDishaReportsPage() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setSelectedStudent(null)}
+                                        onClick={() => {
+                                            setSelectedStudent(null);
+                                            setDetailedReport(null);
+                                        }}
                                     >
                                         Close
                                     </Button>
@@ -419,6 +474,180 @@ export default function AdminDishaReportsPage() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Question Breakdown */}
+                                {loadingDetails ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader />
+                                    </div>
+                                ) : detailedReport && detailedReport.question_breakdown ? (
+                                    <div className="mt-6">
+                                        <h3 className="text-lg font-semibold mb-4">Question Breakdown</h3>
+                                        <div className="space-y-4">
+                                            {detailedReport.question_breakdown.map((round) => (
+                                                <div key={round.round_number} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                                                    <h4 className="font-semibold mb-3 text-base">
+                                                        Round {round.round_number}: {round.round_name}
+                                                    </h4>
+                                                    <div className="space-y-3">
+                                                        {/* Special display for Group Discussion rounds */}
+                                                        {round.round_type === 'group_discussion' ? (
+                                                            <div className="space-y-4">
+                                                                {round.questions.map((q, idx) => (
+                                                                    <div key={idx} className={`rounded-lg p-4 border ${(q as any).is_gd_summary
+                                                                        ? 'bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800'
+                                                                        : 'bg-white dark:bg-gray-900'
+                                                                        }`}>
+                                                                        {/* GD Summary Card */}
+                                                                        {(q as any).is_gd_summary ? (
+                                                                            <div>
+                                                                                <div className="flex items-center gap-2 mb-3">
+                                                                                    <MessageSquare className="h-5 w-5 text-purple-600" />
+                                                                                    <h5 className="font-semibold text-purple-800 dark:text-purple-300">Discussion Evaluation Summary</h5>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                                                                    <div>
+                                                                                        <p className="text-xs text-gray-500">Participation</p>
+                                                                                        <p className="font-medium">{q.student_answer}</p>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <p className="text-xs text-gray-500">Score</p>
+                                                                                        <p className="font-bold text-lg text-purple-600">
+                                                                                            {(q.points_earned ?? 0).toFixed(1)} / {(q.points_max ?? 0).toFixed(1)}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                {q.feedback && (
+                                                                                    <div className="bg-white/50 dark:bg-gray-800/50 rounded p-3 text-sm">
+                                                                                        <p className="font-semibold mb-1 text-purple-700 dark:text-purple-300">Evaluation Feedback:</p>
+                                                                                        <p className="text-gray-700 dark:text-gray-300">{q.feedback}</p>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ) : (
+                                                                            /* GD Conversation Turn */
+                                                                            <div>
+                                                                                <div className="flex items-center gap-2 mb-3">
+                                                                                    <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                                                        Turn {q.question_order}
+                                                                                    </Badge>
+                                                                                    {idx === 0 && q.question_text.includes('Topic:') && (
+                                                                                        <span className="text-xs text-gray-500">
+                                                                                            {q.question_text.split('Topic:')[1]?.trim()}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {/* Student Response */}
+                                                                                <div className="flex gap-3 mb-3">
+                                                                                    <div className="flex-shrink-0">
+                                                                                        <UserCircle className="h-8 w-8 text-green-600" />
+                                                                                    </div>
+                                                                                    <div className="flex-1 bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                                                                                        <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Student:</p>
+                                                                                        <p className="text-sm text-gray-800 dark:text-gray-200">
+                                                                                            {q.student_answer || <span className="italic text-gray-400">No response</span>}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {/* AI Agent Responses */}
+                                                                                {q.feedback && (
+                                                                                    <div className="flex gap-3 ml-6">
+                                                                                        <div className="flex-shrink-0">
+                                                                                            <Bot className="h-8 w-8 text-blue-600" />
+                                                                                        </div>
+                                                                                        <div className="flex-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                                                                                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">AI Participants:</p>
+                                                                                            <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                                                                                                {q.feedback.split(' | ').map((response: string, i: number) => (
+                                                                                                    <span key={i} className="block mb-1 last:mb-0">
+                                                                                                        {response}
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            /* Standard question display for non-GD rounds */
+                                                            round.questions.map((q, idx) => (
+                                                                <div key={idx} className="bg-white dark:bg-gray-900 rounded-lg p-4 border">
+                                                                    <div className="flex items-start justify-between gap-4">
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded">
+                                                                                    Q{idx + 1}
+                                                                                </span>
+                                                                                <Badge variant="outline" className="text-xs capitalize">
+                                                                                    {q.question_type.replace('_', ' ')}
+                                                                                </Badge>
+                                                                            </div>
+                                                                            <p className="font-medium text-sm mb-3">{q.question_text}</p>
+
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                                                                    <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">Correct Answer:</p>
+                                                                                    <p className="text-sm font-medium text-red-900 dark:text-red-100 break-words">
+                                                                                        {q.correct_answer || <span className="italic text-gray-400">N/A</span>}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className={`border rounded p-3 ${q.is_correct
+                                                                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                                                                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                                                                    }`}>
+                                                                                    <p className={`text-xs font-semibold mb-1 ${q.is_correct
+                                                                                        ? 'text-green-700 dark:text-green-300'
+                                                                                        : 'text-gray-700 dark:text-gray-300'
+                                                                                        }`}>
+                                                                                        Your Answer:
+                                                                                    </p>
+                                                                                    <p className={`text-sm font-medium break-words ${q.is_correct
+                                                                                        ? 'text-green-900 dark:text-green-100'
+                                                                                        : 'text-gray-900 dark:text-gray-100'
+                                                                                        }`}>
+                                                                                        {q.student_answer || <span className="italic text-gray-400">No answer provided</span>}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {q.feedback && (
+                                                                                <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2 text-xs text-blue-800 dark:text-blue-300">
+                                                                                    <p className="font-semibold mb-1">Feedback:</p>
+                                                                                    {q.feedback}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-right min-w-[100px]">
+                                                                            {q.is_correct ? (
+                                                                                <div className="flex flex-col items-end text-green-600 dark:text-green-400">
+                                                                                    <CheckCircle2 className="h-6 w-6 mb-1" />
+                                                                                    <span className="font-bold text-lg">+{(q.points_earned ?? 0).toFixed(1)}</span>
+                                                                                    <span className="text-xs text-gray-500">/ {(q.points_max ?? 0).toFixed(1)}</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="flex flex-col items-end text-red-600 dark:text-red-400">
+                                                                                    <XCircle className="h-6 w-6 mb-1" />
+                                                                                    <span className="font-bold text-lg">{(q.points_earned ?? 0).toFixed(1)}</span>
+                                                                                    <span className="text-xs text-gray-500">/ {(q.points_max ?? 0).toFixed(1)}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : null}
                             </CardContent>
                         </Card>
                     </div>
