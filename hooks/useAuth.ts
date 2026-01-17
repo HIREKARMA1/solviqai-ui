@@ -90,6 +90,11 @@ export function useAuth() {
 
       console.log('✅ Login successful');
 
+      // Clear any existing Disha SSO state to prevent user type conflicts
+      localStorage.removeItem('disha_student_id');
+      localStorage.removeItem('disha_package_id');
+      localStorage.removeItem('disha_attempt_id');
+
       apiClient.setAuthTokens(response.access_token, response.refresh_token)
       // Store token expiry (30 minutes from now)
       localStorage.setItem('token_expiry', String(Date.now() + 30 * 60 * 1000))
@@ -144,6 +149,11 @@ export function useAuth() {
       console.error('Logout error:', error)
     } finally {
       apiClient.clearAuthTokens()
+      // Also clear Disha SSO related items
+      localStorage.removeItem('disha_student_id')
+      localStorage.removeItem('disha_package_id')
+      localStorage.removeItem('disha_attempt_id')
+
       setUser(null)
       router.push('/auth/login')
       toast.success('Logged out successfully')

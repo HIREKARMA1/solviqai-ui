@@ -98,7 +98,7 @@ export default function AdminDishaReportsPage() {
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<PackageReport | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
-    const [detailedReport, setDetailedReport] = useState<any>(null);
+    const [detailedReport, setDetailedReport] = useState<DetailedReport | null>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
     useEffect(() => {
@@ -437,8 +437,8 @@ export default function AdminDishaReportsPage() {
                                                 ) : detailedReport?.question_breakdown ? (
                                                     <div className="p-4 space-y-4">
                                                         {detailedReport.question_breakdown
-                                                            .find((r: any) => r.round_number === round.round_number)
-                                                            ?.questions.map((q: any, idx: number) => (
+                                                            .find((r: RoundDetail) => r.round_number === round.round_number)
+                                                            ?.questions.map((q: QuestionDetail, idx: number) => (
                                                                 <div key={idx} className="border-t pt-3 first:border-0 first:pt-0">
                                                                     <div className="flex justify-between items-start mb-2">
                                                                         <div className="flex-1">
@@ -484,7 +484,7 @@ export default function AdminDishaReportsPage() {
                                     <div className="mt-6">
                                         <h3 className="text-lg font-semibold mb-4">Question Breakdown</h3>
                                         <div className="space-y-4">
-                                            {detailedReport.question_breakdown.map((round) => (
+                                            {detailedReport.question_breakdown.map((round: RoundDetail) => (
                                                 <div key={round.round_number} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
                                                     <h4 className="font-semibold mb-3 text-base">
                                                         Round {round.round_number}: {round.round_name}
@@ -493,13 +493,13 @@ export default function AdminDishaReportsPage() {
                                                         {/* Special display for Group Discussion rounds */}
                                                         {round.round_type === 'group_discussion' ? (
                                                             <div className="space-y-4">
-                                                                {round.questions.map((q, idx) => (
-                                                                    <div key={idx} className={`rounded-lg p-4 border ${(q as any).is_gd_summary
+                                                                {round.questions.map((q: QuestionDetail, idx: number) => (
+                                                                    <div key={idx} className={`rounded-lg p-4 border ${q.is_gd_summary
                                                                         ? 'bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800'
                                                                         : 'bg-white dark:bg-gray-900'
                                                                         }`}>
                                                                         {/* GD Summary Card */}
-                                                                        {(q as any).is_gd_summary ? (
+                                                                        {q.is_gd_summary ? (
                                                                             <div>
                                                                                 <div className="flex items-center gap-2 mb-3">
                                                                                     <MessageSquare className="h-5 w-5 text-purple-600" />
@@ -576,7 +576,7 @@ export default function AdminDishaReportsPage() {
                                                             </div>
                                                         ) : (
                                                             /* Standard question display for non-GD rounds */
-                                                            round.questions.map((q, idx) => (
+                                                            round.questions.map((q: QuestionDetail, idx: number) => (
                                                                 <div key={idx} className="bg-white dark:bg-gray-900 rounded-lg p-4 border">
                                                                     <div className="flex items-start justify-between gap-4">
                                                                         <div className="flex-1">
