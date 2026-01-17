@@ -1115,6 +1115,25 @@ class ApiClient {
     return response.data;
   }
 
+  async executeDishaCode(
+    packageId: string,
+    roundId: string,
+    payload: {
+      question_id: string;
+      language: string;
+      code: string;
+      stdin?: string;
+    },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/code/execute`,
+      payload,
+      { timeout: 60000 },
+    );
+    return response.data;
+  }
+
+
   async getDishaAttemptStatus(packageId: string, attemptId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/assessments/${packageId}/attempts/${attemptId}/status`

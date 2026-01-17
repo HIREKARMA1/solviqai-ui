@@ -193,6 +193,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
         } else {
           toast.success(`Passed ${res.passed}/${res.total} tests (${passRate}%)`)
         }
+      } else if (res.subscription_error) {
+        toast.error('Code execution service is currently unavailable. Please contact support.')
       } else if (res.quota_exceeded) {
         toast.error('API quota exceeded. Please try again later or contact support.')
       } else if (res.network_error) {
@@ -288,61 +290,204 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                       <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
                         {currentTab === 'problem' && (
                           <>
+                            {/* Problem Title */}
                             <div>
-                              <h2 className="text-xl font-bold text-gray-900 mb-2">{meta.title || q.question_text.slice(0, 50)}</h2>
-                              <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed">
-                                {/* Create a cleaner text display */}
-                                <p>{q.question_text}</p>
+                              <h2 className="text-xl font-bold text-gray-900 mb-3">{meta.title || q.question_text.slice(0, 50)}</h2>
+                              {/* Problem Description - Cleaned */}
+                              <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed mb-4">
+                                <p className="whitespace-pre-wrap">{q.question_text.split(/\*\*Input Format:\*\*|\*\*Output Format:\*\*|\*\*Examples?:\*\*|\*\*Constraints?:\*\*/i)[0].trim()}</p>
                               </div>
                             </div>
 
-                            {/* Examples Section */}
-                            {meta.examples?.length > 0 && (
-                              meta.examples.map((ex: any, i: number) => (
-                                <div key={i} className="space-y-2">
-                                  <h3 className="font-bold text-gray-900 text-sm">Example {i + 1}:</h3>
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700 space-y-1">
-                                    <div><span className="font-semibold text-gray-900">Input:</span> {ex.input}</div>
-                                    <div><span className="font-semibold text-gray-900">Output:</span> {ex.output}</div>
-                                    {ex.explanation && <div><span className="font-semibold text-gray-900">Explanation:</span> {ex.explanation}</div>}
-                                  </div>
+                            {/* Input Format */}
+                            {(() => {
+                              const inputMatch = q.question_text.match(/\*\*Input Format:\*\*\s*(.+?)(?=\*\*|$)/is);
+                              const inputFormat = inputMatch ? inputMatch[1].trim() : meta.input_format;
+                              return inputFormat ? (
+                                <div className="bg-blue-50 border-l-4 border-blue-500 rounded p-4">
+                                  <h3 className="font-bold text-blue-900 text-sm mb-2">Input Format</h3>
+                                  <p className="text-sm text-blue-800 font-mono">{inputFormat}</p>
                                 </div>
-                              ))
-                            )}
+                              ) : null;
+                            })()}
 
-                            {/* Constraints */}
-                            {meta.constraints?.length > 0 && (
-                              <div>
-                                <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
-                                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
-                                  {meta.constraints.map((c: string, i: number) => (
-                                    <li key={i}>{c}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            {/* Output Format */}
+                            {(() => {
+                              const outputMatch = q.question_text.match(/\*\*Output Format:\*\*\s*(.+?)(?=\*\*|$)/is);
+                              const outputFormat = outputMatch ? outputMatch[1].trim() : meta.output_format;
+                              return outputFormat ? (
+                                <div className="bg-green-50 border-l-4 border-green-500 rounded p-4">
+                                  <h3 className="font-bold text-green-900 text-sm mb-2">Output Format</h3>
+                                  <p className="text-sm text-green-800 font-mono">{outputFormat}</p>
+                                </div>
+                              ) : null;
+                            })()}
+
+                            {/* Examples Section - Enhanced */}
+                            {(() => {
+                              // Try to parse examples from metadata first
+                              if (meta.examples?.length > 0) {
+                                return (
+                                  <div className="space-y-4">
+                                    <h3 className="font-bold text-gray-900 text-base">Examples</h3>
+                                    {meta.examples.map((ex: any, i: number) => (
+                                      <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                                        <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                                          <span className="font-bold text-gray-900 text-sm">Example {i + 1}</span>
+                                        </div>
+                                        <div className="p-4 space-y-3">
+                                          <div>
+                                            <span className="font-semibold text-gray-900 text-sm block mb-1">Input:</span>
+                                            <pre className="bg-white border border-gray-200 rounded p-2 text-xs font-mono text-gray-800 overflow-x-auto">{String(ex.input || ex.input_data || '')}</pre>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold text-gray-900 text-sm block mb-1">Output:</span>
+                                            <pre className="bg-white border border-gray-200 rounded p-2 text-xs font-mono text-gray-800 overflow-x-auto">{String(ex.output || ex.expected_output || '')}</pre>
+                                          </div>
+                                          {ex.explanation && (
+                                            <div className="text-xs text-gray-600 italic pt-2 border-t border-gray-200">
+                                              <span className="font-semibold">Explanation:</span> {ex.explanation}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              // Fallback: Try to parse from question text
+                              const examplesMatch = q.question_text.match(/\*\*Examples?:\*\*\s*(.+?)(?=\*\*Constraints?:\*\*|$)/is);
+                              if (examplesMatch) {
+                                const examplesText = examplesMatch[1];
+                                const exampleBlocks = examplesText.split(/(?:^|\n)\s*(?:Input:|Example \d+)/i).filter(Boolean);
+                                if (exampleBlocks.length > 0) {
+                                  return (
+                                    <div className="space-y-4">
+                                      <h3 className="font-bold text-gray-900 text-base">Examples</h3>
+                                      {exampleBlocks.slice(0, 4).map((block, i) => {
+                                        const inputMatch = block.match(/Input:\s*(.+?)(?:\n|Output:|$)/is);
+                                        const outputMatch = block.match(/Output:\s*(.+?)(?:\n|$)/is);
+                                        return (inputMatch || outputMatch) ? (
+                                          <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                                            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                                              <span className="font-bold text-gray-900 text-sm">Example {i + 1}</span>
+                                            </div>
+                                            <div className="p-4 space-y-3">
+                                              {inputMatch && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-900 text-sm block mb-1">Input:</span>
+                                                  <pre className="bg-white border border-gray-200 rounded p-2 text-xs font-mono text-gray-800 overflow-x-auto">{inputMatch[1].trim()}</pre>
+                                                </div>
+                                              )}
+                                              {outputMatch && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-900 text-sm block mb-1">Output:</span>
+                                                  <pre className="bg-white border border-gray-200 rounded p-2 text-xs font-mono text-gray-800 overflow-x-auto">{outputMatch[1].trim()}</pre>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : null;
+                                      })}
+                                    </div>
+                                  );
+                                }
+                              }
+                              return null;
+                            })()}
+
+                            {/* Constraints - Enhanced */}
+                            {(() => {
+                              const constraints = meta.constraints || [];
+                              // Try to parse from question text if not in metadata
+                              if (constraints.length === 0) {
+                                const constraintsMatch = q.question_text.match(/\*\*Constraints?:\*\*\s*(.+?)(?=\*\*|$)/is);
+                                if (constraintsMatch) {
+                                  const constraintsText = constraintsMatch[1].trim();
+                                  // Split by lines or bullets
+                                  constraints.push(...constraintsText.split(/\n|•|\*/).filter(c => c.trim().length > 0).map(c => c.trim().replace(/^[-•]\s*/, '')));
+                                }
+                              }
+                              return constraints.length > 0 ? (
+                                <div className="bg-amber-50 border-l-4 border-amber-500 rounded p-4">
+                                  <h3 className="font-bold text-amber-900 text-sm mb-2">Constraints</h3>
+                                  <ul className="space-y-1.5 text-sm text-amber-800">
+                                    {constraints.map((c: string, i: number) => (
+                                      <li key={i} className="flex items-start gap-2">
+                                        <span className="text-amber-600 mt-1">•</span>
+                                        <span>{c}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null;
+                            })()}
                           </>
                         )}
 
                         {/* RE-USE EXISTING TABS LOGIC FOR TESTS & SUBMISSIONS (SIMPLIFIED) */}
                         {currentTab === 'tests' && (
                           <div className="space-y-4">
-                            <h3 className="font-bold text-gray-900">Test Cases</h3>
-                            {results[q.id]?.results?.map((r: any, i: number) => (
-                              <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                <div className="flex justify-between mb-2">
-                                  <span className="font-semibold text-sm">Case {i + 1}</span>
-                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${r.passed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                                    {r.passed ? 'PASSED' : 'FAILED'}
-                                  </span>
+                            <h3 className="font-bold text-gray-900 text-base mb-4">Test Cases</h3>
+                            {results[q.id]?.results?.length > 0 ? (
+                              results[q.id].results.map((r: any, i: number) => (
+                                <div
+                                  key={i}
+                                  className={`p-4 rounded-lg border-2 ${
+                                    r.passed
+                                      ? 'bg-green-50 border-green-300'
+                                      : 'bg-red-50 border-red-300'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center mb-3">
+                                    <span className="font-bold text-sm text-gray-900">Test Case {i + 1}</span>
+                                    <span
+                                      className={`text-xs font-bold px-3 py-1 rounded-full ${
+                                        r.passed
+                                          ? 'bg-green-200 text-green-800'
+                                          : 'bg-red-200 text-red-800'
+                                      }`}
+                                    >
+                                      {r.passed ? '✓ PASSED' : '✗ FAILED'}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-2 font-mono text-xs">
+                                    <div className="bg-white border border-gray-200 rounded p-2">
+                                      <span className="font-semibold text-gray-700 block mb-1">Input:</span>
+                                      <pre className="text-gray-800 whitespace-pre-wrap break-words">{String(r.input || '(no input)')}</pre>
+                                    </div>
+                                    <div className="bg-white border border-gray-200 rounded p-2">
+                                      <span className="font-semibold text-gray-700 block mb-1">Expected:</span>
+                                      <pre className="text-green-700 whitespace-pre-wrap break-words">{String(r.expected || '')}</pre>
+                                    </div>
+                                    <div className="bg-white border border-gray-200 rounded p-2">
+                                      <span className="font-semibold text-gray-700 block mb-1">Your Output:</span>
+                                      <pre
+                                        className={`whitespace-pre-wrap break-words ${
+                                          r.passed ? 'text-green-700' : 'text-red-700'
+                                        }`}
+                                      >
+                                        {String(r.stdout || r.stderr || '(no output)')}
+                                      </pre>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="font-mono text-xs space-y-1">
-                                  <div>In: {String(r.input)}</div>
-                                  <div>Exp: {String(r.expected)}</div>
-                                  <div>Out: {String(r.stdout || r.stderr)}</div>
+                              ))
+                            ) : results[q.id]?.error ? (
+                              <div className="p-4 rounded-lg border-2 bg-red-50 border-red-300">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-red-600 font-bold">Error</span>
                                 </div>
+                                <pre className="text-xs text-red-800 whitespace-pre-wrap">
+                                  {String(results[q.id].message || results[q.id].stderr || 'Execution failed')}
+                                </pre>
                               </div>
-                            )) || <div className="text-gray-500 text-sm">Run your code to see results.</div>}
+                            ) : (
+                              <div className="text-center py-8 text-gray-500 text-sm">
+                                <p>Run your code to see test case results</p>
+                                <p className="text-xs mt-2 text-gray-400">Click the "Run Code" button to execute your solution</p>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -357,18 +502,41 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                           </div>
                         )}
 
-                        {/* Test Cases Summary - Moved inside scrollable area */}
-                        <div className="mt-8 pt-6 border-t border-gray-200">
-                          <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
-                          <div className="space-y-2">
-                            <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-800">
-                              <span className="font-bold">Test Case 1:</span> Failed
+                        {/* Test Cases Summary - Dynamic based on actual results */}
+                        {(() => {
+                          const testResults = results[q.id]?.results;
+                          if (testResults && testResults.length > 0) {
+                            return (
+                              <div className="mt-8 pt-6 border-t border-gray-200">
+                                <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
+                                <div className="space-y-2">
+                                  {testResults.map((r: any, i: number) => (
+                                    <div
+                                      key={i}
+                                      className={`border rounded p-2 text-xs ${
+                                        r.passed
+                                          ? 'bg-green-50 border-green-100 text-green-800'
+                                          : 'bg-red-50 border-red-100 text-red-800'
+                                      }`}
+                                    >
+                                      <span className="font-bold">Test Case {i + 1}:</span>{' '}
+                                      <span className={r.passed ? 'text-green-700' : 'text-red-700'}>
+                                        {r.passed ? 'Passed' : 'Failed'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          // Show placeholder if no results yet
+                          return (
+                            <div className="mt-8 pt-6 border-t border-gray-200">
+                              <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
+                              <div className="text-xs text-gray-500 italic">Run your code to see test case results</div>
                             </div>
-                            <div className="bg-green-50 border border-green-100 rounded p-2 text-xs text-green-800">
-                              <span className="font-bold">Test Case 2:</span> Passed
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })()}
 
                       </div>
                     </div>

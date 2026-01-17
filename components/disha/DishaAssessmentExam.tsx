@@ -1238,15 +1238,83 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         // Special Round: Coding
         console.log('[DEBUG] Round type:', currentRound.round_type, 'Round name:', currentRound.round_name);
         if (currentRound.round_type?.toLowerCase() === 'coding' || currentRound.round_name?.toLowerCase().includes('coding')) {
-            const currentCodingQuestion = currentRound.questions[currentQuestionIndex];
+            // Transform data to match Solviq structure - same as assessment/round/page.tsx
             const codingRoundData = {
-                ...currentRound,
-                questions: currentRound.questions.map(q => ({
-                    id: q.question_id,
-                    question_text: q.question_text,
-                    metadata: q.question_metadata || {},
-                }))
+                round_id: currentRound.round_id || currentRound.id,
+                round_type: currentRound.round_type,
+                round_name: currentRound.round_name,
+                questions: currentRound.questions.map(q => {
+                    // Ensure metadata structure matches what CodingRound expects
+                    const metadata = q.question_metadata || {};
+                    // If metadata is a string, parse it
+                    let parsedMetadata = metadata;
+                    if (typeof metadata === 'string') {
+                        try {
+                            parsedMetadata = JSON.parse(metadata);
+                        } catch (e) {
+                            parsedMetadata = {};
+                        }
+                    }
+
+                    // Sanitize starter_code: Replace complete solutions with template
+                    const sanitizeStarterCode = (code: string | undefined, lang: string): string | undefined => {
+                        if (!code) return undefined;
+                        const codeLower = code.toLowerCase();
+                        // Check if it's a complete solution (has function definitions with implementations)
+                        const hasFunctionDef = /def |function |public |int |void |class /.test(codeLower);
+                        const hasReturn = codeLower.includes('return ');
+                        const hasComplexLogic = /if |for |while |sort\(|max\(|min\(/.test(codeLower);
+                        const hasTodo = /# todo|\/\/ todo/.test(codeLower);
+
+                        // If it looks like a complete solution, return undefined to use template
+                        if (hasFunctionDef && (hasReturn || hasComplexLogic) && !hasTodo) {
+                            return undefined;
+                        }
+                        return code;
+                    };
+
+                    // Sanitize starter_code: preserve original or use template
+                    const originalStarterCode = parsedMetadata.starter_code || {};
+                    const defaultStarterCode = {
+                        python: '# Read input\ninput_data = input()\n\n# TODO: Process and solve\n\n# Print output\nprint(result)\n',
+                        javascript: '// Read input\nconst readline = require(\'readline\');\nconst rl = readline.createInterface({\n  input: process.stdin,\n  output: process.stdout\n});\n\nrl.on(\'line\', (input_data) => {\n  // TODO: Process and solve\n  \n  // Print output\n  console.log(result);\n  rl.close();\n});\n',
+                        java: 'import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Read input\n        Scanner scanner = new Scanner(System.in);\n        String inputData = scanner.nextLine();\n        \n        // TODO: Process and solve\n        \n        // Print output\n        System.out.println(result);\n    }\n}\n',
+                        cpp: '#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read input\n    string inputData;\n    getline(cin, inputData);\n    \n    // TODO: Process and solve\n    \n    // Print output\n    cout << result << endl;\n    return 0;\n}\n',
+                    };
+
+                    // Build sanitized starter_code
+                    const sanitizedStarterCode: Record<string, string> = {};
+                    for (const lang of ['python', 'javascript', 'java', 'cpp', 'typescript']) {
+                        const originalCode = originalStarterCode[lang];
+                        const sanitized = sanitizeStarterCode(originalCode, lang);
+                        sanitizedStarterCode[lang] = sanitized || defaultStarterCode[lang as keyof typeof defaultStarterCode] || defaultStarterCode.python;
+                    }
+                    // Ensure typescript uses javascript template if not provided
+                    if (!sanitizedStarterCode.typescript) {
+                        sanitizedStarterCode.typescript = sanitizedStarterCode.javascript;
+                    }
+
+                    return {
+                        id: q.question_id,
+                        question_text: q.question_text,
+                        metadata: {
+                            ...parsedMetadata,
+                            // Use sanitized starter_code
+                            starter_code: sanitizedStarterCode,
+                            title: parsedMetadata.title || q.question_text.slice(0, 50),
+                            examples: parsedMetadata.examples || [],
+                            constraints: parsedMetadata.constraints || [],
+                            tests: parsedMetadata.tests || []
+                        }
+                    };
+                })
             };
+
+            // Custom execute function for Disha - uses the new executeDishaCode endpoint
+            const handleExecuteCode = async (payload: { question_id: string; language: string; code: string; stdin?: string }) => {
+                return await apiClient.executeDishaCode(packageId, codingRoundData.round_id, payload);
+            };
+
 
             const handleCodingSubmit = async (responses: any[]) => {
                 await submitRound();
@@ -1260,63 +1328,32 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             return (
                 <div className="fullscreen-exam">
                     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
-                        {/* Header */}
+                        {/* Header - Matching Solviq style */}
                         <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
                             <h1 className="text-xl font-bold tracking-tight">
-                                Round {packageInfo?.current_round || 1}: {currentRound.round_name} - Question {currentQuestionIndex + 1} of {currentRound.questions.length}
+                                Round {packageInfo?.current_round || 1}: {currentRound.round_name || 'Coding Challenge'}
                             </h1>
                             <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
                                 <Clock className="w-4 h-4" />
-                                <span>{formatTime(timeRemaining)}</span>
+                                <span>{timeRemaining !== null ? `${Math.floor(timeRemaining / 60)}m ${(timeRemaining % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
                             </div>
                         </div>
 
-                        {/* Coding Question Workspace */}
-                        <div className="flex-1 overflow-hidden relative flex flex-col">
+                        {/* Coding Question Workspace - Same structure as Solviq */}
+                        <div className="flex-1 overflow-hidden relative">
                             <CodingRound
                                 assessmentId={packageId}
                                 roundData={codingRoundData}
+                                executeCodeFn={handleExecuteCode}
                                 submitFn={handleCodingSubmit}
                                 onChange={handleCodingChange}
-                                showSubmitButton={false}
-                                activeQuestionId={currentCodingQuestion?.question_id}
-                                hideFooter={true}
+                                showSubmitButton={true}
+                                onSubmitted={() => {
+                                    // submitRound() already handles state transitions
+                                    // This callback is called after successful submission
+                                    toast.success('Round submitted successfully!');
+                                }}
                             />
-
-                            {/* Navigation Footer */}
-                            <div className="shrink-0 bg-white border-t border-gray-300 p-4 flex items-center justify-between shadow-md z-30">
-                                <button
-                                    onClick={() => {
-                                        if (currentQuestionIndex > 0) {
-                                            navigateToQuestion(currentQuestionIndex - 1);
-                                        }
-                                    }}
-                                    disabled={currentQuestionIndex === 0}
-                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded font-semibold shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Previous Question
-                                </button>
-
-                                <div className="flex items-center gap-3">
-                                    {currentQuestionIndex < currentRound.questions.length - 1 ? (
-                                        <button
-                                            onClick={() => navigateToQuestion(currentQuestionIndex + 1)}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded font-semibold shadow-sm transition-colors"
-                                        >
-                                            Next Question
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={handleSubmitWithConfirmation}
-                                            disabled={isSubmitting}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded font-bold shadow-sm transition-colors flex items-center gap-2"
-                                        >
-                                            {isSubmitting && <Loader2 size="sm" color="white" />}
-                                            Submit Round
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

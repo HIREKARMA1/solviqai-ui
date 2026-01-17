@@ -62,6 +62,30 @@ export default function AdminDishaReportsPage() {
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<PackageReport | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
+    const [detailedReport, setDetailedReport] = useState<any>(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    useEffect(() => {
+        const loadDetailedReport = async () => {
+            if (!selectedStudent) {
+                setDetailedReport(null);
+                return;
+            }
+
+            try {
+                setLoadingDetails(true);
+                const data = await apiClient.getDishaReport(selectedStudent.attempt_id);
+                setDetailedReport(data);
+            } catch (error: any) {
+                console.error('Failed to load detailed report:', error);
+                // Don't show toast error here to avoid spamming if it's just not evaluated yet
+            } finally {
+                setLoadingDetails(false);
+            }
+        };
+
+        loadDetailedReport();
+    }, [selectedStudent]);
 
     useEffect(() => {
         const loadReport = async () => {
@@ -250,10 +274,10 @@ export default function AdminDishaReportsPage() {
                                             </td>
                                             <td className="p-3">
                                                 <span className={`font-semibold ${student.overall_percentage >= 80
-                                                        ? 'text-green-600'
-                                                        : student.overall_percentage >= 60
-                                                            ? 'text-yellow-600'
-                                                            : 'text-red-600'
+                                                    ? 'text-green-600'
+                                                    : student.overall_percentage >= 60
+                                                        ? 'text-yellow-600'
+                                                        : 'text-red-600'
                                                     }`}>
                                                     {student.overall_percentage.toFixed(1)}%
                                                 </span>
@@ -304,7 +328,7 @@ export default function AdminDishaReportsPage() {
                                     </Button>
                                 </div>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-gray-500">Overall Score</p>
@@ -328,13 +352,13 @@ export default function AdminDishaReportsPage() {
 
                                 <div>
                                     <h3 className="text-lg font-semibold mb-3">Round-wise Scores</h3>
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
                                         {selectedStudent.round_scores.map((round) => (
                                             <div
                                                 key={round.round_number}
-                                                className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                                                className="bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border"
                                             >
-                                                <div className="flex items-center justify-between">
+                                                <div className="p-3 bg-gray-100 dark:bg-gray-700 flex items-center justify-between">
                                                     <div>
                                                         <p className="font-semibold">
                                                             Round {round.round_number}: {round.round_name}
@@ -349,6 +373,48 @@ export default function AdminDishaReportsPage() {
                                                         </p>
                                                     </div>
                                                 </div>
+
+                                                {/* Detailed Question Breakdown */}
+                                                {loadingDetails ? (
+                                                    <div className="p-4 flex justify-center">
+                                                        <Loader size="sm" />
+                                                    </div>
+                                                ) : detailedReport?.question_breakdown ? (
+                                                    <div className="p-4 space-y-4">
+                                                        {detailedReport.question_breakdown
+                                                            .find((r: any) => r.round_number === round.round_number)
+                                                            ?.questions.map((q: any, idx: number) => (
+                                                                <div key={idx} className="border-t pt-3 first:border-0 first:pt-0">
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <div className="flex-1">
+                                                                            <span className="font-medium text-sm text-gray-500">Q{q.question_order}:</span>
+                                                                            <span className="ml-2 text-sm font-medium">{q.question_text}</span>
+                                                                        </div>
+                                                                        <Badge variant={q.is_correct ? 'default' : 'destructive'} className="ml-2 shrink-0">
+                                                                            {q.points_earned} / {q.points_max}
+                                                                        </Badge>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-sm">
+                                                                        <div className="bg-white dark:bg-gray-900 p-2 rounded border">
+                                                                            <p className="text-xs text-gray-500 mb-1">Student Answer:</p>
+                                                                            <pre className="whitespace-pre-wrap font-mono text-xs overflow-x-auto">
+                                                                                {q.student_answer || "(No answer)"}
+                                                                            </pre>
+                                                                        </div>
+                                                                        <div className="bg-blue-50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900">
+                                                                            <p className="text-xs text-gray-500 mb-1">Feedback:</p>
+                                                                            <p className="text-gray-700 dark:text-gray-300">{q.feedback || "No feedback available"}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-4 text-center text-sm text-gray-500">
+                                                        Detailed breakdown not available.
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
