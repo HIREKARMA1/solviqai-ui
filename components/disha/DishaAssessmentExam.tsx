@@ -1915,32 +1915,31 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                     </div>
                                                 );
                                             }
+
+
+                                            if (isListeningQuestion) {
+                                                return (
+                                                    <div className="h-full flex flex-col">
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                                            <p className="text-sm text-gray-700">
+                                                                <strong>Instructions:</strong> Listen to the audio and type exactly what you hear in the box below.
+                                                            </p>
+                                                        </div>
+                                                        <label className="text-sm font-semibold text-gray-600 mb-2">Type what you heard:</label>
+                                                        <textarea
+                                                            className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
+                                                            placeholder="Type sentence here..."
+                                                            value={userAnswers[currentQuestion.question_id] || ''}
+                                                            onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                        />
+                                                        <div className="text-right text-xs text-gray-500 mt-2">
+                                                            {(userAnswers[currentQuestion.question_id] || '').length} characters
+                                                        </div>
+                                                    </div>
                                                 );
                                             }
 
-                                        if (isListeningQuestion) {
-                                                 return (
-                                        <div className="h-full flex flex-col">
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                                                <p className="text-sm text-gray-700">
-                                                    <strong>Instructions:</strong> Listen to the audio and type exactly what you hear in the box below.
-                                                </p>
-                                            </div>
-                                            <label className="text-sm font-semibold text-gray-600 mb-2">Type what you heard:</label>
-                                            <textarea
-                                                className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
-                                                placeholder="Type sentence here..."
-                                                value={userAnswers[currentQuestion.question_id] || ''}
-                                                onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
-                                            />
-                                            <div className="text-right text-xs text-gray-500 mt-2">
-                                                {(userAnswers[currentQuestion.question_id] || '').length} characters
-                                            </div>
-                                        </div>
-                                        );
-                                            }
-
-                                        return null; // Continue with MCQ rendering
+                                            return null; // Continue with MCQ rendering
                                         })()}
 
                                         {/* MCQ Options */}
