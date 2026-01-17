@@ -358,7 +358,7 @@ export function GroupDiscussionRound({
 
         try {
             setLoading(true);
-            toast.loading('Submitting your discussion...', { id: 'submitting' });
+            // toast.loading('Submitting your discussion...', { id: 'submitting' });
 
             // Get assessment ID from prop or URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -431,7 +431,6 @@ export function GroupDiscussionRound({
             let evalScore = 0;
             try {
                 toast.dismiss('submitting'); // Dismiss submitting toast first
-                toast.loading('Evaluating your discussion...', { id: 'evaluating' });
 
                 const endpoint = isDisha
                     ? `/disha/assessments/${assessmentId}/rounds/${roundId}/evaluate-discussion`
@@ -454,18 +453,9 @@ export function GroupDiscussionRound({
 
                 console.log('✅ Evaluation complete:', evalResponse.data);
                 evalScore = evalResponse.data?.score || 0;
-
-                toast.dismiss('evaluating');
-                toast.success('Discussion evaluated successfully!');
             } catch (evalError: any) {
                 console.error('❌ Evaluation failed:', evalError);
-                console.error('Error details:', {
-                    message: evalError.message,
-                    response: evalError.response?.data,
-                    status: evalError.response?.status
-                });
-                toast.dismiss('evaluating');
-                toast.dismiss('submitting'); // Make sure submitting is also dismissed
+                toast.dismiss('submitting');
                 toast.error('Evaluation failed. Please contact support.');
             }
 

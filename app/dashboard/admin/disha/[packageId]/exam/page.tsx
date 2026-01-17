@@ -42,7 +42,7 @@ export default function AdminDishaExamPage() {
     }, [packageId, router]);
 
     const handleComplete = () => {
-        router.push(`/dashboard/admin/disha/${packageId}/reports`);
+        router.push(`/dashboard/admin/disha`);
     };
 
     if (loading) {

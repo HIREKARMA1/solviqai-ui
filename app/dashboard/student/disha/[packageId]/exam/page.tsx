@@ -43,7 +43,7 @@ export default function StudentDishaExamPage() {
     }, [packageId, router]);
 
     const handleComplete = () => {
-        router.push(`/dashboard/student/disha/${packageId}/report`);
+        router.push(`/dashboard/student`);
     };
 
     if (loading) {

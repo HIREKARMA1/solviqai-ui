@@ -858,7 +858,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
             if (response.assessment_complete) {
                 setExamState('assessment_complete');
-                toast.success('Assessment completed! Evaluation in progress...');
 
                 // Poll for evaluation status
                 pollEvaluationStatus();
@@ -905,10 +904,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 const status = await apiClient.getDishaAttemptStatus(packageId, attemptId);
                 if (status.status === 'EVALUATED' || status.status === 'COMPLETED') {
                     clearInterval(poll);
-                    toast.success('Evaluation complete!');
+                    // Removed automatic onComplete() to prevent auto-redirection
+                    /*
                     if (onComplete) {
                         onComplete();
                     }
+                    */
                 }
             } catch (error) {
                 console.error('Failed to check status:', error);
@@ -1318,16 +1319,16 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             <div className="w-full max-w-4xl mx-auto p-6">
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <h2 className="text-3xl font-bold mb-4">Assessment Complete!</h2>
+                    <h2 className="text-3xl font-bold mb-4">Exam Submitted Successfully!</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Your assessment has been submitted and is being evaluated. Results will be available shortly.
+                        Your assessment has been submitted. You can now return to the dashboard.
                     </p>
                     {onComplete && (
                         <button
                             onClick={onComplete}
                             className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
                         >
-                            View Results
+                            Go to Dashboard
                         </button>
                     )}
                 </div>
@@ -1374,15 +1375,16 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                 setIsSubmitting(true);
                                 // GD Round calls its own evaluate endpoint which handles submission
                                 // We just need to refresh the package status
-                                toast.success('Discussion round completed successfully!');
+                                // toast.success('Discussion round completed successfully!'); // Optional: remove if user wants no success toasts
 
                                 // Wait briefly for user to see success message
-                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                await new Promise(resolve => setTimeout(resolve, 500));
 
                                 await continueToNextRound();
                             } catch (error: any) {
                                 console.error('Error completing discussion round:', error);
                                 toast.error('Failed to update status');
+                            } finally {
                                 setIsSubmitting(false);
                             }
                         }}
@@ -1396,7 +1398,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         if (currentRound.round_type?.toLowerCase() === 'coding' || currentRound.round_name?.toLowerCase().includes('coding')) {
             // Transform data to match Solviq structure - same as assessment/round/page.tsx
             const codingRoundData = {
-                round_id: currentRound.round_id || currentRound.id,
+                round_id: currentRound.round_id || currentRound.id || '',
                 round_type: currentRound.round_type,
                 round_name: currentRound.round_name,
                 questions: currentRound.questions.map(q => {
@@ -1665,7 +1667,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                     disabled={isSubmitting}
                                     className="bg-[#10B981] hover:bg-green-600 text-white px-8 py-2.5 rounded-sm font-bold shadow-sm transition-colors flex items-center gap-2"
                                 >
-                                    {isSubmitting && <Loader2 size="sm" color="white" />}
+                                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                                     Submit Section
                                 </button>
                             </div>
@@ -2127,8 +2129,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                         ) : (
                                             <button
                                                 onClick={handleSubmitWithConfirmation}
-                                                className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                                disabled={isSubmitting}
+                                                className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
                                             >
+                                                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                                                 Submit Round
                                             </button>
                                         )}
