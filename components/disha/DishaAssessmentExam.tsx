@@ -906,9 +906,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 if (status.status === 'EVALUATED' || status.status === 'COMPLETED') {
                     clearInterval(poll);
                     toast.success('Evaluation complete!');
-                    if (onComplete) {
-                        onComplete();
-                    }
+                    // onComplete(); // Disabled to prevent auto-redirect to report
+                    // instead we just stay on the completion screen
                 }
             } catch (error) {
                 console.error('Failed to check status:', error);
@@ -1318,18 +1317,34 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             <div className="w-full max-w-4xl mx-auto p-6">
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <h2 className="text-3xl font-bold mb-4">Assessment Complete!</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Your assessment has been submitted and is being evaluated. Results will be available shortly.
+                    <h2 className="text-3xl font-bold mb-4">Assessment Submitted</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
+                        Your exam is submitted to the recruiter. You will be notified soon.
+                        <br />
+                        You can close the window.
                     </p>
-                    {onComplete && (
+
+                    <div className="flex justify-center gap-4">
                         <button
-                            onClick={onComplete}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                            onClick={() => {
+                                try {
+                                    window.close();
+                                } catch (e) {
+                                    toast.error('Could not close window automatically. Please close the tab.');
+                                }
+                            }}
+                            className="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-md"
                         >
-                            View Results
+                            Close Window
                         </button>
-                    )}
+
+                        <button
+                            onClick={() => router.push('/dashboard/student')}
+                            className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition"
+                        >
+                            Return to Dashboard
+                        </button>
+                    </div>
                 </div>
             </div>
         );
