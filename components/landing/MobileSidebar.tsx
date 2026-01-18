@@ -119,6 +119,12 @@ const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'disha',
+    icon: <FileText className="w-5 h-5" />,
+    label: 'Disha Assessments',
+    onClick: undefined,
+  },
+  {
     id: 'profile',
     icon: <User className="w-5 h-5" />,
     label: 'Profile',
@@ -147,7 +153,7 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
   // Get sidebar features based on user type
   const getSidebarFeatures = (): SidebarItem[] => {
     if (!user) return studentSidebarFeatures;
-    
+
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
@@ -163,7 +169,7 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    
+
     // Student routes
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
@@ -174,7 +180,7 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
       };
       return routeMap[featureId] || null;
     }
-    
+
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
@@ -185,7 +191,7 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
       };
       return routeMap[featureId] || null;
     }
-    
+
     // Admin routes
     if (user.user_type === 'admin') {
       const routeMap: Record<string, string> = {
@@ -193,11 +199,12 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
         'colleges': `/dashboard/admin/colleges`,
         'students': `/dashboard/admin/students`,
         'analytics': `/dashboard/admin/analytics`,
+        'disha': `/dashboard/admin/disha`,
         'profile': `/dashboard/admin/profile`,
       };
       return routeMap[featureId] || null;
     }
-    
+
     return null;
   };
 
