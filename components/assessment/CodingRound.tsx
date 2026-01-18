@@ -301,7 +301,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
 
                             {/* Input Format */}
                             {(() => {
-                              const inputMatch = q.question_text.match(/\*\*Input Format:\*\*\s*(.+?)(?=\*\*|$)/is);
+                              const inputMatch = q.question_text.match(/\*\*Input Format:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
                               const inputFormat = inputMatch ? inputMatch[1].trim() : meta.input_format;
                               return inputFormat ? (
                                 <div className="bg-blue-50 border-l-4 border-blue-500 rounded p-4">
@@ -313,7 +313,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
 
                             {/* Output Format */}
                             {(() => {
-                              const outputMatch = q.question_text.match(/\*\*Output Format:\*\*\s*(.+?)(?=\*\*|$)/is);
+                              const outputMatch = q.question_text.match(/\*\*Output Format:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
                               const outputFormat = outputMatch ? outputMatch[1].trim() : meta.output_format;
                               return outputFormat ? (
                                 <div className="bg-green-50 border-l-4 border-green-500 rounded p-4">
@@ -356,7 +356,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                 );
                               }
                               // Fallback: Try to parse from question text
-                              const examplesMatch = q.question_text.match(/\*\*Examples?:\*\*\s*(.+?)(?=\*\*Constraints?:\*\*|$)/is);
+                              const examplesMatch = q.question_text.match(/\*\*Examples?:\*\*\s*([\s\S]+?)(?=\*\*Constraints?:\*\*|$)/i);
                               if (examplesMatch) {
                                 const examplesText = examplesMatch[1];
                                 const exampleBlocks = examplesText.split(/(?:^|\n)\s*(?:Input:|Example \d+)/i).filter(Boolean);
@@ -364,9 +364,9 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                   return (
                                     <div className="space-y-4">
                                       <h3 className="font-bold text-gray-900 text-base">Examples</h3>
-                                      {exampleBlocks.slice(0, 4).map((block, i) => {
-                                        const inputMatch = block.match(/Input:\s*(.+?)(?:\n|Output:|$)/is);
-                                        const outputMatch = block.match(/Output:\s*(.+?)(?:\n|$)/is);
+                                      {exampleBlocks.slice(0, 4).map((block: string, i: number) => {
+                                        const inputMatch = block.match(/Input:\s*([\s\S]+?)(?:\n|Output:|$)/i);
+                                        const outputMatch = block.match(/Output:\s*([\s\S]+?)(?:\n|$)/i);
                                         return (inputMatch || outputMatch) ? (
                                           <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                                             <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
@@ -401,11 +401,11 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                               const constraints = meta.constraints || [];
                               // Try to parse from question text if not in metadata
                               if (constraints.length === 0) {
-                                const constraintsMatch = q.question_text.match(/\*\*Constraints?:\*\*\s*(.+?)(?=\*\*|$)/is);
+                                const constraintsMatch = q.question_text.match(/\*\*Constraints?:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
                                 if (constraintsMatch) {
                                   const constraintsText = constraintsMatch[1].trim();
                                   // Split by lines or bullets
-                                  constraints.push(...constraintsText.split(/\n|•|\*/).filter(c => c.trim().length > 0).map(c => c.trim().replace(/^[-•]\s*/, '')));
+                                  constraints.push(...constraintsText.split(/\n|•|\*/).filter((c: string) => c.trim().length > 0).map((c: string) => c.trim().replace(/^[-•]\s*/, '')));
                                 }
                               }
                               return constraints.length > 0 ? (
@@ -433,20 +433,18 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                               results[q.id].results.map((r: any, i: number) => (
                                 <div
                                   key={i}
-                                  className={`p-4 rounded-lg border-2 ${
-                                    r.passed
-                                      ? 'bg-green-50 border-green-300'
-                                      : 'bg-red-50 border-red-300'
-                                  }`}
+                                  className={`p-4 rounded-lg border-2 ${r.passed
+                                    ? 'bg-green-50 border-green-300'
+                                    : 'bg-red-50 border-red-300'
+                                    }`}
                                 >
                                   <div className="flex justify-between items-center mb-3">
                                     <span className="font-bold text-sm text-gray-900">Test Case {i + 1}</span>
                                     <span
-                                      className={`text-xs font-bold px-3 py-1 rounded-full ${
-                                        r.passed
-                                          ? 'bg-green-200 text-green-800'
-                                          : 'bg-red-200 text-red-800'
-                                      }`}
+                                      className={`text-xs font-bold px-3 py-1 rounded-full ${r.passed
+                                        ? 'bg-green-200 text-green-800'
+                                        : 'bg-red-200 text-red-800'
+                                        }`}
                                     >
                                       {r.passed ? '✓ PASSED' : '✗ FAILED'}
                                     </span>
@@ -463,9 +461,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                     <div className="bg-white border border-gray-200 rounded p-2">
                                       <span className="font-semibold text-gray-700 block mb-1">Your Output:</span>
                                       <pre
-                                        className={`whitespace-pre-wrap break-words ${
-                                          r.passed ? 'text-green-700' : 'text-red-700'
-                                        }`}
+                                        className={`whitespace-pre-wrap break-words ${r.passed ? 'text-green-700' : 'text-red-700'
+                                          }`}
                                       >
                                         {String(r.stdout || r.stderr || '(no output)')}
                                       </pre>
@@ -513,11 +510,10 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                   {testResults.map((r: any, i: number) => (
                                     <div
                                       key={i}
-                                      className={`border rounded p-2 text-xs ${
-                                        r.passed
-                                          ? 'bg-green-50 border-green-100 text-green-800'
-                                          : 'bg-red-50 border-red-100 text-red-800'
-                                      }`}
+                                      className={`border rounded p-2 text-xs ${r.passed
+                                        ? 'bg-green-50 border-green-100 text-green-800'
+                                        : 'bg-red-50 border-red-100 text-red-800'
+                                        }`}
                                     >
                                       <span className="font-bold">Test Case {i + 1}:</span>{' '}
                                       <span className={r.passed ? 'text-green-700' : 'text-red-700'}>
