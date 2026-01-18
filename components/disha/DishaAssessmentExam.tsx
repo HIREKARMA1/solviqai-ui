@@ -1321,9 +1321,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
                     <h2 className="text-3xl font-bold mb-4">Assessment Submitted</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
-                        Your exam is submitted to the recruiter. You will be notified soon.
+                        Your exam has been successfully submitted.
                         <br />
-                        You can close the window.
+                        You may now close this window.
                     </p>
 
                     <div className="flex justify-center gap-4">
@@ -1337,7 +1337,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                             }}
                             className="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-md"
                         >
-                            View Results
+                            Close Window
                         </button>
 
                         <button
