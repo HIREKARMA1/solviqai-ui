@@ -270,7 +270,7 @@ export default function StudentDishaReportPage() {
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Correct Answers</span>
                                     <span className="font-semibold text-green-600">
-                                        {report.rounds.reduce((acc, r) => acc + r.questions.filter(q => q.is_correct).length, 0)}
+                                        {report.rounds.reduce((acc, r) => acc + (r.questions || []).filter(q => q.is_correct).length, 0)}
                                     </span>
                                 </div>
                             </div>
@@ -349,11 +349,11 @@ export default function StudentDishaReportPage() {
                                 <Accordion type="single" collapsible>
                                     <AccordionItem value="details" className="border-b-0">
                                         <AccordionTrigger className="px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                                            View Question Breakdown ({round.questions.length})
+                                            View Question Breakdown ({(round.questions || []).length})
                                         </AccordionTrigger>
                                         <AccordionContent className="px-6 pt-2 pb-6">
                                             <div className="space-y-4">
-                                                {round.questions.map((q, idx) => (
+                                                {(round.questions || []).map((q, idx) => (
                                                     <div key={q.question_id} className="border rounded-lg p-4">
                                                         <div className="flex justify-between items-start gap-4">
                                                             <div className="flex-1">
@@ -374,23 +374,20 @@ export default function StudentDishaReportPage() {
                                                                             {q.correct_answer || <span className="italic text-gray-400">N/A</span>}
                                                                         </p>
                                                                     </div>
-                                                                    <div className={`border rounded-lg p-3 ${
-                                                                        q.is_correct 
-                                                                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
-                                                                            : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
-                                                                    }`}>
-                                                                        <p className={`text-xs font-semibold mb-1 ${
-                                                                            q.is_correct 
-                                                                                ? 'text-green-700 dark:text-green-300' 
-                                                                                : 'text-gray-700 dark:text-gray-300'
+                                                                    <div className={`border rounded-lg p-3 ${q.is_correct
+                                                                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                                                                        : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
                                                                         }`}>
+                                                                        <p className={`text-xs font-semibold mb-1 ${q.is_correct
+                                                                            ? 'text-green-700 dark:text-green-300'
+                                                                            : 'text-gray-700 dark:text-gray-300'
+                                                                            }`}>
                                                                             Your Answer:
                                                                         </p>
-                                                                        <p className={`text-sm font-medium break-words ${
-                                                                            q.is_correct 
-                                                                                ? 'text-green-900 dark:text-green-100' 
-                                                                                : 'text-gray-900 dark:text-gray-100'
-                                                                        }`}>
+                                                                        <p className={`text-sm font-medium break-words ${q.is_correct
+                                                                            ? 'text-green-900 dark:text-green-100'
+                                                                            : 'text-gray-900 dark:text-gray-100'
+                                                                            }`}>
                                                                             {q.student_answer || <span className="italic text-gray-400">No answer provided</span>}
                                                                         </p>
                                                                     </div>

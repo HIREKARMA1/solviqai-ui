@@ -98,7 +98,7 @@ export default function AdminDishaReportsPage() {
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<PackageReport | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
-    const [detailedReport, setDetailedReport] = useState<DetailedReport | null>(null);
+    const [detailedReport, setDetailedReport] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
     useEffect(() => {

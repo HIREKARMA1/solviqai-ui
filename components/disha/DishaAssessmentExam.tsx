@@ -1319,18 +1319,34 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             <div className="w-full max-w-4xl mx-auto p-6">
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <h2 className="text-3xl font-bold mb-4">Exam Submitted Successfully!</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Your assessment has been submitted. You can now return to the dashboard.
+                    <h2 className="text-3xl font-bold mb-4">Assessment Submitted</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
+                        Your exam is submitted to the recruiter. You will be notified soon.
+                        <br />
+                        You can close the window.
                     </p>
-                    {onComplete && (
+
+                    <div className="flex justify-center gap-4">
                         <button
-                            onClick={onComplete}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                            onClick={() => {
+                                try {
+                                    window.close();
+                                } catch (e) {
+                                    toast.error('Could not close window automatically. Please close the tab.');
+                                }
+                            }}
+                            className="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-md"
                         >
-                            Go to Dashboard
+                            View Results
                         </button>
-                    )}
+
+                        <button
+                            onClick={() => router.push('/dashboard/student')}
+                            className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition"
+                        >
+                            Return to Dashboard
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -1691,12 +1707,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         Round {packageInfo?.current_round || 1}: {currentRound!.round_name}
                     </h1>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={toggleFullscreen}
-                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                        >
-                            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                        </button>
+                        {/* Fullscreen button removed as requested */}
                     </div>
                 </div>
 
@@ -1815,8 +1826,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
 
+                                            // Detect Listening Questions explicitly first
+                                            const isListeningQuestion =
+                                                questionType === 'listening' ||
+                                                questionType === 'listening_question' ||
+                                                questionText.includes('listen and write');
+
                                             // Check if it's a soft skills question and has speaking keywords OR has no options (likely a speaking question)
-                                            const isSpeakingQuestion = questionType === 'soft_skills' && (
+                                            // BUT NOT if it is a listening question
+                                            const isSpeakingQuestion = (questionType === 'soft_skills' && !isListeningQuestion) && (
                                                 hasNoOptions || // No options usually means speaking question
                                                 questionText.includes('speak') ||
                                                 questionText.includes('read aloud') ||
@@ -1900,6 +1918,30 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                     </div>
                                                 );
                                             }
+
+
+                                            if (isListeningQuestion) {
+                                                return (
+                                                    <div className="h-full flex flex-col">
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                                            <p className="text-sm text-gray-700">
+                                                                <strong>Instructions:</strong> Listen to the audio and type exactly what you hear in the box below.
+                                                            </p>
+                                                        </div>
+                                                        <label className="text-sm font-semibold text-gray-600 mb-2">Type what you heard:</label>
+                                                        <textarea
+                                                            className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
+                                                            placeholder="Type sentence here..."
+                                                            value={userAnswers[currentQuestion.question_id] || ''}
+                                                            onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                        />
+                                                        <div className="text-right text-xs text-gray-500 mt-2">
+                                                            {(userAnswers[currentQuestion.question_id] || '').length} characters
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+
                                             return null; // Continue with MCQ rendering
                                         })()}
 
@@ -1911,7 +1953,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
 
-                                            const isSpeakingQuestion = questionType === 'soft_skills' && (
+                                            const isSpeakingQuestion = (questionType === 'soft_skills') && (
                                                 hasNoOptions ||
                                                 questionText.includes('speak') ||
                                                 questionText.includes('read aloud') ||
@@ -1922,7 +1964,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 questionText.includes('describe') ||
                                                 questionText.includes('explain verbally')
                                             );
-                                            if (isSpeakingQuestion) return null; // Already rendered as speaking question
+                                            const isListeningQuestion =
+                                                questionType === 'listening' ||
+                                                questionType === 'listening_question' ||
+                                                questionText.includes('listen and write');
+
+                                            if (isSpeakingQuestion || isListeningQuestion) return null; // Already rendered as speaking/listening question
 
                                             return (
                                                 <div className="space-y-4">
