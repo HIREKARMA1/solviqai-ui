@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { apiClient } from "@/lib/api";
-import { Mic, MicOff, MessageCircle, Clock, Users, Volume2, ChevronDown, ChevronUp, VolumeX } from 'lucide-react';
+import { Mic, MicOff, MessageCircle, Clock, Users, Volume2, ChevronDown, ChevronUp, VolumeX, Video, VideoOff, MonitorUp, Hand, Smile, PhoneOff, FileText, LayoutGrid } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Type definitions for Web Speech API
@@ -88,6 +88,11 @@ interface GroupDiscussionRoundProps {
     onComplete?: (responses: AssessmentResponse[]) => void;
     mode?: 'practice' | 'assessment';
     practiceJoinPayload?: any;
+    isDisha?: boolean;
+    maxResponses?: number;
+    attemptId?: string;
+    packageId?: string;  // For Disha submit
+    onNextRound?: () => void;  // Callback to advance to next round
 }
 
 export function GroupDiscussionRound({
@@ -95,7 +100,12 @@ export function GroupDiscussionRound({
     assessmentId: propAssessmentId,
     onComplete,
     mode = 'assessment',
-    practiceJoinPayload
+    practiceJoinPayload,
+    isDisha = false,
+    maxResponses = 5,
+    attemptId,
+    packageId,
+    onNextRound
 }: GroupDiscussionRoundProps) {
     const router = useRouter();
 
@@ -105,7 +115,7 @@ export function GroupDiscussionRound({
     const [currentAIResponse, setCurrentAIResponse] = useState<AIResponse | null>(null);
     const [gdResponses, setGDResponses] = useState<GDResponse[]>([]);
     const [gdTurns, setGDTurns] = useState<Turn[]>([]);
-    const [currentStep, setCurrentStep] = useState<'intro' | 'topic' | 'discussion' | 'evaluation'>('topic');
+    const [currentStep, setCurrentStep] = useState<'mic-test' | 'intro' | 'topic' | 'discussion' | 'evaluation'>('mic-test');
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -135,12 +145,24 @@ export function GroupDiscussionRound({
     const [fetchAttempt, setFetchAttempt] = useState(0);
     const maxRetries = 10;
     const inFlightRef = useRef(false);
+    const [isCamOn, setIsCamOn] = useState(true);
+    const [isChatOpen, setIsChatOpen] = useState(true);
+    const [isUserManualSubmit, setIsUserManualSubmit] = useState(false);
+
+    // Round-based state for GD flow (bots speak first, then user)
+    const [currentRoundNumber, setCurrentRoundNumber] = useState(1);
+    const [currentRoundTurn, setCurrentRoundTurn] = useState<'bots' | 'user'>('bots');  // 'bots' means bots should speak first
+    const [waitingForBots, setWaitingForBots] = useState(false);
+    const [hasInitialBotSpoken, setHasInitialBotSpoken] = useState(false);  // Track if question was spoken by bot
 
     // Refs
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const transcriptRef = useRef('');
+    const speechRecognition = useRef<any>(null);
+    const audioContext = useRef<AudioContext | null>(null);
+    const audioAnalyser = useRef<AnalyserNode | null>(null);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Auto-scroll to bottom of chat
     useEffect(() => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTo({
@@ -148,7 +170,7 @@ export function GroupDiscussionRound({
                 behavior: 'smooth'
             });
         }
-    }, [gdTurns, typingAgent]);
+    }, [gdTurns, transcript, interimTranscript, typingAgent]);
 
     // Initialize voices
     useEffect(() => {
@@ -182,6 +204,40 @@ export function GroupDiscussionRound({
         };
     }, [currentStep, topic]);
 
+    // Handle initial bot speech when topic loads and voices are ready (for Disha)
+    useEffect(() => {
+        if (isDisha && topic && voicesLoaded && !hasInitialBotSpoken && currentStep === 'discussion') {
+            // Wait a bit for topic to fully render, then have bot speak question
+            const timer = setTimeout(() => {
+                const questionText = `${topic.title}. ${topic.content}`;
+                setHasInitialBotSpoken(true);
+                setIsTopicAnnounced(true);
+                setCurrentStep('discussion');
+
+                // Add initial bot message about the question
+                const initialTurn: Turn = {
+                    user: '',
+                    agents: [{
+                        name: personas[0].name,
+                        text: `Our topic for discussion is: ${topic.title}. ${topic.content}`
+                    }],
+                    timestamp: Date.now()
+                };
+                setGDTurns([initialTurn]);
+
+                // Speak the question, then trigger bots to speak first
+                speakAgentText(personas[0].name, questionText).then(() => {
+                    // After question is spoken, have all bots speak first in the round
+                    setWaitingForBots(true);
+                    setCurrentRoundTurn('bots');
+                    handleBotsSpeakFirst();
+                });
+            }, 1000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [topic, voicesLoaded, hasInitialBotSpoken, isDisha, currentStep]);
+
     const fetchTopic = async () => {
         if (loading || inFlightRef.current || fetchAttempt > maxRetries) {
             return;
@@ -204,7 +260,11 @@ export function GroupDiscussionRound({
         try {
             const timestamp = new Date().getTime();
             const response = await Promise.race([
-                apiClient.client.post(`/assessments/rounds/${roundId}/gd/topic?t=${timestamp}&refresh=false`),
+                apiClient.client.post(
+                    isDisha
+                        ? `/disha/assessments/${propAssessmentId}/rounds/${roundId}/gd/topic?t=${timestamp}&refresh=false&attempt_id=${attemptId}`
+                        : `/assessments/rounds/${roundId}/gd/topic?t=${timestamp}&refresh=false`
+                ),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 15000))
             ]) as any;
             const topicData = response.data;
@@ -231,6 +291,16 @@ export function GroupDiscussionRound({
 
             setTopic(processedTopicData);
             setFetchAttempt(0);
+
+            // For non-Disha: proceed normally
+            if (!isDisha) {
+                setIsTopicAnnounced(true);
+                setCurrentStep('discussion');
+            } else {
+                // For Disha: Topic is set, useEffect will handle bot speech when voices are ready
+                setIsTopicAnnounced(true);
+                setCurrentStep('discussion');
+            }
 
             if (topicData.audio_url) {
                 fetch(topicData.audio_url).catch(console.error);
@@ -261,7 +331,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    const MAX_RESPONSES = 5;
+    // const MAX_RESPONSES = 5; // Replaced by maxResponses prop
     const personas: AgentMessage[] = [
         { name: 'Aarav (Pro)', text: '' },
         { name: 'Meera (Skeptic)', text: '' },
@@ -288,7 +358,7 @@ export function GroupDiscussionRound({
 
         try {
             setLoading(true);
-            toast.loading('Submitting your discussion...', { id: 'submitting' });
+            // toast.loading('Submitting your discussion...', { id: 'submitting' });
 
             // Get assessment ID from prop or URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -305,55 +375,105 @@ export function GroupDiscussionRound({
             }
 
             // STEP 1: Save full conversation transcript via API
-            const submitPayload = [{
-                response_text: JSON.stringify({
-                    turns: gdTurns,
-                    responses: gdResponses
-                }),
-                score: 0,
-                time_taken: 0
-            }];
-            console.log('GD submit payload preview', {
-                assessmentId,
-                roundId,
-                turns: gdTurns.length,
-                responses: gdResponses.length,
-                payloadSize: JSON.stringify(submitPayload[0].response_text).length
-            });
+            // For DISHA, use submitDishaRound endpoint directly
+            if (isDisha && packageId && roundId && attemptId) {
+                try {
+                    // Submit GD round using Disha submit endpoint
+                    const gdAnswers: Record<string, any> = {
+                        conversation: gdTurns.map(turn => ({
+                            user: turn.user,
+                            agents: turn.agents
+                        })),
+                        responses: gdResponses
+                    };
 
-            try {
-                const submitRes = await apiClient.submitRoundResponses(
+                    await apiClient.submitDishaRound(
+                        packageId,
+                        roundId,
+                        attemptId,
+                        gdAnswers
+                    );
+                    console.log('GD round submitted successfully via Disha endpoint');
+                } catch (saveErr) {
+                    console.warn('GD Disha submit failed, proceeding to evaluation anyway:', saveErr);
+                }
+            } else if (!isDisha) {
+                const submitPayload = [{
+                    response_text: JSON.stringify({
+                        turns: gdTurns,
+                        responses: gdResponses
+                    }),
+                    score: 0,
+                    time_taken: 0
+                }];
+                console.log('GD submit payload preview', {
                     assessmentId,
                     roundId,
-                    submitPayload
-                );
-                console.log('GD submit result', submitRes);
-            } catch (saveErr) {
-                console.warn('GD transcript save failed, proceeding to evaluation anyway:', saveErr);
-                // Don't rethrow; evaluation endpoint can work from provided conversation
+                    turns: gdTurns.length,
+                    responses: gdResponses.length,
+                    payloadSize: JSON.stringify(submitPayload[0].response_text).length
+                });
+
+                try {
+                    const submitRes = await apiClient.submitRoundResponses(
+                        assessmentId,
+                        roundId,
+                        submitPayload
+                    );
+                    console.log('GD submit result', submitRes);
+                } catch (saveErr) {
+                    console.warn('GD transcript save failed, proceeding to evaluation anyway:', saveErr);
+                    // Don't rethrow; evaluation endpoint can work from provided conversation
+                }
             }
 
             // STEP 2: Call evaluate endpoint to complete the round and get score
+            let evalScore = 0;
             try {
-                toast.loading('Evaluating your discussion...', { id: 'evaluating' });
-                const evalResponse = await apiClient.client.post(`/assessments/rounds/${roundId}/evaluate-discussion`, {
-                    conversation: gdTurns
+                toast.dismiss('submitting'); // Dismiss submitting toast first
+
+                const endpoint = isDisha
+                    ? `/disha/assessments/${assessmentId}/rounds/${roundId}/evaluate-discussion`
+                    : `/assessments/rounds/${roundId}/evaluate-discussion`;
+
+                console.log('🔍 Calling evaluation endpoint:', endpoint);
+                console.log('📊 Conversation data being sent:', {
+                    totalTurns: gdTurns.length,
+                    turnsPreview: gdTurns.map((t, idx) => ({
+                        turn: idx + 1,
+                        userText: t.user?.substring(0, 50) || '(empty)',
+                        agentCount: t.agents?.length || 0
+                    }))
                 });
-                console.log('Evaluation complete:', evalResponse.data);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const evalResponse = await apiClient.client.post(endpoint, {
+                    conversation: gdTurns,
+                    attempt_id: attemptId  // Pass attempt_id for reliable DB lookup
+                });
+
+                console.log('✅ Evaluation complete:', evalResponse.data);
+                evalScore = evalResponse.data?.score || 0;
+            } catch (evalError: any) {
+                console.error('❌ Evaluation failed:', evalError);
                 toast.dismiss('submitting');
-                toast.dismiss('evaluating');
-                toast.success('Discussion evaluated successfully!', { duration: 3000 });
-            } catch (evalError) {
-                console.error('Evaluation failed:', evalError);
-                toast.dismiss('evaluating');
-                toast.error('Evaluation failed. Please contact support.', { id: 'evaluating' });
+                toast.error('Evaluation failed. Please contact support.');
             }
 
             // Redirect to assessment page and force a fresh fetch of statuses
-            setTimeout(() => {
-                window.location.href = `/dashboard/student/assessment?id=${assessmentId}&ts=${Date.now()}`;
-            }, 1500);
+            if (onComplete) {
+                onComplete([{
+                    response_text: JSON.stringify({
+                        turns: gdTurns,
+                        responses: gdResponses
+                    }),
+                    score: evalScore,
+                    time_taken: 0
+                }]);
+            } else {
+                setTimeout(() => {
+                    window.location.href = `/dashboard/student/assessment?id=${assessmentId}&ts=${Date.now()}`;
+                }, 300);
+            }
 
         } catch (error) {
             console.error('Error submitting discussion:', error);
@@ -362,10 +482,7 @@ export function GroupDiscussionRound({
         }
     };
 
-    // Speech recognition setup
-    const speechRecognition = useRef<any>(null);
-    const audioContext = useRef<AudioContext | null>(null);
-    const audioAnalyser = useRef<AnalyserNode | null>(null);
+
 
     // Voice selection function
     const getVoiceForAgent = (agentName: string): SpeechSynthesisVoice | null => {
@@ -555,7 +672,7 @@ export function GroupDiscussionRound({
                             utterance.lang = 'en-US';
                         }
 
-                        // Optimized settings for clarity
+                        // Optimized settings for clarity and comprehension
                         utterance.rate = agentName.includes('Aarav') ? 0.9 : agentName.includes('Meera') ? 1.0 : 0.95;
                         utterance.pitch = agentName.includes('Aarav') ? 0.95 : agentName.includes('Meera') ? 1.15 : 1.0;
                         utterance.volume = 1.0; // Maximum volume
@@ -733,12 +850,21 @@ export function GroupDiscussionRound({
             return;
         }
 
+        // Check if there was existing text that wasn't submitted
+        const existingText = transcriptRef.current.trim();
+        if (existingText && !isListening && isUserManualSubmit) {
+            handleUserResponse(existingText);
+            setIsUserManualSubmit(false);
+        }
+
         setIsListening(true);
         setTranscript('');
         transcriptRef.current = '';
         setInterimTranscript('');
         setSpeakingTime(0);
         setWordCount(0);
+        setConfidenceScore(0);
+
 
         const timerId = setInterval(() => {
             setSpeakingTime(prevTime => {
@@ -772,22 +898,170 @@ export function GroupDiscussionRound({
             }
 
             setTimeout(() => {
-                const finalTranscript = transcriptRef.current.trim();
+                let finalTranscript = transcriptRef.current.trim();
+
+                // Fallback: If final transcript is empty but we have an interim one, use it
+                // This happens often if recognition is stopped before the browser sends isFinal
+                if (!finalTranscript && interimTranscript.trim()) {
+                    console.log('Using interim transcript as fallback:', interimTranscript);
+                    finalTranscript = interimTranscript.trim();
+                    setTranscript(finalTranscript);
+                    transcriptRef.current = finalTranscript;
+                }
 
                 if (finalTranscript && finalTranscript.length > 0) {
-                    handleUserResponse(finalTranscript);
-                    setTranscript('');
-                    transcriptRef.current = '';
-                    setInterimTranscript('');
+                    setIsUserManualSubmit(true);
+
+                    // Auto-submit after 1.5 seconds if it's DISHA
+                    if (isDisha) {
+                        toast.success('Capturing response...', { duration: 1000 });
+                        setTimeout(() => {
+                            // Check if still in manual submit mode (hasn't been submitted yet)
+                            if (transcriptRef.current.trim()) {
+                                handleUserResponse(transcriptRef.current);
+                                setIsUserManualSubmit(false);
+                                setTranscript('');
+                                transcriptRef.current = '';
+                                setInterimTranscript('');
+                            }
+                        }, 1500);
+                    }
                 }
-            }, 500);
+            }, 800); // Increased timeout slightly to allow more results to come in
         }
     };
 
     const [responseAttempt, setResponseAttempt] = useState(0);
     const maxResponseRetries = 2;
 
-    const handleUserResponse = async (text: string) => {
+    // Function to have bots speak first in a round
+    const handleBotsSpeakFirst = async () => {
+        if (!topic || waitingForBots || currentRoundTurn !== 'bots') return;
+
+        setWaitingForBots(true);
+        setLoading(true);
+
+        try {
+            // Generate initial bot responses for the round start
+            let responseData: any;
+            try {
+                const endpoint = isDisha
+                    ? `/disha/assessments/${propAssessmentId}/rounds/${roundId}/gd/response`
+                    : `/assessments/rounds/${roundId}/gd/response`;
+
+                const response = await Promise.race([
+                    apiClient.client.post(endpoint, {
+                        text: '',  // Empty text - bots speak first
+                        personas: personas.map(p => p.name),
+                        context: {
+                            topic,
+                            previousTurns: gdTurns,
+                            isRoundStart: true,
+                            roundNumber: currentRoundNumber
+                        }
+                    }),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout')), 15000)
+                    )
+                ]) as any;
+
+                responseData = response.data;
+            } catch (apiError) {
+                console.error('API failed for bots speak first:', apiError);
+                // Fallback responses
+                responseData = {
+                    agents: [
+                        { name: personas[0].name, text: `I'd like to start by highlighting the positive aspects of this topic.` },
+                        { name: personas[1].name, text: `While I see some benefits, I'm concerned about potential challenges.` },
+                        { name: personas[2].name, text: `I think we need to consider both perspectives for a balanced view.` }
+                    ]
+                };
+            }
+
+            const agents: AgentMessage[] = Array.isArray(responseData?.agents) && responseData.agents.length
+                ? responseData.agents.slice(0, 3).map((a: any, idx: number) => ({
+                    name: String(a.name || personas[idx]?.name || `Participant ${idx + 1}`),
+                    text: String(a.text || a.message || a.content || '')
+                }))
+                : [
+                    { name: personas[0].name, text: "I'd like to start by highlighting the positive aspects." },
+                    { name: personas[1].name, text: "While I see benefits, I'm concerned about challenges." },
+                    { name: personas[2].name, text: "We need to consider both perspectives." }
+                ];
+
+            // Create a new turn with bots speaking first (no user message yet)
+            const newTurn: Turn = {
+                user: '',
+                agents: [],
+                timestamp: Date.now()
+            };
+            setGDTurns(prev => [...prev, newTurn]);
+
+            // Add bots one by one with typing indicator and speech
+            if (voicesLoaded) {
+                for (let i = 0; i < agents.length; i++) {
+                    const agent = agents[i];
+
+                    // Show typing indicator
+                    setTypingAgent(agent.name);
+                    await new Promise(resolve => setTimeout(resolve, 800));
+
+                    // Add this agent to the turn
+                    setGDTurns(prev => {
+                        const updatedTurns = [...prev];
+                        const lastTurnIndex = updatedTurns.length - 1;
+                        if (lastTurnIndex >= 0) {
+                            updatedTurns[lastTurnIndex] = {
+                                ...updatedTurns[lastTurnIndex],
+                                agents: [...updatedTurns[lastTurnIndex].agents, agent]
+                            };
+                        }
+                        return updatedTurns;
+                    });
+
+                    // Remove typing indicator
+                    setTypingAgent(null);
+
+                    // Small delay to show the message appeared
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    // Then speak
+                    if (agent.text && agent.text.trim()) {
+                        await speakAgentText(agent.name, agent.text);
+                    }
+
+                    // Pause before next agent
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } else {
+                // If voices not loaded, add all at once
+                setGDTurns(prev => {
+                    const updatedTurns = [...prev];
+                    const lastTurnIndex = updatedTurns.length - 1;
+                    if (lastTurnIndex >= 0) {
+                        updatedTurns[lastTurnIndex] = {
+                            ...updatedTurns[lastTurnIndex],
+                            agents: agents
+                        };
+                    }
+                    return updatedTurns;
+                });
+            }
+
+            // After bots speak, switch to user's turn
+            setCurrentRoundTurn('user');
+            setWaitingForBots(false);
+
+        } catch (error) {
+            console.error('Error in handleBotsSpeakFirst:', error);
+            setWaitingForBots(false);
+            setCurrentRoundTurn('user');  // Still allow user to speak
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUserResponse = async (text: string, isRetry: boolean = false) => {
         const trimmedText = text.trim();
 
         if (!trimmedText || trimmedText.length === 0) {
@@ -798,9 +1072,36 @@ export function GroupDiscussionRound({
             return;
         }
 
+        // For Disha: If it's bots' turn to start but user spoke, capture it and move on
+        if (isDisha && currentRoundTurn === 'bots' && !waitingForBots) {
+            setCurrentRoundTurn('user'); // Switch to user turn immediately since they spoke
+        }
+
+        // If waiting for bots but user spoke, we should still capture it to avoid data loss
+        // The user turn will show up in the UI, and we'll process it
+        if (isDisha && waitingForBots) {
+            // We'll let it proceed but it might have a slight delay or concurrent API call
+            console.log('User spoke while bots were preparing. Capturing anyway...');
+            setWaitingForBots(false); // Force stop waiting to allow user turn
+        }
+
         if (responseAttempt >= maxResponseRetries) {
             setResponseAttempt(0);
             return;
+        }
+
+        const turnTimestamp = Date.now();
+
+        // Add user message to UI immediately (only on first attempt, not on retries)
+        if (!isRetry) {
+            setGDTurns(prev => [...prev, {
+                user: trimmedText,
+                agents: [],
+                timestamp: turnTimestamp
+            }]);
+
+            // Show typing indicator
+            setTypingAgent(personas[0].name);
         }
 
         try {
@@ -808,8 +1109,12 @@ export function GroupDiscussionRound({
 
             let responseData: any;
             try {
+                const endpoint = isDisha
+                    ? `/disha/assessments/${propAssessmentId}/rounds/${roundId}/gd/response`
+                    : `/assessments/rounds/${roundId}/gd/response`;
+
                 const response = await Promise.race([
-                    apiClient.client.post(`/assessments/rounds/${roundId}/gd/response`, {
+                    apiClient.client.post(endpoint, {
                         text: trimmedText,
                         personas: personas.map(p => p.name),
                         context: {
@@ -818,7 +1123,7 @@ export function GroupDiscussionRound({
                         }
                     }),
                     new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timeout')), 15000)
+                        setTimeout(() => reject(new Error('API Timeout - Backend took too long')), 45000)
                     )
                 ]) as any;
 
@@ -831,7 +1136,7 @@ export function GroupDiscussionRound({
                 if (responseAttempt < maxResponseRetries) {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     setLoading(false);
-                    handleUserResponse(trimmedText);
+                    handleUserResponse(trimmedText, true); // Mark as retry
                     return;
                 }
 
@@ -858,14 +1163,8 @@ export function GroupDiscussionRound({
                     { name: personas[2].name, text: "A middle path might work." }
                 ];
 
-            // Add user message first (without agents yet)
-            const turnTimestamp = Date.now();
-            setGDTurns(prev => [...prev, {
-                user: trimmedText,
-                agents: [],
-                timestamp: turnTimestamp
-            }]);
-
+            // Store responses for evaluation but don't add agents to GDTurns yet
+            // (they will be added one-by-one with typing animation in the loop below)
             setGDResponses(prev => [...prev, {
                 userResponse: trimmedText,
                 aiQuestion: agents.map(a => a.text).join('\n')
@@ -929,7 +1228,16 @@ export function GroupDiscussionRound({
                 });
             }
 
-            if ((gdTurns.length + 1) >= MAX_RESPONSES) {
+            // After user speaks and bots respond, reset turn to 'user' for next interaction
+            // Round advancement happens when user clicks "Next Question" button
+            if (isDisha) {
+                // Reset for next turn - bots will speak first in next round when Next Question is clicked
+                setCurrentRoundTurn('bots');
+            }
+
+            // Check if discussion is complete AFTER bots finish speaking
+            // Uses +1 because gdTurns variable in closure might not have updated yet
+            if ((gdTurns.length + (isRetry ? 0 : 1)) >= maxResponses) {
                 setDiscussionComplete(true);
             }
 
@@ -979,703 +1287,359 @@ export function GroupDiscussionRound({
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [currentStep, isTopicAnnounced, isListening, discussionComplete]);
 
-    return (
-        <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8 px-3 sm:px-4 md:px-6">
-            {/* Progress Stepper */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow-sm">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
-                    {['Topic', 'Discussion', 'Evaluation'].map((step, idx) => (
-                        <div key={step} className="flex items-center flex-1 w-full sm:w-auto">
-                            <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold transition-all text-sm sm:text-base
-                                ${idx === 0 && currentStep === 'topic' ? 'bg-blue-600 text-white scale-110' :
-                                    idx === 1 && currentStep === 'discussion' ? 'bg-blue-600 text-white scale-110' :
-                                        idx === 2 && currentStep === 'evaluation' ? 'bg-blue-600 text-white scale-110' :
-                                            'bg-gray-200 text-gray-600'}`}>
-                                {idx + 1}
+    if (currentStep === 'mic-test') {
+        return (
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 font-sans items-center justify-center p-4">
+                <Card className="max-w-md w-full p-8 shadow-2xl rounded-2xl bg-white dark:bg-gray-800 border-none">
+                    <div className="text-center space-y-6">
+                        <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto">
+                            <Mic className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                        </div>
+
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Microphone Check</h2>
+                            <p className="text-gray-500 dark:text-gray-400">Please verify your microphone is working before we begin.</p>
+                        </div>
+
+                        <div className="bg-gray-100 dark:bg-gray-900/50 rounded-xl p-6 relative overflow-hidden">
+                            <div className="flex items-center justify-center gap-4 z-10 relative">
+                                <Mic className={`w-8 h-8 transition-colors ${micTested ? 'text-green-500' : 'text-gray-400'}`} />
+                                <div className="flex flex-col items-start gap-1">
+                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        {micTested ? 'Microphone Detected' : 'Speak to test...'}
+                                    </span>
+                                    <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-green-500 transition-all duration-75"
+                                            style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <span className={`ml-2 font-medium transition-all text-xs sm:text-sm ${(idx === 0 && currentStep === 'topic') ||
-                                (idx === 1 && currentStep === 'discussion') ||
-                                (idx === 2 && currentStep === 'evaluation')
-                                ? 'text-blue-600' : 'text-gray-500'
-                                }`}>{step}</span>
-                            {idx < 2 && (
-                                <div className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition-all hidden sm:block ${idx === 0 && (currentStep === 'discussion' || currentStep === 'evaluation')
-                                    ? 'bg-blue-600'
-                                    : idx === 1 && currentStep === 'evaluation'
-                                        ? 'bg-blue-600'
-                                        : 'bg-gray-200'
-                                    }`} />
+                        </div>
+
+                        <div className="space-y-3">
+                            {!micTested ? (
+                                <Button
+                                    onClick={startMicTest}
+                                    className="w-full py-6 text-lg font-semibold bg-gray-900 hover:bg-gray-800 text-white rounded-xl transition-all"
+                                >
+                                    Start Test
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => setCurrentStep('topic')}
+                                    className="w-full py-6 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all animate-in zoom-in duration-300"
+                                >
+                                    Start Discussion
+                                </Button>
                             )}
                         </div>
-                    ))}
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 font-sans">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 shrink-0 flex items-center justify-between shadow-md">
+                <h1 className="text-white text-xl font-bold tracking-wide">
+                    Round {currentRoundNumber}: Group Discussion
+                </h1>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full text-white text-sm backdrop-blur-sm">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatTime(speakingTime)}</span>
+                    </div>
                 </div>
             </div>
 
-            {currentStep === 'topic' && (
-                <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900 dark:text-white">Discussion Topic</h2>
-                    {topic ? (
-                        <div className="space-y-4 sm:space-y-6">
-                            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md">
-                                <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-blue-700 dark:text-blue-400">{topic.title}</h3>
-                                <div className="border-l-4 border-blue-500 pl-3 sm:pl-6 mb-4 sm:mb-6">
-                                    <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">{topic.content}</p>
-                                </div>
-                            </div>
+            {/* Main Content */}
+            <div className="flex flex-1 overflow-hidden p-6 gap-6">
 
-                            {!micTested && (
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 sm:p-6 rounded-xl border-2 border-yellow-400">
-                                    <h4 className="font-bold mb-2 sm:mb-3 text-yellow-800 dark:text-yellow-400 flex items-center text-sm sm:text-base">
-                                        <Mic className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                                        Test Your Microphone
-                                    </h4>
-                                    <p className="text-xs sm:text-sm mb-3 sm:mb-4 text-gray-700 dark:text-gray-300">
-                                        Before starting, let's make sure your microphone works properly.
-                                    </p>
-                                    <Button
-                                        onClick={startMicTest}
-                                        className="bg-yellow-600 hover:bg-yellow-700 text-xs sm:text-sm w-full sm:w-auto"
-                                        size="sm"
-                                    >
-                                        Test Microphone (3 seconds)
-                                    </Button>
-                                    {audioLevel > 0 && (
-                                        <div className="mt-4">
-                                            <div className="flex items-center space-x-2">
-                                                <Volume2 className="w-5 h-5 text-green-600" />
-                                                <div className="flex-1 bg-gray-200 rounded-full h-3">
-                                                    <div
-                                                        className="bg-green-600 h-3 rounded-full transition-all duration-100"
-                                                        style={{ width: `${Math.min(audioLevel, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-sm font-medium">{audioLevel}%</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                {/* Left Panel: Video Grid & Transcribe */}
+                <div className="flex-1 flex flex-col gap-6 min-w-0">
 
-                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 sm:p-6 rounded-xl border-2 border-indigo-400">
-                                <h4 className="font-bold mb-2 sm:mb-3 text-indigo-800 dark:text-indigo-400 text-sm sm:text-base">📋 Instructions</h4>
-                                <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200">{topic.instructions}</p>
-                            </div>
+                    {/* Video Grid - 2x2 Layout */}
+                    <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative flex flex-col">
 
-                            {topic.followUpQuestions && topic.followUpQuestions.length > 0 && (
-                                <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
-                                    <h4 className="font-bold mb-3 sm:mb-4 text-blue-800 dark:text-blue-400 flex items-center text-sm sm:text-base">
-                                        <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                                        Key Points to Consider
-                                    </h4>
-                                    <ul className="space-y-3">
-                                        {topic.followUpQuestions.map((point, idx) => (
-                                            <li key={idx} className="flex items-start">
-                                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center text-sm font-semibold mr-3 mt-0.5">
-                                                    {idx + 1}
-                                                </span>
-                                                <span className="text-gray-700 dark:text-gray-300">{point}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 sm:p-6 rounded-xl border-2 border-blue-300">
-                                <h4 className="font-bold mb-3 sm:mb-4 text-blue-900 dark:text-blue-300 text-sm sm:text-base">🎯 Discussion Flow</h4>
-                                <ol className="space-y-2 sm:space-y-3">
-                                    {[
-                                        'Listen to the topic introduction',
-                                        'Click "Start Speaking" and share your thoughts',
-                                        'Click "Stop Speaking" when finished',
-                                        'AI participants will respond one by one with voice',
-                                        'Continue the discussion (up to 5 rounds total)',
-                                        'Click "Submit Discussion" when ready for evaluation',
-                                        'View detailed feedback on your performance'
-                                    ].map((step, idx) => (
-                                        <li key={idx} className="flex items-start">
-                                            <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-xs sm:text-sm font-bold mr-2 sm:mr-3 shadow-md">
-                                                {idx + 1}
-                                            </span>
-                                            <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 pt-0.5 sm:pt-1">{step}</span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            </div>
-
-                            <Button
-                                onClick={() => {
-                                    setCurrentStep('discussion');
-                                    setIsTopicAnnounced(false);
-
-                                    try {
-                                        // Create a concise announcement - long text causes speech errors
-                                        const MAX_ANNOUNCEMENT_LENGTH = 400; // characters
-                                        let announcement = `Today's discussion topic is: ${topic.title}.`;
-
-                                        // Add a shortened version of the content if available
-                                        if (topic.content) {
-                                            const contentPreview = topic.content.length > 150
-                                                ? topic.content.substring(0, 150) + '...'
-                                                : topic.content;
-                                            announcement += ' ' + contentPreview;
-                                        }
-
-                                        announcement += ' You can now share your thoughts. Remember to click Stop Speaking when you finish.';
-
-                                        // Ensure total length is within limits
-                                        if (announcement.length > MAX_ANNOUNCEMENT_LENGTH) {
-                                            announcement = announcement.substring(0, MAX_ANNOUNCEMENT_LENGTH) + '...';
-                                        }
-
-                                        // Get best voice for announcement
-                                        const voices = window.speechSynthesis.getVoices();
-                                        const bestVoice = voices.find(v =>
-                                            v.lang.startsWith('en') &&
-                                            (v.name.toLowerCase().includes('neural') ||
-                                                v.name.toLowerCase().includes('premium') ||
-                                                v.name.toLowerCase().includes('enhanced'))
-                                        ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
-
-                                        const utterance = new SpeechSynthesisUtterance(announcement);
-                                        if (bestVoice) {
-                                            utterance.voice = bestVoice;
-                                            utterance.lang = bestVoice.lang;
-                                        } else {
-                                            utterance.lang = 'en-US';
-                                        }
-                                        utterance.rate = 0.9;  // Clear and understandable
-                                        utterance.pitch = 1.0;
-                                        utterance.volume = 1.0;  // Maximum volume
-
-                                        let hasStarted = false;
-                                        const timeout = setTimeout(() => {
-                                            if (!hasStarted) {
-                                                window.speechSynthesis.cancel();
-                                                setIsTopicAnnounced(true);
-                                            }
-                                        }, 10000);
-
-                                        utterance.onstart = () => {
-                                            hasStarted = true;
-                                            clearTimeout(timeout);
-                                        };
-
-                                        utterance.onend = () => {
-                                            clearTimeout(timeout);
-                                            setIsTopicAnnounced(true);
-                                        };
-
-                                        utterance.onerror = (error: any) => {
-                                            clearTimeout(timeout);
-                                            console.error('TTS error:', error);
-                                            setIsTopicAnnounced(true);
-                                        };
-
-                                        // Timeout fallback in case speech hangs
-                                        setTimeout(() => {
-                                            if (!isTopicAnnounced) {
-                                                window.speechSynthesis.cancel();
-                                                setIsTopicAnnounced(true);
-                                            }
-                                        }, 20000); // 20 second timeout
-
-                                        window.speechSynthesis.speak(utterance);
-                                    } catch (err) {
-                                        // If speech fails, just proceed without it
-                                        setIsTopicAnnounced(true);
-                                    }
-                                }}
-                                size="lg"
-                                disabled={!micTested}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 sm:py-4 text-sm sm:text-lg shadow-lg transform hover:scale-[1.02] transition-all"
-                            >
-                                🎙️ Begin Topic Introduction
-                            </Button>
-
-                            {!micTested && (
-                                <p className="text-center text-sm text-yellow-600 dark:text-yellow-400">
-                                    Please test your microphone before starting
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center py-12">
-                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400">Loading discussion topic...</p>
-                        </div>
-                    )}
-                </Card>
-            )}
-
-            {currentStep === 'discussion' && (
-                <div className="space-y-4 sm:space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-                        {/* Sidebar */}
-                        <Card className="p-4 sm:p-6 lg:sticky lg:top-6 h-fit bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 shadow-lg">
-                            <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-blue-900 dark:text-blue-300 line-clamp-2">{topic?.title}</h3>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 line-clamp-3">{topic?.content}</p>
-
-                            {/* Round Progress */}
-                            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-lg">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Discussion Rounds</span>
-                                    <span className="text-xs sm:text-sm font-bold text-blue-600">{gdTurns.length}/{MAX_RESPONSES}</span>
-                                </div>
-                                <Progress value={(gdTurns.length / MAX_RESPONSES) * 100} className="h-2" />
-                            </div>
-
-                            {/* Participants */}
-                            <div className="mb-3 sm:mb-4">
-                                <h4 className="text-xs sm:text-sm font-semibold mb-2 flex items-center text-gray-700 dark:text-gray-300">
-                                    <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                    Participants
-                                </h4>
-                                <div className="space-y-1.5 sm:space-y-2">
-                                    <div className="flex items-center space-x-2 p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md">
+                        <div className="flex-1 grid grid-cols-2 gap-1 p-1 bg-gray-900">
+                            {/* User Feed (Top Left) */}
+                            <div className="relative bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                                {isCamOn ? (
+                                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center">
+                                        <Users className="w-20 h-20 text-gray-400" />
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                                        <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold">
                                             Y
                                         </div>
-                                        <span className="text-xs sm:text-sm font-medium">You</span>
                                     </div>
-                                    {personas.map((p, idx) => (
-                                        <div key={idx} className="flex items-center space-x-2 p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md">
-                                                {p.name.charAt(0)}
-                                            </div>
-                                            <span className="text-xs sm:text-sm">{p.name.split(' ')[0]}</span>
-                                        </div>
-                                    ))}
+                                )}
+                                <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1 rounded-full text-white text-sm font-medium backdrop-blur-md flex items-center gap-2">
+                                    <span>You</span>
+                                    {isListening && <Mic className="w-3 h-3 text-green-400 animate-pulse" />}
                                 </div>
+                                <div className="absolute inset-0 border-2 border-transparent transition-colors pointer-events-none"
+                                    style={{ borderColor: isListening ? '#4ade80' : 'transparent' }} />
                             </div>
 
+                            {/* Personas (Other Cells) */}
+                            {personas.map((persona, idx) => {
+                                const isSpeaking = currentSpeakingAgent === persona.name;
+                                const bgColor = idx === 0 ? 'bg-blue-600' : idx === 1 ? 'bg-indigo-600' : 'bg-red-600';
 
-
-                            {gdTurns.length > 0 && !discussionComplete && !isAISpeaking && !typingAgent && (
-                                <div className="mt-4 p-3 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-lg border-2 border-orange-300">
-                                    <h4 className="text-sm font-semibold mb-2 text-orange-800 dark:text-orange-400">
-                                        Early Submit
-                                    </h4>
-                                    <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
-                                        Completed {gdTurns.length}/{MAX_RESPONSES} rounds.
-                                        Ready to finish?
-                                    </p>
-                                    <Button
-                                        onClick={() => {
-                                            setDiscussionComplete(true);
-                                        }}
-                                        disabled={loading}
-                                        size="sm"
-                                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-                                    >
-                                        Submit Discussion
-                                    </Button>
-                                </div>
-                            )}
-                        </Card>
-
-                        {/* Main Discussion Area */}
-                        <div className="lg:col-span-3 space-y-4">
-                            {!isTopicAnnounced ? (
-                                <Card className="p-8 flex flex-col items-center space-y-4">
-                                    <div className="animate-pulse text-blue-600 dark:text-blue-400 flex items-center space-x-2">
-                                        <Volume2 className="w-6 h-6 animate-bounce" />
-                                        <span className="text-lg font-medium">Listening to topic introduction...</span>
+                                return (
+                                    <div key={idx} className="relative bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                                        <div className={`w-full h-full ${bgColor} flex items-center justify-center`}>
+                                            <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                                                <img
+                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${persona.name}&backgroundColor=transparent`}
+                                                    alt={persona.name}
+                                                    className="w-20 h-20"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1 rounded-full text-white text-sm font-medium backdrop-blur-md flex items-center gap-2">
+                                            <span>{persona.name.split(' ')[0]}</span>
+                                            {isSpeaking && <Volume2 className="w-3 h-3 text-white animate-pulse" />}
+                                        </div>
+                                        <div className="absolute inset-0 border-4 border-transparent transition-all duration-300 pointer-events-none"
+                                            style={{ borderColor: isSpeaking ? '#fbbf24' : 'transparent' }} />
                                     </div>
-                                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                </Card>
-                            ) : (
-                                <>
-                                    {/* Discussion History */}
-                                    <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-                                        <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 dark:text-white">Discussion History</h3>
-                                        <div
-                                            ref={chatContainerRef}
-                                            className="space-y-4 sm:space-y-6 min-h-[250px] sm:min-h-[300px] max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-2 scroll-smooth"
-                                        >
-                                            {gdTurns.length === 0 && !typingAgent && (
-                                                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                                                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                                    <p>No messages yet. Start speaking to begin the discussion!</p>
-                                                </div>
-                                            )}
-
-                                            {gdTurns.map((turn, tIdx) => (
-                                                <div key={tIdx} className="space-y-4 animate-in slide-in-from-bottom duration-300">
-                                                    {/* User Message */}
-                                                    <div className="flex items-start space-x-2 sm:space-x-3">
-                                                        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                                                            <span className="text-white font-bold text-xs sm:text-sm">Y</span>
-                                                        </div>
-                                                        <div className="flex-1 max-w-3xl min-w-0">
-                                                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-md">
-                                                                <div className="text-[10px] sm:text-xs font-semibold mb-1 sm:mb-2 opacity-90">You</div>
-                                                                <p className="text-sm sm:text-base leading-relaxed break-words">{turn.user}</p>
-                                                            </div>
-                                                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 ml-2">
-                                                                {new Date(turn.timestamp).toLocaleTimeString()}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* AI Messages with speaking indicator */}
-                                                    {turn.agents.map((a, aIdx) => (
-                                                        <div key={aIdx} className="flex items-start space-x-2 sm:space-x-3 ml-4 sm:ml-6">
-                                                            <div className={`flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md ${currentSpeakingAgent === a.name ? 'animate-pulse ring-2 sm:ring-4 ring-purple-400' : ''
-                                                                }`}>
-                                                                <span className="text-white font-bold text-[10px] sm:text-xs">{a.name.charAt(0)}</span>
-                                                            </div>
-                                                            <div className="flex-1 max-w-2xl min-w-0">
-                                                                <div className={`bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl rounded-tl-none shadow-sm transition-all ${currentSpeakingAgent === a.name ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20' : ''
-                                                                    }`}>
-                                                                    <div className="flex items-center justify-between mb-1 sm:mb-2">
-                                                                        <div className="text-[10px] sm:text-xs font-semibold text-purple-700 dark:text-purple-400">
-                                                                            {a.name}
-                                                                        </div>
-                                                                        {currentSpeakingAgent === a.name && (
-                                                                            <div className="flex space-x-0.5 sm:space-x-1">
-                                                                                {[...Array(3)].map((_, i) => (
-                                                                                    <div
-                                                                                        key={i}
-                                                                                        className="w-0.5 sm:w-1 h-2 sm:h-3 bg-purple-600 rounded-full animate-pulse"
-                                                                                        style={{ animationDelay: `${i * 0.1}s` }}
-                                                                                    />
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed break-words">{a.text}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))}
-
-                                            {/* Typing Indicator */}
-                                            {typingAgent && (
-                                                <div className="flex items-start space-x-3 ml-6 animate-in slide-in-from-bottom duration-300">
-                                                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md animate-pulse">
-                                                        <span className="text-white font-bold text-xs">{typingAgent.charAt(0)}</span>
-                                                    </div>
-                                                    <div className="flex-1 max-w-2xl">
-                                                        <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-2xl rounded-tl-none shadow-sm">
-                                                            <div className="text-xs font-semibold mb-2 text-purple-700 dark:text-purple-400">
-                                                                {typingAgent}
-                                                            </div>
-                                                            <div className="flex space-x-1">
-                                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Card>
-
-                                    {/* AI Speaking Indicator with Skip */}
-                                    {isAISpeaking && currentSpeakingAgent && !typingAgent && (
-                                        <Card className="p-4 flex items-center justify-between text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-300 dark:border-purple-700">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md animate-pulse">
-                                                    <span className="text-white font-bold text-sm">{currentSpeakingAgent.charAt(0)}</span>
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <div className="flex space-x-1">
-                                                            {[...Array(3)].map((_, i) => (
-                                                                <div
-                                                                    key={i}
-                                                                    className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                                                                    style={{ animationDelay: `${i * 0.15}s` }}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                        <span className="font-bold">{currentSpeakingAgent}</span>
-                                                    </div>
-                                                    <span className="text-sm">is speaking...</span>
-                                                </div>
-                                            </div>
-
-                                            <Button
-                                                onClick={() => {
-                                                    window.speechSynthesis.cancel();
-                                                    setIsAISpeaking(false);
-                                                    setCurrentSpeakingAgent(null);
-                                                }}
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900"
-                                            >
-                                                <VolumeX className="w-4 h-4 mr-2" />
-                                                Skip
-                                            </Button>
-                                        </Card>
-                                    )}
-
-                                    {/* Live Transcript */}
-                                    {(transcript || interimTranscript) && (
-                                        <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700">
-                                            <div className="flex items-center space-x-2 mb-2">
-                                                {isListening && (
-                                                    <div className="flex space-x-1">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <div
-                                                                key={i}
-                                                                className="w-1 bg-blue-600 rounded-full animate-pulse"
-                                                                style={{
-                                                                    height: `${Math.random() * 16 + 8}px`,
-                                                                    animationDelay: `${i * 0.1}s`
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Live Transcript</span>
-                                            </div>
-                                            <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
-                                                {transcript}
-                                                <span className="text-gray-400 dark:text-gray-500 italic">{interimTranscript}</span>
-                                            </p>
-                                        </Card>
-                                    )}
-
-                                    {/* Voice Controls - Bottom Sticky */}
-                                    {!discussionComplete && (
-                                        <div className="sticky bottom-0 z-20 pb-4">
-                                            <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700 shadow-2xl">
-                                                <button
-                                                    onClick={() => setStatsCollapsed(!statsCollapsed)}
-                                                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                                                >
-                                                    {statsCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                                                </button>
-
-                                                {!statsCollapsed && (
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                                                        <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
-                                                            <Clock className={`w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 ${getTimerColor()}`} />
-                                                            <div className={`text-lg sm:text-xl font-bold ${getTimerColor()}`}>
-                                                                {formatTime(speakingTime)}
-                                                            </div>
-                                                            <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-                                                                {speakingTime < 60 ? "Keep going" :
-                                                                    speakingTime < 120 ? "Good!" :
-                                                                        "Wrap up"}
-                                                            </div>
-                                                        </div>
-
-                                                        {wordCount > 0 && (
-                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
-                                                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mx-auto mb-1" />
-                                                                <div className="text-lg sm:text-xl font-bold text-green-600">{wordCount}</div>
-                                                                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">words</div>
-                                                            </div>
-                                                        )}
-
-                                                        {speechRate > 0 && isListening && (
-                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
-                                                                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 mx-auto mb-1" />
-                                                                <div className="text-lg sm:text-xl font-bold text-purple-600">{speechRate}</div>
-                                                                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-                                                                    {speechRate < 100 ? "Faster" :
-                                                                        speechRate > 160 ? "Slower" :
-                                                                            "Good!"} wpm
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {isListening && (
-                                                            <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg text-center shadow-sm">
-                                                                <div className="text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Clarity</div>
-                                                                <div className={`text-lg sm:text-xl font-bold ${confidenceScore >= 80 ? 'text-green-600' :
-                                                                    confidenceScore >= 60 ? 'text-yellow-600' :
-                                                                        'text-red-600'
-                                                                    }`}>{confidenceScore}%</div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <div className="flex space-x-2 sm:space-x-3">
-                                                    <Button
-                                                        onClick={isListening ? stopListening : startListening}
-                                                        disabled={loading || isAISpeaking || typingAgent !== null}
-                                                        size="lg"
-                                                        className={`w-full font-bold py-3 sm:py-4 text-sm sm:text-base shadow-lg transform hover:scale-[1.02] transition-all ${isListening
-                                                            ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
-                                                            : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                                                            }`}
-                                                    >
-                                                        {isListening ? (
-                                                            <span className="flex items-center justify-center space-x-2">
-                                                                <MicOff className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
-                                                                <span>Stop Speaking</span>
-                                                            </span>
-                                                        ) : (
-                                                            <span className="flex items-center justify-center space-x-2">
-                                                                <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                                <span>Start Speaking</span>
-                                                            </span>
-                                                        )}
-                                                    </Button>
-                                                </div>
-
-                                                <div className="mt-2 sm:mt-3 text-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                                                    💡 Press <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Space</kbd> to start/stop • <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-200 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Esc</kbd> to cancel
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    )}
-
-                                    {/* Submit Button */}
-                                    {discussionComplete && (
-                                        <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-400 dark:border-green-600 shadow-xl">
-                                            <div className="text-center">
-                                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-800 mb-4">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                </div>
-                                                <h3 className="text-2xl font-bold text-green-800 dark:text-green-400 mb-3">Discussion Complete! 🎉</h3>
-                                                <p className="text-green-700 dark:text-green-300 mb-6">
-                                                    You've completed {gdTurns.length} rounds. Click below to submit your discussion. You'll see your evaluation in the assessment report.
-                                                </p>
-                                                <Button
-                                                    onClick={() => {
-                                                        setEvaluationInitiated(true);
-                                                        getFinalEvaluation();
-                                                    }}
-                                                    disabled={loading || evaluationInitiated}
-                                                    size="lg"
-                                                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-8 text-lg shadow-lg transform hover:scale-[1.05] transition-all"
-                                                >
-                                                    {loading ? (
-                                                        <span className="flex items-center space-x-2">
-                                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                            <span>Submitting...</span>
-                                                        </span>
-                                                    ) : (
-                                                        '✅ Submit Discussion'
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        </Card>
-                                    )}
-                                </>
-                            )}
+                                );
+                            })}
                         </div>
-                    </div>
-                </div>
-            )}
 
-            {currentStep === 'evaluation' && finalEvaluation && (
-                <Card className="p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900">
-                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 p-6 mb-8 rounded-2xl border-2 border-green-400 flex items-center shadow-lg">
-                        <div className="bg-green-500 p-4 rounded-full mr-4 shadow-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-green-800 dark:text-green-400">Discussion Complete!</h3>
-                            <p className="text-green-700 dark:text-green-300">Thank you for participating. Here's your detailed evaluation.</p>
+                        {/* Control Bar Overlay */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-gray-900/90 p-2 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl z-20">
+                            <button
+                                onClick={() => isListening ? stopListening() : startListening()}
+                                className={`p-3 rounded-xl transition-all ${isListening ? 'bg-white text-blue-600' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+                            >
+                                {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                            </button>
+                            <button
+                                onClick={() => setIsCamOn(!isCamOn)}
+                                className={`p-3 rounded-xl transition-all ${isCamOn ? 'bg-white text-blue-600' : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'}`}
+                            >
+                                {isCamOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+                            </button>
+                            <div className="w-px h-8 bg-gray-700 mx-1" />
+                            <button
+                                onClick={() => setIsChatOpen(!isChatOpen)}
+                                className={`p-3 rounded-xl transition-all ${isChatOpen ? 'bg-white text-blue-600' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+                            >
+                                <MessageCircle className="w-5 h-5" />
+                            </button>
+                            <button className="p-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-all">
+                                <Smile className="w-5 h-5" />
+                            </button>
+                            <button className="p-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-all">
+                                <MonitorUp className="w-5 h-5" />
+                            </button>
+                            <button className="p-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-all">
+                                <Hand className="w-5 h-5" />
+                            </button>
+                            <div className="w-px h-8 bg-gray-700 mx-1" />
+                            <button
+                                onClick={getFinalEvaluation}
+                                className="p-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                            >
+                                <PhoneOff className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
 
-                    <h2 className="text-4xl font-bold mb-8 text-gray-900 dark:text-white">Group Discussion Results</h2>
-
-                    {/* Overall Score */}
-                    <div className="mb-10 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-blue-200 dark:border-blue-800">
-                        <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">Overall Performance</h3>
-                            <div className="text-center">
-                                <span className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                                    {Math.round(finalEvaluation.score)}%
-                                </span>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                                    {finalEvaluation.score >= 80 ? 'Excellent!' :
-                                        finalEvaluation.score >= 70 ? 'Good Job!' :
-                                            finalEvaluation.score >= 60 ? 'Fair' :
-                                                'Needs Improvement'}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 shadow-inner">
+                    {/* Transcribe Section (Chat Window) - Scrollable */}
+                    {isChatOpen && (
+                        <div className="h-48 bg-green-50/50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-900 p-4 flex flex-col shrink-0 animate-in slide-in-from-bottom duration-200">
+                            <h3 className="text-green-800 dark:text-green-400 font-semibold mb-2 flex items-center gap-2 text-sm">
+                                <FileText className="w-4 h-4" />
+                                Live Transcript
+                            </h3>
                             <div
-                                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-4 rounded-full shadow-md transition-all duration-1000 ease-out"
-                                style={{ width: `${Math.min(Math.max(finalEvaluation.score, 0), 100)}%` }}
-                            ></div>
-                        </div>
-                    </div>
+                                ref={chatContainerRef}
+                                className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
+                            >
+                                {gdTurns.length === 0 && !interimTranscript && waitingForBots && (
+                                    <p className="text-gray-400 text-sm italic">Bots are speaking first in this round...</p>
+                                )}
+                                {gdTurns.length === 0 && !interimTranscript && !waitingForBots && (
+                                    <p className="text-gray-400 text-sm italic">Conversation will appear here...</p>
+                                )}
 
-                    {/* Criteria Scores */}
-                    <div className="mb-10">
-                        <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Performance Breakdown</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {[
-                                { name: 'Communication', score: finalEvaluation.feedback.criteria_scores.communication, icon: '💬' },
-                                { name: 'Topic Understanding', score: finalEvaluation.feedback.criteria_scores.topic_understanding, icon: '🧠' },
-                                { name: 'Interaction', score: finalEvaluation.feedback.criteria_scores.interaction, icon: '🤝' }
-                            ].map((criteria) => (
-                                <div key={criteria.name} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border-2 border-blue-200 dark:border-blue-800 transform hover:scale-105 transition-all">
-                                    <div className="text-4xl mb-3">{criteria.icon}</div>
-                                    <h4 className="font-bold text-gray-900 dark:text-white mb-3">{criteria.name}</h4>
-                                    <div className="flex items-end justify-between mb-2">
-                                        <span className="text-3xl font-bold text-blue-600">{Math.round(criteria.score)}%</span>
+                                {gdTurns.map((turn, tIdx) => (
+                                    <div key={tIdx} className="space-y-2 border-l-2 border-gray-100 dark:border-gray-800 pl-3 py-1">
+                                        <div className="flex gap-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Turn {tIdx + 1}</span>
+                                                <span className="font-bold text-blue-600 text-sm whitespace-nowrap">You:</span>
+                                            </div>
+                                            <p className="text-gray-700 dark:text-gray-300 text-sm pt-4">{turn.user || <span className="italic opacity-50 text-xs">Starting discussion...</span>}</p>
+                                        </div>
+                                        {turn.agents.map((agent, aIdx) => (
+                                            <div key={`${tIdx}-${aIdx}`} className="flex gap-2">
+                                                <span className="font-bold text-purple-600 text-sm whitespace-nowrap">{agent.name.split(' ')[0]}:</span>
+                                                <p className="text-gray-700 dark:text-gray-300 text-sm">{agent.text}</p>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <Progress value={Math.round(criteria.score)} className="h-3" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                ))}
 
-                    {/* Strengths */}
-                    <div className="mb-10">
-                        <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-                            <span className="text-3xl mr-3">✅</span>
-                            Key Strengths
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {finalEvaluation.strengths.map((strength: string, index: number) => (
-                                <div key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-md hover:shadow-lg transition-all">
-                                    <div className="flex items-start gap-3">
-                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shadow-md">✓</span>
-                                        <span className="text-gray-800 dark:text-gray-200 pt-1">{strength}</span>
+                                {isListening && (transcript || interimTranscript) && (
+                                    <div className="flex gap-2 bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                                        <span className="font-bold text-blue-600 text-sm whitespace-nowrap shrink-0">You (speaking):</span>
+                                        <p className="text-gray-700 dark:text-gray-200 text-sm italic leading-relaxed">
+                                            {transcript}
+                                            <span className="text-gray-500 dark:text-gray-400 animate-pulse">{interimTranscript}</span>
+                                        </p>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Areas for Improvement */}
-                    <div className="mb-10">
-                        <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-                            <span className="text-3xl mr-3">💡</span>
-                            Areas for Improvement
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {finalEvaluation.areasOfImprovement.map((area: string, index: number) => (
-                                <div key={index} className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 p-5 rounded-xl border-2 border-orange-300 dark:border-orange-700 shadow-md hover:shadow-lg transition-all">
-                                    <div className="flex items-start gap-3">
-                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold shadow-md">!</span>
-                                        <span className="text-gray-800 dark:text-gray-200 pt-1">{area}</span>
+                                )}
+                                {typingAgent && (
+                                    <div className="flex gap-2 items-center text-purple-500 text-sm">
+                                        <span className="font-bold">{typingAgent.split(' ')[0]}</span>
+                                        <span className="italic">is typing...</span>
                                     </div>
+                                )}
+
+                                {isUserManualSubmit && (
+                                    <div className="flex justify-end mt-2 sticky bottom-0 bg-white dark:bg-gray-800/80 p-2 backdrop-blur-sm rounded-lg border border-blue-100 dark:border-blue-900 shadow-lg">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                if (transcriptRef.current.trim()) {
+                                                    handleUserResponse(transcriptRef.current);
+                                                    setIsUserManualSubmit(false);
+                                                    setTranscript('');
+                                                    transcriptRef.current = '';
+                                                    setInterimTranscript('');
+                                                }
+                                            }}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all shadow-md animate-in slide-in-from-right-5 fade-in duration-300"
+                                        >
+                                            <MessageCircle className="w-4 h-4" />
+                                            Send Response
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Sidebar - Info & Controls */}
+                {/* Right Sidebar - Info & Controls */}
+                <div className="w-96 flex flex-col gap-4 shrink-0 h-full">
+
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 min-h-0">
+                        {/* Question Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 border border-blue-100 dark:border-blue-800 shrink-0">
+                            <div className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full w-fit mb-3 shadow-sm">
+                                Question 1
+                            </div>
+                            <h2 className="text-gray-900 dark:text-white font-bold text-lg mb-4 leading-snug">
+                                {topic?.title || "Loading topic..."}
+                            </h2>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
+                                {topic?.content?.substring(0, 150)}...
+                            </p>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <span>Discussion Rounds</span>
+                                    <span>{gdTurns.length}/{maxResponses}</span>
                                 </div>
-                            ))}
+                                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                                        style={{ width: `${(gdTurns.length / maxResponses) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Participants */}
+                        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-6 border border-blue-100 dark:border-blue-800 shrink-0">
+                            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                                <Users className="w-5 h-5 text-gray-500" />
+                                Participants
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                            Y
+                                        </div>
+                                        <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm">You</span>
+                                    </div>
+                                    {isListening && <Mic className="w-4 h-4 text-green-500 animate-pulse" />}
+                                </div>
+                                {personas.map((p, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-transparent hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                                                <img
+                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`}
+                                                    alt={p.name}
+                                                    className="w-full h-full"
+                                                />
+                                            </div>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300 text-sm">{p.name.split(' ')[0]}</span>
+                                        </div>
+                                        {currentSpeakingAgent === p.name && (
+                                            <div className="flex space-x-0.5">
+                                                {[...Array(3)].map((_, i) => (
+                                                    <div key={i} className="w-0.5 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <Button
-                        onClick={() => router.push('/dashboard/student/assessment')}
-                        size="lg"
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-6 text-lg shadow-xl transform hover:scale-[1.02] transition-all"
-                    >
-                        🏁 Complete & Return to Dashboard
-                    </Button>
-                </Card>
-            )}
+                    {/* Bottom Actions */}
+                    <div className="flex gap-3 shrink-0">
+                        <button
+                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={waitingForBots || isAISpeaking || currentRoundTurn === 'bots'}
+                            onClick={async () => {
+                                // For Disha: Advance to next round
+                                if (isDisha && onNextRound) {
+                                    // Reset round state for next round
+                                    setCurrentRoundNumber(prev => prev + 1);
+                                    setCurrentRoundTurn('bots');
+                                    setWaitingForBots(true);
+                                    // Call parent's next round handler
+                                    onNextRound();
+                                    // Trigger bots to speak first in new round
+                                    setTimeout(() => {
+                                        handleBotsSpeakFirst();
+                                    }, 500);
+                                } else {
+                                    toast.success('Moving to next round...');
+                                }
+                            }}
+                        >
+                            Next Question
+                        </button>
+                        <button
+                            onClick={getFinalEvaluation}
+                            disabled={gdTurns.length === 0 || waitingForBots || isAISpeaking}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                        >
+                            Submit Section
+                        </button>
+                    </div>
+
+                </div>
+            </div>
         </div>
     );
 }
