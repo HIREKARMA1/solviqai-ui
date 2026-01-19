@@ -424,7 +424,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             recognitionRef.current.start();
             setIsLiveTranscribing(true);
             isLiveTranscribingRef.current = true;
-            toast.success('Listening... Speak clearly.');
+            // toast.success('Listening... Speak clearly.');
         } catch (e) {
             console.error(e);
             toast.error('Could not start microphone.');
@@ -454,7 +454,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
             setLiveTranscript('');
             setInterimTranscript('');
-            toast.success('Response saved.');
+            // toast.success('Response saved.');
         }
     };
     // Add styles to head
@@ -586,6 +586,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             }
         }
     }, [attemptId, currentRound?.round_id]);
+
+    // Clear live transcript when changing questions to prevent data bleed
+    useEffect(() => {
+        setLiveTranscript('');
+        setInterimTranscript('');
+    }, [currentQuestionIndex]);
 
     // Save answers to localStorage
     useEffect(() => {
@@ -1052,6 +1058,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     };
 
     const navigateToQuestion = (index: number) => {
+        // Auto-stop recording if user navigates away while speaking
+        if (isLiveTranscribing) {
+            stopLiveTranscription();
+        }
+
         setCurrentQuestionIndex(index);
         setVisitedQuestions(prev => new Set([...Array.from(prev), index]));
         // Reset audio played state when navigating to a new question
@@ -1499,21 +1510,31 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 handleAnswer(qid, payload);
             };
 
+            // Get the current coding question based on currentQuestionIndex
+            const codingQuestions = codingRoundData.questions || [];
+            const currentCodingQuestion = codingQuestions[currentQuestionIndex];
+            const totalCodingQuestions = codingQuestions.length;
+
             return (
                 <div className="fullscreen-exam">
                     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
                         {/* Header - Matching Solviq style */}
                         <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
-                            <h1 className="text-xl font-bold tracking-tight">
-                                Round {packageInfo?.current_round || 1}: {currentRound.round_name || 'Coding Challenge'}
-                            </h1>
+                            <div className="flex items-center gap-4">
+                                <h1 className="text-xl font-bold tracking-tight">
+                                    Round {packageInfo?.current_round || 1}: {currentRound.round_name || 'Coding Challenge'}
+                                </h1>
+                                <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
+                                    Question {currentQuestionIndex + 1} of {totalCodingQuestions}
+                                </span>
+                            </div>
                             <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
                                 <Clock className="w-4 h-4" />
                                 <span>{timeRemaining !== null ? `${Math.floor(timeRemaining / 60)}m ${(timeRemaining % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
                             </div>
                         </div>
 
-                        {/* Coding Question Workspace - Same structure as Solviq */}
+                        {/* Coding Question Workspace - Show one question at a time */}
                         <div className="flex-1 overflow-hidden relative">
                             <CodingRound
                                 assessmentId={packageId}
@@ -1521,13 +1542,69 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                 executeCodeFn={handleExecuteCode}
                                 submitFn={handleCodingSubmit}
                                 onChange={handleCodingChange}
-                                showSubmitButton={true}
+                                showSubmitButton={false}
+                                hideFooter={true}
+                                activeQuestionId={currentCodingQuestion?.id}
                                 onSubmitted={() => {
                                     // submitRound() already handles state transitions
                                     // This callback is called after successful submission
                                     toast.success('Round submitted successfully!');
                                 }}
                             />
+                        </div>
+
+                        {/* Bottom Navigation Bar for Coding Questions */}
+                        <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                            <div className="flex items-center gap-4">
+                                {/* Previous Button */}
+                                <button
+                                    onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                                    disabled={currentQuestionIndex === 0}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                    Previous
+                                </button>
+
+                                {/* Question Counter (Mobile) */}
+                                <div className="md:hidden flex items-center gap-2 text-sm font-medium text-gray-600">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full">
+                                        {currentQuestionIndex + 1} / {totalCodingQuestions}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                {/* Next Button */}
+                                {currentQuestionIndex < totalCodingQuestions - 1 ? (
+                                    <button
+                                        onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        Next
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                ) : null}
+
+                                {/* Submit Button - Always visible */}
+                                <button
+                                    onClick={handleSubmitWithConfirmation}
+                                    disabled={isSubmitting}
+                                    className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-50"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Submit Round
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1834,16 +1911,29 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
                                             // Check if it's a soft skills question and has speaking keywords OR has no options (likely a speaking question)
                                             // BUT NOT if it is a listening question
-                                            const isSpeakingQuestion = (questionType === 'soft_skills' && !isListeningQuestion) && (
-                                                hasNoOptions || // No options usually means speaking question
+                                            // Check if it's a speaking question
+                                            // 1. Explicit Soft Skills type
+                                            // 2. Keywords in text (speak, read aloud, etc.)
+                                            // 3. No options available (implies subjective/speaking)
+                                            const hasSpeakingKeywords =
                                                 questionText.includes('speak') ||
                                                 questionText.includes('read aloud') ||
+                                                /read[\s\S]*?aloud/i.test(questionText) || // specific regex for "read ... aloud"
                                                 questionText.includes('read the following') ||
-                                                questionText.includes('read out') ||
                                                 questionText.includes('verbal') ||
                                                 questionText.includes('tell us') ||
                                                 questionText.includes('describe') ||
-                                                questionText.includes('explain verbally')
+                                                questionText.includes('explain verbally');
+
+                                            // Check for writing-specific keywords to prevent false positives in Soft Skills round
+                                            const hasWritingKeywords = /\b(write|type)\b/i.test(questionText) &&
+                                                !questionText.includes('listen and write');
+
+                                            const isSpeakingQuestion = !isListeningQuestion && !hasWritingKeywords && (
+                                                (questionType === 'soft_skills' && hasNoOptions) ||
+                                                (hasSpeakingKeywords && (questionType === 'soft_skills' || hasNoOptions)) ||
+                                                // Fallback: if we are in soft skills round and there are no options, assume speaking
+                                                (currentRound?.round_name?.toLowerCase().includes('soft skill') && hasNoOptions)
                                             );
 
                                             if (isSpeakingQuestion) {
@@ -1953,21 +2043,28 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
 
-                                            const isSpeakingQuestion = (questionType === 'soft_skills') && (
-                                                hasNoOptions ||
+                                            const hasSpeakingKeywords =
                                                 questionText.includes('speak') ||
                                                 questionText.includes('read aloud') ||
+                                                /read[\s\S]*?aloud/i.test(questionText) ||
                                                 questionText.includes('read the following') ||
-                                                questionText.includes('read out') ||
                                                 questionText.includes('verbal') ||
                                                 questionText.includes('tell us') ||
                                                 questionText.includes('describe') ||
-                                                questionText.includes('explain verbally')
-                                            );
+                                                questionText.includes('explain verbally');
+
                                             const isListeningQuestion =
                                                 questionType === 'listening' ||
                                                 questionType === 'listening_question' ||
                                                 questionText.includes('listen and write');
+
+                                            const hasWritingKeywords = /\b(write|type)\b/i.test(questionText) && !questionText.includes('listen and write');
+
+                                            const isSpeakingQuestion = !isListeningQuestion && !hasWritingKeywords && (
+                                                (questionType === 'soft_skills' && hasNoOptions) ||
+                                                (hasSpeakingKeywords && (questionType === 'soft_skills' || hasNoOptions)) ||
+                                                (currentRound?.round_name?.toLowerCase().includes('soft skill') && hasNoOptions)
+                                            );
 
                                             if (isSpeakingQuestion || isListeningQuestion) return null; // Already rendered as speaking/listening question
 
