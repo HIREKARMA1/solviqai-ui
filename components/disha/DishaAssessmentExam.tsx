@@ -1337,27 +1337,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         You may now close this window.
                     </p>
 
-                    <div className="flex justify-center gap-4">
-                        <button
-                            onClick={() => {
-                                try {
-                                    window.close();
-                                } catch (e) {
-                                    toast.error('Could not close window automatically. Please close the tab.');
-                                }
-                            }}
-                            className="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-md"
-                        >
-                            Close Window
-                        </button>
-
-                        <button
-                            onClick={() => router.push('/dashboard/student')}
-                            className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition"
-                        >
-                            Return to Dashboard
-                        </button>
-                    </div>
+                    {/* Buttons removed as per request */}
                 </div>
             </div>
         );

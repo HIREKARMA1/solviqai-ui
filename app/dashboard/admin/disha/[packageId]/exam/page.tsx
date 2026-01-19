@@ -68,7 +68,7 @@ export default function AdminDishaExamPage() {
     }
 
     return (
-        <DashboardLayout requiredUserType="admin">
+        <DashboardLayout requiredUserType="admin" hideNavigation={true}>
             <DishaAssessmentExam
                 packageId={packageId}
                 studentId={adminId}
