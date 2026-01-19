@@ -69,7 +69,7 @@ export default function StudentDishaExamPage() {
     }
 
     return (
-        <DashboardLayout requiredUserType="student">
+        <DashboardLayout requiredUserType="student" hideNavigation={true}>
             <DishaAssessmentExam
                 packageId={packageId}
                 studentId={studentId}
