@@ -35,7 +35,7 @@ export default function AdminStudents() {
     const [selectedReport, setSelectedReport] = useState<any>(null)
     const [showReportModal, setShowReportModal] = useState(false)
     const [loadingReport, setLoadingReport] = useState(false)
-    
+
     // Subscription management state
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
     const [selectedStudent, setSelectedStudent] = useState<any>(null)
@@ -66,7 +66,7 @@ export default function AdminStudents() {
             console.error('Error fetching data:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to load data'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -74,7 +74,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setLoading(false)
@@ -109,7 +109,7 @@ export default function AdminStudents() {
             console.error('Error creating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to create student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -117,7 +117,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setCreating(false)
@@ -137,7 +137,7 @@ export default function AdminStudents() {
             console.error('Error deactivating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to deactivate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -145,7 +145,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -163,7 +163,7 @@ export default function AdminStudents() {
             console.error('Error activating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to activate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -171,7 +171,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -196,7 +196,7 @@ export default function AdminStudents() {
             console.error('Error deleting student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to delete student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -204,7 +204,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -214,7 +214,7 @@ export default function AdminStudents() {
             setExpandedStudent(null)
         } else {
             setExpandedStudent(studentId)
-            
+
             // Load assessments if not already loaded
             if (!studentAssessments[studentId]) {
                 setLoadingAssessments(studentId)
@@ -251,9 +251,13 @@ export default function AdminStudents() {
 
     const handleOpenSubscriptionModal = (student: any) => {
         setSelectedStudent(student)
+        // Load existing subscription data including expiry date
+        const existingExpiry = student.subscription_expiry
+            ? new Date(student.subscription_expiry).toISOString().split('T')[0]
+            : ''
         setSubscriptionData({
             subscription_type: student.subscription_type || 'premium',
-            subscription_expiry: ''
+            subscription_expiry: existingExpiry
         })
         setShowSubscriptionModal(true)
     }
@@ -267,14 +271,14 @@ export default function AdminStudents() {
             const payload: any = {
                 subscription_type: subscriptionData.subscription_type
             }
-            
+
             // Only include expiry date if it's set
             if (subscriptionData.subscription_expiry) {
                 payload.subscription_expiry = new Date(subscriptionData.subscription_expiry).toISOString()
             }
 
             const response = await apiClient.updateStudentSubscription(selectedStudent.id, payload)
-            
+
             toast.success(`Subscription updated! ${selectedStudent.name} is now on ${response.new_subscription} plan`)
             setShowSubscriptionModal(false)
             setSelectedStudent(null)
@@ -283,7 +287,7 @@ export default function AdminStudents() {
             console.error('Error updating subscription:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update subscription'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -291,7 +295,7 @@ export default function AdminStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdatingSubscription(false)
@@ -407,20 +411,28 @@ export default function AdminStudents() {
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge variant={student.status === 'ACTIVE' ? 'success' : 'secondary'}>
-                                                            {student.status}
-                                                        </Badge>
-                                                        <Badge 
-                                                            variant={
-                                                                student.subscription_type === 'premium' ? 'default' :
-                                                                student.subscription_type === 'college_license' ? 'success' :
-                                                                'outline'
-                                                            }
-                                                            className="capitalize"
-                                                        >
-                                                            {student.subscription_type || 'free'}
-                                                        </Badge>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge variant={student.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                                                                {student.status}
+                                                            </Badge>
+                                                            <Badge
+                                                                variant={
+                                                                    student.subscription_type === 'premium' ? 'default' :
+                                                                        student.subscription_type === 'college_license' ? 'success' :
+                                                                            'outline'
+                                                                }
+                                                                className="capitalize"
+                                                            >
+                                                                {student.subscription_type || 'free'}
+                                                            </Badge>
+                                                        </div>
+                                                        {student.subscription_expiry && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                <Calendar className="h-3 w-3 inline mr-1" />
+                                                                Expires: {new Date(student.subscription_expiry).toLocaleDateString()}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <Button
@@ -523,7 +535,7 @@ export default function AdminStudents() {
                                                                                 )}
                                                                             </div>
                                                                             <p className="text-xs text-gray-500 mt-1">
-                                                                                {assessment.completed_at 
+                                                                                {assessment.completed_at
                                                                                     ? `Completed: ${new Date(assessment.completed_at).toLocaleDateString()}`
                                                                                     : `Started: ${new Date(assessment.created_at).toLocaleDateString()}`
                                                                                 }
@@ -663,8 +675,8 @@ export default function AdminStudents() {
                                                         </div>
                                                         {round.ai_feedback && (
                                                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                {typeof round.ai_feedback === 'string' 
-                                                                    ? round.ai_feedback 
+                                                                {typeof round.ai_feedback === 'string'
+                                                                    ? round.ai_feedback
                                                                     : JSON.stringify(round.ai_feedback)}
                                                             </p>
                                                         )}
@@ -894,11 +906,11 @@ export default function AdminStudents() {
                                     <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm font-medium">Current Plan:</span>
-                                            <Badge 
+                                            <Badge
                                                 variant={
                                                     selectedStudent.subscription_type === 'premium' ? 'default' :
-                                                    selectedStudent.subscription_type === 'college_license' ? 'success' :
-                                                    'outline'
+                                                        selectedStudent.subscription_type === 'college_license' ? 'success' :
+                                                            'outline'
                                                 }
                                                 className="capitalize"
                                             >
@@ -909,6 +921,14 @@ export default function AdminStudents() {
                                             <p><strong>Email:</strong> {selectedStudent.email}</p>
                                             {selectedStudent.free_tests_used !== undefined && (
                                                 <p><strong>Free Tests Used:</strong> {selectedStudent.free_tests_used}/1</p>
+                                            )}
+                                            {selectedStudent.subscription_expiry && (
+                                                <p className="mt-1">
+                                                    <strong><Calendar className="h-3 w-3 inline mr-1" />Current Expiry:</strong>
+                                                    <span className="text-blue-600 dark:text-blue-400 ml-1">
+                                                        {new Date(selectedStudent.subscription_expiry).toLocaleDateString()}
+                                                    </span>
+                                                </p>
                                             )}
                                         </div>
                                     </div>
@@ -981,14 +1001,14 @@ export default function AdminStudents() {
                                     </div>
 
                                     {/* Important Note */}
-                                    {selectedStudent.subscription_type === 'free' && 
-                                     (subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
-                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                            <p className="text-sm text-green-700 dark:text-green-300">
-                                                <strong>✓ Upgrading:</strong> This will reset the student's usage counters and grant immediate unlimited access.
-                                            </p>
-                                        </div>
-                                    )}
+                                    {selectedStudent.subscription_type === 'free' &&
+                                        (subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
+                                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                                <p className="text-sm text-green-700 dark:text-green-300">
+                                                    <strong>✓ Upgrading:</strong> This will reset the student's usage counters and grant immediate unlimited access.
+                                                </p>
+                                            </div>
+                                        )}
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-2 justify-end pt-4">
@@ -1003,8 +1023,8 @@ export default function AdminStudents() {
                                         >
                                             Cancel
                                         </Button>
-                                        <Button 
-                                            type="submit" 
+                                        <Button
+                                            type="submit"
                                             disabled={updatingSubscription}
                                             className="bg-blue-600 hover:bg-blue-700"
                                         >
