@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import { LandingNavbar } from './LandingNavbar';
-import { LandingSidebar } from './LandingSidebar';
-import { MobileNavbar } from './MobileNavbar';
 import { MobileTopNavbar } from './MobileTopNavbar';
 import { MobileSidebar } from './MobileSidebar';
 import { Footer } from './Footer';
@@ -16,17 +14,13 @@ interface LandingLayoutProps {
 }
 
 export function LandingLayout({ children, activeFeature, onFeatureChange }: LandingLayoutProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Landing Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
       <div className="hidden lg:block">
-        <LandingNavbar
-          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          isSidebarCollapsed={isSidebarCollapsed}
-        />
+        <LandingNavbar />
       </div>
 
       {/* Mobile Top Navbar - Only visible on small screens */}
@@ -49,35 +43,16 @@ export function LandingLayout({ children, activeFeature, onFeatureChange }: Land
         onFeatureChange={onFeatureChange}
       /> */}
 
-      {/* Main Content Area with Sidebar */}
+      {/* Main Content Area */}
       <div className="flex flex-1 flex-col">
-        {/* Sidebar - Hidden on mobile */}
-        <div className="hidden lg:block">
-          <LandingSidebar
-            isCollapsed={isSidebarCollapsed}
-            activeFeature={activeFeature}
-            onFeatureChange={onFeatureChange}
-          />
-        </div>
-
         {/* Main Content */}
-        <main
-          className={cn(
-            "flex-1 transition-all duration-300",
-            isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
-          )}
-        >
+        <main className="flex-1 w-full">
           {children}
         </main>
 
         {/* Footer - Only show when not viewing a feature */}
         {!activeFeature && (
-          <div
-            className={cn(
-              "transition-all duration-300",
-              isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
-            )}
-          >
+          <div className="w-full">
             <Footer />
           </div>
         )}

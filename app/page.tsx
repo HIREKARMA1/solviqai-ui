@@ -1,19 +1,43 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import {
-  LandingLayout,
-  HeroSection,
-  FeatureCards,
-  WhyChooseUs,
-  HowItWorks,
-  ProblemSolution,
-  // Testimonials,
-  // Partners,
-  FAQ,
-} from '@/components/landing';
+
+// Critical above-the-fold components - load immediately
+import { LandingLayout } from '@/components/landing';
+import { HeroSection } from '@/components/landing/HeroSection';
+
+// Lazy load below-the-fold components for better performance
+const FeatureCards = dynamic(() => import('@/components/landing/FeatureCards').then(mod => ({ default: mod.FeatureCards })), {
+  loading: () => <div className="min-h-[400px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading features...</div></div>,
+  ssr: true
+});
+
+const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks').then(mod => ({ default: mod.HowItWorks })), {
+  loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading...</div></div>,
+  ssr: true
+});
+
+const ProblemSolution = dynamic(() => import('@/components/landing/ProblemSolution').then(mod => ({ default: mod.ProblemSolution })), {
+  loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading...</div></div>,
+  ssr: true
+});
+
+const Pricing = dynamic(() => import('@/components/landing/Pricing').then(mod => ({ default: mod.Pricing })), {
+  loading: () => <div className="min-h-[400px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading pricing...</div></div>,
+  ssr: true
+});
+
+const FAQ = dynamic(() => import('@/components/landing/FAQ').then(mod => ({ default: mod.FAQ })), {
+  loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading FAQ...</div></div>,
+  ssr: true
+});
+
+const Partners = dynamic(() => import('@/components/landing/Partners').then(mod => ({ default: mod.Partners })), {
+  loading: () => <div className="min-h-[200px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading partners...</div></div>,
+  ssr: true
+});
 
 // Dynamically import feature pages (these will handle their own auth)
 const ResumePage = dynamic(() => import('@/app/dashboard/student/resume/page'), { ssr: false });
@@ -32,14 +56,16 @@ export default function Home() {
     }
   }, [pathname]);
 
-  const handleFeatureChange = (featureId: string | null) => {
+  const handleFeatureChange = useCallback((featureId: string | null) => {
     setActiveFeature(featureId);
 
     // Scroll to top when switching features
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
 
-  const renderFeature = () => {
+  const renderFeature = useMemo(() => {
     switch (activeFeature) {
       case 'resume':
         return <ResumePage />;
@@ -52,7 +78,7 @@ export default function Home() {
       default:
         return null;
     }
-  };
+  }, [activeFeature]);
 
   return (
     <LandingLayout
@@ -62,34 +88,43 @@ export default function Home() {
       {activeFeature ? (
         // Render selected feature page
         <div className="min-h-screen">
-          {renderFeature()}
+          {renderFeature}
         </div>
       ) : (
-        // Render landing page sections
+        // Render landing page sections with lazy loading
         <>
-          {/* Hero Section with animated background */}
+          {/* Hero Section with animated background - Above the fold */}
           <HeroSection />
 
-          {/* Feature Cards Section */}
-          <FeatureCards />
+          {/* Feature Cards Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <FeatureCards />
+          </Suspense>
 
-          {/* Why Choose Us Section */}
-          <WhyChooseUs />
+          {/* How It Works Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[300px]" />}>
+            <HowItWorks />
+          </Suspense>
 
-          {/* How It Works Section */}
-          <HowItWorks />
+          {/* Problem Solution Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[300px]" />}>
+            <ProblemSolution />
+          </Suspense>
 
-          {/* Problem Solution Section */}
-          <ProblemSolution />
+          {/* Pricing Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <Pricing />
+          </Suspense>
 
-          {/* Testimonials Section */}
-          {/* <Testimonials /> */}
+          {/* FAQ Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[300px]" />}>
+            <FAQ />
+          </Suspense>
 
-          {/* Partners Section */}
-          {/* <Partners /> */}
-
-          {/* FAQ Section */}
-          <FAQ />
+          {/* Partners Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[200px]" />}>
+            <Partners />
+          </Suspense>
         </>
       )}
     </LandingLayout>

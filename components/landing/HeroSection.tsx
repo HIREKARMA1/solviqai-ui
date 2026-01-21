@@ -1,200 +1,154 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { Button } from '@/components/ui/button';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { VideoModal } from '@/components/ui/video-modal';
-import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
-export function HeroSection() {
+// Memoize stats to prevent recreation on each render
+const STATS = [
+  { label: 'Jobs', value: '120k+' },
+  { label: 'Users', value: '150k+' },
+  { label: 'Reviews', value: '32k+' },
+] as const;
+
+export const HeroSection = memo(function HeroSection() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [displayedText, setDisplayedText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const fullText = t('hero.title');
-  
-  const DEMO_VIDEO_URL = 'https://solviqai.s3.ap-south-1.amazonaws.com/SolviqDemo.mp4';
+  const [jobTitle, setJobTitle] = useState('');
+  const [location, setLocation] = useState('');
 
-  useEffect(() => {
-    if (currentIndex < fullText.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(prev => prev + fullText[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }, 80); // Speed of typing (80ms per character)
-
-      return () => clearTimeout(timeout);
+  const handleFindJob = useCallback(() => {
+    if (user) {
+      router.push(`/dashboard/${user.user_type}/jobs`);
+    } else {
+      router.push('/auth/login');
     }
-  }, [currentIndex, fullText]);
-
-  const stats = [
-    {
-      label: t('stats.jobsSecured'),
-      icon: <TrendingUp className="w-4 h-4" />
-    },
-    {
-      label: t('stats.usersActive'),
-      icon: <Sparkles className="w-4 h-4" />
-    },
-    {
-      label: t('stats.rating'),
-      icon: null
-    },
-  ];
+  }, [user, router]);
 
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-12"
+      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black py-32 sm:py-8 md:py-10 lg:py-32"
     >
-      {/* Animated Background */}
-      <div className="absolute inset-0 gradient-bg -z-10">
-        <AnimatedBackground variant="default" />
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-20">
-        <div className="text-center max-w-5xl mx-auto">
-          {/* Stats Badges */}
+      <div className="w-[90%] mx-auto max-w-[1600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-center w-full">
+          {/* Left Column - Content */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="w-full order-1"
           >
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="badge-primary flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm"
-              >
-                {stat.icon}
-                <span>{stat.label}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Main Heading with Typewriter Effect */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight"
-          >
-            <span className="gradient-text">
-              {displayedText}
-              <motion.span
-                animate={{ opacity: [1, 0, 1] }}
-                transition={{ duration: 0.8, repeat: Infinity }}
-                className="inline-block w-1 h-[0.9em] bg-primary-500 ml-1 align-middle"
-              />
-            </span>
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-            className="text-lg sm:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed"
-          >
-            {t('hero.subtitle')}
-          </motion.p>
-
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.6 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
-            <Button
-              size="lg"
-              className="group relative overflow-hidden bg-primary-500 hover:bg-primary-600 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
-              onClick={() => {
-                if (user) {
-                  // If logged in, navigate to assessment page
-                  router.push(`/dashboard/${user.user_type}/assessment`);
-                } else {
-                  // If not logged in, navigate to login
-                  router.push('/auth/login');
-                }
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                {t('hero.cta.primary')}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            {/* Main Heading */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-[78px] font-bold tracking-tight leading-[1.1] mb-6">
+              <span className="text-gray-900 dark:text-white block whitespace-normal lg:whitespace-nowrap">
+                Find the Perfect Job.
               </span>
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-primary-600 to-secondary-600"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </Button>
+              <span className="text-gray-900 dark:text-white block whitespace-normal lg:whitespace-nowrap">
+                Apply Smarter with
+              </span>
+              <span className="text-[#FF541F] block">
+                Solviq.AI
+              </span>
+            </h1>
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-primary-500 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-lg px-8 py-6 rounded-xl transition-all"
-              onClick={() => setIsVideoModalOpen(true)}
-            >
-              {t('hero.cta.secondary')}
-            </Button>
+            {/* Subtitle */}
+            <p className="text-2xl md:text-3xl lg:text-3xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed mb-8 tracking-tight leading-[1.1]">
+              AI-powered job matching, resume optimization, and one-click applications all in one platform
+            </p>
+
+            {/* Hero Search Bar */}
+            <div className="w-full max-w-2xl mb-10">
+              <div className="bg-white dark:bg-gray-900 rounded-full shadow-sm p-3 flex items-center px-5">
+
+                {/* Job Title Input */}
+                <div className="flex-1 flex items-center px-4 border-r border-gray-200 dark:border-gray-700">
+                  <Search className="w-5 h-5 text-[#FF541F] mr-3" />
+                  <input
+                    type="text"
+                    placeholder="Job title, Keyword..."
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-gray-700 dark:text-200 placeholder-gray-400"
+                  />
+                </div>
+
+                {/* Location Input */}
+                <div className="flex-1 flex items-center px-4">
+                  <MapPin className="w-5 h-5 text-[#FF541F] mr-3" />
+                  <input
+                    type="text"
+                    placeholder="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-gray-700 dark:text-200 placeholder-gray-400"
+                  />
+                </div>
+
+                {/* Find Job Button */}
+                <button
+                  onClick={handleFindJob}
+                  className="bg-[#FF541F] hover:bg-[#f43e06] text-white font-semibold px-8 py-3 rounded-md transition-colors whitespace-nowrap text-lg"
+                >
+                  Find Job
+                </button>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-12">
+              {STATS.map((stat, index) => (
+                <div key={index} className="flex flex-col">
+                  <div className="text-[#FF541F] font-semibold text-lg mb-1">{stat.label}</div>
+                  <div className="text-gray-900 dark:text-white font-bold text-3xl">
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
-          {/* Launch Message */}
+          {/* Right Column - Decorative Illustration - Hidden on mobile */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.8 }}
-            className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="relative hidden md:block w-full order-2"
           >
-            <p className="text-base text-gray-600 dark:text-gray-300 mb-2 font-medium">
-              🚀 New Platform Launch
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-              Join us as we revolutionize interview preparation with AI-powered insights and comprehensive practice tools. Start your journey today!
-            </p>
+            <div className="relative w-full h-[52vh] sm:h-[52vh] md:h-[62vh] lg:h-[62vh] xl:h-[72vh]">
+              {/* Main Container */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-full h-full">
+
+
+                  {/* Hero Image - Woman with Laptop */}
+                  <div className="relative w-full h-full mx-auto z-10">
+                    <Image
+                      src="/images/heroimg.png"
+                      alt="Woman working happily on laptop"
+                      fill
+                      className="object-contain drop-shadow-2xl"
+                      priority
+                      sizes="(max-width: 768px) 0vw, (max-width: 1024px) 50vw, 40vw"
+                      loading="eager"
+                      quality={85}
+                      placeholder="blur"
+                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjdGNUVBIi8+PC9zdmc+"
+                    />
+
+                  </div>
+
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>
-
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-      >
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-6 h-10 border-2 border-gray-400 dark:border-gray-600 rounded-full flex items-start justify-center p-2"
-        >
-          <motion.div
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-600 rounded-full"
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* Video Modal */}
-      <VideoModal
-        isOpen={isVideoModalOpen}
-        onClose={() => setIsVideoModalOpen(false)}
-        videoUrl={DEMO_VIDEO_URL}
-        title="Solviq AI Demo"
-      />
     </section>
   );
-}
-
+});

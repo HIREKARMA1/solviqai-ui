@@ -7,6 +7,7 @@ export { FeatureCards } from './FeatureCards';
 export { WhyChooseUs } from './WhyChooseUs';
 export { HowItWorks } from './HowItWorks';
 export { ProblemSolution } from './ProblemSolution';
+export { Pricing } from './Pricing';
 export { Testimonials } from './Testimonials';
 export { Partners } from './Partners';
 export { FAQ } from './FAQ';
