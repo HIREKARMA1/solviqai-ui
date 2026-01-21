@@ -833,7 +833,7 @@ export default function AssessmentReportPage() {
                                                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                 }}
                                                 labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                formatter={(value: any, name: string) => [value, name]}
+                                                formatter={(value: any, name: string | undefined) => [value, name || '']}
                                             />
                                             <Legend 
                                                 wrapperStyle={{ paddingTop: '20px' }}
@@ -977,7 +977,7 @@ export default function AssessmentReportPage() {
                                                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                             }}
                                             labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                            formatter={(value: any, name: string) => [`${value}%`, name]}
+                                            formatter={(value: any, name: string | undefined) => [`${value}%`, name || '']}
                                         />
                                         <Legend 
                                             wrapperStyle={{ paddingTop: '15px' }}
@@ -1063,7 +1063,7 @@ export default function AssessmentReportPage() {
                                                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                 }}
                                                 labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                formatter={(value: any, name: string) => [`${value}%`, name]}
+                                                formatter={(value: any, name: string | undefined) => [`${value}%`, name || '']}
                                             />
                                             <Funnel
                                                 dataKey="value"

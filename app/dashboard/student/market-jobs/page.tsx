@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { apiClient } from '@/lib/api'
 import { Target, LinkedinIcon, } from 'lucide-react'
 
@@ -289,6 +290,8 @@ export default function MarketJobsPage() {
     const [selectedSources, setSelectedSources] = useState<PlatformKey[]>(['unstop'])
     const [error, setError] = useState<string | null>(null)
     const [keywordsUsed, setKeywordsUsed] = useState<string[]>([])
+    const [showLimitDialog, setShowLimitDialog] = useState(false)
+    const [limitMessage, setLimitMessage] = useState('')
     const [resumeSkills, setResumeSkills] = useState<string[]>([])
     const [hasResumeSkills, setHasResumeSkills] = useState(false)
     const [loadingSkills, setLoadingSkills] = useState(false)
@@ -553,7 +556,11 @@ export default function MarketJobsPage() {
                 status: error.response?.status,
                 code: error.code
             })
-            // Return empty result for this platform, don't fail entire search
+            // Propagate 403 errors (limit reached) to show the dialog
+            if (error.response?.status === 403) {
+                throw error
+            }
+            // Return empty result for other errors, don't fail entire search
             return { platform, jobs: [], keywordsUsed: [] }
         }
     }
@@ -707,8 +714,14 @@ export default function MarketJobsPage() {
                 }
             }
 
-            setError(errorMessage)
-            toast.error(errorMessage, { duration: 5000 })
+            // Handle 403 Forbidden (limit reached) with dialog instead of toast
+            if (axiosError.response?.status === 403) {
+                setLimitMessage(errorMessage)
+                setShowLimitDialog(true)
+            } else {
+                setError(errorMessage)
+                toast.error(errorMessage, { duration: 5000 })
+            }
         } finally {
             setLoading(false)
         }
@@ -747,8 +760,17 @@ export default function MarketJobsPage() {
             }
         } catch (err) {
             console.error('Error fetching additional platform jobs:', err)
-            const platformNames = platformsToFetch.map(platform => PLATFORM_LABELS[platform]).join(', ')
-            toast.error(`Failed to load ${platformNames}`)
+            const axiosError = err as AxiosError<{ detail: string }>
+            
+            // Handle 403 Forbidden (limit reached) with dialog
+            if (axiosError.response?.status === 403) {
+                const errorMessage = axiosError.response.data?.detail || 'You have reached your daily limit for job searches'
+                setLimitMessage(errorMessage)
+                setShowLimitDialog(true)
+            } else {
+                const platformNames = platformsToFetch.map(platform => PLATFORM_LABELS[platform]).join(', ')
+                toast.error(`Failed to load ${platformNames}`)
+            }
         } finally {
             setPlatformFetchPending(false)
         }
@@ -1511,6 +1533,31 @@ export default function MarketJobsPage() {
                     </Card>
                 )}
             </div>
+
+            {/* Limit Reached Dialog */}
+            <Dialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                            <AlertCircle className="h-5 w-5" />
+                            Daily Limit Reached
+                        </DialogTitle>
+                        <DialogDescription className="text-base pt-2">
+                            {limitMessage}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="sm:justify-start">
+                        <Button
+                            type="button"
+                            variant="default"
+                            onClick={() => setShowLimitDialog(false)}
+                            className="w-full sm:w-auto"
+                        >
+                            Got it
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }
