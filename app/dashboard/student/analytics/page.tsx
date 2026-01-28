@@ -15,7 +15,7 @@ import {
     BarChart3, Target, ShieldCheck, TrendingUp, TrendingDown, 
     Award, Brain, Users, FileText, Briefcase, Calendar, Filter,
     ClipboardList, MessageCircle, Clock, Activity, Zap, Sparkles,
-    CheckCircle, AlertCircle, ArrowUpRight, ArrowDownRight,
+    CheckCircle, AlertCircle, ArrowUpRight,
     PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon
 } from 'lucide-react'
 
@@ -41,85 +41,58 @@ const LabelList = dynamic(() => import('recharts').then(m => m.LabelList), { ssr
 const AreaChart = dynamic(() => import('recharts').then(m => m.AreaChart), { ssr: false })
 const Area = dynamic(() => import('recharts').then(m => m.Area), { ssr: false })
 
-// Stat Card Component with hover effects
+// Metric card per Figma: Frame 92973410 / 2087328159 – 284×162, radius 16px, padding 10px, gap 10px; icon 44×44 radius 8px; status pill radius 28px
 function StatCard({ 
     icon: Icon, 
     label, 
     value, 
     subtitle, 
-    trend, 
-    trendValue,
-    color, 
-    bgColor 
+    statusTag,
+    iconBgClass,
+    iconColor,
 }: { 
     icon: any
     label: string
     value: string | number
     subtitle?: string
-    trend?: 'up' | 'down' | 'neutral'
-    trendValue?: string
-    color: string
-    bgColor: string
+    statusTag?: { label: string; variant: 'need-improvement' | 'developing' | 'good' }
+    iconBgClass: string
+    iconColor: string
 }) {
-    const [isHovered, setIsHovered] = useState(false)
-    
     return (
-        <motion.div 
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            whileHover={{ y: -4, scale: 1.02 }} 
-            transition={{ duration: 0.2 }}
-            className="relative"
+        <div 
+            className="flex flex-col w-full min-w-0 rounded-[16px] p-2 sm:p-[10px] gap-2 sm:gap-[10px] min-h-0 sm:min-h-[162px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_4px_0_rgba(0,0,0,0.4)]"
         >
-            <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-all duration-300">
-                {/* Animated Background Gradient */}
-                <motion.div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-transparent via-primary-50/30 to-secondary-50/20 dark:from-transparent dark:via-primary-900/10 dark:to-secondary-900/10"
-                    initial={false}
-                    animate={isHovered ? { scale: 1 } : { scale: 0.9 }}
-                />
-                
-                <CardContent className="p-4 sm:p-6 relative z-10">
-                    <div className="flex items-start justify-between mb-3 sm:mb-4">
-                        <div className={`p-2 sm:p-3 rounded-xl ${bgColor} shadow-md flex-shrink-0`}>
-                            <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
-                        </div>
-                        {trend && trend !== 'neutral' && (
-                            <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex-shrink-0 ${
-                                trend === 'up' 
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
-                                {trend === 'up' ? <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
-                                <span className="whitespace-nowrap">{trendValue}</span>
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div>
-                        <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</p>
-                        <motion.p 
-                            animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
-                            transition={{ duration: 0.2 }}
-                            className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1"
-                        >
-                            {value}
-                        </motion.p>
-                        {subtitle && (
-                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{subtitle}</p>
-                        )}
-                    </div>
-                </CardContent>
-                
-                {/* Bottom accent line */}
-                <motion.div
-                    className={`absolute bottom-0 left-0 h-1 rounded-full ${bgColor.replace('bg-', 'bg-gradient-to-r from-').replace('-200', '-500')}`}
-                    initial={{ width: '0%' }}
-                    animate={isHovered ? { width: '100%' } : { width: '0%' }}
-                    transition={{ duration: 0.3 }}
-                />
-            </Card>
-        </motion.div>
+            <div className="flex items-start justify-between gap-2 flex-shrink-0">
+                <div 
+                    className={`w-11 h-11 rounded-[8px] flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
+                >
+                    <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} />
+                </div>
+                {statusTag && (
+                    <span 
+                        className={`
+                            inline-flex items-center gap-1 sm:gap-[8px] h-8 sm:h-[33px] px-2 sm:px-3 rounded-[28px] text-[10px] sm:text-xs font-semibold flex-shrink-0 max-w-full truncate
+                            ${statusTag.variant === 'need-improvement' 
+                                ? 'bg-[#FFE1E2] text-red-700 dark:bg-red-900/40 dark:text-red-300' 
+                                : statusTag.variant === 'developing'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}
+                        `}
+                    >
+                        <ArrowUpRight className="w-3 h-3" />
+                        {statusTag.label}
+                    </span>
+                )}
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{value}</p>
+                {subtitle && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{subtitle}</p>
+                )}
+            </div>
+        </div>
     )
 }
 
@@ -227,58 +200,34 @@ export default function StudentAnalyticsPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-                <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0">
-                {/* Header - Matching Dashboard Style */}
+                <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-6 lg:pt-0 overflow-x-hidden min-w-0">
+                {/* Header - Analytics Dashboard (Figma: light + dark mode) */}
                 <motion.div 
-                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
+                    className="relative overflow-hidden rounded-[16px] py-3 px-3 sm:py-4 sm:px-4 flex flex-col min-h-0 sm:min-h-[140px] gap-3 sm:gap-[15px] dark:gap-6 bg-[#F6FBFF] dark:bg-[#1C2938] border border-transparent dark:border dark:border-[#CACACA] shadow-[inset_0_1px_1.5px_0_rgba(0,0,0,0.25)] dark:shadow-none"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    {/* Decorative corners */}
-                    <motion.div 
-                        className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
-                        animate={{ rotate: [45, 50, 45] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <motion.div 
-                        className="pointer-events-none absolute -bottom-14 -left-14 w-64 h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <div className="relative z-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                    <motion.div 
-                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
-                                        animate={{ rotate: [0, 360] }}
-                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                    >
-                                        <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    </motion.div>
-                                    <motion.h1 
-                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
-                                        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                                        transition={{ duration: 3, repeat: Infinity }}
-                                        style={{ backgroundSize: '200% 200%' }}
-                                    >
-                                        <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Analytics Dashboard</span>
-                                    </motion.h1>
-                                </div>
-                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
-                                    Track your performance, skills, and job readiness metrics
-                                </p>
-                            </div>
-                            <Button
-                                onClick={() => setShowFilters(!showFilters)}
-                                variant="outline"
-                                className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h1 
+                                className="text-3xl sm:text-[40px] sm:leading-[40px] font-bold tracking-normal truncate mb-0 bg-gradient-to-r from-[#0068FC] to-[#8D5AFF] dark:from-[#1C6FE6] dark:to-[#8C59FF] bg-clip-text text-transparent"
+                                style={{ fontFamily: 'var(--font-poppins), sans-serif' }}
                             >
-                                <Filter className="w-4 h-4" />
-                                <span className="sm:inline">Filters</span>
-                            </Button>
+                                Analytics Dashboard
+                            </h1>
+                            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1 max-w-2xl">
+                                Track your performance, skills, and job readiness metrics
+                            </p>
                         </div>
+                        <Button
+                            onClick={() => setShowFilters(!showFilters)}
+                            variant="outline"
+                            className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0 h-10 min-w-[100px] rounded-[10px] border border-[#B3B3B3] bg-[#ECECF5] hover:bg-[#e0e0ec] dark:border-[#A2A2A2] dark:bg-[#23233A] dark:hover:bg-[#2d2d45] text-gray-900 dark:text-gray-100"
+                        >
+                            <Filter className="w-4 h-4" />
+                            <span className="sm:inline">Filters</span>
+                        </Button>
                     </div>
                 </motion.div>
 
@@ -360,80 +309,82 @@ export default function StudentAnalyticsPage() {
                     </motion.div>
                 )}
 
-                {/* Key Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Key Metrics Cards – Figma Frame 92973410: horizontal, gap 24px, card 284×162, radius 16px, shadow 0 2px 4px rgba(0,0,0,0.25) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     <StatCard
                         icon={Target}
                         label="Overall Score"
                         value={`${Math.round(overallScore)}%`}
                         subtitle="Average across assessments"
-                        trend={overallScore > 70 ? 'up' : overallScore > 50 ? 'neutral' : 'down'}
-                        trendValue={overallScore > 70 ? 'Good' : overallScore > 50 ? 'Fair' : 'Needs Improvement'}
-                        color="text-blue-600 dark:text-blue-400"
-                        bgColor="bg-blue-100 dark:bg-blue-900/30"
+                        statusTag={{
+                            label: overallScore >= 70 ? 'Good' : overallScore >= 50 ? 'Fair' : 'Need Improvement',
+                            variant: overallScore >= 70 ? 'good' : overallScore >= 50 ? 'developing' : 'need-improvement',
+                        }}
+                        iconBgClass="bg-[#E4EFFF] dark:bg-blue-900/40"
+                        iconColor="text-blue-600 dark:text-blue-400"
                     />
                     <StatCard
                         icon={ShieldCheck}
                         label="Job Readiness"
                         value={`${Math.round(readinessIndex)}%`}
                         subtitle="Composite readiness index"
-                        trend={readinessIndex > 75 ? 'up' : readinessIndex > 50 ? 'neutral' : 'down'}
-                        trendValue={readinessIndex > 75 ? 'Excellent' : readinessIndex > 50 ? 'Good' : 'Developing'}
-                        color="text-green-600 dark:text-green-400"
-                        bgColor="bg-green-100 dark:bg-green-900/30"
+                        statusTag={{
+                            label: readinessIndex >= 75 ? 'Excellent' : readinessIndex >= 50 ? 'Good' : 'Developing',
+                            variant: readinessIndex >= 75 ? 'good' : readinessIndex >= 50 ? 'developing' : 'developing',
+                        }}
+                        iconBgClass="bg-[#E0FFDE] dark:bg-green-900/40"
+                        iconColor="text-green-600 dark:text-green-400"
                     />
                     <StatCard
                         icon={ClipboardList}
                         label="Assessments"
-                        value={`${assessmentCompleted}/${assessmentTotal}`}
+                        value={`${completionRate}%`}
                         subtitle={`${completionRate}% completion rate`}
-                        trend={completionRate > 75 ? 'up' : 'neutral'}
-                        trendValue={completionRate > 75 ? 'Active' : 'On Track'}
-                        color="text-purple-600 dark:text-purple-400"
-                        bgColor="bg-purple-100 dark:bg-purple-900/30"
+                        statusTag={completionRate >= 75 ? { label: 'On Track', variant: 'good' } : undefined}
+                        iconBgClass="bg-[#EDE9FE] dark:bg-purple-900/40"
+                        iconColor="text-[#7F56D9] dark:text-purple-400"
                     />
                     <StatCard
                         icon={Briefcase}
                         label="Applications"
-                        value={funnel.submitted || 0}
-                        subtitle={`${funnel.offers || 0} offers received`}
-                        trend={funnel.offers > 0 ? 'up' : 'neutral'}
-                        trendValue={funnel.offers > 0 ? 'Success!' : 'Keep Going'}
-                        color="text-orange-600 dark:text-orange-400"
-                        bgColor="bg-orange-100 dark:bg-orange-900/30"
+                        value={funnel.submitted ?? 0}
+                        subtitle={`${funnel.offers ?? 0} offers received`}
+                        statusTag={funnel.offers && funnel.offers > 0 ? { label: 'Success', variant: 'good' } : undefined}
+                        iconBgClass="bg-[#FFECD2] dark:bg-orange-900/40"
+                        iconColor="text-orange-600 dark:text-orange-400"
                     />
                     </div>
 
-                {/* Tabs for different views */}
+                {/* Tabs – Figma Frame 2087328303: horizontal, h 57px, radius 8px, padding 10px, gap 90px, bg #FDFDFD, border #C0C0C0 */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-auto gap-1 sm:gap-1.5">
+                    <TabsList className="flex flex-row items-center w-full min-h-[48px] sm:h-[57px] rounded-[8px] border border-[#C0C0C0] dark:border-gray-600 px-2 sm:px-[10px] gap-2 sm:gap-4 md:gap-8 lg:gap-[90px] bg-[#FDFDFD] dark:bg-gray-800 p-0 overflow-x-auto">
                         <TabsTrigger 
                             value="overview"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
-                            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                            <span className="whitespace-nowrap relative z-10">Overview</span>
+                            <Activity className="w-4 h-4 shrink-0" />
+                            <span className="whitespace-nowrap">Overview</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="skills"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
-                            <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                            <span className="whitespace-nowrap relative z-10">Skills</span>
+                            <Brain className="w-4 h-4 shrink-0" />
+                            <span className="whitespace-nowrap">Skills</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="performance"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
-                            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                            <span className="whitespace-nowrap relative z-10">Performance</span>
+                            <TrendingUp className="w-4 h-4 shrink-0" />
+                            <span className="whitespace-nowrap">Performance</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="timeline"
-                            className="rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-4 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                            className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
-                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                            <span className="whitespace-nowrap relative z-10">Timeline</span>
+                            <Calendar className="w-4 h-4 shrink-0" />
+                            <span className="whitespace-nowrap">Timeline</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -441,38 +392,46 @@ export default function StudentAnalyticsPage() {
                     <TabsContent value="overview" className="space-y-6">
                         {/* Overall Progress Cards */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md rounded-2xl">
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Target className="w-5 h-5 text-blue-600" />
+                                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                                        <Target className="w-5 h-5 text-blue-600 shrink-0" />
                                         Overall Performance Score
                                 </CardTitle>
-                                    <CardDescription>Your average score across all assessments</CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm">Your average score across all assessments</CardDescription>
                             </CardHeader>
                             <CardContent>
                                     <div className="space-y-4">
                                         <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(overallScore)}%</span>
-                                                <Badge className={overallScore >= 70 ? "bg-green-500" : overallScore >= 50 ? "bg-yellow-500" : "bg-red-500"}>
+                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{Math.round(overallScore)}%</span>
+                                                <span
+                                                    className={`inline-flex items-center px-4 py-1 rounded-full text-xs font-semibold text-white
+                                                        ${overallScore >= 70
+                                                            ? "bg-[#00C951]"
+                                                            : overallScore >= 50
+                                                            ? "bg-[#FFB800]"
+                                                            : "bg-[#FF2B3A]"
+                                                        }`}
+                                                >
                                                     {overallScore >= 70 ? "Excellent" : overallScore >= 50 ? "Good" : "Needs Improvement"}
-                                                </Badge>
+                                                </span>
                                             </div>
                                             <Progress value={overallScore} className="h-3" />
                                         </div>
                                         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                                            <div className="grid grid-cols-3 gap-4 text-center">
+                                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center divide-x divide-[#C1C1C1]">
                                                 <div>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Assessments</p>
-                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{assessmentCompleted}</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{assessmentCompleted}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Completion</p>
-                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{completionRate}%</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{completionRate}%</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Readiness</p>
-                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{Math.round(readinessIndex)}%</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{Math.round(readinessIndex)}%</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -480,45 +439,46 @@ export default function StudentAnalyticsPage() {
                             </CardContent>
                         </Card>
 
-                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md rounded-2xl">
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <ShieldCheck className="w-5 h-5 text-green-600" />
+                                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                                        <ShieldCheck className="w-5 h-5 text-green-600 shrink-0" />
                                         Job Readiness Index
                                 </CardTitle>
-                                    <CardDescription>Comprehensive readiness assessment</CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm">Your average score across all assessments</CardDescription>
                             </CardHeader>
                             <CardContent>
                                     <div className="space-y-4">
                                         <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(readinessIndex)}%</span>
-                                                <Badge className={readinessIndex >= 75 ? "bg-green-500" : readinessIndex >= 50 ? "bg-blue-500" : "bg-orange-500"}>
+                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{Math.round(readinessIndex)}%</span>
+                                                <span
+                                                    className={`inline-flex items-center px-4 py-1 rounded-full text-xs font-semibold text-white
+                                                        ${readinessIndex >= 75
+                                                            ? "bg-[#00C951]"
+                                                            : readinessIndex >= 50
+                                                            ? "bg-[#1E7BFF]"
+                                                            : "bg-[#FF6800]"
+                                                        }`}
+                                                >
                                                     {readinessIndex >= 75 ? "Ready" : readinessIndex >= 50 ? "Almost Ready" : "In Progress"}
-                                                </Badge>
+                                                </span>
                                             </div>
                                             <Progress value={readinessIndex} className="h-3" />
                                         </div>
-                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">Resume</span>
-                                                <div className="flex items-center gap-2">
-                                                    <Progress value={resumeCompletion} className="w-24 h-2" />
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{resumeCompletion}%</span>
+                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center divide-x divide-[#C1C1C1]">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Resume</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{resumeCompletion}%</p>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">Portfolio</span>
-                                                <div className="flex items-center gap-2">
-                                                    <Progress value={portfolioStrength} className="w-24 h-2" />
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{portfolioStrength}%</span>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Portfolio</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{portfolioStrength}%</p>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">Assessments</span>
-                                                <div className="flex items-center gap-2">
-                                                    <Progress value={completionRate} className="w-24 h-2" />
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">{completionRate}%</span>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Assessments</p>
+                                                    <p className="text-base sm:text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{Math.round(readinessIndex)}%</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -529,7 +489,7 @@ export default function StudentAnalyticsPage() {
 
                         {/* Application Funnel */}
                         {showApplication && funnelData.some(f => f.value > 0) && (
-                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
+                            <Card className="border border-[#ABABAB] dark:border-gray-700 shadow-md rounded-2xl">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Briefcase className="w-5 h-5 text-orange-600" />
@@ -538,9 +498,9 @@ export default function StudentAnalyticsPage() {
                                     <CardDescription>Your job application journey from submission to offers</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="h-80">
+                                    <div className="h-[220px] sm:h-[320px] lg:h-[418px] w-full max-w-[985px] mx-auto border border-[#A2A2A2] rounded-lg bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={funnelData}>
+                                            <BarChart data={funnelData} barCategoryGap="25%">
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                                 <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
                                                 <YAxis tick={{ fill: '#6b7280' }} />
@@ -548,10 +508,10 @@ export default function StudentAnalyticsPage() {
                                                     contentStyle={{ 
                                                         backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                                         border: '1px solid #e5e7eb',
-                                                        borderRadius: '8px'
+                                                        borderRadius: '1px'
                                                     }}
                                                 />
-                                                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                                                <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={123}>
                                                     {funnelData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                                     ))}
@@ -559,14 +519,14 @@ export default function StudentAnalyticsPage() {
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
                                         {funnelData.map((item, idx) => (
-                                            <div key={idx} className="text-center">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }} />
-                                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{item.name}</span>
+                                            <div key={idx} className="text-center min-w-0">
+                                                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                                                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded shrink-0" style={{ backgroundColor: item.fill }} />
+                                                    <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{item.name}</span>
                                                 </div>
-                                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                                                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
                                                 {idx > 0 && funnelData[idx - 1].value > 0 && (
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                         {Math.round((item.value / funnelData[idx - 1].value) * 100)}% conversion
@@ -908,7 +868,7 @@ export default function StudentAnalyticsPage() {
                                                                             {t.score != null && (
                                                                                         <div className="flex items-center gap-2 mt-2">
                                                                                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score:</span>
-                                                                                            <span className="text-lg font-bold text-gray-900 dark:text-white">{Math.round(t.score)}%</span>
+                                                                                            <span className="text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{Math.round(t.score)}%</span>
                                                                                         </div>
                                                                             )}
                                                                         </div>
@@ -935,3 +895,5 @@ export default function StudentAnalyticsPage() {
         </DashboardLayout>
     )
 }
+
+
