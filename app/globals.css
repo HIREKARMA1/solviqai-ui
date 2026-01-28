@@ -41,29 +41,33 @@
     --toast-color: #ffffff;
     --toast-border: #374151;
 
-    /* Dark mode - Optimized for professional look */
-    --background: 222 47% 11%;
+    /* Dark mode - Figma SolviQ theme (#1A2C58 navy, stat card colors) */
+    --background: 224 54% 22%;
+    /* #1A2C58 */
     --foreground: 210 40% 98%;
-    --card: 217 33% 17%;
+    --card: 224 54% 26%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 224 54% 22%;
     --popover-foreground: 210 40% 98%;
     --primary: 195 100% 45%;
-    /* Bright Blue for dark mode */
-    --primary-foreground: 222 47% 11%;
+    --primary-foreground: 224 54% 22%;
     --secondary: 212 77% 37%;
-    /* Dark Blue */
     --secondary-foreground: 0 0% 100%;
-    --muted: 217 33% 17%;
+    --muted: 224 40% 28%;
     --muted-foreground: 215 20% 65%;
     --accent: 37 95% 52%;
-    /* Orange */
     --accent-foreground: 0 0% 100%;
     --destructive: 356 63% 54%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 224 40% 32%;
+    --input: 224 40% 28%;
     --ring: 195 100% 45%;
+    /* Figma stat card dark mode hex (for inline use) */
+    --solviq-dark-bg: #1A2C58;
+    --solviq-stat-blue: #3D97EF;
+    --solviq-stat-purple: #3B0069;
+    --solviq-stat-magenta: #A30057;
+    --solviq-stat-gold: #BEA300;
   }
 }
 
@@ -73,7 +77,11 @@
   }
 
   body {
-    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
+    @apply bg-white text-gray-900 dark:text-white;
+  }
+
+  html.dark body {
+    background-color: #030e29;
   }
 
   /* Prevent layout shift when scrollbar appears/disappears */
