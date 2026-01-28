@@ -28,7 +28,7 @@ function getDemoRecentActivities(): Array<{ id: string; date: string; score?: nu
     return [
         { id: 'demo-1', date: now.toISOString(), title: 'Technical Assessment- Javascript' },
         { id: 'demo-2', date: new Date(now.getTime() - 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
-        { id: 'demo-3', date: new Date(now.getTime() - 2 * 86400000).toISOString(), score: 92, title: 'System Design Interview Prepare' },
+        { id: 'demo-3', date: new Date(now.getTime() - 2 * 86400000).toISOString(), score: 82, title: 'System Design Interview Prepare' },
         { id: 'demo-4', date: new Date(now.getTime() - 3 * 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
     ]
 }
@@ -426,9 +426,9 @@ export default function StudentDashboard() {
                                                     <p className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(a.date)}</p>
                                                 </div>
                                                 {a.score != null && (
-                                                    <Badge variant="secondary" className="shrink-0 text-xs">
+                                                    <span className="shrink-0 rounded-full bg-[#1C7CD5] px-3 py-1 text-xs font-semibold text-white">
                                                         {Number(a.score).toFixed(0)}%
-                                                    </Badge>
+                                                    </span>
                                                 )}
                                             </div>
                                         ))}
