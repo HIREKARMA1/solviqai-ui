@@ -28,6 +28,7 @@ import CareerCalendarTab from '@/components/career-guidance/CareerCalendarTab';
 import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModal';
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
 import { AxiosError } from 'axios';
+import { useTheme } from 'next-themes';
 
 interface Message {
   role: 'ai' | 'user';
@@ -37,6 +38,8 @@ interface Message {
 
 export default function CareerGuidancePage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -531,7 +534,7 @@ export default function CareerGuidancePage() {
         <motion.div
           className="relative overflow-hidden w-full rounded-xl sm:rounded-[16px] text-gray-900 dark:text-white flex flex-col items-start justify-center text-left py-3 px-3 sm:py-[14px] sm:px-[10px] gap-2 sm:gap-4 min-h-[100px] sm:min-h-[120px] lg:h-[140px] lg:min-h-[140px]"
           style={{
-            backgroundColor: '#F6FBFF',
+            backgroundColor: isDark ? '#1C2938' : '#F6FBFF',
             boxShadow: 'inset 0 1px 1.5px 0 rgba(0,0,0,0.25)',
           }}
         >
@@ -562,9 +565,9 @@ export default function CareerGuidancePage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
-          {/* Current Stage Card - Figma: Fill 381px, Hug 122px, Vertical flow, 10px gap */}
+          {/* Current Stage Card - Figma: light #FFF / dark #1C2938, border #CACACA / #666565 */}
           <Card
-            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+            className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
             <CardContent className="p-[10px] flex flex-col gap-[10px]">
               <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Current Stage</div>
@@ -581,9 +584,9 @@ export default function CareerGuidancePage() {
             </CardContent>
           </Card>
 
-          {/* In Progress Card - Figma: Title + 22% on same row, progress bar, then target icon + blue text */}
+          {/* In Progress Card - Figma: light #FFF / dark #1C2938 */}
           <Card
-            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+            className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
             <CardContent className="p-[10px] flex flex-col gap-[10px]">
               <div className="flex items-center justify-between">
@@ -592,17 +595,17 @@ export default function CareerGuidancePage() {
               </div>
               <Progress value={completionPercentage} className="h-2 sm:h-3" />
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full border-2 border-[#0068FC] flex items-center justify-center flex-shrink-0 bg-[#E8F0FE]/50">
-                  <Target className="w-4 h-4 text-[#0068FC]" />
+                <div className="w-8 h-8 rounded-full border-2 border-[#0068FC] dark:border-[#8EBDFF] flex items-center justify-center flex-shrink-0 bg-[#E8F0FE]/50 dark:bg-[#0068FC]/20">
+                  <Target className="w-4 h-4 text-[#0068FC] dark:text-[#8EBDFF]" />
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-[#0068FC]">Your perfect career paths!</span>
+                <span className="text-xs sm:text-sm font-medium text-[#0068FC] dark:text-green-400">Your perfect career paths!</span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Quick Actions Card - Figma: Title, centered View History button with icon */}
+          {/* Quick Actions Card - Figma: light #FFF / dark #1C2938 */}
           <Card
-            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+            className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
             <CardContent className="p-[10px] flex flex-col gap-[10px]">
               <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Quick Actions</div>
@@ -610,7 +613,7 @@ export default function CareerGuidancePage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowHistory(true)}
-                  className="border-gray-300 dark:border-gray-600 rounded-lg h-10 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  className="border-gray-300 dark:border-[#666565] rounded-lg h-10 px-4 bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-[#243447] text-gray-700 dark:text-gray-200"
                   aria-label="Session history"
                 >
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -647,24 +650,24 @@ export default function CareerGuidancePage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="lg:col-span-5 flex flex-col rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg min-h-[320px] sm:min-h-[420px] lg:min-h-[640px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-180px)]"
+            className="lg:col-span-5 flex flex-col rounded-lg overflow-hidden border border-gray-200 dark:border-[#4F5764] shadow-lg min-h-[320px] sm:min-h-[420px] lg:min-h-[640px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-180px)]"
             style={{
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 105, 255, 0.05)',
+              backgroundColor: isDark ? 'rgba(28, 41, 56, 0.6)' : 'rgba(0, 105, 255, 0.05)',
               gap: 16,
             }}
           >
-            {/* Chat Header - compact on mobile, full size on sm+ */}
+            {/* Chat Header - light #D6E1FF / dark #1C2938 or #1F2748 */}
             <div
-              className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 border-b border-gray-200/50 dark:border-gray-700 px-2 py-2.5 sm:px-4 sm:py-4 min-h-[60px] sm:min-h-[86px]"
-              style={{ backgroundColor: '#D6E1FF' }}
+              className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 border-b border-gray-200/50 dark:border-[#4F5764] px-2 py-2.5 sm:px-4 sm:py-4 min-h-[60px] sm:min-h-[86px]"
+              style={{ backgroundColor: isDark ? '#1C2938' : '#D6E1FF' }}
             >
-              <div className="p-1 sm:p-2 rounded-md sm:rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(0,104,252,0.2)' }}>
-                <MessageCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#0068FC]" />
+              <div className="p-1 sm:p-2 rounded-md sm:rounded-lg flex-shrink-0 bg-[#0068FC]/20 dark:bg-[#0068FC]/30">
+                <MessageCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#0068FC] dark:text-[#8EBDFF]" />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xs sm:text-lg font-bold text-gray-900 dark:text-white truncate">AI Career Counselor</h2>
-                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-500 truncate">Ask me anything about your career journey</p>
+                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400 truncate">Ask me anything about your career journey</p>
               </div>
             </div>
 
@@ -694,22 +697,24 @@ export default function CareerGuidancePage() {
                       <div
                         className={`
                           max-w-[92%] sm:max-w-[85%] lg:max-w-[80%] px-3 py-2.5 sm:px-5 sm:py-4 shadow-sm min-h-0 sm:min-h-[88px]
-                          ${message.role === 'user' ? 'text-gray-900' : 'text-gray-900'}
+                          ${message.role === 'user' ? 'text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white'}
                         `}
                         style={
                           message.role === 'user'
-                            ? {
-                                /* User response: #D6E1FF background, 12px radius, 1px border #8692A6 20% */
-                                backgroundColor: '#D6E1FF',
-                                border: '1px solid rgba(134, 146, 166, 0.2)',
-                                borderRadius: 12,
-                              }
-                            : {
-                                /* Screenshot 2 / Figma: AI response – white theme #FFFFFF, 16px radius, 1px border #8692A6 */
-                                backgroundColor: '#FFFFFF',
-                                border: '1px solid #8692A6',
-                                borderRadius: 16,
-                              }
+                            ? isDark
+                              ? { backgroundColor: '#384370', border: '1px solid #4F5764', borderRadius: 12 }
+                              : {
+                                  backgroundColor: '#D6E1FF',
+                                  border: '1px solid rgba(134, 146, 166, 0.2)',
+                                  borderRadius: 12,
+                                }
+                            : isDark
+                              ? { backgroundColor: '#2A2C38', border: '1px solid #4F5764', borderRadius: 16 }
+                              : {
+                                  backgroundColor: '#FFFFFF',
+                                  border: '1px solid #8692A6',
+                                  borderRadius: 16,
+                                }
                         }
                       >
                         {message.role === 'ai' ? (
@@ -722,13 +727,13 @@ export default function CareerGuidancePage() {
                               <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Like">
                                 <ThumbsUp className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
                               </button>
-                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Dislike">
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Dislike">
                                 <ThumbsDown className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
                               </button>
-                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Copy">
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Copy">
                                 <Copy className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
                               </button>
-                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Regenerate">
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Regenerate">
                                 <RefreshCw className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
                               </button>
                             </div>
@@ -753,7 +758,11 @@ export default function CareerGuidancePage() {
                 >
                   <div
                     className="rounded-2xl px-4 py-3 shadow-sm border"
-                    style={{ backgroundColor: '#FFFFFF', borderColor: '#8692A6', borderRadius: 16 }}
+                    style={
+                      isDark
+                        ? { backgroundColor: '#2A2C38', borderColor: '#4F5764', borderRadius: 16 }
+                        : { backgroundColor: '#FFFFFF', borderColor: '#8692A6', borderRadius: 16 }
+                    }
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#0068FC] flex-shrink-0" />
@@ -782,10 +791,10 @@ export default function CareerGuidancePage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input - compact on mobile (small buttons/gaps), full size on sm+ */}
-            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-1 sm:p-4 bg-white dark:bg-gray-900/50">
+            {/* Input - compact on mobile; dark mode #1C2938 / #4F5764 */}
+            <div className="flex-shrink-0 border-t border-gray-200 dark:border-[#4F5764] p-1 sm:p-4 bg-white dark:bg-[#1C2938]/80">
               <div
-                className="flex gap-1 sm:gap-3 items-center border border-gray-200 dark:border-gray-600 px-1.5 sm:px-4 py-1.5 sm:py-4 max-sm:px-2 max-sm:py-2 bg-white dark:bg-gray-800 rounded-md sm:rounded-lg min-h-[48px] sm:min-h-[96px] max-sm:min-h-[44px]"
+                className="flex gap-1 sm:gap-3 items-center border border-gray-200 dark:border-[#4F5764] px-1.5 sm:px-4 py-1.5 sm:py-4 max-sm:px-2 max-sm:py-2 bg-white dark:bg-[#2A2C38] rounded-md sm:rounded-lg min-h-[48px] sm:min-h-[96px] max-sm:min-h-[44px]"
               >
                 <textarea
                   value={inputMessage}
@@ -845,26 +854,25 @@ export default function CareerGuidancePage() {
               {/* Tab Navigation - icon-only on small screens to avoid truncation; full labels on sm+ */}
               <div className="flex-shrink-0 mb-2 sm:mb-4">
                 <TabsList
-                  className="grid grid-cols-3 w-full h-[40px] sm:h-[57px] rounded-lg p-1.5 sm:p-[10px] gap-1 sm:gap-4 lg:gap-6 border"
-                  style={{ backgroundColor: '#FDFDFD', borderColor: '#C0C0C0' }}
+                  className="grid grid-cols-3 w-full h-[40px] sm:h-[57px] rounded-lg p-1.5 sm:p-[10px] gap-1 sm:gap-4 lg:gap-6 border bg-[#FDFDFD] dark:bg-[#1C2938] border-[#C0C0C0] dark:border-[#4F5764]"
                 >
                   <TabsTrigger
                     value="playlist"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-white/10 w-full border-0 outline-none focus-visible:ring-0"
                   >
                     <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
                     <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Playlist</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="calendar"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-white/10 w-full border-0 outline-none focus-visible:ring-0"
                   >
                     <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
                     <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Calendar</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="flowchart"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-white/10 w-full border-0 outline-none focus-visible:ring-0"
                   >
                     <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
                     <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Tree</span>
@@ -874,7 +882,7 @@ export default function CareerGuidancePage() {
 
               {/* Tab Content */}
               <TabsContent value="playlist" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-gray-700">
+                <Card className="h-full border border-gray-200 dark:border-[#4F5764] dark:bg-[#1C2938]">
                   <CardContent className="p-0 h-full">
                     {sessionId ? (
                       <CareerPlaylistTab sessionId={sessionId} />
@@ -918,25 +926,32 @@ export default function CareerGuidancePage() {
               {/* Tree tab – Figma: empty state bg #FBFCFE, border #BDBDBD, 8px radius, padding 50px, purple icon + title */}
               <TabsContent value="flowchart" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
                 {nodes.length > 0 || edges.length > 0 ? (
-                  <div className="h-full w-full rounded-lg border overflow-hidden" style={{ backgroundColor: '#FBFCFE', borderColor: '#BDBDBD', borderRadius: 8 }}>
+                  <div
+                    className="h-full w-full rounded-lg border overflow-hidden dark:border-[#4F5764]"
+                    style={{
+                      backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
+                      borderColor: isDark ? '#4F5764' : '#BDBDBD',
+                      borderRadius: 8,
+                    }}
+                  >
                     <CareerTreeVisualization nodes={nodes} edges={edges} />
                   </div>
                 ) : (
                   <div
-                    className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px]"
+                    className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px] dark:border-[#4F5764]"
                     style={{
-                      backgroundColor: '#FBFCFE',
-                      borderColor: '#BDBDBD',
+                      backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
+                      borderColor: isDark ? '#4F5764' : '#BDBDBD',
                       borderRadius: 8,
                     }}
                   >
                     <div className="flex justify-center">
-                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: '#E8E0F5' }}>
-                        <Workflow className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-[#7F56D9]" />
+                      <div className="p-3 sm:p-4 rounded-xl bg-[#E8E0F5] dark:bg-[#2A2C38]">
+                        <Workflow className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-[#7F56D9] dark:text-[#8EBDFF]" />
                       </div>
                     </div>
-                    <p className="text-base sm:text-lg font-bold text-gray-900 text-center">Career Tree Visualization</p>
-                    <p className="text-xs sm:text-sm text-gray-500 max-w-md text-center">Your career journey map will appear here as you progress</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white text-center">Career Tree Visualization</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md text-center">Your career journey map will appear here as you progress</p>
                   </div>
                 )}
               </TabsContent>
