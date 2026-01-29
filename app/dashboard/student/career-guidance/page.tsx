@@ -7,7 +7,8 @@ import {
   Send, Sparkles, Target, Brain, Lightbulb, Rocket,
   Trophy, TrendingUp, CheckCircle, MessageCircle, Loader2,
   Mic, MicOff, Volume2, VolumeX, PlayCircle, Workflow, Calendar,
-  AlertCircle, RefreshCw, Wifi, WifiOff
+  AlertCircle, RefreshCw, Wifi, WifiOff, Users, Paperclip,
+  ThumbsUp, ThumbsDown, Reply, Copy
 } from 'lucide-react';
 import { MarkerType } from 'reactflow';
 import { Button } from '@/components/ui/button';
@@ -525,118 +526,97 @@ export default function CareerGuidancePage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 lg:pt-0">
-        {/* Header - Simplified */}
+      <div className="space-y-3 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-24 sm:pt-28 lg:pt-0 pb-6 sm:pb-8">
+        {/* Header - responsive: min-height on small, fixed on lg; padding scales */}
         <motion.div
-          className="relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"
+          className="relative overflow-hidden w-full rounded-xl sm:rounded-[16px] text-gray-900 dark:text-white flex flex-col items-start justify-center text-left py-3 px-3 sm:py-[14px] sm:px-[10px] gap-2 sm:gap-4 min-h-[100px] sm:min-h-[120px] lg:h-[140px] lg:min-h-[140px]"
+          style={{
+            backgroundColor: '#F6FBFF',
+            boxShadow: 'inset 0 1px 1.5px 0 rgba(0,0,0,0.25)',
+          }}
         >
-          {/* Decorative corners */}
-          <motion.div
-            className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 sm:w-56 sm:h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
-            animate={{ rotate: [45, 50, 45] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="pointer-events-none absolute -bottom-14 -left-14 w-48 h-48 sm:w-64 sm:h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2">
-              <motion.div
-                className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-              </motion.div>
-              <motion.h1
-                className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold gradient-text"
-                animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                style={{ backgroundSize: '200% 200%' }}
-              >
-                <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">AI Career Guidance</span>
-              </motion.h1>
-            </div>
-            <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
-              Discover your perfect career path with personalized AI-powered guidance
-            </p>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-[#0068FC] flex-shrink-0" />
+            <h1
+              className="text-xl sm:text-3xl md:text-[40px] font-bold leading-tight sm:leading-[40px] tracking-normal bg-clip-text text-transparent"
+              style={{
+                fontFamily: 'var(--font-poppins), sans-serif',
+                fontWeight: 700,
+                background: 'linear-gradient(90deg, #0068FC 0%, #8D5AFF 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+              }}
+            >
+              AI Career Guidance
+            </h1>
           </div>
+          <p className="text-xs sm:text-base text-gray-600 dark:text-gray-400 line-clamp-2 sm:line-clamp-none">
+            Discover your perfect career path with personalized AI-powered guidance
+          </p>
         </motion.div>
 
-        {/* Stats Cards Section */}
+        {/* Stats Cards - Figma: Vertical flow, Fill width, Hug height (122px), 10px gap, white cards with shadow */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
-          {/* Stage Info Card */}
-          <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
-              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Current Stage</div>
-              <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
-                <div className={`p-2 sm:p-3 rounded-lg bg-gradient-to-br ${stageInfo.bgColor} to-indigo-500 shadow-lg flex-shrink-0`}>
-                  <StageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          {/* Current Stage Card - Figma: Fill 381px, Hug 122px, Vertical flow, 10px gap */}
+          <Card
+            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+          >
+            <CardContent className="p-[10px] flex flex-col gap-[10px]">
+              <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Current Stage</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Stage {stageInfo.number} of 4</div>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <div className="p-2 rounded-full flex-shrink-0 bg-[#E8F0FE] dark:bg-blue-900/30">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#0068FC]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">Stage {stageInfo.number} of 4</div>
                   <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">{stageInfo.label}</div>
-                  <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 italic mt-1 line-clamp-1">{stageInfo.description}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{stageInfo.description}</div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Progress Card */}
-          <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Progress</div>
+          {/* In Progress Card - Figma: Title + 22% on same row, progress bar, then target icon + blue text */}
+          <Card
+            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+          >
+            <CardContent className="p-[10px] flex flex-col gap-[10px]">
+              <div className="flex items-center justify-between">
+                <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">In Progress</div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{completionPercentage}%</div>
               </div>
-              <Progress value={completionPercentage} className="h-2 sm:h-3 mt-3 sm:mt-4" />
-              {currentStage === 'exploration' && (
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-2 sm:mt-3">
-                  <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">Learning about you...</span>
+              <Progress value={completionPercentage} className="h-2 sm:h-3" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full border-2 border-[#0068FC] flex items-center justify-center flex-shrink-0 bg-[#E8F0FE]/50">
+                  <Target className="w-4 h-4 text-[#0068FC]" />
                 </div>
-              )}
-              {currentStage === 'recommendations' && (
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-green-600 dark:text-green-400 font-medium mt-2 sm:mt-3 animate-pulse">
-                  <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">Generating recommendations...</span>
-                </div>
-              )}
-              {currentStage === 'roadmap' && (
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-2 sm:mt-3 animate-pulse">
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">Creating roadmap...</span>
-                </div>
-              )}
-              {currentStage === 'introduction' && (
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-medium mt-2 sm:mt-3">
-                  <Rocket className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">Getting started...</span>
-                </div>
-              )}
+                <span className="text-xs sm:text-sm font-medium text-[#0068FC]">Your perfect career paths!</span>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Actions Card */}
-          <Card className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
-              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">Quick Actions</div>
-              <Button
-                variant="outline"
-                onClick={() => setShowHistory(true)}
-                className="w-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg h-9 sm:h-10"
-                aria-label="Session history"
-              >
-                <Workflow className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                <span className="text-xs sm:text-sm font-medium">View History</span>
-              </Button>
+          {/* Quick Actions Card - Figma: Title, centered View History button with icon */}
+          <Card
+            className="rounded-2xl border border-[#CACACA] bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden"
+          >
+            <CardContent className="p-[10px] flex flex-col gap-[10px]">
+              <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Quick Actions</div>
+              <div className="flex items-center justify-center flex-1 min-h-[80px]">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowHistory(true)}
+                  className="border-gray-300 dark:border-gray-600 rounded-lg h-10 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  aria-label="Session history"
+                >
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  <span className="text-sm font-medium">View History</span>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -660,31 +640,36 @@ export default function CareerGuidancePage() {
           </Alert>
         )}
 
-        {/* Main Content - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-          {/* Chat Interface - Left Column */}
+        {/* Main Content - Stack on mobile, two columns on lg */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6">
+          {/* Chat Console - responsive min/max height */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="lg:col-span-5 flex flex-col bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-            style={{ minHeight: '500px', maxHeight: 'calc(100vh - 300px)' }}
+            className="lg:col-span-5 flex flex-col rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg min-h-[320px] sm:min-h-[420px] lg:min-h-[640px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-180px)]"
+            style={{
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 105, 255, 0.05)',
+              gap: 16,
+            }}
           >
-            {/* Chat Header */}
-            <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg shadow-md flex-shrink-0">
-                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">AI Career Counselor</h2>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Ask me anything about your career journey</p>
-                </div>
+            {/* Chat Header - compact on mobile, full size on sm+ */}
+            <div
+              className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 border-b border-gray-200/50 dark:border-gray-700 px-2 py-2.5 sm:px-4 sm:py-4 min-h-[60px] sm:min-h-[86px]"
+              style={{ backgroundColor: '#D6E1FF' }}
+            >
+              <div className="p-1 sm:p-2 rounded-md sm:rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(0,104,252,0.2)' }}>
+                <MessageCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#0068FC]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xs sm:text-lg font-bold text-gray-900 dark:text-white truncate">AI Career Counselor</h2>
+                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-500 truncate">Ask me anything about your career journey</p>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {/* Messages - responsive padding and gap */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style={{ WebkitOverflowScrolling: 'touch' }}>
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center space-y-3 sm:space-y-4 px-4">
@@ -708,20 +693,49 @@ export default function CareerGuidancePage() {
                     >
                       <div
                         className={`
-                          max-w-[85%] sm:max-w-[80%] rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-2 sm:py-3 shadow-md
-                          ${message.role === 'user'
-                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
-                            : 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white'
-                          }
+                          max-w-[92%] sm:max-w-[85%] lg:max-w-[80%] px-3 py-2.5 sm:px-5 sm:py-4 shadow-sm min-h-0 sm:min-h-[88px]
+                          ${message.role === 'user' ? 'text-gray-900' : 'text-gray-900'}
                         `}
+                        style={
+                          message.role === 'user'
+                            ? {
+                                /* User response: #D6E1FF background, 12px radius, 1px border #8692A6 20% */
+                                backgroundColor: '#D6E1FF',
+                                border: '1px solid rgba(134, 146, 166, 0.2)',
+                                borderRadius: 12,
+                              }
+                            : {
+                                /* Screenshot 2 / Figma: AI response – white theme #FFFFFF, 16px radius, 1px border #8692A6 */
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #8692A6',
+                                borderRadius: 16,
+                              }
+                        }
                       >
-                        {message.role === 'ai' && (
-                          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
-                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300"></span>
-                          </div>
+                        {message.role === 'ai' ? (
+                          <>
+                            <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#0068FC] flex-shrink-0" />
+                            </div>
+                            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                            <div className="flex items-center gap-0.5 sm:gap-3 mt-1 sm:mt-2 pt-1 sm:pt-2 border-t border-gray-200 max-sm:gap-1">
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Like">
+                                <ThumbsUp className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
+                              </button>
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Dislike">
+                                <ThumbsDown className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
+                              </button>
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Copy">
+                                <Copy className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
+                              </button>
+                              <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Regenerate">
+                                <RefreshCw className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                         )}
-                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -737,29 +751,28 @@ export default function CareerGuidancePage() {
                   className="flex justify-start"
                   onAnimationComplete={() => scrollToBottom(true)}
                 >
-                  <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-2 sm:py-3 shadow-md">
+                  <div
+                    className="rounded-2xl px-4 py-3 shadow-sm border"
+                    style={{ backgroundColor: '#FFFFFF', borderColor: '#8692A6', borderRadius: 16 }}
+                  >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
-                      </div>
-                      <div className="flex items-center gap-1 ml-1 sm:ml-2">
-                        <div className="flex gap-1">
-                          <motion.span
-                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
-                            animate={{ y: [0, -4, 0] }}
-                            transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                          />
-                          <motion.span
-                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
-                            animate={{ y: [0, -4, 0] }}
-                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                          />
-                          <motion.span
-                            className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full"
-                            animate={{ y: [0, -4, 0] }}
-                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                          />
-                        </div>
+                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#0068FC] flex-shrink-0" />
+                      <div className="flex gap-1">
+                        <motion.span
+                          className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                        />
+                        <motion.span
+                          className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                        />
+                        <motion.span
+                          className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -769,32 +782,51 @@ export default function CareerGuidancePage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input - Fixed at bottom */}
-            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50">
-              <div className="flex gap-2 sm:gap-3 items-end">
+            {/* Input - compact on mobile (small buttons/gaps), full size on sm+ */}
+            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-1 sm:p-4 bg-white dark:bg-gray-900/50">
+              <div
+                className="flex gap-1 sm:gap-3 items-center border border-gray-200 dark:border-gray-600 px-1.5 sm:px-4 py-1.5 sm:py-4 max-sm:px-2 max-sm:py-2 bg-white dark:bg-gray-800 rounded-md sm:rounded-lg min-h-[48px] sm:min-h-[96px] max-sm:min-h-[44px]"
+              >
                 <textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Share your thoughts, interests, and goals..."
-                  className="flex-1 resize-none rounded-lg sm:rounded-xl border border-gray-300 dark:border-gray-600 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                  placeholder="Type your response or use voice input..."
+                  className="flex-1 min-w-0 resize-none text-xs sm:text-sm bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 min-h-[36px] sm:min-h-[56px] max-sm:min-h-[32px] max-sm:text-[11px] max-sm:placeholder:text-[11px] focus:outline-none border-0 rounded-none"
                   rows={2}
                   disabled={isLoading || connectionStatus !== 'connected'}
-                  style={{ maxHeight: '100px' }}
+                  style={{ maxHeight: '120px' }}
                   aria-label="Message input"
                 />
-                <Button
-                  onClick={sendMessage}
-                  disabled={!inputMessage.trim() || isLoading || connectionStatus !== 'connected'}
-                  className="self-end bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg h-auto px-3 sm:px-4 py-2 sm:py-3 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                  size="sm"
-                  aria-label="Send message"
-                >
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
+                <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0 max-sm:gap-1">
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!inputMessage.trim() || isLoading || connectionStatus !== 'connected'}
+                    className="h-7 w-7 sm:h-10 sm:w-10 max-sm:h-7 max-sm:w-7 p-0 rounded-md sm:rounded-lg text-white disabled:opacity-50 flex-shrink-0 border-0 hover:opacity-90"
+                    style={{ backgroundColor: '#8EBDFF' }}
+                    size="sm"
+                    aria-label="Send message"
+                  >
+                    <Send className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
+                  </Button>
+                  <button
+                    type="button"
+                    className="p-1 sm:p-2 max-sm:p-1 rounded-md sm:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    aria-label="Attach file"
+                  >
+                    <Paperclip className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1 sm:p-2 max-sm:p-1 rounded-md sm:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    aria-label="Voice input"
+                  >
+                    <Mic className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center justify-between mt-1.5 sm:mt-2 flex-wrap gap-1">
-                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">Press Enter to send, Shift+Enter for new line</p>
+              <p className="mt-1 sm:mt-2 text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Press Enter to send, Shift+Enter for new line</p>
+              <div className="flex items-center justify-between mt-0.5 flex-wrap gap-1">
                 {connectionStatus !== 'connected' && (
                   <p className="text-[10px] sm:text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
                 )}
@@ -802,38 +834,40 @@ export default function CareerGuidancePage() {
             </div>
           </motion.div>
 
-          {/* Right Column - Tabs */}
+          {/* Right Column - Tabs; responsive height on small screens */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="lg:col-span-7 flex flex-col gap-3 sm:gap-4"
-            style={{ minHeight: '500px', maxHeight: 'calc(100vh - 300px)' }}
+            className="lg:col-span-7 flex flex-col gap-2 sm:gap-4 min-h-[320px] sm:min-h-[420px] lg:min-h-[640px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-180px)]"
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Tab Navigation */}
-              <div className="flex-shrink-0 mb-3 sm:mb-4">
-                <TabsList className="grid grid-cols-3 bg-white dark:bg-gray-800 p-1 sm:p-1.5 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full gap-1 sm:gap-1.5 h-auto">
+              {/* Tab Navigation - icon-only on small screens to avoid truncation; full labels on sm+ */}
+              <div className="flex-shrink-0 mb-2 sm:mb-4">
+                <TabsList
+                  className="grid grid-cols-3 w-full h-[40px] sm:h-[57px] rounded-lg p-1.5 sm:p-[10px] gap-1 sm:gap-4 lg:gap-6 border"
+                  style={{ backgroundColor: '#FDFDFD', borderColor: '#C0C0C0' }}
+                >
                   <TabsTrigger
                     value="playlist"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
                   >
-                    <PlayCircle className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                    <span className="hidden sm:inline whitespace-nowrap relative z-10">Playlist</span>
+                    <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
+                    <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Playlist</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="calendar"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
                   >
-                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                    <span className="hidden sm:inline whitespace-nowrap relative z-10">Calendar</span>
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
+                    <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Calendar</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="flowchart"
-                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-0 flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2rem] sm:min-h-[2.5rem] px-2 sm:px-3 py-1.5 sm:py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:outline-none focus-visible:ring-0 relative"
+                    className="rounded-md sm:rounded-lg bg-transparent data-[state=active]:!bg-[#0068FC] data-[state=active]:text-white flex items-center justify-center gap-1 sm:gap-2 h-full px-1.5 sm:px-3 py-1 sm:py-2 max-sm:px-1 max-sm:py-1 transition-all font-semibold text-[10px] sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 w-full border-0 outline-none focus-visible:ring-0"
                   >
-                    <Workflow className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 relative z-10" />
-                    <span className="hidden sm:inline whitespace-nowrap relative z-10">Tree</span>
+                    <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />
+                    <span className="whitespace-nowrap truncate max-sm:sr-only sm:inline">Tree</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -881,24 +915,30 @@ export default function CareerGuidancePage() {
                 </Card>
               </TabsContent>
 
+              {/* Tree tab – Figma: empty state bg #FBFCFE, border #BDBDBD, 8px radius, padding 50px, purple icon + title */}
               <TabsContent value="flowchart" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
-                  <CardContent className="p-0 h-full">
-                    {nodes.length > 0 || edges.length > 0 ? (
-                      <CareerTreeVisualization nodes={nodes} edges={edges} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-blue-900/20">
-                        <div className="text-center space-y-4">
-                          <Workflow className="w-16 h-16 text-gray-300 dark:text-white/40 mx-auto" />
-                          <div>
-                            <p className="text-gray-700 dark:text-white/80 font-medium mb-1">Career Tree Visualization</p>
-                            <p className="text-gray-500 dark:text-white/60 text-sm">Your career journey map will appear here as you progress</p>
-                          </div>
-                        </div>
+                {nodes.length > 0 || edges.length > 0 ? (
+                  <div className="h-full w-full rounded-lg border overflow-hidden" style={{ backgroundColor: '#FBFCFE', borderColor: '#BDBDBD', borderRadius: 8 }}>
+                    <CareerTreeVisualization nodes={nodes} edges={edges} />
+                  </div>
+                ) : (
+                  <div
+                    className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px]"
+                    style={{
+                      backgroundColor: '#FBFCFE',
+                      borderColor: '#BDBDBD',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <div className="flex justify-center">
+                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: '#E8E0F5' }}>
+                        <Workflow className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-[#7F56D9]" />
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </div>
+                    <p className="text-base sm:text-lg font-bold text-gray-900 text-center">Career Tree Visualization</p>
+                    <p className="text-xs sm:text-sm text-gray-500 max-w-md text-center">Your career journey map will appear here as you progress</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </motion.div>
