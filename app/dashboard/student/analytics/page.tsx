@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useTheme } from 'next-themes'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -99,6 +100,8 @@ function StatCard({
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4']
 
 export default function StudentAnalyticsPage() {
+    const { resolvedTheme } = useTheme()
+    const isDark = resolvedTheme === 'dark'
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
     const [timeline, setTimeline] = useState<any[]>([])
@@ -548,45 +551,46 @@ export default function StudentAnalyticsPage() {
                         )}
                     </TabsContent>
 
-                    {/* Skills Tab – Figma: Skills Assessment = bar chart, Topic Distribution = radar with two series */}
+                    {/* Skills Tab – Figma: Skills Assessment = bar chart, Topic Distribution = radar; charts fill white space */}
                     <TabsContent value="skills" className="space-y-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:min-h-[520px] lg:items-stretch">
                             {showAssessment && skills.length > 0 && (
-                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-gray-700 shadow-md p-[10px] flex flex-col gap-[29px]">
-                                    <CardHeader className="p-0">
-                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
+                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-[#747474] dark:bg-[#1C2938] shadow-md p-[10px] flex flex-col gap-3 min-h-0">
+                                    <CardHeader className="p-0 flex-shrink-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
                                             Skills Assessment
                                         </CardTitle>
-                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Performance across skill categories</CardDescription>
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Performance across skill categories</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="p-0">
-                                        <div className="h-[320px] min-h-[280px]">
+                                    <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+                                        <div className="flex-1 min-h-[260px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={skills} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                                                    <CartesianGrid stroke="#d1d5db" strokeWidth={1} vertical={false} horizontal={true} />
+                                                <BarChart data={skills} margin={{ top: 4, right: 4, left: 4, bottom: 24 }}>
+                                                    <CartesianGrid stroke={isDark ? '#6B7280' : '#d1d5db'} strokeWidth={1} vertical={false} horizontal={true} />
                                                     <XAxis
                                                         dataKey="category"
-                                                        tick={{ fill: '#111827', fontSize: 11, fontWeight: 700 }}
-                                                        axisLine={{ stroke: '#e5e7eb' }}
+                                                        tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 11, fontWeight: 700 }}
+                                                        axisLine={{ stroke: isDark ? '#6B7280' : '#e5e7eb' }}
                                                         tickLine={false}
                                                     />
                                                     <YAxis
                                                         domain={[0, 100]}
                                                         ticks={[0, 25, 50, 75, 100]}
-                                                        tick={{ fill: '#111827', fontSize: 10, fontWeight: 700 }}
+                                                        tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 10, fontWeight: 700 }}
                                                         axisLine={false}
-                                                        tickLine={{ stroke: '#e5e7eb' }}
+                                                        tickLine={{ stroke: isDark ? '#6B7280' : '#e5e7eb' }}
                                                     />
                                                     <Tooltip
                                                         contentStyle={{
-                                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                            border: '1px solid #e5e7eb',
+                                                            backgroundColor: isDark ? 'rgba(28, 41, 56, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                                                            border: isDark ? '1px solid #747474' : '1px solid #e5e7eb',
                                                             borderRadius: '8px',
+                                                            color: isDark ? '#E5E7EB' : undefined,
                                                         }}
                                                         formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
                                                     />
-                                                    <Bar dataKey="score" fill="#6466FA" radius={[4, 4, 0, 0]} maxBarSize={16} />
+                                                    <Bar dataKey="score" fill={isDark ? '#7F56D9' : '#6466FA'} radius={[4, 4, 0, 0]} maxBarSize={16} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -595,49 +599,50 @@ export default function StudentAnalyticsPage() {
                             )}
 
                             {showAssessment && topicDistributionRadar.length > 0 && (
-                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-gray-700 shadow-md p-[10px] flex flex-col gap-[29px]">
-                                    <CardHeader className="p-0">
-                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
+                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-[#747474] dark:bg-[#1C2938] shadow-md p-[10px] flex flex-col gap-3 min-h-0">
+                                    <CardHeader className="p-0 flex-shrink-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
                                             Topic Distribution
                                         </CardTitle>
-                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Average performance by topic</CardDescription>
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Average performance by topic</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="p-0">
-                                        <div className="h-[310px] min-h-[380px] sm:h-[360px]">
+                                    <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+                                        <div className="flex-1 min-h-[320px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <RadarChart cx="50%" cy="50%" outerRadius="85%" data={topicDistributionRadar}>
-                                                    <PolarGrid stroke="#e5e7eb" />
+                                                <RadarChart cx="50%" cy="50%" outerRadius="92%" data={topicDistributionRadar}>
+                                                    <PolarGrid stroke={isDark ? '#9CA3AF' : '#e5e7eb'} />
                                                     <PolarAngleAxis
                                                         dataKey="subject"
-                                                        tick={{ fill: '#111827', fontSize: 12, fontWeight: 700 }}
+                                                        tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 12, fontWeight: 700 }}
                                                     />
                                                     <PolarRadiusAxis
                                                         angle={30}
                                                         domain={[0, 80]}
-                                                        tick={{ fill: '#111827', fontSize: 10, fontWeight: 700 }}
+                                                        tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 10, fontWeight: 700 }}
                                                     />
                                                     <Radar
                                                         name="Average"
                                                         dataKey="average"
-                                                        stroke="#5388D8"
-                                                        fill="#5388D8"
-                                                        fillOpacity={0.3}
+                                                        stroke={isDark ? '#7F56D9' : '#5388D8'}
+                                                        fill={isDark ? '#7F56D9' : '#5388D8'}
+                                                        fillOpacity={isDark ? 0.2 : 0.3}
                                                         strokeWidth={1}
                                                     />
                                                     <Radar
                                                         name="Benchmark"
                                                         dataKey="benchmark"
-                                                        stroke="#F4BE37"
-                                                        fill="#F4BE37"
-                                                        fillOpacity={0.3}
+                                                        stroke={isDark ? '#A78BFA' : '#F4BE37'}
+                                                        fill={isDark ? '#A78BFA' : '#F4BE37'}
+                                                        fillOpacity={isDark ? 0.2 : 0.3}
                                                         strokeWidth={1}
                                                     />
                                                     <Tooltip
                                                         contentStyle={{
-                                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                            border: '1px solid #e5e7eb',
+                                                            backgroundColor: isDark ? 'rgba(28, 41, 56, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                                                            border: isDark ? '1px solid #747474' : '1px solid #e5e7eb',
                                                             borderRadius: '8px',
+                                                            color: isDark ? '#E5E7EB' : undefined,
                                                         }}
                                                         formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}` : value)}
                                                     />
@@ -650,124 +655,132 @@ export default function StudentAnalyticsPage() {
                         </div>
                     </TabsContent>
 
-                    {/* Performance Tab */}
+                    {/* Performance Tab – Figma: Job Readiness Index area chart, Interview Stages + Assessment Progress cards */}
                     <TabsContent value="performance" className="space-y-6">
+                        {/* Job Readiness Index – Figma Frame 2087328348: light border #B0B0B0; dark bg #1C2938, border #727272; chart dark fill #7F56D9 50% */}
                         {showInterview && interviewTrend.length > 0 && (
-                            <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                            <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <LineChartIcon className="w-5 h-5 text-green-600" />
-                                        Interview Performance Trend
+                            <Card className="rounded-[8px] border border-[#B0B0B0] dark:border-[#727272] dark:bg-[#1C2938] shadow-md p-[15px] flex flex-col gap-9">
+                                <CardHeader className="p-0">
+                                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                        <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
+                                        Job Readiness Index
                                     </CardTitle>
-                                    <CardDescription>Your interview scores over time</CardDescription>
-                            </CardHeader>
-                                <CardContent>
-                                    <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
+                                    <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Your average score across all assessments</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="h-[280px] sm:h-[320px]">
+                                        <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={interviewTrend}>
                                                 <defs>
-                                                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                                                    <linearGradient id="colorJobReadinessLight" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#8D34F9" stopOpacity={0.22}/>
+                                                        <stop offset="95%" stopColor="#8D34F9" stopOpacity={0.05}/>
+                                                    </linearGradient>
+                                                    <linearGradient id="colorJobReadinessDark" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#7F56D9" stopOpacity={0.5}/>
+                                                        <stop offset="95%" stopColor="#7F56D9" stopOpacity={0.08}/>
                                                     </linearGradient>
                                                 </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                <XAxis dataKey="date" tick={{ fill: '#6b7280' }} />
-                                                <YAxis domain={[0, 100]} tick={{ fill: '#6b7280' }} />
-                                                <Tooltip 
-                                                    contentStyle={{ 
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '8px'
+                                                <CartesianGrid stroke={isDark ? '#6B7280' : '#e5e7eb'} strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="date" tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 11 }} />
+                                                <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 11 }} />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: isDark ? 'rgba(28, 41, 56, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                                                        border: isDark ? '1px solid #555252' : '1px solid #e5e7eb',
+                                                        borderRadius: '8px',
+                                                        color: isDark ? '#E5E7EB' : undefined,
                                                     }}
                                                     formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
                                                 />
-                                                <Area 
-                                                    type="monotone" 
-                                                    dataKey="score" 
-                                                    stroke="#10b981" 
-                                                    strokeWidth={3}
-                                                    fill="url(#colorScore)"
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="score"
+                                                    stroke={isDark ? '#7F56D9' : '#8D34F9'}
+                                                    strokeWidth={2}
+                                                    fill={isDark ? 'url(#colorJobReadinessDark)' : 'url(#colorJobReadinessLight)'}
                                                 />
                                             </AreaChart>
-                                </ResponsiveContainer>
+                                        </ResponsiveContainer>
                                     </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
                         )}
 
+                        {/* Interview Stages + Assessment Progress – Figma dark: bg #1C2938, border #555252; light: border #8D8989 */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {showInterview && interviewStageSplit.length > 0 && (
-                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                            <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-indigo-600" />
+                                <Card className="rounded-[8px] border border-[#8D8989] dark:border-[#555252] dark:bg-[#1C2938] shadow-md pt-6 pr-8 pb-10 pl-2.5 flex flex-col gap-4">
+                                    <CardHeader className="p-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <Users className="w-5 h-5 text-[#7F56D9] dark:text-purple-400 shrink-0" />
                                             Interview Stages
                                         </CardTitle>
-                                        <CardDescription>Breakdown by interview stage</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {(() => {
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Breakdown by interview stage</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {(() => {
                                             const total = interviewStageSplit.reduce((s: number, x: any) => s + (x.value || 0), 0)
-                                            const colors = ['bg-indigo-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500']
+                                            const barColors = ['#7F56D9', '#0885FE', '#7F56D9', '#FF329B']
                                             return (
                                                 <div className="space-y-4">
                                                     {interviewStageSplit.map((s: any, idx: number) => {
                                                         const val = s.value || 0
                                                         const pct = total ? Math.round((val / total) * 100) : 0
-                                    return (
+                                                        return (
                                                             <div key={`${s.name}-${idx}`} className="space-y-2">
                                                                 <div className="flex items-center justify-between text-sm gap-2">
-                                                                    <span className="font-medium text-gray-900 dark:text-white break-words min-w-0 flex-1">{s.name}</span>
-                                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold shrink-0">{val}</span>
+                                                                    <span className="font-bold text-gray-900 dark:text-white break-words min-w-0 flex-1">{s.name}</span>
+                                                                    <span className="text-gray-900 dark:text-white font-semibold shrink-0">{val}</span>
                                                                 </div>
-                                                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                                    <motion.div 
-                                                                        className={`h-2 ${colors[idx % colors.length]} rounded-full`}
+                                                                <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-[12px] overflow-hidden">
+                                                                    <motion.div
+                                                                        className="h-3 rounded-[12px]"
+                                                                        style={{ backgroundColor: barColors[idx % barColors.length], width: `${pct}%` }}
                                                                         initial={{ width: 0 }}
                                                                         animate={{ width: `${pct}%` }}
                                                                         transition={{ duration: 0.8, delay: idx * 0.1 }}
                                                                     />
                                                                 </div>
                                                                 <p className="text-xs text-gray-500 dark:text-gray-400">{pct}% of total</p>
-                                                </div>
+                                                            </div>
                                                         )
                                                     })}
-                                        </div>
-                                    )
-                                })()}
-                            </CardContent>
-                        </Card>
+                                                </div>
+                                            )
+                                        })()}
+                                    </CardContent>
+                                </Card>
                             )}
 
                             {showAssessment && (
-                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                <Card className="rounded-[8px] border border-[#8D8989] dark:border-[#555252] dark:bg-[#1C2938] shadow-md pt-6 pr-8 pb-10 pl-2.5 flex flex-col gap-4">
+                                    <CardHeader className="p-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
                                             Assessment Progress
                                         </CardTitle>
-                                        <CardDescription>Completion status and rate</CardDescription>
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Completion status and rate</CardDescription>
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-6">
-                                            <div className="space-y-3">
+                                    <CardContent className="p-0">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
                                                 <div className="flex items-center justify-between text-sm">
-                                                    <span className="font-medium text-gray-900 dark:text-white">Started</span>
-                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold">{assessmentTotal}</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white">Started</span>
+                                                    <span className="text-gray-900 dark:text-white font-semibold">{assessmentTotal}</span>
                                                 </div>
-                                                <Progress value={assessmentTotal > 0 ? 100 : 0} className="h-3" />
+                                                <Progress value={assessmentTotal > 0 ? 100 : 0} className="h-3 rounded-[12px]" />
                                             </div>
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 <div className="flex items-center justify-between text-sm">
-                                                    <span className="font-medium text-gray-900 dark:text-white">Completed</span>
-                                                    <span className="text-gray-600 dark:text-gray-400 font-semibold">{assessmentCompleted}</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white">Completed</span>
+                                                    <span className="text-gray-900 dark:text-white font-semibold">{assessmentCompleted}</span>
                                                 </div>
-                                                <Progress value={completionRate} className="h-3" />
+                                                <Progress value={completionRate} className="h-3 rounded-[12px]" />
                                             </div>
-                                            <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-600">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="font-medium text-gray-900 dark:text-white">Completion Rate</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white">Completion Rate</span>
                                                     <span className="text-2xl font-bold text-gray-900 dark:text-white">{completionRate}%</span>
                                                 </div>
                                                 {completionRate < 100 && (
@@ -780,141 +793,112 @@ export default function StudentAnalyticsPage() {
                                     </CardContent>
                                 </Card>
                             )}
-                    </div>
+                        </div>
                     </TabsContent>
 
-                    {/* Timeline Tab */}
+                    {/* Timeline Tab – Figma Frame 2087328350: border #A2A2A2, radius 8px, padding 16px, gap 24px; cards 98px min, border #999999, shadow 0 2px 4px rgba(0,0,0,0.25), pill #EBF5FF */}
                     <TabsContent value="timeline" className="space-y-6">
-                        <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                        <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Calendar className="w-5 h-5 text-blue-600" />
+                        <Card className="rounded-[8px] border border-[#A2A2A2] dark:border-[#555252] dark:bg-[#1C2938] shadow-md p-4 flex flex-col gap-6">
+                            <CardHeader className="p-0">
+                                <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                    <Calendar className="w-5 h-5 text-black dark:text-white shrink-0" />
                                     Activity Timeline
                                 </CardTitle>
-                                <CardDescription>Chronological view of all your activities</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {(() => {
-                                const getIcon = (type: string) => {
-                                    const t = String(type || '').toLowerCase()
-                                        const iconClass = "w-5 h-5"
-                                        if (t === 'assessment') return <ClipboardList className={iconClass} />
-                                        if (t === 'interview') return <Users className={iconClass} />
-                                        if (t === 'resume' || t === 'portfolio') return <FileText className={iconClass} />
-                                        if (t === 'application') return <Briefcase className={iconClass} />
-                                        return <Clock className={iconClass} />
+                                <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Chronological view of all your activities</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {(() => {
+                                    const dayLabel = (iso: string) => {
+                                        const d = new Date(iso)
+                                        const today = new Date()
+                                        const yday = new Date()
+                                        yday.setDate(today.getDate() - 1)
+                                        const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+                                        if (sameDay(d, today)) return 'Today'
+                                        if (sameDay(d, yday)) return 'Yesterday'
+                                        return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
                                     }
 
-                                    const getColor = (type: string) => {
+                                    const statusLabel = (type: string) => {
                                         const t = String(type || '').toLowerCase()
-                                        if (t === 'assessment') return 'bg-blue-500'
-                                        if (t === 'interview') return 'bg-green-500'
-                                        if (t === 'resume' || t === 'portfolio') return 'bg-purple-500'
-                                        if (t === 'application') return 'bg-orange-500'
-                                        return 'bg-gray-500'
-                                }
+                                        if (t === 'assessment') return 'Developing'
+                                        if (t === 'interview') return 'Developing'
+                                        return 'Developing'
+                                    }
 
-                                const dayLabel = (iso: string) => {
-                                    const d = new Date(iso)
-                                    const today = new Date()
-                                    const yday = new Date()
-                                    yday.setDate(today.getDate() - 1)
-                                    const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-                                    if (sameDay(d, today)) return 'Today'
-                                    if (sameDay(d, yday)) return 'Yesterday'
-                                        return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-                                }
+                                    const groups: Record<string, any[]> = {}
+                                    for (const item of timeline) {
+                                        const k = dayLabel(item.date)
+                                        if (!groups[k]) groups[k] = []
+                                        groups[k].push(item)
+                                    }
+                                    const ordered = Object.entries(groups).sort((a, b) => {
+                                        const da = new Date(a[1][0]?.date || 0).getTime()
+                                        const db = new Date(b[1][0]?.date || 0).getTime()
+                                        return db - da
+                                    })
 
-                                // Group timeline by calendar day
-                                const groups: Record<string, any[]> = {}
-                                for (const item of timeline) {
-                                    const k = dayLabel(item.date)
-                                    if (!groups[k]) groups[k] = []
-                                    groups[k].push(item)
-                                }
-                                const ordered = Object.entries(groups).sort((a, b) => {
-                                    const da = new Date(a[1][0]?.date || 0).getTime()
-                                    const db = new Date(b[1][0]?.date || 0).getTime()
-                                    return db - da
-                                })
-
-                                if (!timeline.length) {
+                                    if (!timeline.length) {
                                         return (
                                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                                 <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
                                                 <p className="text-gray-600 dark:text-gray-400 font-medium">No activities found</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Start taking assessments or applying to jobs to see your timeline</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Start taking assessments or applying to jobs to see your timeline</p>
                                             </div>
                                         )
-                                }
+                                    }
 
-                                return (
-                                        <div className="space-y-8">
-                                        {ordered.map(([label, items], gi) => (
-                                                <motion.div 
-                                                    key={`grp-${gi}`} 
-                                                    className="relative"
+                                    return (
+                                        <div className="flex flex-col gap-6">
+                                            {ordered.map(([label, items], gi) => (
+                                                <motion.div
+                                                    key={`grp-${gi}`}
+                                                    className="flex flex-col gap-4"
                                                     initial={{ opacity: 0, y: 20 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.3, delay: gi * 0.1 }}
                                                 >
-                                                    <div className="mb-4 text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-lg inline-block">
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {label}
-                                                    </div>
-                                                    <div className="relative pl-8 ml-2">
-                                                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500" />
-                                                    <div className="space-y-4">
+                                                    </p>
+                                                    <div className="flex flex-col gap-4">
                                                         {items.map((t: any, idx: number) => (
-                                                                <motion.div 
-                                                                    key={`it-${gi}-${idx}`} 
-                                                                    className="relative"
-                                                                    initial={{ opacity: 0, x: -20 }}
-                                                                    animate={{ opacity: 1, x: 0 }}
-                                                                    transition={{ duration: 0.2, delay: (gi * 0.1) + (idx * 0.05) }}
-                                                                >
-                                                                    <div className="absolute -left-[18px] top-1">
-                                                                        <div className={`w-4 h-4 rounded-full ${getColor(t.type)} border-2 border-white dark:border-gray-800 shadow-md flex items-center justify-center`}>
-                                                                            {getIcon(t.type)}
-                                                                        </div>
+                                                            <motion.div
+                                                                key={`it-${gi}-${idx}`}
+                                                                className="rounded-[8px] border border-[#999999] dark:border-[#555252] bg-white dark:bg-gray-800/80 p-2.5 flex flex-col gap-2.5 min-h-[98px] justify-center shadow-[0_2px_4px_rgba(0,0,0,0.25)] dark:shadow-none"
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ duration: 0.2, delay: (gi * 0.1) + (idx * 0.05) }}
+                                                            >
+                                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#EBF5FF] dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-0">
+                                                                            {statusLabel(t.type)}
+                                                                        </span>
+                                                                        <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                                                                            {t.subtype || t.type || 'Activity'}
+                                                                        </span>
                                                                     </div>
-                                                                    <Card className="ml-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                                                                        <CardContent className="p-4">
-                                                                <div className="flex items-start justify-between gap-4">
-                                                                                <div className="flex-1">
-                                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                                        <Badge variant="outline" className="capitalize">
-                                                                                            {t.type}
-                                                                                        </Badge>
-                                                                                        {t.subtype && (
-                                                                                            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                                                                                                {t.subtype}
-                                                                                            </span>
-                                                                                        )}
-                                                                            </div>
-                                                                            {t.score != null && (
-                                                                                        <div className="flex items-center gap-2 mt-2">
-                                                                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score:</span>
-                                                                                            <span className="text-xl font-medium text-[#1E7BFF] dark:text-blue-300">{Math.round(t.score)}%</span>
-                                                                                        </div>
-                                                                            )}
-                                                                        </div>
-                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                                                    {new Date(t.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                                        {new Date(t.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
                                                                 </div>
-                                                            </div>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                </motion.div>
+                                                                {t.score != null && (
+                                                                    <p className="text-sm text-gray-900 dark:text-white">
+                                                                        <span className="font-normal">Score: </span>
+                                                                        <span className="font-bold">{Math.round(t.score)}%</span>
+                                                                    </p>
+                                                                )}
+                                                            </motion.div>
                                                         ))}
                                                     </div>
-                                                </div>
                                                 </motion.div>
-                                        ))}
-                                    </div>
-                                )
-                            })()}
-                        </CardContent>
-                    </Card>
+                                            ))}
+                                        </div>
+                                    )
+                                })()}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
                 </div>
