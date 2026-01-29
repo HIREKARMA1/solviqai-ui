@@ -168,11 +168,12 @@ export default function StudentAnalyticsPage() {
     const funnel = (data?.applications_funnel || {
         submitted: 0, responses: 0, interviews: 0, offers: 0,
     })
+    const funnelMax = Math.max(funnel.submitted, funnel.responses, funnel.interviews, funnel.offers, 1)
     const funnelData = [
-        { name: 'Submitted', value: funnel.submitted, fill: '#3b82f6' },
-        { name: 'Responses', value: funnel.responses, fill: '#8b5cf6' },
-        { name: 'Interviews', value: funnel.interviews, fill: '#10b981' },
-        { name: 'Offers', value: funnel.offers, fill: '#f59e0b' },
+        { name: 'Submitted', value: funnel.submitted, displayValue: (funnel.submitted / funnelMax) * 100, fill: '#7c3aed' },
+        { name: 'Responses', value: funnel.responses, displayValue: (funnel.responses / funnelMax) * 100, fill: '#f59e0b' },
+        { name: 'Interviews', value: funnel.interviews, displayValue: (funnel.interviews / funnelMax) * 100, fill: '#3b82f6' },
+        { name: 'Offers', value: funnel.offers, displayValue: (funnel.offers / funnelMax) * 100, fill: '#10b981' },
     ]
 
     const resumeCompletion = data?.resume?.completion || 0
@@ -498,49 +499,52 @@ export default function StudentAnalyticsPage() {
                         </Card>
                     </div>
 
-                        {/* Application Funnel */}
-                        {showApplication && funnelData.some(f => f.value > 0) && (
-                            <Card className="border border-[#ABABAB] dark:border-gray-700 shadow-md rounded-2xl">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Briefcase className="w-5 h-5 text-orange-600" />
+                        {/* Application Funnel – layout per design: white card, chart 0–100 scale, summary columns below */}
+                        {showApplication && (
+                            <Card className="rounded-[8px] border border-[#E5E7EB] dark:border-gray-600 dark:bg-[#1C2938] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none overflow-hidden">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
+                                        <Briefcase className="w-5 h-5 text-orange-600 dark:text-orange-500 shrink-0" />
                                         Application Funnel
                                     </CardTitle>
-                                    <CardDescription>Your job application journey from submission to offers</CardDescription>
+                                    <CardDescription className="text-sm text-gray-700 dark:text-gray-300">Your job application journey from submission to offers</CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="h-[220px] sm:h-[320px] lg:h-[418px] w-full max-w-[985px] mx-auto border border-[#A2A2A2] rounded-lg bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={funnelData} barCategoryGap="25%">
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-                                                <YAxis tick={{ fill: '#6b7280' }} />
-                                                <Tooltip 
-                                                    contentStyle={{ 
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '1px'
-                                                    }}
-                                                />
-                                                <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={123}>
-                                                    {funnelData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                <CardContent className="space-y-6 pt-0">
+                                    <div className="w-full  bg-white dark:bg-gray-900/50 overflow-hidden">
+                                        <div className="h-[220px] sm:h-[280px] lg:h-[340px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={funnelData} barCategoryGap="25%" margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                                                    <CartesianGrid stroke={isDark ? '#6B7280' : '#d1d5db'} horizontal={true} vertical={false} />
+                                                    <XAxis dataKey="name" tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontWeight: 700, fontSize: 12 }} />
+                                                    <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: isDark ? '#9CA3AF' : '#6b7280', fontSize: 12 }} />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            backgroundColor: isDark ? 'rgba(28, 41, 56, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                                                            border: isDark ? '1px solid #555252' : '1px solid #e5e7eb',
+                                                            borderRadius: '8px',
+                                                            color: isDark ? '#E5E7EB' : undefined,
+                                                        }}
+                                                        formatter={(_, __, props: any) => [props.payload?.value ?? 0, 'Count']}
+                                                    />
+                                                    <Bar dataKey="displayValue" radius={[8, 8, 0, 0]} maxBarSize={80} name="Count">
+                                                        {funnelData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                        ))}
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 border-t border-gray-200 dark:border-gray-600">
                                         {funnelData.map((item, idx) => (
-                                            <div key={idx} className="text-center min-w-0">
-                                                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-                                                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded shrink-0" style={{ backgroundColor: item.fill }} />
-                                                    <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{item.name}</span>
-                                                </div>
-                                                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
-                                                {idx > 0 && funnelData[idx - 1].value > 0 && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        {Math.round((item.value / funnelData[idx - 1].value) * 100)}% conversion
+                                            <div key={idx} className="text-center min-w-0 flex flex-col gap-1">
+                                                <p className="text-sm font-normal text-gray-700 dark:text-gray-300">{item.name}</p>
+                                                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                                                {idx > 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {funnelData[idx - 1].value > 0
+                                                            ? `${Math.round((item.value / funnelData[idx - 1].value) * 100)}% conversion`
+                                                            : '0% conversion'}
                                                     </p>
                                                 )}
                                             </div>
