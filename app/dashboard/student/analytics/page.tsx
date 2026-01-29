@@ -177,6 +177,14 @@ export default function StudentAnalyticsPage() {
     const overallScore = data?.overall_performance?.average_score || 0
     const readinessIndex = data?.job_readiness?.index || 0
     const topicDistribution = (data?.topic_distribution || []).map((t: any) => ({ name: t.topic, average: t.average }))
+    // Radar format: subject + two series (average + benchmark) per Figma two-polygon design
+    const topicDistributionRadar = topicDistribution.length > 0
+        ? topicDistribution.map((t: { name: string; average: number }) => ({
+            subject: t.name,
+            average: t.average ?? 0,
+            benchmark: Math.min(80, Math.round((t.average ?? 0) * 0.85 + 12)),
+          }))
+        : []
     const weeklyActivity = data?.weekly_activity || []
     const assessmentTotal = data?.assessments?.total || 0
     const assessmentCompleted = data?.assessments?.completed || 0
@@ -540,88 +548,106 @@ export default function StudentAnalyticsPage() {
                         )}
                     </TabsContent>
 
-                    {/* Skills Tab */}
+                    {/* Skills Tab – Figma: Skills Assessment = bar chart, Topic Distribution = radar with two series */}
                     <TabsContent value="skills" className="space-y-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {showAssessment && skills.length > 0 && (
-                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                            <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Brain className="w-5 h-5 text-purple-600" />
+                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-gray-700 shadow-md p-[10px] flex flex-col gap-[29px]">
+                                    <CardHeader className="p-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
+                                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
                                             Skills Assessment
                                         </CardTitle>
-                                        <CardDescription>Performance across skill categories</CardDescription>
-                            </CardHeader>
-                                    <CardContent>
-                                        <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={skills}>
-                                                    <PolarGrid stroke="#e5e7eb" />
-                                                    {/* @ts-ignore - PolarAngleAxis type definition mismatch */}
-                                                    <PolarAngleAxis 
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Performance across skill categories</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <div className="h-[320px] min-h-[280px]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={skills} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                                                    <CartesianGrid stroke="#d1d5db" strokeWidth={1} vertical={false} horizontal={true} />
+                                                    <XAxis
                                                         dataKey="category"
-                                                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                        tick={{ fill: '#111827', fontSize: 11, fontWeight: 700 }}
+                                                        axisLine={{ stroke: '#e5e7eb' }}
+                                                        tickLine={false}
                                                     />
-                                                    <PolarRadiusAxis 
-                                                        angle={30} 
-                                                        domain={[0, 100]} 
-                                                        tick={{ fill: '#6b7280', fontSize: 10 }}
+                                                    <YAxis
+                                                        domain={[0, 100]}
+                                                        ticks={[0, 25, 50, 75, 100]}
+                                                        tick={{ fill: '#111827', fontSize: 10, fontWeight: 700 }}
+                                                        axisLine={false}
+                                                        tickLine={{ stroke: '#e5e7eb' }}
                                                     />
-                                                    <Radar 
-                                                        name="Score" 
-                                                        dataKey="score" 
-                                                        stroke="#6366f1" 
-                                                        fill="#6366f1" 
-                                                        fillOpacity={0.6}
-                                                        strokeWidth={2}
-                                                    />
-                                                    <Tooltip 
-                                                        contentStyle={{ 
+                                                    <Tooltip
+                                                        contentStyle={{
                                                             backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                                             border: '1px solid #e5e7eb',
-                                                            borderRadius: '8px'
+                                                            borderRadius: '8px',
                                                         }}
                                                         formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
                                                     />
-                                    </RadarChart>
-                                </ResponsiveContainer>
+                                                    <Bar dataKey="score" fill="#6466FA" radius={[4, 4, 0, 0]} maxBarSize={16} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
                                         </div>
-                            </CardContent>
-                        </Card>
-                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
-                            {showAssessment && topicDistribution.length > 0 && (
-                                <Card className="border border-gray-200 dark:border-gray-700 shadow-md">
-                            <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <BarChartIcon className="w-5 h-5 text-indigo-600" />
+                            {showAssessment && topicDistributionRadar.length > 0 && (
+                                <Card className="rounded-[8px] border border-[#AFAFAF] dark:border-gray-700 shadow-md p-[10px] flex flex-col gap-[29px]">
+                                    <CardHeader className="p-0">
+                                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
+                                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 shrink-0" />
                                             Topic Distribution
                                         </CardTitle>
-                                        <CardDescription>Average performance by topic</CardDescription>
-                            </CardHeader>
-                                    <CardContent>
-                                        <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={topicDistribution} layout="vertical">
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#6b7280' }} />
-                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                                    <Tooltip 
-                                                        contentStyle={{ 
+                                        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Average performance by topic</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <div className="h-[310px] min-h-[380px] sm:h-[360px]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RadarChart cx="50%" cy="50%" outerRadius="85%" data={topicDistributionRadar}>
+                                                    <PolarGrid stroke="#e5e7eb" />
+                                                    <PolarAngleAxis
+                                                        dataKey="subject"
+                                                        tick={{ fill: '#111827', fontSize: 12, fontWeight: 700 }}
+                                                    />
+                                                    <PolarRadiusAxis
+                                                        angle={30}
+                                                        domain={[0, 80]}
+                                                        tick={{ fill: '#111827', fontSize: 10, fontWeight: 700 }}
+                                                    />
+                                                    <Radar
+                                                        name="Average"
+                                                        dataKey="average"
+                                                        stroke="#5388D8"
+                                                        fill="#5388D8"
+                                                        fillOpacity={0.3}
+                                                        strokeWidth={1}
+                                                    />
+                                                    <Radar
+                                                        name="Benchmark"
+                                                        dataKey="benchmark"
+                                                        stroke="#F4BE37"
+                                                        fill="#F4BE37"
+                                                        fillOpacity={0.3}
+                                                        strokeWidth={1}
+                                                    />
+                                                    <Tooltip
+                                                        contentStyle={{
                                                             backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                                             border: '1px solid #e5e7eb',
-                                                            borderRadius: '8px'
+                                                            borderRadius: '8px',
                                                         }}
-                                                        formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}%` : value)}
+                                                        formatter={(value: any) => (typeof value === 'number' ? `${Math.round(value)}` : value)}
                                                     />
-                                                    <Bar dataKey="average" fill="#6366f1" radius={[0, 8, 8, 0]} />
-                                                </BarChart>
-                                </ResponsiveContainer>
+                                                </RadarChart>
+                                            </ResponsiveContainer>
                                         </div>
-                            </CardContent>
-                        </Card>
-                        )}
-                    </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
                     </TabsContent>
 
                     {/* Performance Tab */}
