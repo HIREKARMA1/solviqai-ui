@@ -151,225 +151,185 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Topics Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group">
-                        {/* Multi-color decorative shapes */}
-                        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-blue-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br from-cyan-200/25 to-teal-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute top-1/2 -right-16 w-16 h-16 rounded-full bg-gradient-to-br from-indigo-200/20 to-purple-100/10 blur-xl group-hover:blur-2xl transition-all duration-500" />
-                        <CardContent className="relative z-10 pt-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md">
-                                    <GraduationCap className="h-5 w-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Topics</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                        {playlist.length}
-                                    </p>
-                                </div>
+                    <div className="bg-[#DDEEFF] dark:bg-[#DDEEFF]/10 rounded-[16px] p-5 h-[116px] flex flex-col justify-center relative overflow-hidden border border-[#DDEEFF] dark:border-blue-900/30">
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-full bg-white/50 flex items-center justify-center shrink-0">
+                                <GraduationCap className="h-5 w-5 text-gray-800 dark:text-gray-200" />
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Topics</span>
+                                <span className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{playlist.length}</span>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
 
+                {/* Resources Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group">
-                        {/* Multi-color decorative shapes */}
-                        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br from-pink-200/25 to-rose-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute top-1/2 -right-16 w-16 h-16 rounded-full bg-gradient-to-br from-violet-200/20 to-fuchsia-100/10 blur-xl group-hover:blur-2xl transition-all duration-500" />
-                        <CardContent className="relative z-10 pt-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md">
-                                    <Play className="h-5 w-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Resources</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                        {playlist.reduce((sum, item) => sum + item.videos.length, 0)}
-                                    </p>
-                                </div>
+                    <div className="bg-[#F8EFFF] dark:bg-[#F8EFFF]/10 rounded-[16px] p-5 h-[116px] flex flex-col justify-center relative overflow-hidden border border-[#F8EFFF] dark:border-purple-900/30">
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-full bg-white/50 border border-purple-100 flex items-center justify-center shrink-0">
+                                <Play className="h-5 w-5 text-gray-800 dark:text-gray-200 ml-0.5" />
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Resources</span>
+                                <span className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                    {playlist.reduce((sum, item) => sum + item.videos.length, 0)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
 
+                {/* Platforms Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                    <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group">
-                        {/* Multi-color decorative shapes */}
-                        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br from-emerald-200/25 to-teal-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                        <div className="absolute top-1/2 -right-16 w-16 h-16 rounded-full bg-gradient-to-br from-lime-200/20 to-yellow-100/10 blur-xl group-hover:blur-2xl transition-all duration-500" />
-                        <CardContent className="relative z-10 pt-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md">
-                                    <TrendingUp className="h-5 w-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Platforms</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                        {new Set(playlist.flatMap(item => item.videos.map(v => v.platform))).size}
-                                    </p>
-                                </div>
+                    <div className="bg-[#FFEFFF] dark:bg-[#FFEFFF]/10 rounded-[16px] p-5 h-[116px] flex flex-col justify-center relative overflow-hidden border border-[#FFEFFF] dark:border-pink-900/30">
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-full bg-[#FF88D9] flex items-center justify-center shrink-0 shadow-sm">
+                                <TrendingUp className="h-5 w-5 text-white" />
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Platforms</span>
+                                <span className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                    {new Set(playlist.flatMap(item => item.videos.map(v => v.platform))).size}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
 
-            {/* Filters */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-            >
-                <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-primary-200/20 to-secondary-200/20 blur-2xl" />
-                    <CardContent className="relative z-10 pt-6">
-                        <div className="flex flex-wrap items-center gap-4">
-                            <Filter className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Platform:</span>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant={platformFilter === 'youtube' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setPlatformFilter('youtube')}
-                                    className={`flex items-center gap-1 ${platformFilter === 'youtube' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md' : ''}`}
-                                >
-                                    <Youtube className="h-3 w-3" />
-                                    YouTube
-                                </Button>
+            {/* Topics Tabs */}
+            <div className="space-y-4">
+                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                    {filteredPlaylist.map((item, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setActiveTopic(item.topic)}
+                            className={`
+                                whitespace-nowrap px-4 py-2.5 rounded-[8px] text-sm font-medium transition-all duration-200 flex items-center gap-2
+                                ${activeTopic === item.topic 
+                                    ? 'bg-gradient-to-r from-[#1E7BFF] to-[#8650FF] text-white shadow-md' 
+                                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}
+                            `}
+                        >
+                            {activeTopic === item.topic && <TrendingUp className="h-3.5 w-3.5" />}
+                            {item.topic}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Videos Grid */}
+                {activeTopic && (() => {
+                    const activeItem = filteredPlaylist.find(item => item.topic === activeTopic)
+                    if (!activeItem || activeItem.videos.length === 0) {
+                        return (
+                            <Card className="border-dashed border-gray-300 shadow-none">
+                                <CardContent className="pt-12 pb-12 text-center">
+                                    <p className="text-gray-600 dark:text-gray-400">
+                                        No videos found for this topic.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )
+                    }
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="bg-[#F0F7FF] dark:bg-[#1E7BFF]/10 p-4 rounded-[12px] border border-blue-100 dark:border-blue-900/30">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                                    {activeTopic}
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Curated content to enhance your skills
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {activeItem.videos.map((video, idx) => {
+                                    const PlatformIcon = getPlatformIcon(video.platform)
+                                    
+                                    return (
+                                        <motion.div
+                                            key={video.id || idx}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: idx * 0.1 }}
+                                        >
+                                            <div 
+                                                className="group cursor-pointer flex flex-col gap-3"
+                                                onClick={() => window.open(video.url, '_blank')}
+                                            >
+                                                {/* Thumbnail */}
+                                                <div className="relative aspect-video rounded-[12px] overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm group-hover:shadow-md transition-all">
+                                                    {video.thumbnail ? (
+                                                        <img
+                                                            src={video.thumbnail}
+                                                            alt={video.title}
+                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full bg-gray-200 dark:bg-gray-700">
+                                                            <Play className="h-12 w-12 text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Play Overlay */}
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 shadow-lg">
+                                                            <Play className="w-5 h-5 text-gray-900 fill-current ml-0.5" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Duration Badge */}
+                                                    {video.duration && (
+                                                        <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-1 rounded-[4px]">
+                                                            {video.duration}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <h4 className="font-bold text-sm sm:text-[15px] leading-snug text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-[#1E7BFF] transition-colors">
+                                                        {video.title}
+                                                    </h4>
+                                                    
+                                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center">
+                                                                <PlatformIcon className="h-3 w-3" />
+                                                            </div>
+                                                            <span className="font-medium">{video.channel || video.platform}</span>
+                                                        </div>
+                                                        {video.views && <span>{video.views} views</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Topics Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-                {filteredPlaylist.map((item, idx) => (
-                    <Button
-                        key={idx}
-                        variant={activeTopic === item.topic ? 'default' : 'outline'}
-                        onClick={() => setActiveTopic(item.topic)}
-                        className={`whitespace-nowrap transition-all duration-300 ${
-                            activeTopic === item.topic 
-                                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-md' 
-                                : ''
-                        }`}
-                    >
-                        {item.topic}
-                        <Badge variant="secondary" className={`ml-2 ${activeTopic === item.topic ? 'bg-white/20 text-white' : ''}`}>
-                            {item.videos.length}
-                        </Badge>
-                    </Button>
-                ))}
-            </div>
-
-            {/* Videos Grid */}
-            {activeTopic && (() => {
-                const activeItem = filteredPlaylist.find(item => item.topic === activeTopic)
-                if (!activeItem || activeItem.videos.length === 0) {
-                    return (
-                        <Card className="border-dashed border-gray-300 shadow-none">
-                            <CardContent className="pt-12 pb-12 text-center">
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    No videos found for this topic.
-                                </p>
-                            </CardContent>
-                        </Card>
                     )
-                }
-
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {activeItem.videos.map((video, idx) => {
-                            const PlatformIcon = getPlatformIcon(video.platform)
-                            
-                            return (
-                                <motion.div
-                                    key={video.id || idx}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                                >
-                                    <div 
-                                        className="group cursor-pointer"
-                                        onClick={() => window.open(video.url, '_blank')}
-                                    >
-                                        {/* Thumbnail */}
-                                        <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3">
-                                            {video.thumbnail ? (
-                                                <img
-                                                    src={video.thumbnail}
-                                                    alt={video.title}
-                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                />
-                                            ) : (
-                                                <div className="flex items-center justify-center h-full">
-                                                    <Play className="h-12 w-12 text-gray-400" />
-                                                </div>
-                                            )}
-                                            
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                <Play className="w-12 h-12 text-white drop-shadow-lg fill-current" />
-                                            </div>
-
-                                            {/* Duration Badge */}
-                                            {video.duration && (
-                                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {video.duration}
-                                                </div>
-                                            )}
-                                            
-                                            {/* Quality Badge - Minimal */}
-                                            {video.quality_score && video.quality_score >= 0.9 && (
-                                                <div className="absolute top-2 left-2">
-                                                    <Badge className="bg-yellow-400 text-yellow-900 border-0 text-[10px] px-1.5 py-0">
-                                                        Top Rated
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <h4 className="font-semibold text-sm sm:text-base leading-tight text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                                                {video.title}
-                                            </h4>
-                                            
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                <div className="flex items-center gap-1">
-                                                    <PlatformIcon className="h-3 w-3" />
-                                                    <span>{video.channel || video.platform}</span>
-                                                </div>
-                                                <span>•</span>
-                                                <span>{video.views || 'Recommended'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )
-                        })}
-                    </div>
-                )
-            })()}
+                })()}
+            </div>
         </div>
     )
 }
