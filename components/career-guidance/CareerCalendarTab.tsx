@@ -305,29 +305,24 @@ export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps)
 
     if (playlist.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-full p-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-                <Card className="border-dashed border-2 border-blue-200 bg-white/80 backdrop-blur-sm max-w-lg w-full shadow-lg">
-                    <CardContent className="pt-12 pb-12">
-                        <div className="flex flex-col items-center justify-center text-center space-y-6">
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                className="relative"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full blur-2xl opacity-30 animate-pulse" />
-                                <div className="relative p-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl shadow-xl">
-                                    <CalendarIcon className="h-12 w-12 text-white" />
-                                </div>
-                            </motion.div>
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-bold text-gray-900">
-                                    Complete Your Career Journey
-                                </h3>
-                                <p className="text-sm text-gray-600 max-w-md leading-relaxed">
-                                    Finish the career guidance conversation to unlock your personalized learning calendar with timeline visualization.
-                                </p>
+            <div className="flex flex-col items-center justify-center h-full p-6 gap-[19px]">
+                {/* Figma: Calendar tab empty state – white card, calendar icon, Complete Your Career Journey */}
+                <Card className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <CardContent className="py-12 px-6 flex flex-col items-center justify-center text-center gap-4">
+                        <div className="flex justify-center">
+                            <div className="p-4 rounded-xl bg-[#E8F0FE] dark:bg-blue-900/30">
+                                <CalendarIcon className="h-12 w-12 text-[#0068FC]" />
                             </div>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900">
+                            Complete Your Career Journey
+                        </h3>
+                        <p className="text-sm text-gray-600 max-w-md leading-relaxed">
+                            Finish the career guidance conversation to unlock your personalized learning roadmap with curated video resources tailored to your goals.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                            <Sparkles className="h-4 w-4 text-[#8D5AFF]" />
+                            <span>Your roadmap will appear here once the session is complete</span>
                         </div>
                     </CardContent>
                 </Card>
