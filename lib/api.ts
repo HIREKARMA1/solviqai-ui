@@ -16,9 +16,14 @@ class ApiClient {
   public client: AxiosInstance;
 
   constructor() {
+    const shouldLog =
+      typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
     // Validate API base URL
-    if (!config.api.fullUrl) {
-      console.error("⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.");
+    if (shouldLog && !config.api.fullUrl) {
+      console.warn(
+        "⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.",
+      );
     }
 
     this.client = axios.create({
@@ -29,10 +34,12 @@ class ApiClient {
       },
     });
 
-    console.log("🚀 API Client initialized:", {
-      baseURL: config.api.fullUrl || "(not configured)",
-      timeout: "180s (3 minutes)",
-    });
+    if (shouldLog) {
+      console.log("🚀 API Client initialized:", {
+        baseURL: config.api.fullUrl || "(not configured)",
+        timeout: "180s (3 minutes)",
+      });
+    }
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use(
