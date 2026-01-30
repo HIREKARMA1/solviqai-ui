@@ -287,7 +287,7 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                 const activeItem = filteredPlaylist.find(item => item.topic === activeTopic)
                 if (!activeItem || activeItem.videos.length === 0) {
                     return (
-                        <Card>
+                        <Card className="border-dashed border-gray-300 shadow-none">
                             <CardContent className="pt-12 pb-12 text-center">
                                 <p className="text-gray-600 dark:text-gray-400">
                                     No videos found for this topic.
@@ -309,93 +309,61 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: idx * 0.1 }}
                                 >
-                                    <Card
-                                        className="relative overflow-hidden group hover:shadow-2xl transition-all duration-300 cursor-pointer border-0 shadow-lg hover:scale-[1.02] h-full flex flex-col"
+                                    <div 
+                                        className="group cursor-pointer"
                                         onClick={() => window.open(video.url, '_blank')}
                                     >
-                                        {/* Background decorative shape */}
-                                        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-primary-200/20 to-secondary-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                                        
                                         {/* Thumbnail */}
-                                        <div className="relative z-10 w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
-                                        {video.thumbnail ? (
-                                            <img
-                                                src={video.thumbnail}
-                                                alt={video.title}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                            />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full">
-                                                <Play className="h-16 w-16 text-gray-400" />
+                                        <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3">
+                                            {video.thumbnail ? (
+                                                <img
+                                                    src={video.thumbnail}
+                                                    alt={video.title}
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="flex items-center justify-center h-full">
+                                                    <Play className="h-12 w-12 text-gray-400" />
+                                                </div>
+                                            )}
+                                            
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <Play className="w-12 h-12 text-white drop-shadow-lg fill-current" />
                                             </div>
-                                        )}
-                                        
-                                        {/* Duration Badge */}
-                                        {video.duration && (
-                                            <div className="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                <Clock className="h-3 w-3" />
-                                                {video.duration}
+
+                                            {/* Duration Badge */}
+                                            {video.duration && (
+                                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" />
+                                                    {video.duration}
+                                                </div>
+                                            )}
+                                            
+                                            {/* Quality Badge - Minimal */}
+                                            {video.quality_score && video.quality_score >= 0.9 && (
+                                                <div className="absolute top-2 left-2">
+                                                    <Badge className="bg-yellow-400 text-yellow-900 border-0 text-[10px] px-1.5 py-0">
+                                                        Top Rated
+                                                    </Badge>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h4 className="font-semibold text-sm sm:text-base leading-tight text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                                {video.title}
+                                            </h4>
+                                            
+                                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                <div className="flex items-center gap-1">
+                                                    <PlatformIcon className="h-3 w-3" />
+                                                    <span>{video.channel || video.platform}</span>
+                                                </div>
+                                                <span>•</span>
+                                                <span>{video.views || 'Recommended'}</span>
                                             </div>
-                                        )}
-                                        
-                                        {/* Quality Badge */}
-                                        {video.quality_score && video.quality_score >= 0.9 && (
-                                            <div className="absolute top-2 left-2">
-                                                <Badge className={`${getQualityBadgeColor(video.quality_score)} border-0`}>
-                                                    ⭐ Top Rated
-                                                </Badge>
-                                            </div>
-                                        )}
+                                        </div>
                                     </div>
-
-                                    <CardContent className="relative z-10 p-4">
-                                        {/* Platform Badge */}
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="outline" className={`${getPlatformColor(video.platform)} text-xs`}>
-                                                <PlatformIcon className="h-3 w-3 mr-1" />
-                                                {video.platform}
-                                            </Badge>
-                                            {video.rating && (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    ⭐ {video.rating}
-                                                </Badge>
-                                            )}
-                                            {video.price && (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    ₹{video.price}
-                                                </Badge>
-                                            )}
-                                        </div>
-
-                                        {/* Title */}
-                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                            {video.title}
-                                        </h4>
-
-                                        {/* Meta Info */}
-                                        <div className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
-                                            {video.channel && (
-                                                <p className="flex items-center gap-1">
-                                                    <span>{video.channel}</span>
-                                                </p>
-                                            )}
-                                            {video.views && (
-                                                <p className="text-xs">{video.views}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Action Button */}
-                                        <Button
-                                            size="sm"
-                                            className="w-full mt-3 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300"
-                                            variant="outline"
-                                        >
-                                            <Play className="h-4 w-4 mr-2" />
-                                            Watch Now
-                                            <ExternalLink className="h-3 w-3 ml-2" />
-                                        </Button>
-                                    </CardContent>
-                                </Card>
                                 </motion.div>
                             )
                         })}

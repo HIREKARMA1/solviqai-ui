@@ -197,6 +197,7 @@ export default function AssessmentReportPage() {
         return report.rounds.map((round: any) => ({
             subject: getRoundName(round),
             score: parseFloat(formatPercentage(round.percentage, 2)),
+            benchmark: 75, // Static benchmark for visual reference
             fullMark: 100,
             roundNumber: round.round_number
         }))
@@ -488,166 +489,112 @@ export default function AssessmentReportPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0 pb-8">
-                {/* Header - Matching Assessment Journey Style with Hover Animations */}
-                <motion.div 
-                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group"
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {/* Decorative corners */}
-                    <motion.div 
-                        className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
-                        animate={{ rotate: [45, 50, 45] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <motion.div 
-                        className="pointer-events-none absolute -bottom-14 -left-14 w-64 h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <div className="relative z-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                    <motion.div 
-                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
-                                        animate={{ rotate: [0, 360] }}
-                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                    >
-                                        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    </motion.div>
-                                    <motion.h1 
-                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
-                                        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                                        transition={{ duration: 3, repeat: Infinity }}
-                                        style={{ backgroundSize: '200% 200%' }}
-                                    >
-                                        <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">Performance Analysis</span>{' '}
-                                        <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Dashboard</span>
-                                    </motion.h1>
+            <div className="space-y-5 pt-1 sm:pt-6 lg:pt-0 pb-8 dark:bg-[#020817] min-h-screen">
+                {/* Banner – Sigma: white bg, 16px radius, 1px #4EA8FD border, 10px padding/gap, increased height */}
+                <div className="rounded-[16px] border border-[#4EA8FD] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[24px] flex flex-col gap-[10px]">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Sparkles className="h-6 w-6 text-[#4EA8FD] dark:text-blue-400 shrink-0" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">
+                            Performance Analysis Dashboard
+                        </h1>
+                    </div>
+                    <p className="text-base leading-6 text-gray-900 dark:text-gray-300 max-w-2xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500 }}>
+                        Track your progress, analyze performance, and unlock your potential with AI-powered insights
+                    </p>
+                </div>
+
+                {/* KPI Cards – Sigma: horizontal, 24px gap, 16px radius, 1px #BEBEBE, 10px px, 20px py, 44x44 icon bg */}
+                <div className="flex flex-col sm:flex-row gap-6 flex-wrap">
+                    {/* Overall Score – icon bg #B8DCFF */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#B8DCFF] dark:bg-blue-500/30">
+                                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                                 </div>
-                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
-                                    Track your progress, analyze performance, and unlock your potential with AI-powered insights
-                                </p>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Overall Score</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{Math.round(report?.overall_score || 0)}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </motion.div>
-
-                {/* Assessment Stats - Matching Assessment Overview Style */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-                    {/* Overall Score */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Overall Score</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.overall_score || 0)}</p>
-                            </div>
-                                    </div>
-                            </div>
-                        </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-200/50 to-purple-100/20 dark:from-purple-900/30 dark:to-purple-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-900/10" />
-                    </Card>
                     </motion.div>
-
-                    {/* Readiness Index */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Readiness Index</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.readiness_index || 0)}%</p>
-                            </div>
-                                    </div>
+                    {/* Readiness Index – icon bg #EDD4FF */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                    <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-300" />
                                 </div>
-                        </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-green-200/50 to-green-100/20 dark:from-green-900/30 dark:to-green-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-900/10" />
-                    </Card>
-                    </motion.div>
-
-                    {/* Completed Rounds */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Completed Rounds</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">
-                                                {report?.rounds?.filter((r: any) => r.status === 'COMPLETED' || r.percentage != null).length || 0}
-                                            </p>
-                            </div>
-                                    </div>
-                            </div>
-                        </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-200/50 to-purple-100/20 dark:from-purple-900/30 dark:to-purple-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-900/10" />
-                    </Card>
-                    </motion.div>
-
-                    {/* Total Duration */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Total Duration</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">
-                                                {report?.rounds?.reduce((total: number, round: any) => {
-                                                    // Estimate 30 min per completed round
-                                                    const isCompleted = round.status === 'COMPLETED' || round.percentage != null
-                                                    return total + (isCompleted ? 30 : 0)
-                                                }, 0) || 0} min
-                                            </p>
-                                        </div>
-                                    </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Readiness Index</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{Math.round(report?.readiness_index || 0)}%</p>
                                 </div>
-                        </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-200/50 to-orange-100/20 dark:from-orange-900/30 dark:to-orange-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-orange-50 to-orange-100/70 dark:from-orange-900/20 dark:to-orange-900/10" />
-                    </Card>
+                            </div>
+                        </div>
+                    </motion.div>
+                    {/* Completed Rounds – icon bg #FFA8D9 */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFA8D9] dark:bg-pink-500/30">
+                                    <Activity className="w-5 h-5 text-pink-600 dark:text-pink-300" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Completed Rounds</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                        {report?.rounds?.filter((r: any) => r.status === 'COMPLETED' || r.percentage != null).length || 0}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                    {/* Total Duration – icon bg #FFEF79 */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFEF79] dark:bg-amber-500/30">
+                                    <Target className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Duration</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                        {report?.rounds?.reduce((total: number, round: any) => {
+                                            const isCompleted = round.status === 'COMPLETED' || round.percentage != null
+                                            return total + (isCompleted ? 30 : 0)
+                                        }, 0) || 0} Mins
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 </div>
 
-                {/* Enhanced Tabs with Better Navigation */}
+                {/* Tabs – Sigma: active blue #1E7BFF, 8px radius, 24px gap, 44px height, no button borders */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-10">
-                    {/* Tabs Navigation */}
-                    <TabsList className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 sm:p-5 rounded-xl w-full gap-1 sm:gap-1.5">
-                        <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                    <TabsList className="grid grid-cols-3 sm:grid-cols-6 bg-white dark:bg-[#1C2938] border border-[#797979] dark:border-[#797979] p-1.5 sm:p-2 rounded-lg w-full gap-4 sm:gap-6 min-h-[56px] sm:min-h-[71px] h-auto">
+                        <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Activity className="h-4 w-4 shrink-0 data-[state=active]:text-white" />
                             <span className="whitespace-nowrap">Overview</span>
                         </TabsTrigger>
-                        <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Activity className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Analytics</span>
                         </TabsTrigger>
-                        <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Rounds</span>
                         </TabsTrigger>
-                        <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Questions</span>
                         </TabsTrigger>
-                        <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Playlist</span>
                         </TabsTrigger>
-                        <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Brain className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Clock className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">AI Insights</span>
                         </TabsTrigger>
                     </TabsList>
@@ -717,48 +664,47 @@ export default function AssessmentReportPage() {
                     {/* Overview Tab with Enhanced Charts - Matching Theme */}
                     <TabsContent value="overview" className="space-y-4 sm:space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                            {/* Radar Chart - Skills Assessment */}
+                            {/* Radar Chart - Skills Assessment – Sigma: white card, 16px radius, purple clock icon */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
-                                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg h-full">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <div className="w-9 h-9 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-300" />
                                             </div>
-                                        <span className="truncate">Skills Assessment</span>
-                                    </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                                        Multi-dimensional performance analysis
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6">
-                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
-                                        <RadarChart data={prepareRadarData()}>
+                                            <span className="truncate">Skills Assessment</span>
+                                        </CardTitle>
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            Multi-dimensional performance analysis
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-2">
+                                    <ResponsiveContainer width="100%" height={350} className="sm:h-[450px]">
+                                        <RadarChart data={prepareRadarData()} cx="50%" cy="50%" outerRadius="75%">
                                             <PolarGrid stroke="#e5e7eb" />
-                                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280' }} />
+                                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }} />
+                                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                                             <Radar 
                                                 name="Your Score" 
                                                 dataKey="score" 
-                                                stroke="#8b5cf6" 
-                                                fill="#8b5cf6" 
-                                                fillOpacity={0.6}
-                                                strokeWidth={3}
-                                                dot={{ fill: '#8b5cf6', r: 5 }}
+                                                stroke="#5388D8" 
+                                                strokeWidth={2}
+                                                fill="#5388D8" 
+                                                fillOpacity={0.3}
+                                                dot={{ fill: '#5388D8', r: 3 }}
                                             />
                                             <Radar 
-                                                name="Target" 
-                                                dataKey="fullMark" 
-                                                stroke="#d1d5db" 
-                                                fill="#d1d5db" 
-                                                fillOpacity={0.1}
-                                                strokeDasharray="5 5"
+                                                name="Benchmark" 
+                                                dataKey="benchmark" 
+                                                stroke="#F4BE37" 
                                                 strokeWidth={2}
+                                                fill="#F4BE37" 
+                                                fillOpacity={0.3}
+                                                dot={{ fill: '#F4BE37', r: 3 }}
                                             />
                                             <Tooltip 
                                                 contentStyle={{ 
@@ -771,36 +717,36 @@ export default function AssessmentReportPage() {
                                                 formatter={(value: any) => `${value}%`}
                                             />
                                             <Legend 
-                                                wrapperStyle={{ paddingTop: '20px' }}
-                                                iconType="line"
+                                                wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }}
+                                                iconType="circle"
                                             />
                                         </RadarChart>
                                     </ResponsiveContainer>
+                                    <div className="text-center font-bold text-3xl mt-2 pb-4 text-gray-900 dark:text-white">Your Score</div>
                                 </CardContent>
                             </Card>
                             </motion.div>
 
-                            {/* Enhanced Pie Chart - Answer Distribution */}
+                            {/* Answer Distribution – Sigma: white card, 16px radius, purple wave icon */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.1 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-green-900/20 dark:via-gray-900 dark:to-green-900/10 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/20 rounded-t-lg border-b border-green-200/50 dark:border-green-700/30 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600 shadow-md flex-shrink-0">
-                                                <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg h-full">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <div className="w-9 h-9 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-300" />
                                             </div>
-                                        <span className="truncate">Answer Distribution</span>
-                                    </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                                        Correct vs. incorrect responses
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6">
-                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
+                                            <span className="truncate">Answer Distribution</span>
+                                        </CardTitle>
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            Correct vs. incorrect responses
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-2">
+                                    <ResponsiveContainer width="100%" height={350} className="sm:h-[450px]">
                                         <RechartsPieChart>
                                             <Pie
                                                 data={prepareQuestionDistribution()}
@@ -819,7 +765,7 @@ export default function AssessmentReportPage() {
                                                 {prepareQuestionDistribution().map((entry, index) => (
                                                     <Cell 
                                                         key={`cell-${index}`} 
-                                                        fill={entry.name === 'Correct' ? '#10b981' : '#f97316'} 
+                                                        fill={entry.name === 'Correct' ? '#00C951' : '#FF541F'} 
                                                         stroke="#fff"
                                                         strokeWidth={2}
                                                     />
@@ -836,11 +782,12 @@ export default function AssessmentReportPage() {
                                                 formatter={(value: any, name: string) => [value, name]}
                                             />
                                             <Legend 
-                                                wrapperStyle={{ paddingTop: '20px' }}
+                                                verticalAlign="bottom" 
+                                                height={36}
                                                 iconType="circle"
                                                 formatter={(value) => {
-                                                    if (value === 'Correct') return <span style={{ color: '#10b981', fontWeight: 'bold' }}>Correct</span>
-                                                    return <span style={{ color: '#f97316', fontWeight: 'bold' }}>Incorrect</span>
+                                                    if (value === 'Correct') return <span style={{ color: '#00C951', fontWeight: 'bold' }}>Correct</span>
+                                                    return <span style={{ color: '#FF541F', fontWeight: 'bold' }}>Incorrect</span>
                                                 }}
                                             />
                                         </RechartsPieChart>
@@ -856,69 +803,74 @@ export default function AssessmentReportPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
                         >
-                            <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
-                                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
-                                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
-                                            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                            <Card className="rounded-[16px] border border-[#ABABAB] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-none overflow-hidden transition-all duration-300 hover:shadow-lg">
+                                <CardHeader className="p-4 sm:px-6 sm:py-5 pb-2 border-0">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30 mt-1">
+                                            <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                                         </div>
-                                    <span className="truncate">Round-wise Performance Comparison</span>
-                                </CardTitle>
-                                    <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                                    Detailed score breakdown by assessment round
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="relative z-10 p-4 sm:p-6">
-                                <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
-                                    <BarChart data={prepareRadarData()} margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                        <XAxis 
-                                            dataKey="subject" 
-                                            tick={{ fill: '#6b7280', fontSize: 12 }}
-                                            angle={-45}
-                                            textAnchor="end"
-                                            height={80}
-                                        />
-                                        <YAxis 
-                                            domain={[0, 100]} 
-                                            tick={{ fill: '#6b7280' }}
-                                            label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
-                                        />
-                                        <Tooltip 
-                                            contentStyle={{ 
-                                                backgroundColor: '#fff', 
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                                            }}
-                                            labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                        />
-                                        <Legend 
-                                            wrapperStyle={{ paddingTop: '20px' }}
-                                            iconType="square"
-                                        />
-                                        <Bar 
-                                            dataKey="score" 
-                                            fill="#8b5cf6"
-                                            radius={[8, 8, 0, 0]}
-                                            animationBegin={0}
-                                            animationDuration={800}
+                                        <div>
+                                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                                                Round-wise Performance Comparison
+                                            </CardTitle>
+                                            <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                Detailed score breakdown by assessment round
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-4 sm:px-6 sm:py-5 pt-4">
+                                    <ResponsiveContainer width="100%" height={400} className="sm:h-[450px]">
+                                        <BarChart 
+                                            data={prepareRadarData()} 
+                                            margin={{ top: 20, right: 20, bottom: 10, left: 10 }}
+                                            barSize={40}
+                                            barGap={-40}
                                         >
-                                            {prepareRadarData().map((_: any, index: number) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                            <LabelList 
-                                                dataKey="score" 
-                                                position="top" 
-                                                formatter={(value: any) => `${value}%`}
-                                                style={{ fill: '#6b7280', fontSize: '11px', fontWeight: 'bold' }}
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                            <XAxis 
+                                                dataKey="subject" 
+                                                tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                                dy={10}
                                             />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
+                                            <YAxis 
+                                                domain={[0, 100]} 
+                                                tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <Tooltip 
+                                                cursor={{ fill: 'transparent' }}
+                                                contentStyle={{ 
+                                                    backgroundColor: '#fff', 
+                                                    border: '1px solid #e5e7eb',
+                                                    borderRadius: '8px',
+                                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                                }}
+                                                labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
+                                            />
+                                            <Bar 
+                                                dataKey="fullMark" 
+                                                fill="#E5E7EB" 
+                                                radius={[4, 4, 0, 0]} 
+                                                isAnimationActive={false}
+                                            />
+                                            <Bar 
+                                                dataKey="score" 
+                                                radius={[4, 4, 0, 0]}
+                                                animationBegin={0}
+                                                animationDuration={800}
+                                            >
+                                                {prepareRadarData().map((_: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
                         </motion.div>
                     </TabsContent>
 
@@ -930,7 +882,7 @@ export default function AssessmentReportPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
                         >
-                            <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
+                            <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-[#1C2938] shadow-lg hover:scale-[1.02] group dark:border dark:border-[#797979]">
                                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-cyan-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
                                 <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
                                     <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
@@ -940,22 +892,22 @@ export default function AssessmentReportPage() {
                                     <span className="truncate">Performance Trend Analysis</span>
                                 </CardTitle>
                                     <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Track your progress across rounds</CardDescription>
-                            </CardHeader>
-                            <CardContent className="relative z-10 p-4 sm:p-6">
-                                <ResponsiveContainer width="100%" height={300} className="sm:h-[450px]">
+                                </CardHeader>
+                                <CardContent className="relative z-10 p-4 sm:p-6">
+                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[450px]">
                                     <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 20, right: 30, bottom: 10, left: 10 }}>
                                         <defs>
                                             <linearGradient id="colorScoreGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6}/>
-                                                <stop offset="30%" stopColor="#8b5cf6" stopOpacity={0.4}/>
-                                                <stop offset="70%" stopColor="#8b5cf6" stopOpacity={0.15}/>
-                                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03}/>
+                                                <stop offset="0%" stopColor="#5388D8" stopOpacity={0.6}/>
+                                                <stop offset="30%" stopColor="#5388D8" stopOpacity={0.4}/>
+                                                <stop offset="70%" stopColor="#5388D8" stopOpacity={0.15}/>
+                                                <stop offset="100%" stopColor="#5388D8" stopOpacity={0.03}/>
                                             </linearGradient>
                                             <linearGradient id="colorCumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
-                                                <stop offset="30%" stopColor="#10b981" stopOpacity={0.3}/>
-                                                <stop offset="70%" stopColor="#10b981" stopOpacity={0.12}/>
-                                                <stop offset="100%" stopColor="#10b981" stopOpacity={0.02}/>
+                                                <stop offset="0%" stopColor="#00C951" stopOpacity={0.5}/>
+                                                <stop offset="30%" stopColor="#00C951" stopOpacity={0.3}/>
+                                                <stop offset="70%" stopColor="#00C951" stopOpacity={0.12}/>
+                                                <stop offset="100%" stopColor="#00C951" stopOpacity={0.02}/>
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -1001,20 +953,20 @@ export default function AssessmentReportPage() {
                                         <Line 
                                             type="monotone" 
                                             dataKey="score" 
-                                            stroke="#8b5cf6" 
+                                            stroke="#5388D8" 
                                             strokeWidth={3}
-                                            dot={{ fill: '#8b5cf6', r: 7, strokeWidth: 3, stroke: '#fff' }}
-                                            activeDot={{ r: 10, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 3 }}
+                                            dot={{ fill: '#5388D8', r: 7, strokeWidth: 3, stroke: '#fff' }}
+                                            activeDot={{ r: 10, fill: '#5388D8', stroke: '#fff', strokeWidth: 3 }}
                                             name="Your Score"
                                         />
                                         {/* Cumulative Average Line */}
                                         <Line 
                                             type="monotone" 
                                             dataKey="cumulative" 
-                                            stroke="#10b981" 
+                                            stroke="#00C951" 
                                             strokeWidth={2.5}
                                             strokeDasharray="5 5"
-                                            dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                                            dot={{ fill: '#00C951', r: 5, strokeWidth: 2, stroke: '#fff' }}
                                             activeDot={{ r: 8 }}
                                             name="Cumulative Average"
                                         />
@@ -1022,7 +974,7 @@ export default function AssessmentReportPage() {
                                         <Line 
                                             type="monotone" 
                                             dataKey="target" 
-                                            stroke="#ef4444" 
+                                            stroke="#FF541F" 
                                             strokeWidth={2}
                                             strokeDasharray="3 3"
                                             dot={false}
@@ -1041,18 +993,19 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.1 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-orange-200/30 to-orange-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-md flex-shrink-0">
-                                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg h-full">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <div className="w-9 h-9 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFEF79] dark:bg-orange-500/30">
+                                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-300" />
                                             </div>
-                                        <span className="truncate">Performance Funnel</span>
-                                    </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Rounds ranked by score</CardDescription>
-                                </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6">
+                                            <span className="truncate">Performance Funnel</span>
+                                        </CardTitle>
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            Rounds ranked by score
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-2">
                                     <ResponsiveContainer width="100%" height={350} className="sm:h-[480px]">
                                         <FunnelChart>
                                             <Tooltip 
@@ -1111,7 +1064,7 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.2 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
+                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-[#1C2938] shadow-lg hover:scale-[1.02] group dark:border dark:border-[#797979]">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-teal-200/30 to-teal-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
                                     <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
                                         <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
@@ -1132,14 +1085,14 @@ export default function AssessmentReportPage() {
                                             <Area 
                                                 type="monotone" 
                                                 dataKey="score" 
-                                                stroke="#14b8a6" 
+                                                stroke="#5388D8" 
                                                 fill="url(#colorArea)" 
                                                 strokeWidth={2}
                                             />
                                             <defs>
                                                 <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>
-                                                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.1}/>
+                                                    <stop offset="5%" stopColor="#5388D8" stopOpacity={0.8}/>
+                                                    <stop offset="95%" stopColor="#5388D8" stopOpacity={0.1}/>
                                                 </linearGradient>
                                             </defs>
                                         </AreaChart>
@@ -1156,25 +1109,31 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.3 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-blue-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                    <CardTitle className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-400">
-                                        Highest Score
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-3xl font-bold text-blue-600">
-                                        {formatPercentage(Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0])), 2)}%
-                                    </div>
-                                    <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-1">
-                                        {(() => {
-                                            const best = report?.rounds?.reduce((max: any, r: any) => r.percentage > max.percentage ? r : max, { percentage: -1 })
-                                            return best ? getRoundName(best) : undefined
-                                        })()}
-                                    </p>
-                                </CardContent>
-                            </Card>
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                                            Highest Score
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-0">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#B8DCFF] dark:bg-blue-500/30">
+                                                <Trophy className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                                    {formatPercentage(Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0])), 2)}%
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                                                    {(() => {
+                                                        const best = report?.rounds?.reduce((max: any, r: any) => r.percentage > max.percentage ? r : max, { percentage: -1 })
+                                                        return best ? getRoundName(best) : undefined
+                                                    })()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </motion.div>
 
                             <motion.div
@@ -1182,22 +1141,28 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.4 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                    <CardTitle className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-400">
-                                        Average Performance
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <div className="text-3xl font-bold text-green-600">
-                                        {formatPercentage(report?.overall_score, 2)}%
-                                    </div>
-                                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                                        Across {report?.rounds?.length || 0} rounds
-                                    </p>
-                                </CardContent>
-                            </Card>
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                                            Average Performance
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-0">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-green-500/30">
+                                                <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-300" />
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                                    {formatPercentage(report?.overall_score, 2)}%
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Across {report?.rounds?.length || 0} rounds
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </motion.div>
 
                             <motion.div
@@ -1205,30 +1170,36 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.5 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                    <CardTitle className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400">
-                                        Consistency Score
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6 pt-0">
-                                    <div className="text-2xl sm:text-3xl font-bold text-purple-600">
-                                        {(() => {
-                                            const scores = report?.rounds?.map((r: any) => r.percentage) || []
-                                            const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
-                                            const variance = scores.reduce((sum: number, score: number) => 
-                                                sum + Math.pow(score - avg, 2), 0) / scores.length
-                                            const stdDev = Math.sqrt(variance)
-                                            const consistency = Math.max(0, 100 - stdDev * 2)
-                                            return formatPercentage(consistency, 2)
-                                        })()}%
-                                    </div>
-                                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                                        Performance stability
-                                    </p>
-                                </CardContent>
-                            </Card>
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                                            Consistency Score
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 sm:p-5 pt-0">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFA8D9] dark:bg-purple-500/30">
+                                                <Activity className="w-5 h-5 text-purple-600 dark:text-purple-300" />
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                                    {(() => {
+                                                        const scores = report?.rounds?.map((r: any) => r.percentage) || []
+                                                        const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+                                                        const variance = scores.reduce((sum: number, score: number) => 
+                                                            sum + Math.pow(score - avg, 2), 0) / scores.length
+                                                        const stdDev = Math.sqrt(variance)
+                                                        const consistency = Math.max(0, 100 - stdDev * 2)
+                                                        return formatPercentage(consistency, 2)
+                                                    })()}%
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Performance stability
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </motion.div>
                         </div>
                     </TabsContent>

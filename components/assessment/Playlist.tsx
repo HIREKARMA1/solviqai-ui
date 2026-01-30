@@ -38,58 +38,63 @@ export default function Playlist({ assessmentId }: { assessmentId: string }) {
   return (
     <div className="space-y-8">
       {data.playlist.map((item: any, idx: number) => (
-        <Card key={idx} className="overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+        <Card key={idx} className="overflow-hidden border border-[#ABABAB] rounded-[8px] shadow-none">
+          <CardHeader className="bg-[#E3ECFE] border-b border-[#E3ECFE] py-4 px-6">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-900">
                   {item.topic}
                 </CardTitle>
-                <CardDescription className="mt-2 text-gray-600 dark:text-gray-400">
+                <CardDescription className="mt-1 text-gray-700 dark:text-gray-700">
                   Curated content to enhance your skills
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="px-3 py-1">
+              <Badge variant="secondary" className="px-3 py-1 bg-white/50 text-gray-800 hover:bg-white/70">
                 {item.videos?.length || 0} videos
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {item.videos?.map((v: any, i: number) => (
-                <Card key={i} className="overflow-hidden border border-gray-200 dark:border-gray-800 transition-all duration-200 hover:shadow-lg">
-                  <div className="relative aspect-video">
-                    {v.url && v.url.includes('watch') && (
-                      <iframe
-                        src={v.url.replace('watch?v=', 'embed/')}
-                        className="absolute inset-0 w-full h-full"
-                        title={v.title}
-                        allowFullScreen
+                <div key={i} className="group cursor-pointer">
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3">
+                    {v.url && v.url.includes('watch') ? (
+                       <img 
+                        src={`https://img.youtube.com/vi/${v.url.split('v=')[1]?.split('&')[0]}/maxresdefault.jpg`}
+                        alt={v.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${v.url.split('v=')[1]?.split('&')[0]}/mqdefault.jpg`
+                        }}
                       />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                            <PlayCircle className="w-12 h-12 text-gray-400" />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
+                    </div>
+                    {v.duration && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded">
+                            {v.duration}
+                        </div>
                     )}
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold line-clamp-2 mb-2 text-gray-900 dark:text-gray-100">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-sm sm:text-base leading-tight text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 transition-colors">
                       {v.title || 'Watch Video'}
                     </h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <Clock className="w-4 h-4 mr-1" />
-                        <span>{v.duration || 'Tutorial'}</span>
-                      </div>
-                      <a
-                        href={v.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        <PlayCircle className="w-5 h-5 mr-1" />
-                        Watch
-                        <ExternalLink className="w-4 h-4 ml-1" />
-                      </a>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{v.channel || 'Solviq Channel'}</span>
+                        <span>•</span>
+                        <span>{v.views || '1.2K views'}</span>
+                        <span>•</span>
+                        <span>{v.uploaded || '1 day ago'}</span>
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           </CardContent>
