@@ -898,94 +898,96 @@ export default function AssessmentReportPage() {
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="pt-0 pr-2 pb-4 pl-2">
-                                    <div className="absolute top-4 left-14 z-10 font-bold text-lg text-gray-900 dark:text-white">Performance</div>
-                                    <ResponsiveContainer width="90%" height={400} className="sm:h-[450px] mx-auto">
-                                        <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 40, right: 30, bottom: 10, left: 10 }}>
-                                            <XAxis
-                                                dataKey="round"
-                                                tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                                dy={10}
-                                            />
-                                            <YAxis
-                                                domain={[0, 100]}
-                                                tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                                ticks={[0, 25, 50, 75, 100]}
-                                            />
-                                            <Tooltip
-                                                cursor={{ stroke: '#599CD7', strokeWidth: 1.5, strokeDasharray: '4 4' }}
-                                                content={({ active, payload, label }) => {
-                                                    if (active && payload && payload.length) {
-                                                        return (
-                                                            <div className="bg-[#081225] text-white p-4 rounded-[20px] min-w-[240px] shadow-xl border border-gray-800">
-                                                                <p className="text-sm mb-3 font-medium border-b border-gray-700 pb-2">{label}</p>
-                                                                <div className="space-y-3">
-                                                                    {payload.map((entry: any, index: number) => {
-                                                                        // Custom mapping for colors and names based on dataKey
-                                                                        let color = entry.color;
-                                                                        let name = entry.name;
-                                                                        if (entry.dataKey === 'cumulative') {
-                                                                            color = '#599CD7';
-                                                                            name = 'cumulative';
-                                                                        } else if (entry.dataKey === 'score') {
-                                                                            color = '#FAAE68';
-                                                                            name = 'score';
-                                                                        } else if (entry.dataKey === 'target') {
-                                                                            color = '#A855F7';
-                                                                            name = 'Target (75%)';
-                                                                        }
+                                <CardContent className="p-4">
+                                    <div className="bg-[#F8FAFC] dark:bg-[#334155] rounded-[24px] p-2 sm:p-4 h-[400px] sm:h-[450px] relative w-full">
+                                        <div className="absolute top-6 left-6 z-10 font-bold text-lg text-gray-900 dark:text-white">Performance</div>
+                                        <ResponsiveContainer width="90%" height={400}>
+                                            <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 50, right: 10, bottom: 10, left: 0 }}>
+                                                <XAxis
+                                                    dataKey="round"
+                                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    dy={10}
+                                                />
+                                                <YAxis
+                                                    domain={[0, 100]}
+                                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    ticks={[0, 25, 50, 75, 100]}
+                                                />
+                                                <Tooltip
+                                                    cursor={{ stroke: '#599CD7', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                                                    content={({ active, payload, label }) => {
+                                                        if (active && payload && payload.length) {
+                                                            return (
+                                                                <div className="bg-[#081225] text-white p-4 rounded-[20px] min-w-[240px] shadow-xl border border-gray-800">
+                                                                    <p className="text-sm mb-3 font-medium border-b border-gray-700 pb-2">{label}</p>
+                                                                    <div className="space-y-3">
+                                                                        {payload.map((entry: any, index: number) => {
+                                                                            // Custom mapping for colors and names based on dataKey
+                                                                            let color = entry.color;
+                                                                            let name = entry.name;
+                                                                            if (entry.dataKey === 'cumulative') {
+                                                                                color = '#599CD7';
+                                                                                name = 'cumulative';
+                                                                            } else if (entry.dataKey === 'score') {
+                                                                                color = '#FAAE68';
+                                                                                name = 'score';
+                                                                            } else if (entry.dataKey === 'target') {
+                                                                                color = '#A855F7';
+                                                                                name = 'Target (75%)';
+                                                                            }
 
-                                                                        return (
-                                                                            <div key={index} className="flex items-center gap-3 text-sm">
-                                                                                <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: color }}></div>
-                                                                                <span className="text-gray-300 capitalize">{name} :</span>
-                                                                                <span className="font-semibold">{entry.value}%</span>
-                                                                            </div>
-                                                                        );
-                                                                    })}
+                                                                            return (
+                                                                                <div key={index} className="flex items-center gap-3 text-sm">
+                                                                                    <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: color }}></div>
+                                                                                    <span className="text-gray-300 capitalize">{name} :</span>
+                                                                                    <span className="font-semibold">{entry.value}%</span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                }}
-                                            />
-                                            {/* Target Line - Hidden but present for tooltip */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="target"
-                                                stroke="transparent"
-                                                strokeWidth={0}
-                                                dot={false}
-                                                activeDot={false}
-                                                name="Target"
-                                            />
-                                            {/* Cumulative Line (Blue) */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="cumulative"
-                                                stroke="#599CD7"
-                                                strokeWidth={3}
-                                                dot={false}
-                                                activeDot={{ r: 6, fill: '#599CD7', stroke: '#fff', strokeWidth: 2 }}
-                                                name="Cumulative"
-                                            />
-                                            {/* Score Line (Orange) */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="score"
-                                                stroke="#FAAE68"
-                                                strokeWidth={3}
-                                                dot={false}
-                                                activeDot={{ r: 6, fill: '#FAAE68', stroke: '#fff', strokeWidth: 2 }}
-                                                name="Score"
-                                            />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                />
+                                                {/* Target Line - Hidden but present for tooltip */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="target"
+                                                    stroke="transparent"
+                                                    strokeWidth={0}
+                                                    dot={false}
+                                                    activeDot={false}
+                                                    name="Target"
+                                                />
+                                                {/* Cumulative Line (Blue) */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="cumulative"
+                                                    stroke="#599CD7"
+                                                    strokeWidth={3}
+                                                    dot={false}
+                                                    activeDot={{ r: 6, fill: '#599CD7', stroke: '#fff', strokeWidth: 2 }}
+                                                    name="Cumulative"
+                                                />
+                                                {/* Score Line (Orange) */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="score"
+                                                    stroke="#FAAE68"
+                                                    strokeWidth={3}
+                                                    dot={false}
+                                                    activeDot={{ r: 6, fill: '#FAAE68', stroke: '#fff', strokeWidth: 2 }}
+                                                    name="Score"
+                                                />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </motion.div>
