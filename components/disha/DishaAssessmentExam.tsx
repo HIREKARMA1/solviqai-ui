@@ -1345,6 +1345,49 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
     // Exam View
     if (examState === 'exam' && currentRound) {
+        // Define termination modal
+        const terminationModal = showTerminationModal && (
+            <div className="fixed inset-0 z-[10000] bg-gray-900/95 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 border-red-500 animate-in fade-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="w-10 h-10 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        Fullscreen Required
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-8">
+                        You have exited fullscreen mode.
+                        <br />
+                        <strong>If you exit now, your exam will be auto-submitted.</strong>
+                        <br /><br />
+                        Do you want to submit and exit?
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                        <button
+                            onClick={() => {
+                                hasEnteredFullscreenRef.current = false;
+                                toggleFullscreen();
+                                setShowTerminationModal(false);
+                            }}
+                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition-all"
+                        >
+                            No, Resume
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowTerminationModal(false);
+
+                                submitRound();
+                            }}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/30"
+                        >
+                            Yes, Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
         // Special Round: Group Discussion
         console.log('━'.repeat(100));
         console.log('🔍 [GD DETECTION] Starting Group Discussion round check...');
@@ -1396,6 +1439,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                             }
                         }}
                     />
+                    {terminationModal}
                 </div>
             );
         }
@@ -1587,6 +1631,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                             </div>
                         </div>
                     </div>
+                    {terminationModal}
                 </div>
             );
         }
@@ -2399,37 +2444,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         </div>
                     </div>
                 </div >
+                {terminationModal}
             </div >
         );
     }
 
-    return (
-        <>
-            {showTerminationModal && (
-                <div className="fixed inset-0 z-[10000] bg-gray-900/95 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 border-red-500 animate-in fade-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertCircle className="w-10 h-10 text-red-600" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                            Fullscreen Violation
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-300 mb-8">
-                            You have exited fullscreen mode. As per the strict assessment protocol, this action requires your exam session to be terminated.
-                        </p>
-                        <button
-                            onClick={() => {
-                                setShowTerminationModal(false);
-                                submitRound();
-                            }}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-red-500/30 flex items-center justify-center gap-2"
-                        >
-                            <span>I Understand, Terminate Exam</span>
-                            <ChevronsRight className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            )}
-        </>
-    );
+    return null;
 }
