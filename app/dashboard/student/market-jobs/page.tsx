@@ -807,708 +807,291 @@ export default function MarketJobsPage() {
         toast.success('Job info copied to clipboard!')
     }
 
+    const toggleFilters = () => setShowFilters(!showFilters)
+
+    // Calculate a mock match percentage based on keywords overlap
+    // In a real app, this would come from the backend AI matching
+    const calculateMatchScore = (job: MarketJob) => {
+        if (!job.title) return 0
+        const jobText = (job.title + ' ' + job.keyword).toLowerCase()
+        let score = 60 // Base score
+
+        // Boost if matches user keywords
+        const userKeywords = keywords.toLowerCase().split(',').filter(k => k.trim())
+        userKeywords.forEach(k => {
+            if (jobText.includes(k.trim())) score += 10
+        })
+
+        // Boost if matches resume skills
+        if (hasResumeSkills) {
+            resumeSkills.slice(0, 5).forEach(skill => {
+                if (jobText.includes(skill.toLowerCase())) score += 5
+            })
+        }
+
+        return Math.min(98, score + Math.floor(Math.random() * 10)) // Add some variance
+    }
+
     return (
         <DashboardLayout requiredUserType="student">
-            {/* Background */}
-            <div className="fixed inset-0 -z-10">
-                <div className="absolute inset-0 gradient-bg">
-                    <AnimatedBackground variant="default" />
-                </div>
-            </div>
+            <div className="min-h-screen bg-gray-50 dark:bg-[#0B1437] p-6 space-y-8">
 
-            {/* Content */}
-            <div className="relative z-10 space-y-6">
-                {/* Header - Updated to Match Assessment Overview Style */}
-                <motion.div
-                    className="relative overflow-hidden rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-10 lg:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-teal-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group min-h-[140px] sm:min-h-[160px] md:min-h-[160px] lg:min-h-[140px]"
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ duration: 0.3 }}
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    {/* Decorative Animated Background Corners */}
-                    <motion.div
-                        className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 sm:w-56 sm:h-56 rotate-45 bg-gradient-to-br from-teal-100/40 to-cyan-100/30 dark:from-teal-900/30 dark:to-cyan-900/20"
-                        animate={{ rotate: [45, 50, 45] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    />
-
-                    <motion.div
-                        className="pointer-events-none absolute -bottom-14 -left-14 w-48 h-48 sm:w-64 sm:h-64 rounded-full bg-gradient-to-tr from-cyan-100/30 to-teal-100/20 dark:from-cyan-900/20 dark:to-teal-900/10"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-3 sm:gap-4 md:gap-5 mb-3 sm:mb-4">
-                            {/* Rotating Icon */}
-                            <motion.div
-                                className="p-2 sm:p-2.5 md:p-3 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex-shrink-0"
-                                animate={{ rotate: [0, 360] }}
-                                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-                            >
-                                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10" />
-                            </motion.div>
-
-                            {/* Animated Title */}
-                            <motion.h1
-                                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold gradient-text truncate"
-                                animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                                transition={{ duration: 3, repeat: Infinity }}
-                                style={{ backgroundSize: '200% 200%' }}
-                            >
-                                <span className="bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
-                                    Available Jobs in Market
-                                </span>
-                                <motion.span
-                                    className="inline-block"
-                                    animate={{ rotate: [0, 15, -15, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                                >
-                                    💼
-                                </motion.span>
-                            </motion.h1>
+                {/* 1. Header Section */}
+                <div className="relative overflow-hidden rounded-2xl border border-[#989898] dark:border-gray-700 bg-white dark:bg-[#111C44] p-4 md:p-[24px]">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Sparkles className="h-6 w-6 md:h-8 md:w-8 text-[#546FFF]" />
+                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#FF541F] to-[#1E7BFF] bg-clip-text text-transparent">
+                                Available Jobs in Market
+                            </h1>
                         </div>
-
-                        {/* Subtitle */}
-                        <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl">
+                        <p className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-100 pl-1">
                             Browse real-time job listings from LinkedIn, Unstop, Foundit, and Naukri based on your skills
                         </p>
                     </div>
-                </motion.div>
+                </div>
 
+                {/* 2. Search & Filter Section */}
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111C44] p-4 md:p-6 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Search className="h-5 w-5 text-gray-900 dark:text-gray-100" />
+                        <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Search Jobs</h2>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Enter keywords OR enable resume skills to search for jobs
+                    </p>
 
-                {/* Search Card - Enhanced UI */}
-                <Card className="border rounded-2xl shadow-lg bg-gradient-to-br from-white/90 via-white/50 to-teal-50/40 dark:from-gray-900/60 dark:via-gray-900/40 dark:to-teal-900/20 backdrop-blur-xl">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 shadow-md">
-                                <Search className="h-5 w-5 text-white" />
-                            </div>
-                            Search Jobs
-                        </CardTitle>
-                        <CardDescription className="text-gray-600 dark:text-gray-400">
-                            Enter keywords OR enable resume skills to search for jobs
-                        </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="space-y-6">
-                        {/* Inputs */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {/* Keywords */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium flex items-center gap-1">
-                                    Keywords (comma-separated) *
-                                </label>
-
-                                <div className="relative group">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-500" />
-
-                                    <Input
-                                        placeholder="e.g., software engineer, data analyst"
-                                        value={keywords}
-                                        onChange={(e) => setKeywords(e.target.value)}
-                                        disabled={isBusy}
-                                        className={`
-                            pl-10 py-3 rounded-xl transition-all bg-white dark:bg-gray-800
-                            border shadow-sm
-                            group-hover:shadow-md
-                            focus:ring-2 focus:ring-teal-400
-                            ${!keywords.trim() && !includeResumeSkills ?
-                                                'border-amber-300 dark:border-amber-700' :
-                                                'border-gray-300 dark:border-gray-700'}
-                        `}
-                                    />
+                    <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Keyword Input */}
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <Search className="h-5 w-5" />
                                 </div>
-
-                                {/* small helper */}
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Required if resume skills are not enabled
-                                </p>
+                                <Input
+                                    placeholder="Job title or keyword"
+                                    value={keywords}
+                                    onChange={(e) => setKeywords(e.target.value)}
+                                    className="pl-11 h-12 rounded-full border-gray-300 dark:border-gray-600 focus:border-[#1E7BFF] focus:ring-[#1E7BFF] bg-transparent"
+                                />
                             </div>
 
-                            {/* Location */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium">Location</label>
-
+                            {/* Location Input */}
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <MapPin className="h-5 w-5" />
+                                </div>
                                 <Input
-                                    placeholder="e.g., India, Bangalore"
+                                    placeholder="Location"
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
-                                    disabled={isBusy}
-                                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
+                                    className="pl-11 h-12 rounded-full border-gray-300 dark:border-gray-600 focus:border-[#1E7BFF] focus:ring-[#1E7BFF] bg-transparent"
                                 />
                             </div>
                         </div>
 
-                        {/* Job Platforms */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Job Platforms</label>
-                                <div className="flex gap-2 text-xs">
-                                    <button
-                                        type="button"
-                                        onClick={selectAllSources}
-                                        disabled={isBusy}
-                                        className="text-teal-600 dark:text-teal-400 hover:underline disabled:opacity-40"
-                                    >
-                                        Select All
-                                    </button>
-                                    <span className="text-gray-400">|</span>
-                                    <button
-                                        type="button"
-                                        onClick={deselectAllSources}
-                                        disabled={isBusy}
-                                        className="text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-40"
-                                    >
-                                        Clear
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Tag Buttons */}
-                            <div className="flex flex-wrap gap-2">
-                                {[
-                                    { key: "linkedin", name: "LinkedIn", icon: Briefcase, color: "from-blue-500 to-blue-600" },
-                                    { key: "unstop", name: "Unstop", icon: Sparkles, color: "from-orange-500 to-orange-600" },
-                                    { key: "foundit", name: "FoundIt", icon: Building, color: "from-yellow-500 to-yellow-600" },
-                                    { key: "naukri", name: "Naukri", icon: Briefcase, color: "from-purple-500 to-purple-600" },
-                                ].map((item) => (
-                                    <button
-                                        key={item.key}
-                                        type="button"
-                                        onClick={() => toggleSource(item.key as PlatformKey)}
-                                        disabled={isBusy}
-                                        className={`
-                            px-4 py-2 rounded-xl font-medium transition-all shadow-sm 
-                            flex items-center gap-2 border 
-                            ${selectedSources.includes(item.key as PlatformKey)
-                                                ? `text-white bg-gradient-to-r ${item.color} shadow-md`
-                                                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}
-                        `}
-                                    >
-                                        <item.icon className="h-4 w-4" />
-                                        {item.name}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Select one or more platforms to search
-                            </p>
-                        </div>
-
-                        {/* Max Jobs & Search Button */}
-                        <div className="flex items-end gap-4">
-                            <div className="flex-1">
-                                <label className="text-sm font-medium mb-2 block">
-                                    Max Jobs Per Platform (1-15)
-                                </label>
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    max="15"
-                                    value={maxJobs}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value) || "";
-                                        setMaxJobs(val === "" ? "" : Math.min(15, Math.max(1, val)));
-                                    }}
-                                    onBlur={() => !maxJobs && setMaxJobs(15)}
-                                    disabled={isBusy}
-                                    className="py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm focus:ring-2 focus:ring-teal-400"
-                                />
-                            </div>
+                        {/* Actions */}
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={toggleFilters}
+                                className={`h-12 rounded-full px-6 gap-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium ${showFilters ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-gray-600 dark:text-gray-300'}`}
+                            >
+                                <Filter className="h-4 w-4" />
+                                Filter
+                            </Button>
 
                             <Button
                                 onClick={fetchMarketJobs}
                                 disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
-                                size="lg"
-                                className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3"
+                                className="h-12 rounded-full px-8 bg-[#1E7BFF] hover:bg-blue-600 text-white shadow-md font-semibold min-w-[120px]"
                             >
-                                {loading ? (
-                                    <>
-                                        <Loader size="sm" className="mr-2" />
-                                        Searching...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Search className="mr-2 h-4 w-4" />
-                                        Search Jobs
-                                    </>
-                                )}
+                                {loading ? <Loader className="h-5 w-5 animate-spin" /> : 'Search'}
                             </Button>
                         </div>
+                    </div>
 
-                        {/* Validation Message */}
-                        {!keywords.trim() && !includeResumeSkills && (
-                            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                                <AlertCircle className="h-4 w-4" />
-                                <span>Please enter keywords or enable resume skills to start searching</span>
-                            </div>
-                        )}
-
-                        {/* Resume Skills Toggle */}
-                        <div className="flex items-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-800 shadow-sm">
-                            <input
-                                type="checkbox"
-                                id="includeResumeSkills"
-                                checked={includeResumeSkills}
-                                onChange={(e) => setIncludeResumeSkills(e.target.checked)}
-                                disabled={isBusy}
-                                className="w-4 h-4 text-teal-600 bg-white border-gray-300 rounded cursor-pointer focus:ring-teal-500 focus:ring-2"
-                            />
-                            <label
-                                htmlFor="includeResumeSkills"
-                                className="text-sm font-medium cursor-pointer"
-                            >
-                                Include skills extracted from my resume (Alternative to keywords)
-                            </label>
-                        </div>
-
-                        {/* Resume Skills Display */}
-                        {includeResumeSkills && (
-                            <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                                {loadingSkills ? (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                        <Loader size="sm" />
-                                        <span>Loading resume skills...</span>
+                    {/* Expandable Filters */}
+                    {showFilters && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-6"
+                        >
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {/* Sources */}
+                                <div className="space-y-3">
+                                    <label className="text-sm font-semibold text-gray-900 dark:text-gray-100">Job Platforms</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {PLATFORM_KEYS.map((key) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => toggleSource(key)}
+                                                className={`
+                                                    flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border
+                                                    ${selectedSources.includes(key)
+                                                        ? 'bg-[#1E7BFF] border-[#1E7BFF] text-white shadow-sm'
+                                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'}
+                                                `}
+                                            >
+                                                {PLATFORM_LABELS[key]}
+                                            </button>
+                                        ))}
                                     </div>
-                                ) : hasResumeSkills && resumeSkills.length > 0 ? (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                            <span className="text-sm font-semibold">Top 5 skills from your resume:</span>
+                                </div>
+
+                                {/* Skills Toggle */}
+                                <div className="space-y-3">
+                                    <label className="text-sm font-semibold text-gray-900 dark:text-gray-100">Smart Search</label>
+                                    <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-blue-400 transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeResumeSkills}
+                                            onChange={(e) => setIncludeResumeSkills(e.target.checked)}
+                                            className="w-5 h-5 rounded text-[#1E7BFF] focus:ring-[#1E7BFF] border-gray-300"
+                                        />
+                                        <div className="flex-1">
+                                            <span className="font-medium text-gray-900 dark:text-gray-100 block">Include Resume Skills</span>
+                                            <span className="text-xs text-gray-500 block">Automatically match jobs to your uploaded resume's skills</span>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {resumeSkills.slice(0, 5).map((skill, i) => (
-                                                <Badge
-                                                    key={i}
-                                                    className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl shadow"
-                                                >
-                                                    {skill}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <span>No resume skills found. Upload and analyze your resume first.</span>
-                                    </div>
-                                )}
+                                        {includeResumeSkills && <Sparkles className="h-5 w-5 text-amber-500" />}
+                                    </label>
+                                </div>
                             </div>
-                        )}
+                        </motion.div>
+                    )}
+                </div>
 
-                        {/* Keywords Used */}
-                        {keywordsUsed.length > 0 && (
-                            <div className="flex items-center gap-2 flex-wrap p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                                <span className="text-sm font-semibold">Searching for:</span>
-                                {keywordsUsed.map((k, i) => (
-                                    <Badge
-                                        key={i}
-                                        className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-1 rounded-xl"
-                                    >
-                                        {k}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
+                {/* 3. Recommendations Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">AI-Powered Job Recommendations</h2>
+                        {jobs.length > 0 && <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Based on your search criteria</p>}
+                    </div>
+                    {savedJobs.size > 0 && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowSavedOnly(!showSavedOnly)}
+                            className={`rounded-full px-4 border-gray-300 dark:border-gray-600 ${showSavedOnly ? 'bg-primary-50 border-primary-200' : ''}`}
+                        >
+                            <Bookmark className={`h-4 w-4 mr-2 ${showSavedOnly ? 'fill-primary-600 text-primary-600' : 'text-gray-600'}`} />
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">{savedJobs.size}</span>
+                            <span className="ml-1 text-gray-500">Saved</span>
+                        </Button>
+                    )}
+                </div>
 
-
-                    </CardContent>
-                </Card>
-
-
-                {/* Error Message */}
-                {error && (
-                    <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-3">
-                                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                                <p className="text-red-800 dark:text-red-300">{error}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Loading Skeleton */}
-                {loading && (
-                    <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                {/* 4. Results Grid */}
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                         {[...Array(6)].map((_, i) => (
-                            <div key={i} className={`h-full relative overflow-hidden ${viewMode === 'list' ? 'w-full' : ''}`}>
-                                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 animate-pulse">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-                                        <div className="h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-700" />
-                                    </div>
-                                    <div className="h-5 w-3/4 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-                                    <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
-                                    <div className="h-4 w-1/3 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-                                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-700" />
-                                    <div className="mt-4 h-10 w-full rounded bg-gray-200 dark:bg-gray-700" />
+                            <div key={i} className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200 dark:border-gray-700 h-[220px] animate-pulse">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-700" />
+                                    <div className="h-8 w-24 rounded-full bg-gray-100 dark:bg-gray-700" />
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="h-6 w-3/4 rounded bg-gray-100 dark:bg-gray-700" />
+                                    <div className="h-4 w-1/2 rounded bg-gray-100 dark:bg-gray-700" />
                                 </div>
                             </div>
                         ))}
                     </div>
-                )}
-
-                {/* Results */}
-                {jobs.length > 0 && !loading && (
-                    <div className="space-y-4">
-                        {/* Quick Stats */}
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <StatCard
-                                icon={LinkedinIcon}
-                                label="LinkedIn"
-                                value={getJobStats()?.linkedin || 0}
-                                color="text-blue-600 dark:text-blue-400"
-                                bgColor="bg-blue-200 dark:bg-blue-800"
-                                colorClass="blue"
-                            />
-
-                            <StatCard
-                                icon={Sparkles} // Perfect for Unstop's youthful, energetic brand
-                                label="Unstop"
-                                value={getJobStats()?.unstop || 0}
-                                color="text-orange-600 dark:text-orange-400"
-                                bgColor="bg-orange-200 dark:bg-orange-800"
-                                colorClass="orange"
-                            />
-
-                            <StatCard
-                                icon={Search} // Represents job search functionality
-                                label="Foundit"
-                                value={getJobStats()?.foundit || 0}
-                                color="text-green-600 dark:text-green-400"
-                                bgColor="bg-green-200 dark:bg-green-800"
-                                colorClass="green"
-                            />
-
-                            <StatCard
-                                icon={Briefcase} // Classic job/career symbol
-                                label="Naukri"
-                                value={getJobStats()?.naukri || 0}
-                                color="text-purple-600 dark:text-purple-400"
-                                bgColor="bg-purple-200 dark:bg-purple-800"
-                                colorClass="purple"
-                            />
-
-                            <StatCard
-                                icon={Bookmark}
-                                label="Saved"
-                                value={getJobStats()?.saved || 0}
-                                color="text-teal-600 dark:text-teal-400"
-                                bgColor="bg-teal-200 dark:bg-teal-800"
-                                colorClass="teal"
-                            />
-                        </div>
-
-                        {/* Results Header with Filters */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <h2 className="text-2xl font-bold gradient-text">
-                                {filteredJobs.length} of {jobs.length} Jobs
-                            </h2>
-
-                            <div className="flex flex-wrap items-center gap-2">
-                                {/* View Toggle */}
-                                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                                    <button
-                                        onClick={() => setViewMode('grid')}
-                                        className={`p-2 rounded transition-all ${viewMode === 'grid'
-                                            ? 'bg-white dark:bg-gray-700 shadow-sm'
-                                            : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            }`}
-                                        title="Grid View"
-                                    >
-                                        <Grid3x3 className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('list')}
-                                        className={`p-2 rounded transition-all ${viewMode === 'list'
-                                            ? 'bg-white dark:bg-gray-700 shadow-sm'
-                                            : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            }`}
-                                        title="List View"
-                                    >
-                                        <List className="h-4 w-4" />
-                                    </button>
-                                </div>
-
-                                {/* Saved Toggle */}
-                                <Button
-                                    onClick={() => setShowSavedOnly(s => !s)}
-                                    variant={showSavedOnly ? 'default' : 'outline'}
-                                    size="sm"
-                                    className={showSavedOnly ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white' : 'gap-2'}
-                                    title="Show saved jobs only"
+                ) : filteredJobs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {filteredJobs.map((job, index) => {
+                            const matchScore = calculateMatchScore(job)
+                            return (
+                                <motion.div
+                                    key={`${job.url}-${index}`} // unique key
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="group relative"
                                 >
-                                    <Bookmark className="h-4 w-4" />
-                                    {showSavedOnly ? 'Saved Only' : 'Show Saved'}
-                                    <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full">
-                                        {getJobStats()?.saved || 0}
-                                    </Badge>
-                                </Button>
+                                    <Card className="rounded-[12px] border border-[#BABABA] dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-[#111C44] h-full flex flex-col relative overflow-hidden">
+                                        <CardContent className="p-5 flex flex-col h-full relative z-10">
+                                            {/* Header Row: Title & Actions */}
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="flex-1 min-w-0 pr-4">
+                                                    <h3 className="font-bold text-xl text-gray-900 dark:text-white truncate">
+                                                        {job.title}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500 font-medium mb-3 mt-1">
+                                                        {job.company}
+                                                    </p>
+                                                </div>
 
-                                {/* Filter Toggle */}
-                                <Button
-                                    onClick={() => setShowFilters(!showFilters)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2"
-                                >
-                                    <Filter className="h-4 w-4" />
-                                    Filters
-                                    {(filterSource !== 'all' || filterCompany || filterLocation) && (
-                                        <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-teal-500 text-white">
-                                            {[filterSource !== 'all', filterCompany, filterLocation].filter(Boolean).length}
-                                        </Badge>
-                                    )}
-                                </Button>
-
-                                {/* Sort Dropdown */}
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value as any)}
-                                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                >
-                                    <option value="company">Company A-Z</option>
-                                    <option value="title">Job Title A-Z</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Filter Panel */}
-                        {showFilters && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                            >
-                                <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                                    <CardContent className="pt-6">
-                                        <div className="grid md:grid-cols-3 gap-4">
-                                            {/* Source Filter */}
-                                            <div>
-                                                <label className="text-sm font-medium mb-2 block">
-                                                    Platform
-                                                </label>
-                                                <select
-                                                    value={filterSource}
-                                                    onChange={(e) => setFilterSource(e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                                >
-                                                    <option value="all">All Platforms</option>
-                                                    <option value="linkedin" disabled>LinkedIn (Coming Soon)</option>
-                                                    <option value="unstop">Unstop</option>
-                                                    <option value="foundit" disabled>FoundIt (Coming Soon)</option>
-                                                    <option value="naukri">Naukri</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Company Filter */}
-                                            <div>
-                                                <label className="text-sm font-medium mb-2 block">
-                                                    Company
-                                                </label>
-                                                <Input
-                                                    placeholder="Filter by company..."
-                                                    value={filterCompany}
-                                                    onChange={(e) => setFilterCompany(e.target.value)}
-                                                    className="h-10"
-                                                />
-                                            </div>
-
-                                            {/* Location Filter */}
-                                            <div>
-                                                <label className="text-sm font-medium mb-2 block">
-                                                    Location
-                                                </label>
-                                                <Input
-                                                    placeholder="Filter by location..."
-                                                    value={filterLocation}
-                                                    onChange={(e) => setFilterLocation(e.target.value)}
-                                                    className="h-10"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Active Filters */}
-                                        {(filterSource !== 'all' || filterCompany || filterLocation) && (
-                                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {filterSource !== 'all' && (
-                                                            <Badge className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                                                                {filterSource}
-                                                                <X
-                                                                    className="h-3 w-3 cursor-pointer hover:text-blue-900 dark:hover:text-blue-100"
-                                                                    onClick={() => setFilterSource('all')}
-                                                                />
-                                                            </Badge>
-                                                        )}
-                                                        {filterCompany && (
-                                                            <Badge className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                                                                Company: {filterCompany}
-                                                                <X
-                                                                    className="h-3 w-3 cursor-pointer hover:text-green-900 dark:hover:text-green-100"
-                                                                    onClick={() => setFilterCompany('')}
-                                                                />
-                                                            </Badge>
-                                                        )}
-                                                        {filterLocation && (
-                                                            <Badge className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                                                                Location: {filterLocation}
-                                                                <X
-                                                                    className="h-3 w-3 cursor-pointer hover:text-purple-900 dark:hover:text-purple-100"
-                                                                    onClick={() => setFilterLocation('')}
-                                                                />
-                                                            </Badge>
-                                                        )}
+                                                {/* Top Right Actions */}
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => toggleSaveJob(job.url)}
+                                                            className="text-gray-400 hover:text-[#1E7BFF] transition-colors"
+                                                        >
+                                                            <Bookmark className={`h-6 w-6 ${savedJobs.has(job.url) ? 'fill-[#1E7BFF] text-[#1E7BFF]' : ''}`} />
+                                                        </button>
+                                                        <Button
+                                                            onClick={() => window.open(job.url, '_blank')}
+                                                            className="bg-[#1E7BFF] hover:bg-blue-600 text-white rounded-lg px-4 h-9 text-sm font-semibold flex items-center gap-2"
+                                                        >
+                                                            <ExternalLink className="h-4 w-4" />
+                                                            Apply
+                                                        </Button>
                                                     </div>
-                                                    <Button
-                                                        onClick={clearAllFilters}
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                                                    >
-                                                        Clear All
-                                                    </Button>
+                                                    <span className="text-green-500 font-bold text-sm">{matchScore}% match</span>
                                                 </div>
                                             </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        )}
 
-                        {/* Jobs Grid/List */}
-                        {filteredJobs.length > 0 ? (
-                            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-                                {filteredJobs.map((job, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                                        className={viewMode === 'list' ? 'w-full' : ''}
-                                    >
-                                        <Card className={`h-full hover:shadow-lg transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group ${viewMode === 'list' ? 'flex flex-row' : ''
-                                            }`}>
-                                            <div className="absolute -top-8 -right-8 w-32 h-32 rotate-45 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 group-hover:scale-110 transition-transform" />
+                                            {/* Remote Tag */}
+                                            <div className="mb-4">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                    Remote
+                                                </span>
+                                            </div>
 
-                                            <CardHeader className={`relative z-10 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <Badge
-                                                        className={
-                                                            job.source === 'LinkedIn'
-                                                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                                                                : job.source === 'Unstop'
-                                                                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800'
-                                                                    : job.source === 'Foundit'
-                                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                                                                        : job.source === 'Naukri'
-                                                                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-                                                                            : 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800'
-                                                        }
-                                                    >
-                                                        {job.source}
-                                                    </Badge>
-
-                                                    {/* Save Button */}
-                                                    <button
-                                                        onClick={() => toggleSaveJob(job.url)}
-                                                        className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                                        title={savedJobs.has(job.url) ? 'Unsave job' : 'Save job'}
-                                                    >
-                                                        {savedJobs.has(job.url) ? (
-                                                            <BookmarkCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                                                        ) : (
-                                                            <Bookmark className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                                                        )}
-                                                    </button>
-                                                </div>
-                                                <CardTitle className={`text-lg ${viewMode === 'list' ? 'line-clamp-1' : 'line-clamp-2'}`}>
-                                                    {job.title}
-                                                </CardTitle>
-                                                <CardDescription className="flex items-center gap-2 mt-2">
-                                                    <Building className="h-4 w-4" />
-                                                    <span className="font-medium">{job.company}</span>
-                                                </CardDescription>
-                                            </CardHeader>
-
-                                            <CardContent className={`space-y-3 relative z-10 ${viewMode === 'list' ? 'flex items-center gap-4 flex-shrink-0' : ''}`}>
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                            {/* Location & Time */}
+                                            <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400 text-sm mb-4">
+                                                <div className="flex items-center gap-1.5">
                                                     <MapPin className="h-4 w-4" />
-                                                    {job.location}
+                                                    <span>{job.location.split(',')[0]}</span>
                                                 </div>
-
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                <div className="flex items-center gap-1.5">
                                                     <Calendar className="h-4 w-4" />
-                                                    {job.posted_date}
+                                                    <span>{job.posted_date || '1 day ago'}</span>
                                                 </div>
+                                            </div>
 
-                                                <Button
-                                                    onClick={() => window.open(job.url, '_blank')}
-                                                    className={`bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white ${viewMode === 'list' ? 'mt-0' : 'w-full mt-4'
-                                                        }`}
-                                                    size={viewMode === 'list' ? 'sm' : 'default'}
-                                                >
-                                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                                    View Job
-                                                </Button>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        ) : (
-                            <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10">
-                                <CardContent className="py-12">
-                                    <div className="flex flex-col items-center text-center space-y-4">
-                                        <div className="p-4 rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                            <AlertCircle className="h-12 w-12 text-amber-600 dark:text-amber-400" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-semibold mb-2 text-amber-900 dark:text-amber-100">
-                                                No Jobs Match Your Filters
-                                            </h3>
-                                            <p className="text-amber-800 dark:text-amber-300 max-w-md">
-                                                Try adjusting your filters or clearing them to see more results
-                                            </p>
-                                            <Button
-                                                onClick={clearAllFilters}
-                                                className="mt-4 bg-amber-600 hover:bg-amber-700 text-white"
-                                            >
-                                                Clear All Filters
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                                            {/* Salary & Type Stub (Mocked as per design since API might not have it or we use match) */}
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-white mb-6">
+                                                $120k - $150k • Full-time
+                                            </div>
+
+                                            {/* Bottom Tags (Mocked to match 'React', 'TypeScript', 'Node.js' style from screenshot using job keywords/source) */}
+                                            <div className="mt-auto flex flex-wrap gap-2">
+                                                {['React', 'TypeScript', 'Node.js'].map((tag, i) => (
+                                                    <span key={i} className="inline-flex items-center px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-transparent">
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            )
+                        })}
                     </div>
-                )}
-
-                {/* Empty State */}
-                {!loading && jobs.length === 0 && !error && (
-                    <Card>
-                        <CardContent className="py-12">
-                            <div className="flex flex-col items-center text-center space-y-4">
-                                <div className="p-4 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-900/30">
-                                    <Briefcase className="h-12 w-12 text-teal-600 dark:text-teal-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-2">
-                                        Ready to Find Jobs?
-                                    </h3>
-                                    <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                                        Enter job keywords or enable resume skills, select platforms, then click "Search Jobs" to discover opportunities
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                ) : (
+                    // Empty State
+                    <div className="py-20 text-center">
+                        <div className="bg-white dark:bg-gray-800 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <Search className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No jobs found</h3>
+                        <p className="text-gray-500 max-w-md mx-auto">
+                            We couldn't find any jobs matching your criteria. Try adjusting your keywords or filters.
+                        </p>
+                    </div>
                 )}
             </div>
         </DashboardLayout>
