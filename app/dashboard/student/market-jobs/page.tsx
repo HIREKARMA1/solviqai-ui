@@ -834,7 +834,7 @@ export default function MarketJobsPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="min-h-screen bg-gray-50 dark:bg-[#0B1437] p-6 space-y-8">
+            <div className="min-h-screen bg-white dark:bg-[#0B1437] p-6 space-y-8">
 
                 {/* 1. Header Section */}
                 <div className="relative overflow-hidden rounded-2xl border border-[#989898] dark:border-gray-700 bg-white dark:bg-[#111C44] p-4 md:p-[24px]">
