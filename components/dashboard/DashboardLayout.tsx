@@ -10,6 +10,7 @@ import { MobileSidebar } from '@/components/landing/MobileSidebar'
 import { Loader } from '@/components/ui/loader'
 import { DropdownMenuProvider } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
@@ -22,6 +23,9 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
     const router = useRouter()
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+    const [showEntitlementModal, setShowEntitlementModal] = useState(false)
+    const [entitlementMessage, setEntitlementMessage] = useState<string | undefined>(undefined)
+    const [entitlementTitle, setEntitlementTitle] = useState<string | undefined>(undefined)
 
     useEffect(() => {
         if (!loading && !user) {
@@ -32,6 +36,37 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             router.push(`/dashboard/${user.user_type}`)
         }
     }, [user, loading, router, requiredUserType])
+
+    useEffect(() => {
+        const handler = (evt: Event) => {
+            try {
+                const e = evt as CustomEvent<{ message?: string }>
+                const msg = e.detail?.message
+                if (msg && typeof msg === 'string') {
+                    const lower = msg.toLowerCase()
+                    if (lower.includes('license') && lower.includes('expired')) {
+                        setEntitlementTitle('License Expired')
+                    } else if (lower.includes('subscription') && lower.includes('expired')) {
+                        setEntitlementTitle('Subscription Expired')
+                    } else {
+                        setEntitlementTitle('Subscription Required')
+                    }
+                    setEntitlementMessage(msg)
+                } else {
+                    setEntitlementTitle('Subscription Required')
+                    setEntitlementMessage(undefined)
+                }
+                setShowEntitlementModal(true)
+            } catch {
+                // ignore
+            }
+        }
+
+        window.addEventListener('subscription-required', handler as EventListener)
+        return () => {
+            window.removeEventListener('subscription-required', handler as EventListener)
+        }
+    }, [])
 
     if (loading) {
         return (
@@ -116,6 +151,14 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                     {children}
                 </main>
             </div>
+
+            <SubscriptionRequiredModal
+                isOpen={showEntitlementModal}
+                onClose={() => setShowEntitlementModal(false)}
+                feature="this feature"
+                title={entitlementTitle}
+                message={entitlementMessage}
+            />
         </div>
     )
 }

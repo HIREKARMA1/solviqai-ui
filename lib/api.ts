@@ -140,6 +140,26 @@ class ApiClient {
           }
         }
 
+        // Handle subscription/license enforcement (403) globally
+        if (error.response?.status === 403) {
+          const detail = error.response?.data?.detail || "";
+          const msg = typeof detail === "string" ? detail : "";
+          const msgLower = msg.toLowerCase();
+          const looksLikeEntitlement =
+            (msgLower.includes("subscription") || msgLower.includes("license")) &&
+            (msgLower.includes("expired") ||
+              msgLower.includes("contact hirekarma") ||
+              msgLower.includes("free plan"));
+
+          if (looksLikeEntitlement && typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("subscription-required", {
+                detail: { message: msg },
+              }),
+            );
+          }
+        }
+
         return Promise.reject(error);
       },
     );
