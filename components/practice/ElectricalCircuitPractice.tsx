@@ -253,28 +253,37 @@ export default function ElectricalCircuitPractice({
   }
 
   return (
-    <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 pb-8">
-      <div className="max-w-6xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="space-y-3 mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-white" />
+    <div className="w-full bg-white min-h-screen pb-12">
+      {/* Design-Matching Blue Header Banner */}
+      <div className="w-full bg-[#1E88E5] text-white p-6 shadow-md mb-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            <div className="p-2 bg-white/20 rounded-lg">
+              <Zap className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                Electrical Circuit Design
-              </h1>
-              <p className="text-muted-foreground text-base sm:text-lg mt-1">
-                Design circuits, draw diagrams, and get instant AI feedback
-              </p>
+              <h1 className="text-2xl font-bold">Electrical Circuit Design</h1>
+              <p className="text-blue-100 text-sm opacity-90">Design circuits, draw diagrams, and get instant AI feedback</p>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
 
         {/* Assessment Context Banner */}
         {assessmentId && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
             Linked to Assessment: <span className="font-medium">{assessmentId}</span>
             {roundNumber && <span className="ml-2">Round {roundNumber}</span>}
           </div>
@@ -313,159 +322,158 @@ export default function ElectricalCircuitPractice({
           </Card>
         )}
 
-        {/* Auto-save Badge */}
-        <div className="flex items-center justify-end">
-          <Badge className="bg-green-100 text-green-700 border-green-300 shadow-sm">
-            ✓ Auto-save enabled
-          </Badge>
-        </div>
-
         {/* Question Card */}
-        <Card className="shadow-lg border-2 border-yellow-100">
-          <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-t-lg">
-            <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-yellow-600" />
-              Circuit Design Question
-            </CardTitle>
-            <CardDescription className="text-base text-gray-700">AI-generated circuit design prompt</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="p-4 border-2 border-yellow-200 rounded-xl bg-gradient-to-br from-yellow-50/50 to-amber-50/50 text-sm min-h-[80px] whitespace-pre-wrap font-medium text-gray-800">
-              {question || 'Generating question...'}
+        <div className="bg-[#FFFBE6] border border-yellow-200 rounded-[16px] p-6 shadow-sm">
+          <div className="flex items-start gap-3 mb-4">
+            <Zap className="w-5 h-5 text-gray-700 mt-1" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Circuit Design Question</h2>
+              <p className="text-sm text-gray-500">AI-generated circuit design prompt</p>
             </div>
-            {!question && (
+          </div>
+
+          <div className="bg-[#F0F7FF] border border-blue-100 rounded-lg p-4 text-gray-800 font-medium whitespace-pre-wrap">
+            {question || (busy ? 'Generating question...' : 'Click explicitly to generate a question')}
+          </div>
+
+          {!question && !busy && (
+            <div className="mt-4">
               <Button
                 onClick={handleGenerate}
-                disabled={busy}
-                className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="bg-[#1E88E5] hover:bg-blue-600 text-white"
               >
-                {busy ? (
-                  <>
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="mr-2 h-4 w-4" />
-                    Generate Question
-                  </>
-                )}
+                Generate Question
               </Button>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
 
-        {/* Drawing Canvas Card */}
-        <Card className="shadow-lg border-2 border-yellow-100">
-          <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-t-lg">
-            <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
-              <span className="text-2xl">✏️</span>
-              Draw Your Circuit
-            </CardTitle>
-            <CardDescription className="text-base text-gray-700">Use shapes, connectors, and labels to represent components and wiring</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div
-              className="border-2 border-yellow-200 rounded-xl shadow-inner overflow-hidden"
-              style={{
-                height: '600px',
-                width: '100%',
-                position: 'relative',
-                minHeight: '600px'
+        {/* Drawing Canvas Section */}
+        <div className="bg-[#FFFBE6] border border-yellow-200 rounded-[16px] p-6 shadow-sm">
+          <div className="flex items-start gap-3 mb-4">
+            <Zap className="w-5 h-5 text-gray-700 mt-1" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Circuit Design Workspace</h2>
+              <p className="text-sm text-gray-500">Draw your component diagram below</p>
+            </div>
+          </div>
+
+          {/* Canvas Container with Blue Border */}
+          <div
+            className="border-2 border-[#2196F3] rounded-[16px] overflow-hidden bg-white shadow-sm relative"
+            style={{ height: '600px', width: '100%' }}
+          >
+            {/* @ts-ignore */}
+            <Excalidraw
+              excalidrawAPI={onExcalidrawAPIMount}
+              onChange={handleSceneChange}
+              gridModeEnabled={true}
+              theme="light"
+              UIOptions={{
+                canvasActions: {
+                  loadScene: false,
+                  saveToActiveFile: false,
+                  export: false,
+                  saveAsImage: false
+                }
               }}
+            />
+          </div>
+
+          {/* Toolbar / Actions Footer */}
+          <div className="mt-4 flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={handleClearCanvas}
+              disabled={busy}
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
             >
-              {/* @ts-ignore */}
-              <Excalidraw
-                excalidrawAPI={onExcalidrawAPIMount}
-                onChange={handleSceneChange}
-                gridModeEnabled={true}
-                theme="light"
-              />
-            </div>
-            <div className="flex justify-between items-center mt-4 gap-3">
-              <Button
-                variant="outline"
-                onClick={handleClearCanvas}
-                disabled={busy}
-                className="border-red-200 text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Canvas
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={busy || !question}
-                className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300"
-              >
-                {busy ? (
-                  <>
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    Evaluating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Submit for Evaluation
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Clear Canvas
+            </Button>
+
+            <Button
+              onClick={handleSubmit}
+              disabled={busy || !question}
+              className="bg-[#22C55E] hover:bg-[#16A34A] text-white px-8 font-semibold shadow-sm"
+            >
+              {busy ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Evaluating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Submit for Evaluation
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
 
         {/* Evaluation Results */}
         {evaluation && (
-          <Card className="shadow-lg border-2 border-primary">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-t-lg">
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Award className="w-6 h-6 text-primary" />
+          <Card className="shadow-lg border-2 border-[#1E88E5]">
+            <CardHeader className="bg-blue-50/50 rounded-t-lg border-b border-blue-100">
+              <CardTitle className="text-2xl flex items-center gap-2 text-gray-900">
+                <Award className="w-6 h-6 text-[#1E88E5]" />
                 Evaluation Results
               </CardTitle>
               <CardDescription>AI feedback on your circuit design</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              {evaluation.correct != null && (
-                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+            <CardContent className="pt-6 space-y-6">
+
+              <div className={`p-6 rounded-xl border-l-4 ${evaluation.correct ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
+                <div className="flex items-center gap-3 mb-2">
                   {evaluation.correct ? (
                     <CheckCircle2 className="w-6 h-6 text-green-600" />
                   ) : (
                     <AlertCircle className="w-6 h-6 text-red-600" />
                   )}
-                  <div>
-                    <span className="font-semibold text-lg">Correct: </span>
-                    <span className={`text-lg font-bold ${evaluation.correct ? 'text-green-600' : 'text-red-600'}`}>
-                      {evaluation.correct ? '✓ Yes' : '✗ No'}
-                    </span>
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {evaluation.correct ? 'Success!' : 'Needs Improvement'}
+                  </h3>
                 </div>
-              )}
+                <p className="text-gray-700">
+                  {evaluation.correct
+                    ? 'Your circuit design meets the requirements.'
+                    : 'Your circuit design contains errors or is incomplete.'}
+                </p>
+              </div>
+
               {evaluation.score != null && (
-                <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg border-2 border-yellow-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-lg">Score:</span>
-                    <span className="text-3xl font-bold text-yellow-700">
-                      {Math.round((evaluation.score as number) * 100) / 100} / 10
-                    </span>
-                  </div>
-                  {assessmentId && (
-                    <p className="text-sm text-muted-foreground mt-2">(scaled to 0-100 for assessment)</p>
-                  )}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <span className="font-semibold text-gray-600">Overall Score</span>
+                  <span className="text-3xl font-bold text-[#1E88E5]">
+                    {Math.round((evaluation.score as number) * 100) / 100} <span className="text-lg text-gray-400 font-normal">/ 10</span>
+                  </span>
                 </div>
               )}
+
               {evaluation.feedback && (
-                <div className="mt-4 pt-4 border-t-2 border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-lg">Feedback:</span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-base text-gray-700 leading-relaxed p-4 bg-muted/30 rounded-lg">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-[#1E88E5]" />
+                    Detailed Feedback
+                  </h4>
+                  <div className="p-4 bg-white border border-gray-200 rounded-lg text-gray-700 leading-relaxed whitespace-pre-wrap shadow-sm">
                     {evaluation.feedback}
-                  </p>
+                  </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 justify-center pt-4">
+              <div className="flex gap-4 justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleClearCanvas()
+                    setEvaluation(null)
+                  }}
+                >
+                  Keep Editing
+                </Button>
                 <Button
                   onClick={() => {
                     setEvaluation(null)
@@ -473,7 +481,7 @@ export default function ElectricalCircuitPractice({
                     handleClearCanvas()
                     handleGenerate()
                   }}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="bg-[#1E88E5] hover:bg-blue-600 text-white"
                 >
                   <Zap className="mr-2 h-4 w-4" />
                   Try Another Question

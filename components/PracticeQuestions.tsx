@@ -14,7 +14,7 @@ interface Category {
     title: string;
     description: string;
     icon: React.ReactNode;
-    component: React.ComponentType;
+    component: React.ComponentType<any>;
 }
 
 interface PracticeQuestionsProps {
@@ -81,18 +81,7 @@ export default function PracticeQuestions({ onPracticeModeChange }: PracticeQues
         const SelectedComponent = selectedCat.component;
         return (
             <div className="w-full pb-8">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
-                    <button
-                        onClick={() => setSelectedCategory(null)}
-                        className="group mb-2 flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 rounded-lg shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-gray-700 font-medium"
-                    >
-                        <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Categories
-                    </button>
-                </div>
-                <SelectedComponent />
+                <SelectedComponent onBack={() => setSelectedCategory(null)} />
             </div>
         );
     }

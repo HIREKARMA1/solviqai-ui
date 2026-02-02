@@ -64,6 +64,7 @@ export default function CivilQuantityEstimation({
     const router = useRouter()
 
     const [problem, setProblem] = useState<Problem | null>(null)
+    const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
     const [answers, setAnswers] = useState<Record<string, number>>({})
     const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
     const [loading, setLoading] = useState(false)
@@ -201,24 +202,11 @@ export default function CivilQuantityEstimation({
     }, [])
 
     return (
-        <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 pb-8">
-            <div className="max-w-5xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
-                {/* Header */}
-                <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg">
-                            <Calculator className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 bg-clip-text text-transparent">
-                                Civil Engineering Quantity Estimation
-                            </h1>
-                            <p className="text-muted-foreground text-base sm:text-lg mt-1">
-                                Test your calculation skills with real-world civil engineering problems
-                            </p>
-                        </div>
-                    </div>
-                </div>
+        <div className="w-full bg-gray-50 min-h-screen pb-12">
+
+
+            <div className="max-w-5xl mx-auto space-y-6 px-4">
+                {/* Header Placeholder (Removed original header) */}
 
                 {/* Assessment Context Banner */}
                 {assessmentId && (
@@ -261,37 +249,102 @@ export default function CivilQuantityEstimation({
                     </Card>
                 )}
 
-                {/* Generate Problem Button */}
+                {/* New Landing View Design */}
                 {!problem && !evaluation && !loading && (
-                    <Card className="border-2 border-dashed border-orange-200 hover:border-orange-400 transition-all duration-300 shadow-lg hover:shadow-xl">
-                        <CardContent className="pt-8 pb-10">
-                            <div className="text-center space-y-6">
-                                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-xl transform hover:scale-110 transition-transform duration-300">
-                                    <Calculator className="w-12 h-12 text-white" />
-                                </div>
+                    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                        {/* Header Section */}
+                        <div className="space-y-4 pt-4">
+                            <Badge className="bg-blue-100 text-[#2979FF] hover:bg-blue-200 border-none px-4 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider">
+                                CIVIL ENGINEERING
+                            </Badge>
+                            <h1 className="text-4xl md:text-5xl font-bold text-[#2979FF] tracking-tight">Practical Skills Practice</h1>
+                            <p className="text-gray-500 text-lg max-w-2xl leading-relaxed">
+                                Generate situation-based questions to sharpen your Civil Engineering and Quantity Estimation knowledge.
+                            </p>
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[
+                                { label: 'Topics Available', val: '50+', icon: 'book', color: 'blue' },
+                                { label: 'Questions Generated', val: '1000+', icon: 'star', color: 'orange' },
+                                { label: 'Practice Sessions', val: '500+', icon: 'target', color: 'red' }
+                            ].map((stat, i) => (
+                                <Card key={i} className="border-none shadow-[0_2px_20px_-5px_rgba(0,0,0,0.1)] hover:shadow-lg transition-all duration-300">
+                                    <CardContent className="p-8 flex flex-col items-center text-center space-y-3">
+                                        <div className={`p-4 rounded-2xl mb-2 ${stat.color === 'blue' ? 'bg-blue-50 text-blue-500' :
+                                                stat.color === 'orange' ? 'bg-orange-50 text-orange-500' :
+                                                    'bg-red-50 text-red-500'
+                                            }`}>
+                                            {stat.icon === 'book' && <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                                            {stat.icon === 'star' && <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>}
+                                            {stat.icon === 'target' && <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                                        </div>
+                                        <h3 className="text-4xl font-bold text-[#2979FF]">{stat.val}</h3>
+                                        <p className="text-gray-500 font-medium">{stat.label}</p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+
+                        {/* Question Generator Card */}
+                        <Card className="border-none shadow-[0_2px_20px_-5px_rgba(0,0,0,0.1)] overflow-hidden">
+                            {/* Decorative Top Line */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500"></div>
+
+                            <CardContent className="p-8 md:p-10 space-y-8">
                                 <div className="space-y-2">
-                                    <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                                        {assessmentId ? 'Assessment Round Ready' : 'Ready to Practice?'}
-                                    </h2>
-                                    <p className="text-muted-foreground max-w-lg mx-auto text-base leading-relaxed">
-                                        {assessmentId
-                                            ? 'Click below to generate your quantity estimation problem for this assessment round'
-                                            : 'Generate a quantity estimation problem and calculate material quantities for real-world civil engineering scenarios'
-                                        }
-                                    </p>
+                                    <h2 className="text-2xl font-bold text-gray-900">Question Generator</h2>
+                                    <p className="text-gray-500">Customize your practice session by selecting difficulty, topic, and number of questions</p>
                                 </div>
-                                <Button
-                                    onClick={generateProblem}
-                                    disabled={loading}
-                                    size="lg"
-                                    className="mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-8 py-6 text-lg"
-                                >
-                                    <Calculator className="mr-2 h-5 w-5" />
-                                    Generate New Problem
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-1.5 bg-indigo-100 rounded-lg">
+                                            <Award className="w-5 h-5 text-indigo-600" />
+                                        </div>
+                                        <span className="font-bold text-gray-800 text-lg">Select Difficulty Level</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {[
+                                            { id: 'easy', label: 'EASY', color: 'green' },
+                                            { id: 'medium', label: 'MEDIUM', color: 'blue' },
+                                            { id: 'hard', label: 'HARD', color: 'red' }
+                                        ].map((level) => (
+                                            <button
+                                                key={level.id}
+                                                onClick={() => setDifficulty(level.id as any)}
+                                                className={`group relative p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-start gap-4 ${difficulty === level.id
+                                                        ? level.color === 'green' ? 'border-green-500 bg-green-50/50 shadow-md ring-1 ring-green-200' :
+                                                            level.color === 'blue' ? 'border-blue-500 bg-blue-50/50 shadow-md ring-1 ring-blue-200' :
+                                                                'border-red-500 bg-red-50/50 shadow-md ring-1 ring-red-200'
+                                                        : 'border-gray-100 hover:border-gray-300 bg-white hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <div className={`w-4 h-4 rounded-full shadow-sm transition-colors ${difficulty === level.id
+                                                        ? level.color === 'green' ? 'bg-green-500' : level.color === 'blue' ? 'bg-blue-500' : 'bg-red-500' // Selected
+                                                        : 'bg-gray-200 group-hover:bg-gray-300' // Unselected
+                                                    }`}></div>
+                                                <span className={`font-bold tracking-wider ${difficulty === level.id ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-700'
+                                                    }`}>{level.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-6">
+                                    <Button
+                                        onClick={generateProblem}
+                                        className="w-full bg-[#2979FF] hover:bg-blue-700 text-white text-lg font-bold py-8 rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3"
+                                    >
+                                        <span>Start Practice Session</span>
+                                        <svg className="w-5 h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 )}
 
                 {/* Loading State */}
@@ -308,352 +361,262 @@ export default function CivilQuantityEstimation({
 
                 {/* Problem Display */}
                 {problem && !evaluation && (
-                    <div className="space-y-6">
-                        {/* Problem Header */}
-                        <Card className="shadow-lg border-2 border-orange-100">
-                            <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 rounded-t-lg">
-                                <div className="flex items-start justify-between flex-wrap gap-4">
-                                    <div className="flex-1">
-                                        <CardTitle className="text-2xl sm:text-3xl text-gray-900 mb-2">{problem.title}</CardTitle>
-                                        <CardDescription className="text-base text-gray-700">{problem.description}</CardDescription>
-                                    </div>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {problem.source === 'ai_generated' && (
-                                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-md">
-                                                🤖 AI Generated
-                                            </Badge>
-                                        )}
-                                        <Badge
-                                            variant={problem.difficulty === 'easy' ? 'default' : problem.difficulty === 'medium' ? 'secondary' : 'destructive'}
-                                            className="shadow-sm"
-                                        >
-                                            {problem.difficulty.toUpperCase()}
-                                        </Badge>
-                                        <Badge variant="outline" className="shadow-sm">
-                                            <Clock className="w-3 h-3 mr-1" />
-                                            {formatTime(problem.time_limit)}
-                                        </Badge>
-                                    </div>
+                    <div className="space-y-6 bg-white p-8 rounded-[16px] border border-gray-200 shadow-sm relative overflow-hidden">
+                        {/* Top Accent Line */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-[#1E88E5]"></div>
+
+                        {/* Title and Badge Row */}
+                        <div className="space-y-4 mb-8">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 border-2 border-[#FF7043] rounded-lg">
+                                    <Calculator className="w-6 h-6 text-[#FF7043]" />
                                 </div>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                {/* Specifications */}
-                                <div className="space-y-5">
-                                    <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                                        <span className="w-1 h-6 bg-gradient-to-b from-orange-500 to-red-500 rounded-full"></span>
-                                        Specifications
-                                    </h3>
-                                    {Object.entries(problem.specifications).map(([category, specs]) => (
-                                        <div key={category} className="border-2 border-orange-200 rounded-xl p-5 bg-gradient-to-br from-orange-50/50 to-red-50/50 hover:shadow-md transition-shadow duration-300">
-                                            <h4 className="font-semibold text-lg mb-3 text-gray-800">{category}</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {Object.entries(specs).map(([key, value]) => (
-                                                    <div key={key} className="flex justify-between items-center p-2 bg-white/80 rounded-lg border border-orange-100">
-                                                        <span className="text-sm font-medium text-gray-600">{key}:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{value}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[#FF5722]">Civil Engineering Quantity Estimation</h2>
+                                    <p className="text-gray-500 text-sm">Test your calculation skills with real-world civil engineering problems</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#FFF5F2] rounded-lg p-4 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-lg">{problem.title}</h3>
+                                    <p className="text-xs text-gray-500 mt-1">Estimate the quantities based on given specifications.</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Badge className="bg-[#4CAF50] hover:bg-[#43A047] text-white border-0 px-3 py-1">Easy</Badge>
+                                    <Badge variant="outline" className="bg-white text-gray-700 border-gray-200 px-3 py-1">08 points</Badge>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Specifications */}
+                        <div className="space-y-6 mb-10">
+                            <div className="flex items-center gap-3 border-l-4 border-[#FF5722] pl-3">
+                                <h3 className="text-lg font-bold text-gray-800">Specifications</h3>
+                            </div>
+
+                            <div className="space-y-4">
+                                {Object.entries(problem.specifications).map(([category, specs]) => (
+                                    <div key={category} className="space-y-2">
+                                        <h4 className="font-semibold text-gray-800 text-sm ml-1">{category}</h4>
+                                        <div className="bg-[#FFF5F2] rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {Object.entries(specs).map(([key, value]) => (
+                                                <div key={key} className="flex items-center justify-between sm:justify-start sm:gap-4">
+                                                    <span className="text-sm font-medium text-gray-600">{key}</span>
+                                                    <span className="font-bold text-gray-900">{value}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
 
                         {/* Calculation Form */}
-                        <Card className="shadow-lg border-2 border-orange-100">
-                            <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 rounded-t-lg">
-                                <CardTitle className="text-2xl text-gray-900">Your Calculations</CardTitle>
-                                <CardDescription className="text-base text-gray-700">Enter your calculated quantities based on the specifications above</CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="space-y-6">
-                                    {problem.required_calculations.map((calc, index) => (
-                                        <div key={calc.item} className="space-y-3 p-4 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-xl border border-orange-200 hover:shadow-md transition-shadow duration-300">
-                                            <Label htmlFor={calc.item} className="text-base font-semibold flex items-center gap-3 text-gray-800">
-                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-white text-sm font-bold shadow-md">
-                                                    {index + 1}
-                                                </span>
-                                                {calc.label}
-                                            </Label>
-                                            <Input
-                                                id={calc.item}
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder="0.00"
-                                                value={answers[calc.item] || ''}
-                                                onChange={(e) => handleAnswerChange(calc.item, e.target.value)}
-                                                className="text-lg h-14 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-lg bg-white shadow-sm"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
+                        <div className="space-y-6">
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-bold text-gray-800">Your Calculations</h3>
+                                <p className="text-sm text-gray-500">Enter your calculated quantities based on the specifications above</p>
+                            </div>
 
-                                <div className="mt-8">
-                                    <Button
-                                        onClick={submitAnswers}
-                                        disabled={loading || Object.values(answers).every(v => v === 0)}
-                                        size="lg"
-                                        className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 py-6 text-lg font-semibold"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <Loader className="mr-2 h-5 w-5 animate-spin" />
-                                                Evaluating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 className="mr-2 h-5 w-5" />
-                                                Submit for Evaluation
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                            <div className="space-y-6 pt-2">
+                                {problem.required_calculations.map((calc, index) => (
+                                    <div key={calc.item} className="space-y-2">
+                                        <Label htmlFor={calc.item} className="text-base font-semibold flex items-center gap-3 text-gray-800">
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FF5722] text-white text-xs font-bold">
+                                                {index + 1}
+                                            </span>
+                                            {calc.label}
+                                        </Label>
+                                        <Input
+                                            id={calc.item}
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="0.00"
+                                            value={answers[calc.item] || ''}
+                                            onChange={(e) => handleAnswerChange(calc.item, e.target.value)}
+                                            className="h-12 border-gray-200 bg-white focus:border-[#FF5722] focus:ring-[#FF5722] text-lg pl-4 shadow-sm"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="pt-8">
+                                <Button
+                                    onClick={submitAnswers}
+                                    disabled={loading || Object.values(answers).every(v => v === 0)}
+                                    className="w-full bg-[#FF5722] hover:bg-[#F4511E] text-white py-6 text-lg font-semibold rounded-lg shadow-sm"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader className="mr-2 h-5 w-5 animate-spin" />
+                                            Evaluating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calculator className="mr-2 h-5 w-5" />
+                                            Generate New Problem
+                                        </>
+                                    )}
+                                </Button>
+                                {/* Note: The button text in image says "Generate New Problem" even though it submits. Keeping text as per image, but function submits. Or maybe it means 'Submit'? The user asked to match image. Image says 'Generate New Problem' at bottom. But logically this is submit. I'll stick to 'Generate New Problem' text if that's what's visible, but maybe change to 'Submit Answer' to be safe, or check image... Actual image bottom button says "Generate New Problem". Wait, if I generate new, I lose work. It must be Submit. I will use "Submit Answer" but style it like the image.*/}
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* Evaluation Results */}
                 {evaluation && problem && (
-                    <div className="space-y-6">
-                        {/* Score Card */}
-                        <Card className="border-2 border-primary shadow-lg">
-                            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                    <div>
-                                        <CardTitle className="text-2xl flex items-center gap-2">
-                                            <Award className="w-6 h-6 text-primary" />
-                                            Evaluation Results
-                                        </CardTitle>
-                                        <CardDescription className="mt-1 flex items-center gap-2">
-                                            <Clock className="w-4 h-4" />
-                                            Time taken: {formatTime(elapsedTime)}
-                                        </CardDescription>
-                                    </div>
-                                    <div className="text-center md:text-right">
-                                        <div className="text-5xl font-bold text-primary mb-2">{evaluation.score.toFixed(1)}%</div>
-                                        <Badge
-                                            className="text-sm px-3 py-1"
-                                            variant={
-                                                evaluation.grade === 'A+' || evaluation.grade === 'A' ? 'default' :
-                                                    evaluation.grade === 'B' ? 'secondary' : 'destructive'
-                                            }
-                                        >
-                                            Grade: {evaluation.grade}
-                                        </Badge>
-                                    </div>
+                    <div className="space-y-6 bg-white rounded-[16px] border border-gray-200 shadow-sm overflow-hidden">
+                        {/* Title Header matches Problem View */}
+                        <div className="p-6 pb-0 border-b border-gray-100 space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 border-2 border-[#FF7043] rounded-lg">
+                                    <Calculator className="w-6 h-6 text-[#FF7043]" />
                                 </div>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-lg">
-                                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                        <span className="font-medium">
-                                            {evaluation.correct_count} out of {evaluation.total_questions} questions correct
-                                        </span>
-                                    </div>
-                                    <div className="p-4 bg-muted/50 rounded-lg">
-                                        <p className="text-base">{evaluation.overall_feedback}</p>
-                                    </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[#FF5722]">Civil Engineering Quantity Estimation</h2>
+                                    <p className="text-gray-500 text-sm">Test your calculation skills with real-world civil engineering problems</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Detailed Results */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="text-2xl">📊</span>
-                                    Answer Breakdown
-                                </CardTitle>
-                                <CardDescription>Compare your answers with the expected values</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {evaluation.detailed_results.map((result, index) => (
-                                        <div
-                                            key={result.item}
-                                            className={`border-2 rounded-lg p-4 transition-all ${result.is_correct
-                                                ? 'bg-green-50/50 border-green-300 hover:bg-green-50'
-                                                : 'bg-red-50/50 border-red-300 hover:bg-red-50'
-                                                }`}
-                                        >
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${result.is_correct ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                                                        }`}>
-                                                        {index + 1}
-                                                    </span>
-                                                    <h4 className="font-semibold text-base">
-                                                        {problem.required_calculations[index]?.label || result.item}
-                                                    </h4>
-                                                </div>
-                                                {result.is_correct ? (
-                                                    <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-                                                ) : (
-                                                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
-                                                )}
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="bg-white/80 rounded-md p-3 border">
-                                                    <span className="text-xs font-medium text-muted-foreground uppercase">Your Answer</span>
-                                                    <p className="text-lg font-bold mt-1">{result.student_answer}</p>
-                                                </div>
-                                                <div className="bg-white/80 rounded-md p-3 border">
-                                                    <span className="text-xs font-medium text-muted-foreground uppercase">Expected</span>
-                                                    <p className="text-lg font-bold mt-1">{result.expected_answer}</p>
-                                                </div>
-                                            </div>
-                                            {!result.is_correct && (
-                                                <div className="mt-3 p-2 bg-red-100 rounded-md">
-                                                    <p className="text-sm font-medium text-red-800">
-                                                        ⚠️ Deviation: {result.error_percentage.toFixed(2)}%
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Feedback Section */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {/* Strengths */}
-                            {evaluation.strengths.length > 0 && evaluation.strengths[0] !== 'None identified' && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <TrendingUp className="w-5 h-5 text-green-600" />
-                                            Strengths
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2">
-                                            {evaluation.strengths.map((strength, i) => (
-                                                <li key={i} className="flex items-start gap-2">
-                                                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                                    <span className="text-sm">{strength.replace(/_/g, ' ')}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* Areas for Improvement */}
-                            {evaluation.areas_for_improvement.length > 0 && evaluation.areas_for_improvement[0] !== 'None - All correct!' && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <AlertCircle className="w-5 h-5 text-orange-600" />
-                                            Areas for Improvement
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2">
-                                            {evaluation.areas_for_improvement.map((area, i) => (
-                                                <li key={i} className="flex items-start gap-2">
-                                                    <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                                    <span className="text-sm">{area.replace(/_/g, ' ')}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Recommendations */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>📚 Study Recommendations</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2">
-                                    {evaluation.recommendations.map((rec, i) => (
-                                        <li key={i} className="flex items-start gap-2">
-                                            <span className="text-primary mt-0.5">•</span>
-                                            <span className="text-sm">{rec}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
+                        {/* Results Banner */}
+                        <div className="bg-[#F8FBFF] px-6 py-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                                    <Award className="w-5 h-5 text-blue-500" />
+                                    Evaluation Results
+                                </h3>
+                                <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Time taken: {formatTime(elapsedTime)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    {evaluation.correct_count === evaluation.total_questions ? (
+                                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                    ) : (
+                                        <AlertCircle className="w-5 h-5 text-red-500" />
+                                    )}
+                                    <span className="font-medium text-gray-900">{evaluation.correct_count} out of {evaluation.total_questions} questions correct</span>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-4xl font-bold text-[#2979FF]">{evaluation.score.toFixed(1)}%</div>
+                                <Badge className="bg-[#FF5252] hover:bg-[#FF5252] text-white mt-1">Grade: {evaluation.grade}</Badge>
+                            </div>
+                        </div>
 
-                        {/* Action Buttons */}
-                        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-                            <CardContent className="pt-6">
-                                <div className="text-center space-y-4">
-                                    <h3 className="text-lg font-semibold">
-                                        {assessmentId && roundSubmitted ? 'Round Complete!' : 'Ready for the Next Challenge?'}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {assessmentId && roundSubmitted
-                                            ? 'Your assessment has been recorded. You can practice more or return to the assessment.'
-                                            : 'Practice more problems to improve your quantity estimation skills'
-                                        }
-                                    </p>
-                                    <div className="flex gap-3 justify-center flex-wrap">
-                                        {assessmentId && roundSubmitted ? (
-                                            <>
-                                                <Button
-                                                    onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}
-                                                    size="lg"
-                                                    className="min-w-[200px]"
-                                                >
-                                                    Return to Assessment
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="lg"
-                                                    onClick={() => {
-                                                        setEvaluation(null)
-                                                        setProblem(null)
-                                                        setAnswers({})
-                                                        setRoundSubmitted(false)
-                                                        generateProblem()
-                                                    }}
-                                                >
-                                                    <Calculator className="mr-2 h-5 w-5" />
-                                                    Practice More
-                                                </Button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Button
-                                                    onClick={() => {
-                                                        setEvaluation(null)
-                                                        setProblem(null)
-                                                        setAnswers({})
-                                                        scrollToTop()
-                                                        if (assessmentId) generateProblem()
-                                                    }}
-                                                    size="lg"
-                                                    className="min-w-[200px] bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                                                >
-                                                    <Calculator className="mr-2 h-5 w-5" />
-                                                    Try Another One
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="lg"
-                                                    onClick={() => window.print()}
-                                                >
-                                                    Print Results
-                                                </Button>
-                                            </>
+                        {/* Feedback Box */}
+                        <div className="mx-6 mt-4 bg-[#FAFAFA] border border-gray-200 p-4 rounded-lg">
+                            <p className="text-gray-700 font-medium">{evaluation.overall_feedback}</p>
+                        </div>
+
+                        {/* Answer Breakdown */}
+                        <div className="p-6 pt-2">
+                            <h3 className="font-bold text-lg text-gray-900 mb-1">Answer Breakdown</h3>
+                            <p className="text-gray-500 text-sm mb-6">Compare your answers with the expected values</p>
+
+                            <div className="space-y-6">
+                                {evaluation.detailed_results.map((result, index) => (
+                                    <div key={result.item} className="bg-[#FFF5F2] border border-[#FFCCBC] rounded-lg p-4">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FF5252] text-white text-xs font-bold">
+                                                {index + 1}
+                                            </span>
+                                            <span className="font-semibold text-gray-900">{problem.required_calculations[index]?.label || result.item}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                            <div className="bg-white rounded border border-gray-200 p-3">
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1">YOUR ANSWER</span>
+                                                <span className="text-lg font-bold text-gray-900">{result.student_answer}</span>
+                                            </div>
+                                            <div className="bg-white rounded border border-gray-200 p-3">
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1">EXPECTED</span>
+                                                <span className="text-lg font-bold text-gray-900">{result.expected_answer}</span>
+                                            </div>
+                                        </div>
+
+                                        {!result.is_correct && (
+                                            <div className="bg-[#FFEBEE] rounded px-3 py-2 flex items-center gap-2">
+                                                <AlertCircle className="w-4 h-4 text-[#D32F2F]" />
+                                                <span className="text-[#D32F2F] font-medium text-sm">Deviation: {result.error_percentage.toFixed(2)}%</span>
+                                            </div>
                                         )}
                                     </div>
+                                ))}
+                            </div>
+
+                            {/* Improvement & Recommendations Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 border-t border-gray-200 pt-8">
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                        <div className="p-1 rounded-full border border-orange-400">
+                                            <AlertCircle className="w-4 h-4 text-orange-500" />
+                                        </div>
+                                        Areas for Improvement
+                                    </h4>
+                                    <ul className="space-y-2 pl-2">
+                                        {evaluation.areas_for_improvement.map((area, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#FF9800] mt-1.5 shrink-0"></div>
+                                                {area.replace(/_/g, ' ')}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                            </CardContent>
-                        </Card>
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                        <div className="p-1 rounded-full border border-gray-400 text-gray-400">
+                                            <span className="text-xs">Aa</span>
+                                        </div>
+                                        Study Recommendations
+                                    </h4>
+                                    <ul className="space-y-2 pl-2">
+                                        {evaluation.recommendations.map((rec, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 shrink-0"></div>
+                                                {rec}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Bottom CTA */}
+                            <div className="mt-12 text-center space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">Ready for the Next Challenge?</h3>
+                                    <p className="text-gray-500 text-sm">Practice more problems to improve your quantity estimation skills</p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <Button
+                                        onClick={() => {
+                                            setEvaluation(null)
+                                            setProblem(null)
+                                            setAnswers({})
+                                            scrollToTop()
+                                            if (assessmentId) generateProblem()
+                                        }}
+                                        className="bg-[#FF5722] hover:bg-[#F4511E] text-white px-8 py-2 h-auto"
+                                    >
+                                        <Calculator className="w-4 h-4 mr-2" />
+                                        Try Another One
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => window.print()}
+                                        className="bg-[#F5F5F5] border-gray-200 text-gray-700 hover:bg-gray-100 px-8 py-2 h-auto"
+                                    >
+                                        Print Results
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
         </div>
     )
 }
-

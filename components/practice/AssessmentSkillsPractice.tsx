@@ -34,7 +34,7 @@ interface Question {
     is_ai_generated: boolean;
 }
 
-export default function AssessmentSkillsPractice() {
+export default function AssessmentSkillsPractice({ onBack }: { onBack?: () => void }) {
     const [assessmentType, setAssessmentType] = useState<'aptitude' | 'soft_skills'>('aptitude');
     const [topic, setTopic] = useState<string>('');
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -712,8 +712,22 @@ export default function AssessmentSkillsPractice() {
         return (
             <div className="w-full max-w-7xl mx-auto p-4 md:p-8 space-y-8">
                 {/* Header */}
+                {/* Header */}
                 <div className="flex flex-col space-y-2">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI Assessment Practice</h1>
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI Assessment Practice</h1>
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="group flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700 hover:border-blue-400 hover:shadow-sm transition-all text-sm font-medium"
+                            >
+                                <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Back
+                            </button>
+                        )}
+                    </div>
                     <p className="text-gray-500 dark:text-gray-400">Configure your practice session with AI-curated questions</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">Last updated: {new Date().toLocaleDateString()}</p>
                 </div>

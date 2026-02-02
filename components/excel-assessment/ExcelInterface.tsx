@@ -7,13 +7,14 @@ import Handsontable from 'handsontable'
 import { HyperFormula } from 'hyperformula'
 import 'handsontable/dist/handsontable.full.min.css'
 import './HandsontableStyles.css'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  CheckCircle, AlertCircle, Sparkles, Save, 
-  RotateCcw, Download, Calculator, Table
+import {
+  CheckCircle, AlertCircle, Sparkles, Save,
+  RotateCcw, Download, Calculator, Table, Trophy, Loader as LoaderIcon
 } from 'lucide-react'
+import { Loader } from '@/components/ui/loader'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -52,7 +53,7 @@ export default function ExcelInterface({
     // Default 25 rows x 10 columns for accounting tasks
     return Array(25).fill(null).map(() => Array(10).fill(''))
   })
-  
+
   // Create HyperFormula instance for formula support
   const hyperformulaInstance = HyperFormula.buildEmpty({
     licenseKey: 'internal-use-in-handsontable'
@@ -66,12 +67,12 @@ export default function ExcelInterface({
     width: '100%',
     height: 600,
     licenseKey: 'non-commercial-and-evaluation',
-    
+
     // Formula support - KEY FEATURE for accounting
     formulas: {
       engine: hyperformulaInstance
     },
-    
+
     // Enable essential Excel-like features
     contextMenu: true,
     manualColumnResize: true,
@@ -79,12 +80,12 @@ export default function ExcelInterface({
     mergeCells: true,
     copyPaste: true,
     undo: true,
-    
+
     // Custom cell renderer for better formatting
-    cells: function(row, col) {
+    cells: function (row, col) {
       const cellProperties: any = {}
       const cellData = this.instance.getDataAtCell(row, col)
-      
+
       // Auto-format currency cells
       if (typeof cellData === 'number' && cellData > 1000) {
         cellProperties.type = 'numeric'
@@ -93,15 +94,15 @@ export default function ExcelInterface({
           culture: 'en-IN'
         }
       }
-      
+
       // Style header rows (first 5 rows) differently
       if (row < 3) {
         cellProperties.className = 'htCenter htMiddle header-cell'
       }
-      
+
       return cellProperties
     },
-    
+
     // Track changes
     afterChange: (changes, source) => {
       if (source !== 'loadData') {
@@ -109,22 +110,22 @@ export default function ExcelInterface({
         console.log('Data changed:', changes)
       }
     },
-    
+
     // Track cell selection
     afterSelection: (row, column, row2, column2) => {
       const colLetter = String.fromCharCode(65 + column)
       setSelectedCell(`${colLetter}${row + 1}`)
     },
-    
+
     // Prevent editing if submitted
     readOnly: isSubmitted,
-    
+
     // Column widths
     colWidths: [150, 120, 120, 120, 120, 100, 100, 100, 100, 100],
-    
+
     // Row heights
     rowHeights: 25,
-    
+
     // Allow overflow for long text
     className: 'htLeft htMiddle'
   }
@@ -139,7 +140,7 @@ export default function ExcelInterface({
 
       // Get all data from Handsontable
       const spreadsheetData = hot.getData()
-      
+
       // Extract formulas
       const formulas: string[] = []
       for (let row = 0; row < spreadsheetData.length; row++) {
@@ -154,7 +155,7 @@ export default function ExcelInterface({
       }
 
       // Count non-empty cells
-      const nonEmptyCells = spreadsheetData.flat().filter((cell: any) => 
+      const nonEmptyCells = spreadsheetData.flat().filter((cell: any) =>
         cell !== null && cell !== undefined && cell !== ''
       ).length
 
@@ -167,7 +168,7 @@ export default function ExcelInterface({
       }
 
       console.log('Submitting data:', submissionData)
-      
+
       await onSubmit(submissionData)
       setHasChanges(false)
       toast.success('Solution submitted successfully!')
@@ -232,92 +233,101 @@ export default function ExcelInterface({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Instructions */}
-      <Card className="border-l-4 border-l-blue-500">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-blue-600" />
-            Instructions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-            {instructions}
+    <div className="space-y-6">
+      {/* Top Section: Instructions & Formulas */}
+      {!isSubmitted && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Instructions - Left */}
+          <Card className="h-full border-l-4 border-l-blue-500 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+                Instructions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
+                {instructions}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Common Formulas - Right */}
+          <Card className="h-full border-l-4 border-l-green-500 shadow-sm bg-green-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-green-600" />
+                Common Formulas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3">
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm">
+                  <span className="text-sm font-medium text-gray-600">Sum Range</span>
+                  <code className="text-xs bg-gray-100 text-green-700 px-2 py-1 rounded border border-gray-200">=SUM(B2:B10)</code>
+                </div>
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm">
+                  <span className="text-sm font-medium text-gray-600">Average</span>
+                  <code className="text-xs bg-gray-100 text-green-700 px-2 py-1 rounded border border-gray-200">=AVERAGE(B2:B10)</code>
+                </div>
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm">
+                  <span className="text-sm font-medium text-gray-600">Subtract</span>
+                  <code className="text-xs bg-gray-100 text-green-700 px-2 py-1 rounded border border-gray-200">=B2-B3</code>
+                </div>
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm">
+                  <span className="text-sm font-medium text-gray-600">Percentage</span>
+                  <code className="text-xs bg-gray-100 text-green-700 px-2 py-1 rounded border border-gray-200">=B2*0.15</code>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Selected Cell Bar */}
+      {!isSubmitted && (
+        <div className="w-full bg-[#EBF5FF] border-2 border-dashed border-[#007AFF] rounded-xl p-4 flex items-center justify-between animate-in fade-in duration-500">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <Table className="w-5 h-5 text-[#007AFF]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-blue-500 font-bold uppercase tracking-wider">Active Selection</span>
+              <span className="text-lg font-bold text-gray-900">Selected Cell: {selectedCell}</span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-blue-600">
+            <Sparkles className="w-4 h-4" />
+            <span>AI Formula Assistant Active</span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       {!isSubmitted && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Selected Cell Info */}
-              <div className="flex items-center justify-between pb-2 border-b">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Table className="w-4 h-4" />
-                  <span className="font-semibold">Selected Cell:</span>
-                  <Badge variant="outline">{selectedCell}</Badge>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calculator className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-600">Formulas Supported: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">=SUM()</code> <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">=IF()</code> etc.</span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={saveProgress}
-                  className="flex items-center gap-1"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Progress
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadProgress}
-                  className="flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  Load Progress
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={downloadAsCSV}
-                  className="flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  Export CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetSheet}
-                  className="flex items-center gap-1 text-red-600"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset
-                </Button>
-              </div>
-
-              {/* Tips */}
-              <div className="text-xs text-gray-500 pt-2 border-t">
-                <strong>Tips:</strong> Use Excel formulas like <code>=SUM(B2:B5)</code>, <code>=B2*0.30</code>, <code>=B2-B3</code>. 
-                Right-click for more options. Press Tab to move between cells.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={saveProgress} className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300">
+            <Save className="w-4 h-4 mr-2" />
+            Save
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadProgress} className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300">
+            <Download className="w-4 h-4 mr-2" />
+            Load
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadAsCSV} className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300">
+            <Table className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <div className="flex-1"></div>
+          <Button variant="outline" size="sm" onClick={resetSheet} className="bg-white hover:bg-red-50 text-red-600 border-red-200 hover:border-red-300">
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset Sheet
+          </Button>
+        </div>
       )}
 
       {/* Handsontable Spreadsheet */}
-      <Card className="overflow-hidden shadow-lg">
+      <Card className="overflow-hidden shadow-lg border-2 border-gray-200 rounded-xl">
         <CardContent className="p-0">
           <div className="handsontable-container">
             <HotTable
@@ -334,103 +344,106 @@ export default function ExcelInterface({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+          <Card className="border-l-4 border-l-green-500 shadow-md">
+            <CardHeader className="bg-green-50/50">
+              <CardTitle className="text-lg flex items-center gap-2 text-green-700">
                 <CheckCircle className="w-6 h-6 text-green-600" />
                 Solution Evaluated
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-6 space-y-6">
               {/* Score */}
-              <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span className="text-lg font-semibold">Score:</span>
-                <Badge className="text-2xl px-4 py-2 bg-green-600">
-                  {evaluation.score}/10
-                </Badge>
-              </div>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Correctness
-                  </div>
-                  <div className="text-lg font-bold text-blue-600">
-                    {evaluation.correctness_score || 0}%
-                  </div>
+              <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                <div className="space-y-1 text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-gray-900">Assessment Score</h3>
+                  <p className="text-gray-500 text-sm">Based on correctness and efficiency</p>
                 </div>
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Formula Accuracy
-                  </div>
-                  <div className="text-lg font-bold text-purple-600">
-                    {evaluation.formula_accuracy || 0}%
-                  </div>
-                </div>
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Formatting
-                  </div>
-                  <div className="text-lg font-bold text-yellow-600">
-                    {evaluation.formatting_score || 0}%
-                  </div>
-                </div>
-                <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg text-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Efficiency
-                  </div>
-                  <div className="text-lg font-bold text-pink-600">
-                    {evaluation.efficiency_score || 0}%
-                  </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-green-600">{evaluation.score}</span>
+                  <span className="text-gray-400 font-medium">/10</span>
                 </div>
               </div>
 
-              {/* Feedback */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  AI Feedback
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {evaluation.feedback}
-                </p>
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Correctness', val: evaluation.correctness_score, color: 'blue' },
+                  { label: 'Formulas', val: evaluation.formula_accuracy, color: 'purple' },
+                  { label: 'Formatting', val: evaluation.formatting_score, color: 'yellow' },
+                  { label: 'Efficiency', val: evaluation.efficiency_score, color: 'pink' }
+                ].map((stat, i) => (
+                  <div key={i} className={`p-4 rounded-xl text-center border ${stat.color === 'blue' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                      stat.color === 'purple' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                        stat.color === 'yellow' ? 'bg-yellow-50 border-yellow-100 text-yellow-700' :
+                          'bg-pink-50 border-pink-100 text-pink-700'
+                    }`}>
+                    <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">
+                      {stat.label}
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {stat.val || 0}%
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Mistakes */}
-              {evaluation.mistakes && evaluation.mistakes.length > 0 && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <h4 className="font-semibold mb-2 text-red-600">Mistakes Found:</h4>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
-                    {evaluation.mistakes.map((mistake: string, idx: number) => (
-                      <li key={idx}>{mistake}</li>
-                    ))}
-                  </ul>
+              {/* Feedback Section */}
+              <div className="space-y-4">
+                <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
+                  <h4 className="font-bold flex items-center gap-2 text-blue-800 mb-2">
+                    <Sparkles className="w-4 h-4" />
+                    AI Feedback
+                  </h4>
+                  <p className="text-blue-900/80 leading-relaxed">
+                    {evaluation.feedback}
+                  </p>
                 </div>
-              )}
 
-              {/* Suggestions */}
-              {evaluation.suggestions && evaluation.suggestions.length > 0 && (
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <h4 className="font-semibold mb-2 text-green-600">Suggestions:</h4>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
-                    {evaluation.suggestions.map((suggestion: string, idx: number) => (
-                      <li key={idx}>{suggestion}</li>
-                    ))}
-                  </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {evaluation.mistakes?.length > 0 && (
+                    <div className="p-5 bg-red-50 rounded-xl border border-red-100">
+                      <h4 className="font-bold flex items-center gap-2 text-red-800 mb-3">
+                        <AlertCircle className="w-4 h-4" />
+                        Mistakes Found
+                      </h4>
+                      <ul className="space-y-2">
+                        {evaluation.mistakes.map((m: string, i: number) => (
+                          <li key={i} className="flex gap-2 text-sm text-red-700/90">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></span>
+                            {m}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {evaluation.suggestions?.length > 0 && (
+                    <div className="p-5 bg-green-50 rounded-xl border border-green-100">
+                      <h4 className="font-bold flex items-center gap-2 text-green-800 mb-3">
+                        <Trophy className="w-4 h-4" />
+                        Suggestions
+                      </h4>
+                      <ul className="space-y-2">
+                        {evaluation.suggestions.map((s: string, i: number) => (
+                          <li key={i} className="flex gap-2 text-sm text-green-700/90">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0"></span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Try Again Button */}
-              <div className="pt-4">
+              <div className="pt-4 flex justify-center">
                 <Button
                   onClick={() => window.location.href = '/dashboard/student/excel-assessment'}
                   size="lg"
-                  variant="outline"
-                  className="w-full text-lg h-12"
+                  className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:px-8 transition-all"
                 >
-                  <RotateCcw className="w-5 h-5 mr-2" />
-                  Try Again - New Assessment
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Start New Practice Session
                 </Button>
               </div>
             </CardContent>
@@ -440,45 +453,26 @@ export default function ExcelInterface({
         <Button
           onClick={handleSubmit}
           disabled={submitting}
-          size="lg"
-          className="w-full bg-green-600 hover:bg-green-700 text-lg h-14"
+          className="w-full bg-[#00A76F] hover:bg-[#008f5d] text-white text-lg font-bold py-8 rounded-xl shadow-lg shadow-green-200 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3"
         >
           {submitting ? (
             <>
-              <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-              Submitting & Evaluating with AI...
+              <Loader className="w-6 h-6 animate-spin" />
+              Evaluating Solution with AI...
             </>
           ) : (
             <>
-              <Sparkles className="w-5 h-5 mr-2" />
-              Submit Solution for AI Evaluation
+              <span className="text-xl">Submit Solution for AI Evaluation</span>
+              <Sparkles className="w-6 h-6" />
             </>
           )}
         </Button>
       )}
 
       {hasChanges && !isSubmitted && (
-        <div className="text-sm text-yellow-600 dark:text-yellow-400 text-center">
-          ⚠️ You have unsaved changes
+        <div className="text-center animate-pulse text-yellow-600 text-sm font-medium">
+          ⚠️ You have unsaved changes in the spreadsheet
         </div>
-      )}
-
-      {/* Formula Help */}
-      {!isSubmitted && (
-        <Card className="bg-blue-50 dark:bg-blue-900/10">
-          <CardContent className="p-4">
-            <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
-              <Calculator className="w-4 h-4" />
-              Common Formulas for P&L Statement:
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-700 dark:text-gray-300">
-              <div><code className="bg-white px-2 py-1 rounded">=B6-B7</code> Gross Profit</div>
-              <div><code className="bg-white px-2 py-1 rounded">=B8/B6*100</code> Gross Margin %</div>
-              <div><code className="bg-white px-2 py-1 rounded">=B10*0.30</code> Tax Calculation</div>
-              <div><code className="bg-white px-2 py-1 rounded">=SUM(B2:B5)</code> Sum Range</div>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   )

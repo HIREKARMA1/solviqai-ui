@@ -32,7 +32,7 @@ interface SpeechRecognition extends EventTarget {
   onend: () => void;
 }
 
-export default function InterviewPractice() {
+export default function InterviewPractice({ onBack }: { onBack?: () => void }) {
   const [mode, setMode] = useState<'technical' | 'hr'>('technical');
   const [jobRole, setJobRole] = useState<string>('');
   const [topic, setTopic] = useState<string>('');
@@ -278,210 +278,289 @@ export default function InterviewPractice() {
   // Initial form when there are no questions yet
   if (questions.length === 0) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-6 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl shadow-xl border border-blue-100/50">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-8 space-y-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse shadow-lg shadow-blue-500/50"></div>
-            <h2 className="text-3xl font-bold">
-              <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">AI-Powered</span>{' '}
-              <span className="text-blue-400">Interview Practice</span>
-            </h2>
+        {/* Header */}
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI-Powered Interview Practice</h1>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="group flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700 hover:border-blue-400 hover:shadow-sm transition-all text-sm font-medium"
+              >
+                <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            )}
           </div>
-          <p className="text-gray-600">Practice mock interviews with AI-generated questions</p>
+          <p className="text-gray-500 dark:text-gray-400">Practice mock interviews with AI-generated questions tailored to your role</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Last updated: {new Date().toLocaleDateString()}</p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-            <p className="text-red-800 font-medium">{error}</p>
-          </div>
-        )}
-
-        <div className="space-y-6">
-          {/* Interview Type with Sliding Indicator */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-              Interview Type
-            </label>
-            <div className="relative flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
-              {/* Sliding Background Indicator */}
-              <div
-                className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 shadow-lg transition-all duration-500 ease-out z-0"
-                style={{
-                  width: 'calc(50% - 8px)',
-                  left: mode === 'technical' ? '4px' : 'calc(50% + 4px)',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
-                }}
-              ></div>
-              <button
-                onClick={() => setMode('technical')}
-                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${mode === 'technical'
-                  ? 'text-white scale-105 shadow-md'
-                  : 'text-gray-700 hover:scale-[1.02]'
-                  }`}
-              >
-                Technical Interview
-              </button>
-              <button
-                onClick={() => setMode('hr')}
-                className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${mode === 'hr'
-                  ? 'text-white scale-105 shadow-md'
-                  : 'text-gray-700 hover:scale-[1.02]'
-                  }`}
-              >
-                HR Interview
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-                Target Job Role <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={jobRole}
-                onChange={(e) => setJobRole(e.target.value)}
-                disabled={loading}
-                placeholder={mode === 'technical' ? 'e.g., Software Engineer, Backend Developer, Data Engineer' : 'e.g., Software Engineer, Product Manager, HR Generalist'}
-                required
-                className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm text-gray-900 ${!jobRole.trim() ? 'border-red-300 bg-red-50/50' : 'border-gray-200'}`}
-              />
-              {!jobRole.trim() && (
-                <p className="mt-1 text-xs text-red-600">Job role is required to generate relevant questions</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-                Topic (optional)
-              </label>
-              <input
-                type="text"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                disabled={loading}
-                placeholder={mode === 'technical' ? 'e.g., Data Structures, System Design' : 'e.g., Teamwork, Strengths/Weaknesses'}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
-              />
-            </div>
-          </div>
-
-          {/* Difficulty Level with Sliding Indicator */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-              Difficulty Level
-            </label>
-            <div className="relative flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
-              {/* Sliding Background Indicator */}
-              <div
-                className="absolute top-1 bottom-1 rounded-lg shadow-lg transition-all duration-500 ease-out z-0"
-                style={{
-                  width: 'calc(33.333% - 8px)',
-                  left: difficulty === 'easy'
-                    ? '4px'
-                    : difficulty === 'medium'
-                      ? 'calc(33.333% + 4px)'
-                      : 'calc(66.666% + 4px)',
-                  background: difficulty === 'easy'
-                    ? 'linear-gradient(to right, #3b82f6, #2563eb)'
-                    : difficulty === 'medium'
-                      ? 'linear-gradient(to right, #10b981, #059669)'
-                      : 'linear-gradient(to right, #1f2937, #111827)',
-                  boxShadow: difficulty === 'easy'
-                    ? '0 4px 12px rgba(37, 99, 235, 0.4)'
-                    : difficulty === 'medium'
-                      ? '0 4px 12px rgba(16, 185, 129, 0.4)'
-                      : '0 4px 12px rgba(31, 41, 55, 0.4)',
-                }}
-              ></div>
-              {(['easy', 'medium', 'hard'] as const).map((level) => {
-                const isSelected = difficulty === level;
-                const colors = {
-                  easy: isSelected ? 'text-white' : 'text-green-600',
-                  medium: isSelected ? 'text-white' : 'text-orange-600',
-                  hard: isSelected ? 'text-white' : 'text-gray-700',
-                };
-                return (
-                  <button
-                    key={level}
-                    onClick={() => setDifficulty(level)}
-                    className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize ${isSelected
-                      ? 'scale-105 shadow-md'
-                      : 'hover:scale-[1.02]'
-                      } ${colors[level]}`}
-                  >
-                    {level}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Number of Questions */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
-              Number of Questions
-            </label>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500 font-medium">3 questions</span>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
-                  {limit}
-                </span>
-                <span className="text-xs text-gray-500 font-medium">20 questions</span>
+        {/* Top Stats/Selection Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Technical Interview Card */}
+          <button
+            onClick={() => setMode('technical')}
+            className={`p-6 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden group ${mode === 'technical'
+              ? 'bg-[#E8F2FF] border-blue-200 dark:bg-blue-900/40 dark:border-blue-700 shadow-md transform scale-[1.02]'
+              : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-[#E8F2FF] dark:hover:bg-blue-900/30 hover:border-blue-100 hover:shadow-sm'
+              }`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Interview Type</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Technical</h3>
               </div>
-              <input
-                type="range"
-                min="3"
-                max="20"
-                value={limit}
-                onChange={(e) => setLimit(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              <div className={`p-3 rounded-xl ${mode === 'technical' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-500 dark:bg-blue-800 dark:text-blue-200'}`}>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${mode === 'technical' ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {mode === 'technical' ? 'Selected' : 'Click to select'}
+              </span>
+            </div>
+          </button>
+
+          {/* HR Interview Card */}
+          <button
+            onClick={() => setMode('hr')}
+            className={`p-6 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden group ${mode === 'hr'
+              ? 'bg-[#F4EBF7] border-purple-200 dark:bg-purple-900/40 dark:border-purple-700 shadow-md transform scale-[1.02]'
+              : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-[#F4EBF7] dark:hover:bg-purple-900/30 hover:border-purple-100 hover:shadow-sm'
+              }`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Interview Type</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">HR Round</h3>
+              </div>
+              <div className={`p-3 rounded-xl ${mode === 'hr' ? 'bg-purple-500 text-white' : 'bg-purple-100 text-purple-500 dark:bg-purple-800 dark:text-purple-200'}`}>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${mode === 'hr' ? 'text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {mode === 'hr' ? 'Selected' : 'Click to select'}
+              </span>
+            </div>
+          </button>
+
+          {/* Difficulty Stats Card */}
+          <div className="p-6 rounded-2xl border border-gray-100 dark:border-gray-700 bg-[#FCE8EF] dark:bg-pink-900/30 relative overflow-hidden">
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-300">Selected Difficulty</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{difficulty}</h3>
+              </div>
+              <div className="p-3 rounded-xl bg-pink-100 dark:bg-pink-800 text-pink-500 dark:text-pink-200">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="w-full bg-pink-200 dark:bg-pink-800 h-1.5 mt-2">
+              <div
+                className="bg-pink-500 h-1.5 rounded-full transition-all duration-300"
                 style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+                  width: difficulty === 'easy' ? '33%' : difficulty === 'medium' ? '66%' : '100%'
                 }}
               />
+            </div>
+            <p className="text-xs text-pink-600 dark:text-pink-300 mt-2 font-medium">Readiness Level</p>
+          </div>
+
+          {/* Question Count Stats Card */}
+          <div className="p-6 rounded-2xl border border-gray-100 dark:border-gray-700 bg-[#FFF9E6] dark:bg-yellow-900/30 relative overflow-hidden">
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-300">Questions</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{limit}</h3>
+              </div>
+              <div className="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-200">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">~{Math.round(limit * 2.5)} mins</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">estimated time</span>
             </div>
           </div>
         </div>
 
-        <button
-          onClick={fetchQuestions}
-          disabled={loading}
-          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
-            }`}
-        >
-          {loading ? (
-            <>
-              <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-              <span>Loading Questions... (may take 10-20s)</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <span>Start Practice</span>
-            </>
-          )}
-        </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Configuration Card */}
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Session Configuration</h2>
+            </div>
 
-        {!loading && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-800">
-              Questions are generated using AI and cached per topic and difficulty.
-            </p>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <p className="text-red-800 font-medium">{error}</p>
+              </div>
+            )}
+
+            {/* Job Role Input (Critical for Interview) */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Job Role <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={jobRole}
+                  onChange={(e) => setJobRole(e.target.value)}
+                  placeholder={mode === 'technical' ? "e.g., Software Engineer, Data Scientist, Product Manager..." : "e.g., HR Generalist, Project Manager..."}
+                  className={`w-full p-4 border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all bg-gray-50/50 dark:bg-gray-700/50 dark:text-white ${!jobRole.trim() && error ? 'border-red-300 bg-red-50' : 'border-gray-100 dark:border-gray-700'}`}
+                />
+                {!jobRole.trim() && (
+                  <div className="absolute right-4 top-4 text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded">Required</div>
+                )}
+              </div>
+            </div>
+
+            {/* Difficulty Selection */}
+            <div className="mb-8">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Select Difficulty Level</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {(['easy', 'medium', 'hard'] as const).map((level) => {
+                  const isSelected = difficulty === level;
+                  const colors = {
+                    easy: {
+                      bg: 'bg-[#E6F7ED] dark:bg-green-900/20',
+                      border: 'border-green-200 dark:border-green-800',
+                      text: 'text-green-700 dark:text-green-400',
+                      active: 'ring-2 ring-green-500'
+                    },
+                    medium: {
+                      bg: 'bg-[#FFF4E6] dark:bg-orange-900/20',
+                      border: 'border-orange-200 dark:border-orange-800',
+                      text: 'text-orange-700 dark:text-orange-400',
+                      active: 'ring-2 ring-orange-500'
+                    },
+                    hard: {
+                      bg: 'bg-[#E6F0FF] dark:bg-blue-900/20',
+                      border: 'border-blue-200 dark:border-blue-800',
+                      text: 'text-blue-700 dark:text-blue-400',
+                      active: 'ring-2 ring-blue-500'
+                    }
+                  };
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => setDifficulty(level)}
+                      className={`p-4 rounded-xl border transition-all text-left ${colors[level].bg} ${colors[level].border} ${isSelected ? colors[level].active : 'hover:shadow-md'
+                        }`}
+                    >
+                      <div className={`font-bold capitalize mb-1 ${colors[level].text}`}>{level}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {level === 'easy' ? 'For beginners' : level === 'medium' ? 'Standard practice' : 'Challenge yourself'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Topic Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Topic Focus (Optional)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder={mode === 'technical' ? "e.g., 'System Design', 'React Basics'..." : "e.g., 'Conflict Resolution', 'Leadership'..."}
+                  className="w-full p-4 border-2 border-gray-100 dark:border-gray-700 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all bg-gray-50/50 dark:bg-gray-700/50 dark:text-white"
+                />
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Right Column - Slider & Action */}
+          <div className="space-y-6">
+            {/* Questions Slider Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg text-yellow-600 dark:text-yellow-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Question Limit</h2>
+              </div>
+
+              <div className="mb-8 px-2">
+                <input
+                  type="range"
+                  min="3"
+                  max="20"
+                  value={limit}
+                  onChange={(e) => setLimit(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+                  }}
+                />
+                <div className="flex justify-between mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <span>3 Qs</span>
+                  <span>10 Qs</span>
+                  <span>20 Qs</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-300 font-medium">Total Questions</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">{limit}</span>
+              </div>
+            </div>
+
+            {/* Start Button */}
+            <button
+              onClick={fetchQuestions}
+              disabled={loading}
+              className={`w-full py-5 rounded-2xl font-bold text-lg text-white transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1 ${loading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  <span>Generating Questions...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <span>Start Interview</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
+              )}
+            </button>
+
+            {!loading && (
+              <p className="text-xs text-center text-gray-400 dark:text-gray-500">
+                AI generates unique questions based on your profile for each session.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
