@@ -45,7 +45,7 @@ export default function LoginPage() {
     } catch (err: any) {
       const errorMsg = getErrorMessage(err, '');
       if (errorMsg) errors.push(errorMsg);
-      
+
       // If student login fails, try other user types
       try {
         await login(email, password, 'college');
@@ -54,7 +54,7 @@ export default function LoginPage() {
       } catch (err2: any) {
         const errorMsg2 = getErrorMessage(err2, '');
         if (errorMsg2) errors.push(errorMsg2);
-        
+
         try {
           await login(email, password, 'admin');
           router.push('/dashboard/admin');
@@ -70,17 +70,17 @@ export default function LoginPage() {
 
     // Determine the most relevant error message
     // Prioritize password errors over "user not found" errors
-    const passwordError = errors.find(err => 
-      err.toLowerCase().includes('password') || 
+    const passwordError = errors.find(err =>
+      err.toLowerCase().includes('password') ||
       err.toLowerCase().includes('incorrect password') ||
       err.toLowerCase().includes('invalid password')
     );
-    
-    const alreadyLoggedInError = errors.find(err => 
+
+    const alreadyLoggedInError = errors.find(err =>
       err.toLowerCase().includes('already logged in')
     );
-    
-    const inactiveError = errors.find(err => 
+
+    const inactiveError = errors.find(err =>
       err.toLowerCase().includes('inactive')
     );
 
@@ -105,12 +105,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 -z-10">
-        <AnimatedBackground variant="default" showGrid={true} showLines={true} />
-      </div>
-
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-white dark:bg-[#0f172a]">
       {/* Navbar */}
       <LandingNavbar />
 
@@ -120,163 +115,119 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-[519px]"
         >
-          {/* Glassmorphism Card */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-white/60 dark:from-gray-900/80 dark:to-gray-800/60 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-gray-700/30 shadow-2xl" />
+          {/* Card Container */}
+          <div
+            className="w-full bg-white dark:bg-[#1C2938] rounded-lg border border-[#AEAEAE] dark:border-[#757575] p-[24px]"
+            style={{
+              boxShadow: '2px -2px 4px 0px rgba(0, 0, 0, 0.25), -2px 2px 4px 0px rgba(0, 0, 0, 0.25)'
+            }}
+          >
+            {/* Header */}
+            <div className="text-center mb-6 space-y-2">
+              <h1 className="text-[32px] font-semibold text-black dark:text-white leading-[24px] mb-2 font-['Poppins']">
+                Welcome back
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Login to your account to continue your journey
+              </p>
+            </div>
 
-            <div className="relative p-8 md:p-10">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <motion.h1
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent mb-2"
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-[24px]">
+              {/* Email Field */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="email"
+                  className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
-                  {t('auth.login.title')}
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-gray-600 dark:text-gray-400 mt-2"
-                >
-                  {t('auth.login.subtitle')}
-                </motion.p>
+                  <Mail className="w-4 h-4" />
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  disabled={loading}
+                />
               </div>
 
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400"
+              {/* Password Field */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
-                  {error}
-                </motion.div>
-              )}
+                  <Lock className="w-4 h-4" />
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  disabled={loading}
+                />
+              </div>
 
-              {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Email Field */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-2"
+              {/* Forgot Password */}
+              <div className="flex justify-end -mt-2">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-semibold text-black dark:text-white hover:underline"
                 >
-                  <label
-                    htmlFor="email"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {t('auth.login.email')}
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12 bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:border-primary-500 dark:focus:border-primary-400"
-                    disabled={loading}
-                  />
-                </motion.div>
+                  Forgot Password?
+                </Link>
+              </div>
 
-                {/* Password Field */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="space-y-2"
-                >
-                  <label
-                    htmlFor="password"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                  >
-                    <Lock className="w-4 h-4" />
-                    {t('auth.login.password')}
-                  </label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12 bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:border-primary-500 dark:focus:border-primary-400"
-                    disabled={loading}
-                  />
-                </motion.div>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="w-full h-[50px] text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-[8px] transition-all duration-200"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader size="sm" />
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Login
+                    <ArrowRight className="w-5 h-5" />
+                  </span>
+                )}
+              </Button>
 
-                {/* Forgot Password */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="flex justify-end"
-                >
+              {/* Signup Link */}
+              <div className="text-center">
+                <p className="text-sm text-black dark:text-white font-medium">
+                  Need an account?{' '}
                   <Link
-                    href="/auth/forgot-password"
-                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                    href="/auth/register"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    Forgot Password?
+                    Signup
                   </Link>
-                </motion.div>
-
-                {/* Submit Button */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <Loader size="sm" />
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        {t('auth.login.submit')}
-                        <ArrowRight className="w-4 h-4" />
-                      </span>
-                    )}
-                  </Button>
-                </motion.div>
-
-                {/* Contact for Account */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.7 }}
-                  className="text-center pt-4"
-                >
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Need an account?{' '}
-                    {/* <a
-                      href="https://www.hirekarma.in/contact"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-600 dark:text-primary-400 hover:underline font-medium inline-flex items-center gap-1"
-                    >
-                      <MailIcon className="w-3 h-3" />
-                      Contact Us
-                    </a> */}
-                    <Link
-                      href="/auth/register"
-                      className="text-primary-600 dark:text-primary-400 hover:underline font-medium inline-flex items-center gap-1"
-                    >
-                      Signup
-                    </Link>
-                  </p>
-                </motion.div>
-              </form>
-            </div>
+                </p>
+              </div>
+            </form>
           </div>
         </motion.div>
       </main>
