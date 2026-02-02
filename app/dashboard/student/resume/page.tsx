@@ -1,44 +1,30 @@
-// app/dashboard/student/resume/page.tsx
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { 
-    Upload, 
-    FileText, 
-    CheckCircle, 
-    AlertCircle, 
+import {
+    Upload,
+    FileText,
+    CheckCircle,
+    AlertCircle,
     X,
     BarChart,
     TrendingUp,
-    Download,
     RefreshCw,
-    Zap,
-    BarChart3,
-    Home,
-    User,
-    Briefcase
+    Download,
+    File
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
 import { AxiosError } from 'axios'
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
-
-const sidebarItems = [
-    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
-    { name: 'Profile', href: '/dashboard/student/profile', icon: User },
-    { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
-    { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
-    { name: 'Auto Job Apply', href: '/dashboard/student/auto-apply', icon: Zap },
-    { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
-]
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -77,34 +63,34 @@ export default function ResumePage() {
     const [uploadSuccess, setUploadSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [dragActive, setDragActive] = useState(false)
-    
+
     // ATS Score states
     const [atsScore, setAtsScore] = useState<ATSScore | null>(null)
     const [isCalculatingATS, setIsCalculatingATS] = useState(false)
     const [jobDescription, setJobDescription] = useState('')
-    
-    // ✅ NEW: Resume status
+
+    // Resume status
     const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null)
     const [loadingStatus, setLoadingStatus] = useState(true)
     const [showUploadSection, setShowUploadSection] = useState(false)
-    
+
     // Subscription modal state
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
     const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // ✅ NEW: Fetch resume status on mount
+    // Fetch resume status on mount
     useEffect(() => {
         fetchResumeStatus()
     }, [])
 
-    // ✅ NEW: Fetch existing resume status
+    // Fetch existing resume status
     const fetchResumeStatus = async () => {
         try {
             const status = await apiClient.getResumeStatus()
             setResumeStatus(status)
-            
+
             // If no resume exists, show upload section
             if (!status.data.has_resume) {
                 setShowUploadSection(true)
@@ -121,27 +107,27 @@ export default function ResumePage() {
         if (file.size > MAX_FILE_SIZE) {
             return `File size exceeds 5MB limit. Your file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
         }
-        
+
         const extension = file.name.split('.').pop()?.toLowerCase()
         if (!extension || !ALLOWED_EXTENSIONS.includes(`.${extension}`)) {
             return 'Only PDF and DOCX files are allowed'
         }
-        
+
         if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
             return 'Invalid file type. Only PDF and DOCX files are supported'
         }
-        
+
         return null
     }
 
     const handleFileSelect = (selectedFile: File) => {
         const validationError = validateFile(selectedFile)
-        
+
         if (validationError) {
             setError(validationError)
             return
         }
-        
+
         setFile(selectedFile)
         setError(null)
         setUploadSuccess(false)
@@ -163,7 +149,7 @@ export default function ResumePage() {
         e.preventDefault()
         e.stopPropagation()
         setDragActive(false)
-        
+
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFileSelect(e.dataTransfer.files[0])
         }
@@ -177,26 +163,26 @@ export default function ResumePage() {
 
     const handleUpload = async () => {
         if (!file) return
-        
+
         setIsUploading(true)
         setError(null)
         setUploadProgress(0)
-        
+
         try {
             await apiClient.uploadResume(file, (progress) => {
                 setUploadProgress(progress)
             })
-            
+
             setUploadSuccess(true)
             setUploadProgress(100)
-            
-            // ✅ Refresh resume status after upload
+
+            // Refresh resume status after upload
             await fetchResumeStatus()
             setShowUploadSection(false)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to upload resume'
-            
+
             // Check if it's a subscription error
             if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
                 setSubscriptionFeature('resume uploads')
@@ -213,14 +199,14 @@ export default function ResumePage() {
     const handleCalculateATS = async () => {
         setIsCalculatingATS(true)
         setError(null)
-        
+
         try {
             const result = await apiClient.getATSScore(jobDescription || undefined)
             setAtsScore(result)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to calculate ATS score'
-            
+
             // Check if it's a subscription error
             if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
                 setSubscriptionFeature('ATS score calculation')
@@ -254,37 +240,27 @@ export default function ResumePage() {
     // Extract readable filename from stored resume filename
     const getReadableFilename = (filename: string | undefined): string => {
         if (!filename) return 'Resume.pdf'
-        
-        // If filename contains an underscore, check if first part is a UUID
-        // This handles cases like "uuid_original_filename.pdf" or "d37587a3-4e85-4860-83e6-c2854f19_Management_RHealthcare.pdf"
+
         if (filename.includes('_')) {
             const parts = filename.split('_')
             const firstPart = parts[0]
-            
-            // Check if first part looks like a UUID (contains hyphens and is 30+ chars)
-            // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
             if (firstPart.includes('-') && firstPart.length >= 30) {
-                // It's likely a UUID prefix, return everything after the first underscore
                 const readableName = parts.slice(1).join('_')
-                // If we got a valid name, return it; otherwise fall through
                 if (readableName && readableName.length > 0) {
                     return readableName
                 }
             }
         }
-        
-        // If it's just a UUID without extension, return a default name
-        // Check if it looks like a UUID (contains hyphens, is long, and has no file extension)
+
         if (filename.includes('-') && filename.length > 30 && !filename.includes('.')) {
             return 'Resume.pdf'
         }
-        
-        // If filename doesn't have an extension, add .pdf
+
         if (!filename.includes('.')) {
             return filename + '.pdf'
         }
-        
-        // Otherwise return the filename as is
+
         return filename
     }
 
@@ -300,339 +276,317 @@ export default function ResumePage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-1 sm:pt-6 lg:pt-0">
+            <div className="space-y-8 px-4 md:px-8 py-8 md:py-12 max-w-[1400px] mx-auto font-sans">
                 {/* Header */}
-                <div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Resume Management</h1>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                        Upload your resume and get instant ATS score analysis
+                <div className="flex flex-col gap-2 mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                        Resume Management
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400">
+                        Upload your resume and get instant ATS score Analysis
                     </p>
                 </div>
 
-                {/* ✅ NEW: Existing Resume Card */}
-                {resumeStatus?.has_resume && !showUploadSection && (
+                {/* Existing Resume Section */}
+                {!showUploadSection && resumeStatus?.has_resume && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4 }}
+                        className="space-y-6"
                     >
-                        <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-green-950 dark:via-gray-900 dark:to-emerald-950 shadow-lg group">
-                            {/* Decorative shapes */}
-                            <div className="absolute -top-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-green-200/30 to-emerald-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            <div className="absolute -bottom-8 -left-8 w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-teal-200/25 to-cyan-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
-                            <CardHeader className="relative z-10 border-b border-green-200 dark:border-green-700 p-4 sm:p-6">
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 shadow-md flex-shrink-0">
-                                            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        {/* Resume Active Status Board */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-50 dark:bg-[#1C2938] rounded-lg border border-blue-100 dark:border-blue-900">
+                                        <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Resume Uploaded</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">your resume is ready for ATS analysis</p>
+                                    </div>
+                                </div>
+                                <Badge className="bg-[#10B981] hover:bg-[#059669] text-white px-4 py-1.5 rounded-full text-sm font-medium border-0 shadow-lg shadow-green-500/20">
+                                    Active
+                                </Badge>
+                            </div>
+
+                            {/* Resume File Banner (Frame 74) */}
+                            <div className="w-full bg-[#DCFCE9] dark:bg-[#1C2938] dark:border dark:border-green-800/50 rounded-[16px] px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-4 w-full overflow-hidden">
+                                    <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-white/50 dark:bg-white/5 rounded-full">
+                                        <FileText className="h-6 w-6 text-[#10B981] dark:text-green-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-gray-900 dark:text-white truncate">
+                                            {getReadableFilename(resumeStatus.resume_filename)}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            Uploaded {resumeStatus.uploaded_at ? new Date(resumeStatus.uploaded_at).toLocaleDateString() : 'Unknown date'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={() => setShowUploadSection(true)}
+                                    variant="outline"
+                                    className="rounded-full bg-white dark:bg-transparent border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-medium px-6 h-[40px] shadow-sm"
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Replace
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* ATS Analysis Section (Frame 2087328509) */}
+                        <div className="bg-[#F1FEFF] dark:bg-[#1C2938] rounded-[16px] p-6 md:p-8 space-y-6 shadow-sm dark:shadow-none dark:border dark:border-[#292929]">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                    <BarChart className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">ATS Score Analysis</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Get detailed ATS score and recommendations powered by AI</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Job Description (Optional)</label>
+                                    <span className="text-xs px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-gray-600 dark:text-gray-300 shadow-sm">
+                                        Better Matching
+                                    </span>
+                                </div>
+                                <Textarea
+                                    value={jobDescription}
+                                    onChange={(e) => setJobDescription(e.target.value)}
+                                    placeholder="paste the job description here to get tailored ATS ..."
+                                    className="min-h-[140px] rounded-[16px] border-[0.5px] border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-[#020817] text-gray-900 dark:text-gray-100 resize-none p-4 text-sm"
+                                    disabled={isCalculatingATS}
+                                />
+                            </div>
+
+                            <Button
+                                onClick={handleCalculateATS}
+                                disabled={isCalculatingATS}
+                                className="w-full h-[50px] bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-[10px] font-semibold text-lg shadow-md transition-all border-0"
+                            >
+                                {isCalculatingATS ? (
+                                    <div className="flex items-center gap-2">
+                                        <Loader className="h-5 w-5 animate-spin" />
+                                        Analyzing Resume...
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp className="h-5 w-5" />
+                                        Calculate ATS Score
+                                    </div>
+                                )}
+                            </Button>
+
+                            {/* Results Display */}
+                            <div className="bg-white dark:bg-[#020817] rounded-[20px] border border-gray-200 dark:border-[#292929] p-8 flex flex-col items-center justify-center text-center shadow-sm">
+                                {atsScore ? (
+                                    <div className="space-y-4 w-full">
+                                        <p className="text-sm uppercase tracking-widest font-bold text-gray-500 dark:text-gray-400">YOUR ATS SCORE</p>
+                                        <div className="flex items-baseline justify-center gap-1">
+                                            <span className={`text-8xl font-bold ${getScoreColor(atsScore.ats_score)}`}>{atsScore.ats_score}</span>
+                                            <span className="text-2xl text-gray-400 font-medium">/100</span>
                                         </div>
-                                        <div>
-                                            <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold">Resume Uploaded</CardTitle>
-                                            <CardDescription className="mt-1 text-xs sm:text-sm">Your resume is ready for ATS analysis</CardDescription>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Powered by Cohere command -A</p>
+
+                                        {/* Detailed breakdown can go here if needed, keeping it clean for now per screenshot */}
+                                        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-left w-full border-t border-gray-100 dark:border-gray-800 pt-8">
+                                            <div className="p-4 bg-gray-50 dark:bg-[#1C2938]/50 rounded-xl border border-transparent dark:border-[#292929]">
+                                                <h4 className="font-semibold mb-2 flex items-center gap-2 text-gray-900 dark:text-white"><div className="w-2 h-2 rounded-full bg-green-500" /> Strengths</h4>
+                                                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                                    {atsScore.strengths.slice(0, 3).map((s, i) => <li key={i} className="line-clamp-1">• {s}</li>)}
+                                                </ul>
+                                            </div>
+                                            <div className="p-4 bg-gray-50 dark:bg-[#1C2938]/50 rounded-xl border border-transparent dark:border-[#292929]">
+                                                <h4 className="font-semibold mb-2 flex items-center gap-2 text-gray-900 dark:text-white"><div className="w-2 h-2 rounded-full bg-red-500" /> Weaknesses</h4>
+                                                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                                    {atsScore.weaknesses.slice(0, 3).map((s, i) => <li key={i} className="line-clamp-1">• {s}</li>)}
+                                                </ul>
+                                            </div>
+                                            <div className="p-4 bg-gray-50 dark:bg-[#1C2938]/50 rounded-xl border border-transparent dark:border-[#292929]">
+                                                <h4 className="font-semibold mb-2 flex items-center gap-2 text-gray-900 dark:text-white"><div className="w-2 h-2 rounded-full bg-blue-500" /> Suggestions</h4>
+                                                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                                    {atsScore.recommendations.slice(0, 3).map((s, i) => <li key={i} className="line-clamp-1">• {s}</li>)}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
-                                    <Badge className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md text-xs sm:text-sm">
-                                        Active
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="relative z-10 mt-4 sm:mt-6 p-4 sm:p-6">
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg sm:rounded-xl border border-green-200/50 dark:border-green-800/50 overflow-hidden">
-                                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                                        <div className="p-2 sm:p-3 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg flex-shrink-0">
-                                            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0 overflow-hidden">
-                                            <p className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate overflow-hidden text-ellipsis whitespace-nowrap">
-                                                {getReadableFilename(resumeStatus.resume_filename)}
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate overflow-hidden">
-                                                Uploaded {resumeStatus.uploaded_at ? new Date(resumeStatus.uploaded_at).toLocaleDateString() : 'recently'}
-                                            </p>
-                                        </div>
+                                ) : (
+                                    <div className="space-y-4 py-8 opacity-50">
+                                        <div className="text-6xl font-bold text-gray-200 dark:text-gray-700">--</div>
+                                        <p className="text-gray-400 dark:text-gray-500">Calculate your score to see results</p>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Powered by Cohere command -A</p>
                                     </div>
-                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto flex-shrink-0">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setShowUploadSection(true)}
-                                            className="border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/50 w-full sm:w-auto text-xs sm:text-sm"
-                                        >
-                                            <RefreshCw className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                            Replace
-                                        </Button>
-                                    </motion.div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                )}
+                            </div>
+                        </div>
+
                     </motion.div>
                 )}
 
-                {/* Upload Card - Show only if no resume or user wants to replace */}
-                {(showUploadSection || !resumeStatus?.has_resume) && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.15 }}
-                    >
-                        <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-white via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 shadow-lg group">
-                            {/* Decorative shapes */}
-                            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br from-blue-200/30 to-indigo-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-200/25 to-teal-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
-                            <CardHeader className="relative z-10 p-4 sm:p-6">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 shadow-md flex-shrink-0">
-                                            <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                {/* Upload Section (Hidden when resume exists, unless replacing) */}
+                <AnimatePresence>
+                    {(showUploadSection || !resumeStatus?.has_resume) && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-white dark:bg-[#020817] rounded-[16px] border border-gray-100 dark:border-[#292929] shadow-sm p-[16px] md:p-8"
+                        >
+                            <div className="w-full max-w-[1208px] mx-auto flex flex-col gap-[10px]">
+                                {/* Header Section */}
+                                <div className="flex flex-col gap-2 mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 bg-[#007AFF] rounded-[10px] flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                            <Upload className="h-5 w-5" />
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold">
-                                                {resumeStatus?.has_resume ? 'Replace Resume' : 'Upload Resume'}
-                                            </CardTitle>
-                                            <CardDescription className="mt-1 text-xs sm:text-sm">
-                                                Upload your resume in PDF or DOCX format (Max 5MB)
-                                            </CardDescription>
-                                        </div>
+                                        <h2 className="text-[24px] font-bold text-gray-900 dark:text-white">
+                                            {resumeStatus?.has_resume ? 'Replace Resume' : 'Upload Resume'}
+                                        </h2>
                                     </div>
-                                    {resumeStatus?.has_resume && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setShowUploadSection(false)
-                                                handleReset()
-                                            }}
-                                            className="flex-shrink-0"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    )}
+                                    <p className="text-[#666666] dark:text-gray-400 text-sm ml-14">
+                                        Upload your resume in PDF or DOCX format (Max 5MB)
+                                    </p>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="relative z-10 space-y-3 sm:space-y-4 p-4 sm:p-6">
-                                {/* Drag & Drop Zone */}
+
+                                {/* Drop Zone */}
                                 <div
-                                    className={`
-                                        border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 text-center cursor-pointer
-                                        transition-colors duration-200
-                                        ${dragActive 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' 
-                                            : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
-                                        }
-                                        ${file ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : ''}
-                                        ${isUploading ? 'pointer-events-none opacity-60' : ''}
-                                    `}
                                     onDragEnter={handleDrag}
                                     onDragLeave={handleDrag}
                                     onDragOver={handleDrag}
                                     onDrop={handleDrop}
                                     onClick={() => !isUploading && fileInputRef.current?.click()}
+                                    className={`
+                                        relative group cursor-pointer
+                                        border-[2px] border-dashed rounded-[10px]
+                                        flex flex-col items-center justify-center
+                                        transition-all duration-300 ease-in-out
+                                        w-full max-w-[1016px] h-auto min-h-[313px] mx-auto
+                                        py-[52px]
+                                        ${dragActive
+                                            ? 'border-[#9E9DF4] bg-[#9E9DF4]/5'
+                                            : 'border-[#444444]/30 dark:border-[#292929] bg-white dark:bg-[#1C2938] hover:border-[#9E9DF4] hover:bg-gray-50 dark:hover:bg-[#1C2938]/80'
+                                        }
+                                        ${file ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10' : ''}
+                                    `}
                                 >
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".pdf,.doc,.docx"
-                                    onChange={handleFileInputChange}
-                                    className="hidden"
-                                    disabled={isUploading}
-                                />
-                                
-                                {!file ? (
-                                    <div className="space-y-2 sm:space-y-4">
-                                        <Upload className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-gray-400" />
-                                        <div>
-                                            <p className="text-sm sm:text-base md:text-lg font-medium">
-                                                Drag and drop your resume here
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                or click to browse files
-                                            </p>
-                                        </div>
-                                        <p className="text-[10px] sm:text-xs text-gray-400">
-                                            Supported formats: PDF, DOC, DOCX (Max 5MB)
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2 sm:space-y-4">
-                                        <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-green-500" />
-                                        <div>
-                                            <p className="text-sm sm:text-base md:text-lg font-medium flex items-center justify-center gap-2 flex-wrap">
-                                                <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                                <span className="truncate max-w-[200px] sm:max-w-none">{file.name}</span>
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                {(file.size / (1024 * 1024)).toFixed(2)} MB
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Error Message */}
-                            {error && (
-                                <Alert variant="destructive" className="text-xs sm:text-sm">
-                                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                    <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
-                                </Alert>
-                            )}
-
-                            {/* Success Message */}
-                            {uploadSuccess && (
-                                <Alert className="border-green-500 bg-green-50 dark:bg-green-900/10 text-xs sm:text-sm">
-                                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-                                    <AlertDescription className="text-green-600 dark:text-green-500 text-xs sm:text-sm">
-                                        Resume uploaded successfully! You can now calculate your ATS score.
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-
-                            {/* Progress Bar */}
-                            {isUploading && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs sm:text-sm">
-                                        <span className="font-medium">Uploading...</span>
-                                        <span className="font-semibold">{uploadProgress}%</span>
-                                    </div>
-                                    <Progress value={uploadProgress} className="h-1.5 sm:h-2" />
-                                </div>
-                            )}
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                                        <Button
-                                            onClick={handleUpload}
-                                            disabled={!file || isUploading || uploadSuccess}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
-                                        >
-                                            {isUploading ? (
-                                                <>
-                                                    <Loader className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                                    <span className="hidden sm:inline">Uploading </span>{uploadProgress}%
-                                                </>
-                                            ) : uploadSuccess ? (
-                                                <>
-                                                    <CheckCircle className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                                    Uploaded
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                                    <span className="hidden sm:inline">{resumeStatus?.has_resume ? 'Replace Resume' : 'Upload Resume'}</span>
-                                                    <span className="sm:hidden">Upload</span>
-                                                </>
-                                            )}
-                                        </Button>
-                                    </motion.div>
-                                    
-                                    {(file || uploadSuccess) && (
-                                        <Button
-                                            onClick={handleReset}
-                                            variant="outline"
-                                            disabled={isUploading}
-                                            className="w-full sm:w-auto text-sm sm:text-base"
-                                        >
-                                            <X className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                            Clear
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
-
-                {/* ATS Score Card - Show if resume exists */}
-                {(resumeStatus?.has_resume || uploadSuccess) && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                    >
-                        <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-white via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 shadow-lg group">
-                            {/* Decorative shapes */}
-                            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br from-purple-200/30 to-pink-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-200/25 to-purple-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
-                            <CardHeader className="relative z-10 border-b border-purple-200 dark:border-purple-700 p-4 sm:p-6">
-                                <div className="flex items-center gap-2 sm:gap-3">
-                                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-md flex-shrink-0">
-                                        <BarChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold">ATS Score Analysis</CardTitle>
-                                        <CardDescription className="mt-1 text-xs sm:text-sm">Get detailed ATS score and recommendations powered by AI</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="relative z-10 mt-4 sm:mt-6 space-y-4 sm:space-y-6 p-4 sm:p-6">
-                                {/* Job Description (Optional) */}
-                                <div className="space-y-2">
-                                    <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 flex flex-wrap items-center gap-2">
-                                        Job Description (Optional)
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                            Better matching
-                                        </Badge>
-                                    </label>
-                                    <Textarea
-                                        placeholder="Paste the job description here to get tailored ATS recommendations and keyword matching..."
-                                        value={jobDescription}
-                                        onChange={(e) => setJobDescription(e.target.value)}
-                                        rows={4}
-                                        disabled={isCalculatingATS}
-                                        className="resize-none border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400 transition-colors text-sm sm:text-base"
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={handleFileInputChange}
+                                        className="hidden"
+                                        disabled={isUploading}
                                     />
-                                </div>
 
-                                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                                    <Button
-                                        onClick={handleCalculateATS}
-                                        disabled={isCalculatingATS}
-                                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
-                                        size="lg"
-                                    >
-                                        {isCalculatingATS ? (
+                                    <div className="text-center space-y-6 max-w-sm px-4">
+                                        {!file ? (
                                             <>
-                                                <Loader className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                                <span className="hidden sm:inline">Analyzing Resume with AI...</span>
-                                                <span className="sm:hidden">Analyzing...</span>
+                                                <div className="flex flex-col items-center gap-6">
+                                                    <div className="h-[64px] w-[64px] mx-auto flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                        <Upload className="h-10 w-10 text-gray-900 dark:text-white group-hover:text-[#9E9DF4]" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <p className="text-[18px] font-bold text-gray-900 dark:text-white">
+                                                            Drag and drop your resume here
+                                                        </p>
+                                                        <p className="text-[14px] text-gray-500 dark:text-gray-400">
+                                                            here or click to browse files
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-[12px] text-gray-400 dark:text-gray-500 font-medium">
+                                                        Supported formats: PDF, DOC, DOCX (Max 5MB)
+                                                    </p>
+                                                </div>
                                             </>
                                         ) : (
-                                            <>
-                                                <TrendingUp className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                                <span className="hidden sm:inline">Calculate ATS Score</span>
-                                                <span className="sm:hidden">Calculate</span>
-                                            </>
+                                            <AnimatePresence>
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    className="space-y-4"
+                                                >
+                                                    <div className="h-20 w-20 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                                        <FileText className="h-10 w-10 text-green-600 dark:text-green-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-lg text-gray-900 dark:text-white truncate max-w-[250px] mx-auto">
+                                                            {file.name}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                            {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                                        </p>
+                                                    </div>
+                                                </motion.div>
+                                            </AnimatePresence>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Upload Action */}
+                                <div className="w-full max-w-[1016px] mx-auto mt-6">
+                                    {error && (
+                                        <Alert variant="destructive" className="mb-4 bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertDescription>{error}</AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    {isUploading && (
+                                        <div className="mb-4 space-y-2">
+                                            <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
+                                                <span className="font-medium">Uploading...</span>
+                                                <span className="font-semibold">{uploadProgress}%</span>
+                                            </div>
+                                            <Progress value={uploadProgress} className="h-2 bg-gray-100 dark:bg-gray-700" />
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        onClick={handleUpload}
+                                        disabled={!file || isUploading || uploadSuccess}
+                                        className="w-full h-[44px] bg-[#9E9DF4] hover:bg-[#8b8ae0] text-white rounded-[10px] text-base font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-none hover:shadow-md"
+                                    >
+                                        {isUploading ? (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Loader className="h-5 w-5 animate-spin" />
+                                                Uploading...
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Upload className="h-5 w-5" />
+                                                <span>{resumeStatus?.has_resume ? 'Replace Resume' : 'Replace Resume'}</span>
+                                            </div>
                                         )}
                                     </Button>
-                                </motion.div>
 
-                                {/* ATS Results - Keep all the existing display code */}
-                                {atsScore && (
-                                    <div className="space-y-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                        {/* All your existing ATS score display code stays here */}
-                                        {/* Score Display */}
-                                        <div className="text-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
-                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide font-semibold">
-                                                Your ATS Score
-                                            </p>
-                                            <p className={`text-4xl sm:text-5xl md:text-6xl font-bold ${getScoreColor(atsScore.ats_score)}`}>
-                                                {atsScore.ats_score}
-                                                <span className="text-xl sm:text-2xl text-gray-500">/100</span>
-                                            </p>
+                                    {resumeStatus?.has_resume && (
+                                        <div className="mt-3 text-center">
+                                            <button
+                                                onClick={() => {
+                                                    setShowUploadSection(false)
+                                                    handleReset()
+                                                }}
+                                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium"
+                                            >
+                                                Cancel
+                                            </button>
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-            
-            {/* Subscription Required Modal */}
-            <SubscriptionRequiredModal 
+
+            <SubscriptionRequiredModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
                 feature={subscriptionFeature}
