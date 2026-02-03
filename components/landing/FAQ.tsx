@@ -50,12 +50,12 @@ export function FAQ() {
   ];
 
   return (
-    <section 
-      id="faq" 
+    <section
+      id="faq"
       className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#d1c88c] dark:bg-[#310139]"
     >
       {/* Gradient Background for Dark Mode */}
-      <div 
+      <div
         className="absolute inset-0 dark:block hidden"
         style={{
           background: 'linear-gradient(135deg, #1A1A1A 0%, #2B354B 50%, #4A3F6B 100%)'
@@ -90,47 +90,6 @@ export function FAQ() {
               {t('faq.askQuestion')}
             </button>
 
-            {/* Decorative Dotted Line with X */}
-            <div className="relative hidden lg:block mt-8">
-              <svg
-                width="200"
-                height="2"
-                className="absolute top-0 left-0"
-                style={{ overflow: 'visible' }}
-              >
-                <line
-                  x1="0"
-                  y1="1"
-                  x2="180"
-                  y2="1"
-                  stroke="#A6CDFF"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-                <circle
-                  cx="90"
-                  cy="1"
-                  r="4"
-                  fill="#A6CDFF"
-                />
-                <line
-                  x1="88"
-                  y1="-2"
-                  x2="92"
-                  y2="4"
-                  stroke="#A6CDFF"
-                  strokeWidth="1.5"
-                />
-                <line
-                  x1="88"
-                  y1="4"
-                  x2="92"
-                  y2="-2"
-                  stroke="#A6CDFF"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </div>
           </motion.div>
 
           {/* Right Column - FAQ List */}
@@ -193,17 +152,7 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
           transition={{ duration: 0.3 }}
           className="absolute bottom-0 left-0 h-0.5"
         >
-          <svg width="100%" height="2" className="block">
-            <line
-              x1="0"
-              y1="1"
-              x2="100%"
-              y2="1"
-              stroke="#A6CDFF"
-              strokeWidth="2"
-              strokeDasharray="4 4"
-            />
-          </svg>
+
         </motion.div>
       )}
 

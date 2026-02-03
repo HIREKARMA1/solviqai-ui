@@ -6,33 +6,132 @@ import { ArrowRight } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Partner {
-  id: string;
+  id: number | string;
   name: string;
-  logo?: string;
+  logo: string;
 }
+
+const universityPartners: Partner[] = [
+  {
+    "id": 1,
+    "name": "aryan",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/Aryan_1_-removebg-preview.png"
+  },
+  {
+    "id": 2,
+    "name": "BEC",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/BEC_1_-removebg-preview.png"
+  },
+  {
+    "id": 3,
+    "name": "CIME",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/CIME_1_-removebg-preview.png"
+  },
+  {
+    "id": 4,
+    "name": "EATM",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/EATM_logo_1_-removebg-preview.png"
+  },
+  {
+    "id": 5,
+    "name": "GECK",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GCEKJ_1_-removebg-preview.png"
+  },
+  {
+    "id": 6,
+    "name": "GEC",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GEC_1_-removebg-preview.png"
+  },
+  {
+    "id": 7,
+    "name": "GIET",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GIET_baniatangi_1_-removebg-preview.png"
+  },
+  {
+    "id": 8,
+    "name": "GIET Gangapatna",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GIET_gangapatna_1_-removebg-preview+(1).png"
+  },
+  {
+    "id": 9,
+    "name": "KIT",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/KIT_1_-removebg-preview.png"
+  },
+  {
+    "id": 10,
+    "name": "NIST",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/NISt_1_-removebg-preview.png"
+  },
+  {
+    "id": 11,
+    "name": "GIET Gunpur",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GIET_gunpur_1_-removebg-preview.png"
+  },
+  {
+    "id": 12,
+    "name": "GIFT",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GIFT_1_-removebg-preview.png"
+  },
+  {
+    "id": 13,
+    "name": "GITAM",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/GITAM_1_-removebg-preview.png"
+  },
+  {
+    "id": 14,
+    "name": "NMIET",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/NMIET_1_-removebg-preview.png"
+  },
+  {
+    "id": 15,
+    "name": "PMEC",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/PMEC_1_-removebg-preview.png"
+  },
+  {
+    "id": 16,
+    "name": "Presidency",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/Presidency_1_-removebg-preview.png"
+  },
+  {
+    "id": 17,
+    "name": "QUAT",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/QUAT_1_-removebg-preview.png"
+  },
+  {
+    "id": 18,
+    "name": "SRUSTI",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/SRUSTI_1_-removebg-preview.png"
+  },
+  {
+    "id": 19,
+    "name": "Synergy",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/Synergy-Logo%5B1%5D.png"
+  },
+  {
+    "id": 20,
+    "name": "USBM",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/USBM_logo%5B1%5D.png"
+  },
+  {
+    "id": 21,
+    "name": "Suddhananda School",
+    "logo": "https://hirekarma.s3.us-east-1.amazonaws.com/hirekarma_ui/college_logo/LogoSuddhananda_School_of_Management_and_Computer_Science_SD2CyXR_1_-removebg-preview.png"
+  }
+];
 
 export function Partners() {
   const { t } = useTranslation();
 
-  const partners: Partner[] = [
-    { id: '1', name: 'Netflix' },
-    { id: '2', name: 'Microsoft' },
-    { id: '3', name: 'Google' },
-    { id: '4', name: 'TATA' },
-    { id: '5', name: 'IBM' },
-    { id: '6', name: 'Meta' },
-  ];
-
   return (
-    <section 
-      id="partners" 
-      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-gray-100 dark:bg-gray-900"
+    <section
+      id="partners"
+      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900"
     >
       {/* Subtle gradient overlay for dark mode */}
-      <div 
+      <div
         className="absolute inset-0 dark:block hidden opacity-50"
         style={{
-          background: 'radial-gradient(ellipse at top right, rgba(139, 69, 19, 0.1) 0%, transparent 50%)'
+          background: 'radial-gradient(ellipse at top right, rgba(139, 69, 19, 0.1) 0%, transparent 50%)' // Warm accent from Solviq
         }}
       />
 
@@ -43,51 +142,85 @@ export function Partners() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="rounded-2xl p-8 sm:p-12 mb-16 text-center"
+          className="rounded-2xl p-8 sm:p-12 mb-16 text-center shadow-xl relative overflow-hidden"
           style={{ backgroundColor: '#1A4A8A' }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white">
-            {t('partners.cta.title')}
-          </h2>
-          
-          <p className="text-lg sm:text-xl mb-8 text-white/90 max-w-3xl mx-auto leading-relaxed">
-            {t('partners.cta.description')}
-          </p>
+          {/* Background decoration */}
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
 
-          <button
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-white transition-all duration-300 hover:opacity-90 hover:scale-105"
-            style={{ backgroundColor: '#FF541F' }}
-          >
-            {t('partners.cta.button')}
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="relative z-10">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white">
+              {t('partners.cta.title')}
+            </h2>
+
+            <p className="text-lg sm:text-xl mb-8 text-white/90 max-w-3xl mx-auto leading-relaxed">
+              {t('partners.cta.description')}
+            </p>
+
+            <button
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold text-white transition-all duration-300 hover:opacity-90 hover:scale-105 shadow-lg"
+              style={{ backgroundColor: '#FF541F', boxShadow: '0 4px 14px 0 rgba(255, 84, 31, 0.39)' }}
+            >
+              {t('partners.cta.button')}
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </motion.div>
 
-        {/* Partners Section */}
+        {/* Partners Scrolling Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
-            {t('partners.label')}
-          </p>
+          <div className="flex flex-col items-center mb-10">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Our University Partners</h3>
+            <div className="h-1 w-20 bg-blue-600 rounded-full"></div>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-4 text-center max-w-2xl">
+              Trusted by leading educational institutions across India who rely on our platform for their placement needs.
+            </p>
+          </div>
 
-          {/* Partners Logos Grid */}
-          <div className="flex flex-wrap items-center justify-start gap-8 sm:gap-12 lg:gap-16">
-            {partners.map((partner, index) => (
-              <motion.div
-                key={partner.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex items-center justify-center"
-              >
-                <PartnerLogo name={partner.name} />
-              </motion.div>
-            ))}
+          {/* Marquee Container */}
+          <div className="relative w-full overflow-hidden">
+            {/* Gradient Masks for smooth fade out at edges */}
+            <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-l from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div>
+
+            <motion.div
+              className="flex gap-2 sm:gap-4 items-center py-4"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{
+                repeat: Infinity,
+                ease: "linear",
+                duration: 60,
+                repeatType: "loop"
+              }}
+              style={{ width: "fit-content" }}
+            >
+              {[...universityPartners, ...universityPartners].map((partner, index) => (
+                <div
+                  key={`${partner.id}-${index}`}
+                  className="flex-shrink-0 w-36 sm:w-44 md:w-52"
+                >
+                  <div className="h-28 sm:h-32 transition-all duration-300 p-4 flex flex-col items-center justify-center group cursor-pointer hover:-translate-y-1">
+                    <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-2">
+                      <img
+                        src={partner.logo}
+                        alt={partner.name}
+                        className="max-w-full max-h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100 transform group-hover:scale-110"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    {/* Tooltip-like name on hover could go here, but logo should be enough */}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -95,94 +228,3 @@ export function Partners() {
   );
 }
 
-interface PartnerLogoProps {
-  name: string;
-}
-
-function PartnerLogo({ name }: PartnerLogoProps) {
-  // Styled text logos for each partner
-  const getLogoStyle = (name: string) => {
-    switch (name) {
-      case 'Netflix':
-        return (
-          <span className="text-2xl sm:text-3xl font-bold" style={{ color: '#E50914' }}>
-            NETFLIX
-          </span>
-        );
-      case 'Microsoft':
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 grid grid-cols-2 gap-0.5">
-              <div style={{ backgroundColor: '#F25022' }} />
-              <div style={{ backgroundColor: '#7FBA00' }} />
-              <div style={{ backgroundColor: '#00A4EF' }} />
-              <div style={{ backgroundColor: '#FFB900' }} />
-            </div>
-            <span className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300">
-              Microsoft
-            </span>
-          </div>
-        );
-      case 'Google':
-        return (
-          <div className="flex items-center gap-1">
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#4285F4' }}>G</span>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#EA4335' }}>o</span>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#FBBC05' }}>o</span>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#4285F4' }}>g</span>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#34A853' }}>l</span>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#EA4335' }}>e</span>
-          </div>
-        );
-      case 'TATA':
-        return (
-          <span className="text-xl sm:text-2xl font-bold" style={{ color: '#0066B2' }}>
-            TATA
-          </span>
-        );
-      case 'IBM':
-        return (
-          <div className="flex items-center gap-1">
-            <div className="flex gap-0.5">
-              {['#006699', '#006699', '#006699', '#006699', '#006699', '#006699', '#006699', '#006699'].map((color, i) => (
-                <div key={i} className="w-1 h-6 sm:h-8" style={{ backgroundColor: color }} />
-              ))}
-            </div>
-            <span className="text-xl sm:text-2xl font-bold ml-2" style={{ color: '#006699' }}>
-              IBM
-            </span>
-          </div>
-        );
-      case 'Meta':
-        return (
-          <div className="flex items-center gap-2">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="sm:w-10 sm:h-10">
-              <path
-                d="M10 16C10 12.6863 12.6863 10 16 10C19.3137 10 22 12.6863 22 16C22 19.3137 19.3137 22 16 22C12.6863 22 10 19.3137 10 16Z"
-                fill="#0084FF"
-              />
-              <path
-                d="M22 16C22 12.6863 19.3137 10 16 10C12.6863 10 10 12.6863 10 16C10 19.3137 12.6863 22 16 22C19.3137 22 22 19.3137 22 16Z"
-                fill="#0084FF"
-              />
-            </svg>
-            <span className="text-xl sm:text-2xl font-semibold text-white dark:text-white">
-              Meta
-            </span>
-          </div>
-        );
-      default:
-        return (
-          <span className="text-xl sm:text-2xl font-semibold text-gray-700 dark:text-gray-300">
-            {name}
-          </span>
-        );
-    }
-  };
-
-  return (
-    <div className="opacity-70 hover:opacity-100 transition-opacity duration-300">
-      {getLogoStyle(name)}
-    </div>
-  );
-}

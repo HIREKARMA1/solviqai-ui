@@ -4,22 +4,23 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
     Zap,
-    Layers,
-    Check
+    Sparkles,
+    Shield,
+    Check,
+    Crown
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Plan {
     id: string;
     name: string;
-    nameKey: keyof import('@/lib/i18n').TranslationKeys;
     price: string;
-    priceKey: keyof import('@/lib/i18n').TranslationKeys;
-    billingKey: keyof import('@/lib/i18n').TranslationKeys;
+    period: string;
     icon: React.ReactNode;
-    features: (keyof import('@/lib/i18n').TranslationKeys)[];
+    features: string[];
     isHighlighted?: boolean;
-    badgeKey?: keyof import('@/lib/i18n').TranslationKeys;
+    badge?: string;
+    subtext?: string;
 }
 
 export function Pricing() {
@@ -27,54 +28,52 @@ export function Pricing() {
 
     const plans: Plan[] = [
         {
-            id: 'basic',
-            name: 'Basic plan',
-            nameKey: 'pricing.basic.name',
-            price: '$10/month',
-            priceKey: 'pricing.basic.price',
-            billingKey: 'pricing.billing',
+            id: 'starter',
+            name: 'Starter Plan',
+            price: '₹0',
+            period: '/ month',
             icon: <Zap className="w-6 h-6" />,
             features: [
-                'pricing.basic.feature1',
-                'pricing.basic.feature2',
-                'pricing.basic.feature3',
-                'pricing.basic.feature4',
-                'pricing.basic.feature5'
-            ]
-        },
-        {
-            id: 'business',
-            name: 'Business plan',
-            nameKey: 'pricing.business.name',
-            price: '$20/month',
-            priceKey: 'pricing.business.price',
-            billingKey: 'pricing.billing',
-            icon: <Layers className="w-6 h-6" />,
-            features: [
-                'pricing.business.feature1',
-                'pricing.business.feature2',
-                'pricing.business.feature3',
-                'pricing.business.feature4',
-                'pricing.business.feature5'
+                '2 AI-Generated Questions per practice session',
+                '3 Job Searches per day in Job Market',
+                '1 Free ATS Resume Analysis per month',
+                'Access to Basic Skill Development Modules'
             ],
-            isHighlighted: true,
-            badgeKey: 'pricing.badge'
+            subtext: 'Essential tools for students to explore.'
         },
         {
-            id: 'enterprise',
-            name: 'Enterprise plan',
-            nameKey: 'pricing.enterprise.name',
-            price: '$40/month',
-            priceKey: 'pricing.enterprise.price',
-            billingKey: 'pricing.billing',
-            icon: <Layers className="w-6 h-6" />,
+            id: 'professional',
+            name: 'Professional Plan',
+            price: '₹999',
+            period: '/ month',
+            badge: 'Most Popular',
+            isHighlighted: true,
+            icon: <Sparkles className="w-6 h-6" />,
             features: [
-                'pricing.enterprise.feature1',
-                'pricing.enterprise.feature2',
-                'pricing.enterprise.feature3',
-                'pricing.enterprise.feature4',
-                'pricing.enterprise.feature5'
-            ]
+                'Unlimited AI Interview Practice',
+                '15 High-Volume Job Searches per day',
+                'Unlimited ATS Score Calculations',
+                'Advanced Practice Modules (Coding, Civil, etc.)',
+                'Deep AI Feedback on every session'
+            ],
+            subtext: 'For active job seekers needing deep insights.'
+        },
+        {
+            id: 'elite',
+            name: 'Elite Plan',
+            price: '₹5,499',
+            period: '/ 6 months',
+            badge: 'Best Value',
+            icon: <Crown className="w-6 h-6" />,
+            features: [
+                'Everything in Professional Plan',
+                '24/7 Priority Support & Mentorship',
+                'Exclusive Question Banks (Tier-1)',
+                'Verified Skill Certificates for LinkedIn',
+                'Unlimited Resume & Portfolio Versions',
+                'Early Access to new AI tools'
+            ],
+            subtext: '~₹916 / month (Save ~₹500)'
         }
     ];
 
@@ -136,10 +135,10 @@ function PlanCard({ plan, index }: PlanCardProps) {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="relative"
         >
-            {plan.isHighlighted && plan.badgeKey && (
+            {plan.badge && (
                 <div className="absolute -top-3 right-4 z-10">
                     <div className="px-3 py-1 rounded-full text-sm font-semibold text-white" style={{ backgroundColor: '#FF541F' }}>
-                        {t(plan.badgeKey)}
+                        {plan.badge}
                     </div>
                 </div>
             )}
@@ -178,7 +177,7 @@ function PlanCard({ plan, index }: PlanCardProps) {
                         }`}
                     style={plan.isHighlighted ? {} : { color: '#1A1A1A' }}
                 >
-                    {t(plan.nameKey)}
+                    {plan.name}
                 </h3>
 
                 {/* Price */}
@@ -188,29 +187,27 @@ function PlanCard({ plan, index }: PlanCardProps) {
                             }`}
                         style={plan.isHighlighted ? {} : { color: '#1A1A1A' }}
                     >
-                        {t(plan.priceKey).includes('/') ? t(plan.priceKey).split('/')[0] : t(plan.priceKey)}
+                        {plan.price}
                     </span>
-                    {t(plan.priceKey).includes('/') && (
-                        <span
-                            className={`text-base ml-1 ${plan.isHighlighted ? 'text-white/80' : 'text-gray-600'
-                                }`}
-                        >
-                            /{t(plan.priceKey).split('/')[1]}
-                        </span>
-                    )}
+                    <span
+                        className={`text-base ml-1 ${plan.isHighlighted ? 'text-white/80' : 'text-gray-600'
+                            }`}
+                    >
+                        {plan.period}
+                    </span>
                 </div>
 
-                {/* Billing */}
+                {/* Subtext / Goal */}
                 <p
-                    className={`text-sm mb-8 text-center ${plan.isHighlighted ? 'text-white/80' : 'text-gray-600'
+                    className={`text-sm mb-6 text-center ${plan.isHighlighted ? 'text-white/80' : 'text-gray-600'
                         }`}
                 >
-                    {t(plan.billingKey)}
+                    {plan.subtext}
                 </p>
 
                 {/* Features */}
                 <ul className="space-y-4 flex-1 mb-8 w-full">
-                    {plan.features.map((featureKey, i) => (
+                    {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start gap-3">
                             <div className={`mt-1 rounded-full p-0.5 ${plan.isHighlighted ? 'text-white' : 'text-gray-900'}`}>
                                 <Check
@@ -224,7 +221,7 @@ function PlanCard({ plan, index }: PlanCardProps) {
                                     }`}
                                 style={plan.isHighlighted ? {} : { color: '#1A1A1A' }}
                             >
-                                {t(featureKey)}
+                                {feature}
                             </span>
                         </li>
                     ))}
