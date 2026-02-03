@@ -7,11 +7,12 @@ import { Progress } from '@/components/ui/progress'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { motion } from 'framer-motion'
-import { 
-    Activity, AlertTriangle, CheckCircle, Info, 
-    Clock, Calendar, Zap, TrendingUp
+import {
+    Activity, AlertTriangle, CheckCircle, Info,
+    Clock, Calendar, Zap, TrendingUp, Lock
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import SubscriptionRequiredModal from './SubscriptionRequiredModal'
 
 interface UsageData {
     subscription_type: string
@@ -34,6 +35,7 @@ export function UsageAnalyticsCard() {
     const [data, setData] = useState<UsageData | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState('daily')
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -120,16 +122,16 @@ export function UsageAnalyticsCard() {
 
     const getTimeUntilReset = (resetDate: string | null): string => {
         if (!resetDate) return 'Unknown'
-        
+
         const reset = new Date(resetDate)
         const now = new Date()
         const diff = reset.getTime() + 24 * 60 * 60 * 1000 - now.getTime() // Add 24 hours to reset date
-        
+
         if (diff <= 0) return 'Resetting soon...'
-        
+
         const hours = Math.floor(diff / (1000 * 60 * 60))
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        
+
         if (hours > 0) {
             return `${hours}h ${minutes}m`
         }
@@ -154,11 +156,11 @@ export function UsageAnalyticsCard() {
                     </span>
                 </div>
                 <div className="relative">
-                    <Progress 
-                        value={limitData.percentage} 
+                    <Progress
+                        value={limitData.percentage}
                         className="h-2"
                     />
-                    <div 
+                    <div
                         className={`absolute top-0 left-0 h-2 rounded-full transition-all ${getProgressColor(limitData.percentage)}`}
                         style={{ width: `${Math.min(limitData.percentage, 100)}%` }}
                     />
@@ -225,17 +227,23 @@ export function UsageAnalyticsCard() {
 
                     {/* Daily/Weekly Tabs for Free and Premium */}
                     {data.subscription_type !== 'college_license' && (
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <Tabs value={activeTab} onValueChange={(val) => {
+                            if (val === 'weekly' && data.subscription_type === 'free') {
+                                setShowSubscriptionModal(true)
+                                return
+                            }
+                            setActiveTab(val)
+                        }}>
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="daily">
                                     <Clock className="h-4 w-4 mr-2" />
                                     Daily Usage
                                 </TabsTrigger>
-                                <TabsTrigger value="weekly" disabled={data.subscription_type === 'free'}>
+                                <TabsTrigger value="weekly">
                                     <Calendar className="h-4 w-4 mr-2" />
                                     Weekly Usage
                                     {data.subscription_type === 'free' && (
-                                        <Badge variant="outline" className="ml-2 text-xs">Premium</Badge>
+                                        <Lock className="ml-2 h-3 w-3 text-amber-500" />
                                     )}
                                 </TabsTrigger>
                             </TabsList>
@@ -297,6 +305,12 @@ export function UsageAnalyticsCard() {
                     </div>
                 </CardContent>
             </Card>
-        </motion.div>
+
+            <SubscriptionRequiredModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature="weekly analytics"
+            />
+        </motion.div >
     )
 }

@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { apiClient } from '@/lib/api'
-import { Target, LinkedinIcon, } from 'lucide-react'
+import { Target, LinkedinIcon, Lock } from 'lucide-react'
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
+import { config } from '@/lib/config'
 
 import {
     Search,
@@ -295,6 +297,35 @@ export default function MarketJobsPage() {
     const [resumeSkills, setResumeSkills] = useState<string[]>([])
     const [hasResumeSkills, setHasResumeSkills] = useState(false)
     const [loadingSkills, setLoadingSkills] = useState(false)
+    const [isLimitReached, setIsLimitReached] = useState(false)
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+
+    // Check Subscription Status
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const statusData = await response.json();
+                    const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+                    if (isExpired) {
+                        setIsLimitReached(true);
+                        setShowSubscriptionModal(true);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
+    }, [])
 
     // New filter states
     const [filterSource, setFilterSource] = useState<string>('all')
@@ -714,10 +745,20 @@ export default function MarketJobsPage() {
                 }
             }
 
-            // Handle 403 Forbidden (limit reached) with dialog instead of toast
-            if (axiosError.response?.status === 403) {
-                setLimitMessage(errorMessage)
-                setShowLimitDialog(true)
+            // Handle 403 Forbidden (limit reached) with modal
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                (errorMessage && (
+                    errorMessage.toLowerCase().includes('contact hirekarma') ||
+                    errorMessage.toLowerCase().includes('subscription') ||
+                    errorMessage.toLowerCase().includes('free plan') ||
+                    errorMessage.toLowerCase().includes('expired')
+                ));
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
+                setShowSubscriptionModal(true)
             } else {
                 setError(errorMessage)
                 toast.error(errorMessage, { duration: 5000 })
@@ -761,12 +802,23 @@ export default function MarketJobsPage() {
         } catch (err) {
             console.error('Error fetching additional platform jobs:', err)
             const axiosError = err as AxiosError<{ detail: string }>
-            
-            // Handle 403 Forbidden (limit reached) with dialog
-            if (axiosError.response?.status === 403) {
-                const errorMessage = axiosError.response.data?.detail || 'You have reached your daily limit for job searches'
-                setLimitMessage(errorMessage)
-                setShowLimitDialog(true)
+
+            const errorMessage = axiosError.response?.data?.detail || axiosError.message || ''
+
+            // Handle 403 Forbidden (limit reached) with modal
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                (errorMessage && (
+                    errorMessage.toLowerCase().includes('contact hirekarma') ||
+                    errorMessage.toLowerCase().includes('subscription') ||
+                    errorMessage.toLowerCase().includes('free plan') ||
+                    errorMessage.toLowerCase().includes('expired')
+                ));
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
+                setShowSubscriptionModal(true)
             } else {
                 const platformNames = platformsToFetch.map(platform => PLATFORM_LABELS[platform]).join(', ')
                 toast.error(`Failed to load ${platformNames}`)
@@ -1043,11 +1095,16 @@ export default function MarketJobsPage() {
 
                             <Button
                                 onClick={fetchMarketJobs}
-                                disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills)}
+                                disabled={isBusy || selectedSources.length === 0 || (!keywords.trim() && !includeResumeSkills) || isLimitReached}
                                 size="lg"
-                                className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3"
+                                className={`bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-xl shadow-md px-6 py-3 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                {loading ? (
+                                {isLimitReached ? (
+                                    <>
+                                        <Lock className="mr-2 h-4 w-4" />
+                                        Subscription Required
+                                    </>
+                                ) : loading ? (
                                     <>
                                         <Loader size="sm" className="mr-2" />
                                         Searching...
@@ -1534,30 +1591,11 @@ export default function MarketJobsPage() {
                 )}
             </div>
 
-            {/* Limit Reached Dialog */}
-            <Dialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
-                            <AlertCircle className="h-5 w-5" />
-                            Daily Limit Reached
-                        </DialogTitle>
-                        <DialogDescription className="text-base pt-2">
-                            {limitMessage}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="sm:justify-start">
-                        <Button
-                            type="button"
-                            variant="default"
-                            onClick={() => setShowLimitDialog(false)}
-                            className="w-full sm:w-auto"
-                        >
-                            Got it
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <SubscriptionRequiredModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature="job searches"
+            />
         </DashboardLayout>
     )
 }

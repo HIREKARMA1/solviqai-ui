@@ -21,11 +21,17 @@ export default function PracticePage() {
         try {
             const user = await apiClient.getCurrentUser();
             const subscriptionType = user?.subscription_type || 'free';
-            
-            // Free users should be blocked
+
+            // Check Subscription Status
             if (subscriptionType === 'free') {
                 setIsFreeUser(true);
-                setShowSubscriptionModal(true);
+                // Don't show modal immediately, let components handle limits
+            }
+            // Check Premium Expiry
+            if (subscriptionType === 'premium' && user?.subscription_expiry) {
+                if (new Date(user.subscription_expiry) < new Date()) {
+                    setShowSubscriptionModal(true);
+                }
             }
         } catch (error) {
             console.error('Error checking subscription:', error);
@@ -46,20 +52,12 @@ export default function PracticePage() {
 
     return (
         <DashboardLayout requiredUserType="student" hideNavigation={inPractice}>
-            {!isFreeUser ? (
-                <PracticeQuestions onPracticeModeChange={setInPractice} />
-            ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4">
-                    <div className="text-center max-w-md">
-                        <h2 className="text-2xl font-bold mb-4">Practice Section Unavailable</h2>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            The practice section is available for premium users only.
-                        </p>
-                    </div>
-                </div>
-            )}
-            
-            <SubscriptionRequiredModal 
+            <PracticeQuestions
+                onPracticeModeChange={setInPractice}
+                isFreeUser={isFreeUser}
+            />
+
+            <SubscriptionRequiredModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
                 feature="practice section"

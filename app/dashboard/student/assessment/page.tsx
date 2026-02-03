@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import SubscriptionRequiredModal from "@/components/subscription/SubscriptionRequiredModal";
 
 
 const sidebarItems = [
@@ -135,6 +136,10 @@ export default function AssessmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Subscription gating state
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState("additional assessments");
+
   useEffect(() => {
     if (!assessmentId) {
       // If no assessment ID, redirect to Job Recommendations
@@ -142,14 +147,14 @@ export default function AssessmentPage() {
       return;
     }
 
-    fetchAssessment();
+    checkSubscriptionAndFetch();
   }, [assessmentId]);
 
   // Refresh data when page becomes visible (e.g., when navigating back from round)
   useEffect(() => {
     const handleFocus = () => {
       if (assessmentId) {
-        fetchAssessment();
+        checkSubscriptionAndFetch();
       }
     };
 
@@ -160,13 +165,45 @@ export default function AssessmentPage() {
     };
   }, [assessmentId]);
 
-  const fetchAssessment = async () => {
+  const checkSubscriptionAndFetch = async () => {
     try {
       setLoading(true);
+
+      // 1. Check Subscription Status
+      const user = await apiClient.getCurrentUser();
+      const subscriptionType = user?.subscription_type || 'free';
+      const subscriptionExpiry = user?.subscription_expiry;
+
+      // Check Premium Expiry
+      if (subscriptionType === 'premium' && subscriptionExpiry) {
+        const expiryDate = new Date(subscriptionExpiry);
+        if (expiryDate < new Date()) {
+          setSubscriptionFeature("accessing assessments (Premium Expired)");
+          setShowSubscriptionModal(true);
+        }
+      }
+
+      // 2. Fetch Assessment
       const data = await apiClient.getAssessmentStatus(assessmentId!);
       console.log("📊 Assessment data received:", data);
       console.log("📊 Rounds data:", data.rounds);
       setAssessment(data);
+
+      // 3. Check Free Tier Limits
+      if (subscriptionType === 'free') {
+        // Check how many assessments user has.
+        const assessmentsData = await apiClient.getStudentAssessments(0, 50);
+        const count = assessmentsData.total || 0;
+
+        // Direct sign-ups get 1 free mock test.
+        // If count > 1, warn them. 
+        // Note: If they are viewing an OLD assessment, it's fine. 
+        // But if they are viewing a NEW assessment and they are over limit?
+        // We can't easily distinguish "new" vs "old" without date logic, 
+        // but if they have > 1, they are technically over limit for *new* ones.
+        // Let's just warn if they try to start rounds (handled in handleStartRound).
+      }
+
 
       // ✅ Auto-complete assessment if all rounds are done (triggers playlist generation)
       if (data.rounds && data.rounds.length > 0) {
@@ -198,8 +235,14 @@ export default function AssessmentPage() {
       }
     } catch (err: any) {
       console.error("Error fetching assessment:", err);
-      setError(err.message || "Failed to load assessment");
-      toast.error("Failed to load assessment");
+      // Check for subscription error from API
+      if (err.response?.status === 403 || err.message?.includes('subscription')) {
+        setSubscriptionFeature("this assessment");
+        setShowSubscriptionModal(true);
+      } else {
+        setError(err.message || "Failed to load assessment");
+        toast.error("Failed to load assessment");
+      }
     } finally {
       setLoading(false);
     }
@@ -219,6 +262,19 @@ export default function AssessmentPage() {
   };
 
   const handleStartRound = async (round: any) => {
+    // Re-check subscription on action
+    const user = await apiClient.getCurrentUser();
+    const subscriptionType = user?.subscription_type || 'free';
+
+    if (subscriptionType === 'free') {
+      const assessmentsData = await apiClient.getStudentAssessments(0, 5);
+      if ((assessmentsData.total || 0) > 1) {
+        setSubscriptionFeature("starting assessment rounds");
+        setShowSubscriptionModal(true);
+        return;
+      }
+    }
+
     await requestFullscreen();
     const roundType = String(round.round_type || "").toLowerCase();
     if (roundType === "electrical_circuit") {
@@ -514,6 +570,13 @@ export default function AssessmentPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+
+
+      <SubscriptionRequiredModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature={subscriptionFeature}
+      />
+    </DashboardLayout >
   );
 }

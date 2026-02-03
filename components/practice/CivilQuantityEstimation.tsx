@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
 import { AlertCircle, CheckCircle2, Clock, Calculator, TrendingUp, Award } from 'lucide-react'
 import toast from 'react-hot-toast'
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal'
+import { config } from '@/lib/config'
 
 interface Problem {
     id: string
@@ -71,6 +73,9 @@ export default function CivilQuantityEstimation({
     const [elapsedTime, setElapsedTime] = useState(0)
     const [roundSubmitted, setRoundSubmitted] = useState(false)
     const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+    const [isLimitReached, setIsLimitReached] = useState(false)
+    const [subscriptionFeature, setSubscriptionFeature] = useState('Civil Engineering AI')
 
     // Scroll to top of page
     const scrollToTop = () => {
@@ -98,9 +103,25 @@ export default function CivilQuantityEstimation({
                 })
                 setAnswers(initialAnswers)
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to generate problem:', error)
-            toast.error('Failed to generate problem. Please try again.')
+            const msg = error?.response?.data?.detail || error?.message || 'Failed to generate problem.'
+
+            const isSubscriptionError =
+                error?.response?.status === 403 ||
+                error?.response?.status === 402 ||
+                (msg && (
+                    msg.toLowerCase().includes('contact hirekarma') ||
+                    msg.toLowerCase().includes('subscription') ||
+                    msg.toLowerCase().includes('free plan') ||
+                    msg.toLowerCase().includes('expired')
+                ));
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
+                setShowSubscriptionModal(true)
+            }
+            toast.error(msg)
         } finally {
             setLoading(false)
         }
@@ -161,9 +182,15 @@ export default function CivilQuantityEstimation({
                     }
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to evaluate answers:', error)
-            toast.error('Failed to evaluate answers. Please try again.')
+            const msg = error?.response?.data?.detail || error?.message || 'Failed to evaluate answers.'
+
+            if (error?.response?.status === 403 || error?.response?.status === 402) {
+                setIsLimitReached(true)
+                setShowSubscriptionModal(true)
+            }
+            toast.error(msg)
         } finally {
             setLoading(false)
         }
@@ -192,13 +219,36 @@ export default function CivilQuantityEstimation({
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
-    // Auto-generate problem on mount if in assessment mode
+    // Check Subscription Status
     useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const statusData = await response.json();
+                    const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+                    if (isExpired) {
+                        setIsLimitReached(true);
+                        setShowSubscriptionModal(true);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
+
         if (assessmentId && !problem) {
             generateProblem()
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [assessmentId])
 
     return (
         <div className="w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/30 pb-8">
@@ -282,17 +332,38 @@ export default function CivilQuantityEstimation({
                                 </div>
                                 <Button
                                     onClick={generateProblem}
-                                    disabled={loading}
+                                    disabled={loading || isLimitReached}
                                     size="lg"
-                                    className="mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-8 py-6 text-lg"
+                                    className={`mt-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-8 py-6 text-lg ${isLimitReached
+                                        ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                                        : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                                        }`}
                                 >
-                                    <Calculator className="mr-2 h-5 w-5" />
-                                    Generate New Problem
+                                    {isLimitReached ? (
+                                        <>
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+                                            </svg>
+                                            Subscription Required
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calculator className="mr-2 h-5 w-5" />
+                                            Generate New Problem
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Subscription Required Modal */}
+                <SubscriptionRequiredModal
+                    isOpen={showSubscriptionModal}
+                    onClose={() => setShowSubscriptionModal(false)}
+                    feature={subscriptionFeature}
+                />
 
                 {/* Loading State */}
                 {loading && !problem && (
@@ -393,11 +464,16 @@ export default function CivilQuantityEstimation({
                                 <div className="mt-8">
                                     <Button
                                         onClick={submitAnswers}
-                                        disabled={loading || Object.values(answers).every(v => v === 0)}
+                                        disabled={loading || Object.values(answers).every(v => v === 0) || isLimitReached}
                                         size="lg"
-                                        className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 py-6 text-lg font-semibold"
+                                        className={`w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 py-6 text-lg font-semibold ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
-                                        {loading ? (
+                                        {isLimitReached ? (
+                                            <>
+                                                <TrendingUp className="mr-2 h-5 w-5" />
+                                                Subscription Required
+                                            </>
+                                        ) : loading ? (
                                             <>
                                                 <Loader className="mr-2 h-5 w-5 animate-spin" />
                                                 Evaluating...

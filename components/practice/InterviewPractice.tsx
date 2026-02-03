@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { config } from '@/lib/config';
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -32,7 +33,11 @@ interface SpeechRecognition extends EventTarget {
   onend: () => void;
 }
 
-export default function InterviewPractice() {
+interface InterviewPracticeProps {
+  isFreeUser?: boolean;
+}
+
+export default function InterviewPractice({ isFreeUser = false }: InterviewPracticeProps) {
   const [mode, setMode] = useState<'technical' | 'hr'>('technical');
   const [jobRole, setJobRole] = useState<string>('');
   const [topic, setTopic] = useState<string>('');
@@ -40,7 +45,10 @@ export default function InterviewPractice() {
   const [limit, setLimit] = useState<number>(6);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [subscriptionType, setSubscriptionType] = useState<string>('free'); // Default to free
+  const [subscriptionType, setSubscriptionType] = useState<string>(isFreeUser ? 'free' : 'premium');
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState('Interview Practice');
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -113,18 +121,24 @@ export default function InterviewPractice() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        // Use full URL from config
-        const response = await fetch(`${config.api.fullUrl}/api/v1/auth/me`, {
+        const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
         if (response.ok) {
-          const userData = await response.json();
-          const sub = userData.subscription_type || 'free';
-          setSubscriptionType(sub);
+          const statusData = await response.json();
+          setSubscriptionType(statusData.subscription_type || 'free');
+
+          // Expiry logic: if days_remaining is negative, it's expired
+          const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+          if (isExpired) {
+            setIsLimitReached(true);
+            setShowSubscriptionModal(true);
+          }
 
           // Force limit to 2 for free users
-          if (sub === 'free') {
+          if (statusData.subscription_type === 'free' || isFreeUser) {
             setLimit(2);
           }
         }
@@ -133,7 +147,7 @@ export default function InterviewPractice() {
       }
     };
     checkUser();
-  }, []);
+  }, [isFreeUser]);
 
   const startLiveTranscription = async () => {
     if (!speechRecognitionRef.current) {
@@ -281,10 +295,26 @@ export default function InterviewPractice() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 401) throw new Error('Session expired. Please log in again.');
-        if (response.status === 403) throw new Error('Access denied. Student access required.');
-        if (response.status === 500) throw new Error('Server error. Please try again later.');
-        throw new Error(errorData.detail || errorData.error || `API error: ${response.status} ${response.statusText}`);
+        const errorMessage = errorData.detail || response.statusText;
+
+        const isSubscriptionError =
+          response.status === 401 ||
+          response.status === 403 ||
+          response.status === 402 ||
+          (errorMessage && (
+            errorMessage.toLowerCase().includes('contact hirekarma') ||
+            errorMessage.toLowerCase().includes('subscription') ||
+            errorMessage.toLowerCase().includes('free plan') ||
+            errorMessage.toLowerCase().includes('expired')
+          ));
+
+        if (isSubscriptionError) {
+          setIsLimitReached(true);
+          setSubscriptionFeature('Interview AI Practice');
+          setShowSubscriptionModal(true);
+          throw new Error("Subscription limit reached");
+        }
+        throw new Error(errorMessage || `API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -295,8 +325,7 @@ export default function InterviewPractice() {
       setCurrentIndex(0);
       setResponses({});
     } catch (error: any) {
-      const msg = error.name === 'AbortError' ? 'Request timeout. Try with fewer questions.' : error.message || 'Failed to load questions.';
-      setError(msg);
+      setError(error.message || 'Failed to load questions.');
     } finally {
       setLoading(false);
     }
@@ -495,13 +524,20 @@ export default function InterviewPractice() {
 
         <button
           onClick={fetchQuestions}
-          disabled={loading}
-          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-            ? 'bg-gray-400 cursor-not-allowed'
+          disabled={loading || isLimitReached}
+          className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading || isLimitReached
+            ? 'bg-gray-400 cursor-not-allowed opacity-70'
             : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
             }`}
         >
-          {loading ? (
+          {isLimitReached ? (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+              </svg>
+              <span>Subscription Required</span>
+            </>
+          ) : loading ? (
             <>
               <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
               <span>Loading Questions... (may take 10-20s)</span>
@@ -515,6 +551,13 @@ export default function InterviewPractice() {
             </>
           )}
         </button>
+
+        {/* Subscription Required Modal */}
+        <SubscriptionRequiredModal
+          isOpen={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          feature={subscriptionFeature}
+        />
 
         {!loading && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -803,11 +846,12 @@ export default function InterviewPractice() {
                 </p>
               )}
             </div>
-
           </div>
 
+
+
           {/* Navigation */}
-          <div className="bg-white p-4 rounded-lg shadow-lg">
+          <div className="bg-white p-4 rounded-lg shadow-lg mb-6 lg:mb-0">
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
@@ -890,6 +934,13 @@ export default function InterviewPractice() {
           </div>
         </div>
       </div>
+
+      <SubscriptionRequiredModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature="premium interview practice"
+      />
     </div>
+
   );
 }

@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import ExcelInterface from '@/components/excel-assessment/ExcelInterface'
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 import { AxiosError } from 'axios'
+import { config } from '@/lib/config'
 
 interface ExcelAssessment {
     id: string
@@ -58,8 +59,33 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
     const [submitting, setSubmitting] = useState(false)
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
     const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
+    const [isLimitReached, setIsLimitReached] = useState(false)
 
+    // Check Subscription Status
     useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const statusData = await response.json();
+                    const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+                    if (isExpired) {
+                        setIsLimitReached(true);
+                        setShowSubscriptionModal(true);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
         fetchAssessments()
     }, [])
 
@@ -91,13 +117,22 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
             console.error('Error creating assessment:', error)
             const axiosError = error as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to create assessment'
-            
+
             // Check if it's a subscription error
-            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                errorDetail.toLowerCase().includes('contact hirekarma') ||
+                errorDetail.toLowerCase().includes('subscription') ||
+                errorDetail.toLowerCase().includes('free plan') ||
+                errorDetail.toLowerCase().includes('expired');
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
                 setSubscriptionFeature('Excel assessments')
                 setShowSubscriptionModal(true)
             } else {
-                toast.error('Failed to create assessment')
+                toast.error(errorDetail)
             }
             setCreating(false)
         }
@@ -145,9 +180,18 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
             console.error('Error starting practice:', error)
             const axiosError = error as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to start practice session'
-            
+
             // Check if it's a subscription error
-            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                errorDetail.toLowerCase().includes('contact hirekarma') ||
+                errorDetail.toLowerCase().includes('subscription') ||
+                errorDetail.toLowerCase().includes('free plan') ||
+                errorDetail.toLowerCase().includes('expired');
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
                 setSubscriptionFeature('Excel assessments')
                 setShowSubscriptionModal(true)
             } else {
@@ -447,12 +491,17 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
                 <div className="flex justify-end gap-3">
                     <Button
                         onClick={startPractice}
-                        disabled={practiceLoading}
+                        disabled={practiceLoading || isLimitReached}
                         size="lg"
                         variant="outline"
-                        className="border-green-600 text-green-600 hover:bg-green-50 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                        className={`border-green-600 text-green-600 hover:bg-green-50 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        {practiceLoading ? (
+                        {isLimitReached ? (
+                            <>
+                                <AlertCircle className="w-5 h-5 mr-2" />
+                                Subscription Required
+                            </>
+                        ) : practiceLoading ? (
                             <>
                                 <Loader size="sm" className="mr-2" />
                                 Starting...
@@ -466,11 +515,16 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
                     </Button>
                     <Button
                         onClick={createNewAssessment}
-                        disabled={creating}
+                        disabled={creating || isLimitReached}
                         size="lg"
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                        className={`bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        {creating ? (
+                        {isLimitReached ? (
+                            <>
+                                <AlertCircle className="w-5 h-5 mr-2" />
+                                Subscription Required
+                            </>
+                        ) : creating ? (
                             <>
                                 <Loader size="sm" className="mr-2" />
                                 Creating...
@@ -580,9 +634,9 @@ export default function AccountantAssessmentPractice({ onBack }: AccountantAsses
                     </div>
                 )}
             </div>
-            
+
             {/* Subscription Required Modal */}
-            <SubscriptionRequiredModal 
+            <SubscriptionRequiredModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
                 feature={subscriptionFeature}

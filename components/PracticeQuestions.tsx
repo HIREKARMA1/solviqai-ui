@@ -20,16 +20,18 @@ interface Category {
     hoverBorder: string;
     textColor: string;
     iconGradient: string;
-    component: React.ComponentType;
+    component: React.ComponentType<{ isFreeUser?: boolean }>;
     fullWidth?: boolean;
 }
 
 interface PracticeQuestionsProps {
     // Notify parent when the user has entered or exited an active practice mode
     onPracticeModeChange?: (inPractice: boolean) => void;
+    // New prop for subscription gating
+    isFreeUser?: boolean;
 }
 
-export default function PracticeQuestions({ onPracticeModeChange }: PracticeQuestionsProps) {
+export default function PracticeQuestions({ onPracticeModeChange, isFreeUser = false }: PracticeQuestionsProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [isDark, setIsDark] = useState(false);
@@ -149,7 +151,7 @@ export default function PracticeQuestions({ onPracticeModeChange }: PracticeQues
                         Back to Categories
                     </button>
                 </div>
-                <SelectedComponent />
+                <SelectedComponent isFreeUser={isFreeUser} />
             </div>
         );
     }

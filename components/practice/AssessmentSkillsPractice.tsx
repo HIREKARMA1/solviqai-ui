@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Volume2, Mic, Square, CheckCircle2 } from 'lucide-react';
 import { config } from '@/lib/config';
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal';
 
 // Speech Recognition Types
 interface SpeechRecognitionEvent extends Event {
@@ -34,17 +35,26 @@ interface Question {
     is_ai_generated: boolean;
 }
 
-export default function AssessmentSkillsPractice() {
+interface AssessmentSkillsPracticeProps {
+    isFreeUser?: boolean;
+}
+
+export default function AssessmentSkillsPractice({ isFreeUser = false }: AssessmentSkillsPracticeProps) {
     const [assessmentType, setAssessmentType] = useState<'aptitude' | 'soft_skills'>('aptitude');
     const [topic, setTopic] = useState<string>('');
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-    const [numQuestions, setNumQuestions] = useState<number>(20);
+    const [numQuestions, setNumQuestions] = useState<number>(5);
     const [loading, setLoading] = useState(false);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [showResults, setShowResults] = useState(false);
     const [audioPlayed, setAudioPlayed] = useState<Record<number, boolean>>({});
+    // Initialize based on prop, default to 'free' if true (to be safe) or use the prop value
+    const [subscriptionType, setSubscriptionType] = useState<string>(isFreeUser ? 'free' : 'premium');
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+    const [isLimitReached, setIsLimitReached] = useState(false);
+    const [subscriptionFeature, setSubscriptionFeature] = useState('Assessment Practice');
 
     // Live Transcription States
     const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
@@ -57,6 +67,9 @@ export default function AssessmentSkillsPractice() {
         setLoading(true);
         const startTime = Date.now();
         try {
+            const token = localStorage.getItem('access_token');
+            if (!token) throw new Error("Please log in");
+
             const params = new URLSearchParams({
                 exam_type: assessmentType,
                 difficulty,
@@ -74,7 +87,7 @@ export default function AssessmentSkillsPractice() {
                 {
                     method: 'GET',
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                        Authorization: `Bearer ${token}`,
                     },
                     signal: controller.signal,
                 }
@@ -82,7 +95,28 @@ export default function AssessmentSkillsPractice() {
 
             clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.detail || response.statusText;
+
+                const isSubscriptionError =
+                    response.status === 403 ||
+                    response.status === 402 ||
+                    (errorMessage && (
+                        errorMessage.toLowerCase().includes('contact hirekarma') ||
+                        errorMessage.toLowerCase().includes('subscription') ||
+                        errorMessage.toLowerCase().includes('free plan') ||
+                        errorMessage.toLowerCase().includes('expired')
+                    ));
+
+                if (isSubscriptionError) {
+                    setIsLimitReached(true);
+                    setSubscriptionFeature('AI-Powered Assessment');
+                    setShowSubscriptionModal(true);
+                    throw new Error("Subscription limit reached");
+                }
+                throw new Error(errorMessage || `API error: ${response.statusText}`);
+            }
 
             const data = await response.json();
             const elapsed = Date.now() - startTime;
@@ -95,7 +129,7 @@ export default function AssessmentSkillsPractice() {
         } catch (error: any) {
             if (error.name === 'AbortError') {
                 alert('Request timeout. Please try again with fewer questions.');
-            } else {
+            } else if (error.message !== "Subscription limit reached") {
                 console.error('Failed to fetch questions:', error);
                 alert('Failed to load questions. Please try again.');
             }
@@ -190,6 +224,42 @@ export default function AssessmentSkillsPractice() {
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
     }, []);
+
+    // Check Subscription Status
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                // Call the standardized subscription status endpoint
+                const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const statusData = await response.json();
+                    setSubscriptionType(statusData.subscription_type || 'free');
+
+                    // Expiry logic: if days_remaining is negative, it's expired
+                    const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+                    if (isExpired) {
+                        setIsLimitReached(true);
+                        setShowSubscriptionModal(true);
+                    }
+
+                    // Force limit to 2 for free users
+                    if (statusData.subscription_type === 'free' || isFreeUser) {
+                        setNumQuestions(2);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
+    }, [isFreeUser]);
 
     // Initialize Web Speech API for voice recording (only once on mount)
     useEffect(() => {
@@ -864,52 +934,77 @@ export default function AssessmentSkillsPractice() {
                     <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
                         Number of Questions
+                        {subscriptionType === 'free' && (
+                            <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-bold">
+                                Free Limit: 2
+                            </span>
+                        )}
                     </label>
-                    <div className="relative">
+                    <div className={`relative ${subscriptionType === 'free' ? 'opacity-60 grayscale' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-gray-500 font-medium">5 questions</span>
+                            <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? '2 questions' : '1 question'}</span>
                             <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                                 {numQuestions}
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">25 questions</span>
+                            <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? 'Max 2' : '25 questions'}</span>
                         </div>
                         <input
                             type="range"
-                            min="5"
-                            max="25"
+                            min={subscriptionType === 'free' ? "2" : "1"}
+                            max={subscriptionType === 'free' ? "2" : "25"}
                             value={numQuestions}
                             onChange={(e) => setNumQuestions(parseInt(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                            disabled={subscriptionType === 'free'}
+                            className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${subscriptionType === 'free' ? 'cursor-not-allowed' : ''}`}
                             style={{
-                                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((numQuestions - 5) / 20) * 100}%, #e5e7eb ${((numQuestions - 5) / 20) * 100}%, #e5e7eb 100%)`,
+                                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb 100%)`,
                             }}
                         />
+                        {subscriptionType === 'free' && (
+                            <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                                🔒 <strong>Free Plan Limit Check:</strong> You can only generate 2 questions. Upgrade to Premium for up to 30/day!
+                            </p>
+                        )}
                     </div>
                 </div>
 
                 {/* Fetch Button */}
                 <button
                     onClick={fetchQuestions}
-                    disabled={loading}
-                    className={`w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-                        ? 'bg-gray-400 cursor-not-allowed'
+                    disabled={loading || isLimitReached}
+                    className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading || isLimitReached
+                        ? 'bg-gray-400 cursor-not-allowed opacity-70'
                         : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
                         }`}
                 >
-                    {loading ? (
+                    {isLimitReached ? (
+                        <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+                            </svg>
+                            <span>Subscription Required</span>
+                        </>
+                    ) : loading ? (
                         <>
                             <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                            <span>Loading Questions... (may take 10-15s)</span>
+                            <span>Generating Questions... (may take 10-20s)</span>
                         </>
                     ) : (
                         <>
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                             </svg>
-                            <span>Start AI Practice Session</span>
+                            <span>Start Practice</span>
                         </>
                     )}
                 </button>
+
+                {/* Subscription Required Modal */}
+                <SubscriptionRequiredModal
+                    isOpen={showSubscriptionModal}
+                    onClose={() => setShowSubscriptionModal(false)}
+                    feature={subscriptionFeature}
+                />
             </div>
         );
     }

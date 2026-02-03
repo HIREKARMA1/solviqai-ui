@@ -24,7 +24,11 @@ interface Branch {
     requiresBranch?: boolean;
 }
 
-export default function PracticalSkillsBranchSelection() {
+interface PracticalSkillsBranchSelectionProps {
+    isFreeUser?: boolean;
+}
+
+export default function PracticalSkillsBranchSelection({ isFreeUser = false }: PracticalSkillsBranchSelectionProps) {
     const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -124,6 +128,7 @@ export default function PracticalSkillsBranchSelection() {
                 <SelectedComponent
                     {...(selectedBranchData.requiresBranch ? { branch: branchName } : {})}
                     onBack={() => setSelectedBranch(null)}
+                    isFreeUser={isFreeUser}
                 />
             </div>
         );
