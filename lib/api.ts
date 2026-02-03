@@ -16,9 +16,14 @@ class ApiClient {
   public client: AxiosInstance;
 
   constructor() {
+    const shouldLog =
+      typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
     // Validate API base URL
-    if (!config.api.fullUrl) {
-      console.error("⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.");
+    if (shouldLog && !config.api.fullUrl) {
+      console.warn(
+        "⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.",
+      );
     }
 
     this.client = axios.create({
@@ -29,10 +34,12 @@ class ApiClient {
       },
     });
 
-    console.log("🚀 API Client initialized:", {
-      baseURL: config.api.fullUrl || "(not configured)",
-      timeout: "180s (3 minutes)",
-    });
+    if (shouldLog) {
+      console.log("🚀 API Client initialized:", {
+        baseURL: config.api.fullUrl || "(not configured)",
+        timeout: "180s (3 minutes)",
+      });
+    }
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use(
@@ -1125,6 +1132,167 @@ class ApiClient {
       return response.data;
     },
   };
+
+  // Disha Assessment endpoints
+  async getDishaPackageStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}`
+    );
+    return response.data;
+  }
+
+  async getDishaGenerationStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/generation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageQuestions(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/questions`
+    );
+    return response.data;
+  }
+
+  async triggerDishaQuestionGeneration(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/generate-questions`
+    );
+    return response.data;
+  }
+
+  async getAllDishaPackages(params?: {
+    status?: string;
+    mode?: string;
+    include_expired?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async deleteDishaPackage(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/disha/admin/packages/${packageId}`
+    );
+    return response.data;
+  }
+
+  // DISHA Exam APIs
+  async startDishaAssessment(packageId: string, dishaStudentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/start`,
+      { disha_student_id: dishaStudentId }
+    );
+    return response.data;
+  }
+
+  async getDishaRoundQuestions(
+    packageId: string,
+    roundId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/rounds/${roundId}`,
+      { params: { attempt_id: attemptId } }
+    );
+    return response.data;
+  }
+
+  async submitDishaRound(
+    packageId: string,
+    roundId: string,
+    attemptId: string,
+    answers: Record<string, any>
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/submit`,
+      {
+        attempt_id: attemptId,
+        answers: answers
+      }
+    );
+    return response.data;
+  }
+
+  async executeDishaCode(
+    packageId: string,
+    roundId: string,
+    payload: {
+      question_id: string;
+      language: string;
+      code: string;
+      stdin?: string;
+    },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/code/execute`,
+      payload,
+      { timeout: 60000 },
+    );
+    return response.data;
+  }
+
+
+  async getDishaAttemptStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/status`
+    );
+    return response.data;
+  }
+
+  async getDishaEvaluationStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/evaluation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaReport(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  // Admin DISHA APIs
+  async getDishaPackageAttempts(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageReport(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
+
+  async getDishaIndividualStudentReport(
+    packageId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  async validateDishaToken(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/sso/validate-token`,
+      null,
+      { params: { token } }
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();

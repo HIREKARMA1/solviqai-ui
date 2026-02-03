@@ -833,7 +833,7 @@ export default function AssessmentReportPage() {
                                                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                     }}
                                                     labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                    formatter={(value: any, name: any) => [value, name || '']}
+                                                    formatter={(value: any, name?: string) => [value, name ?? '']}
                                                 />
                                                 <Legend
                                                     wrapperStyle={{ paddingTop: '20px' }}
@@ -977,7 +977,7 @@ export default function AssessmentReportPage() {
                                                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                 }}
                                                 labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                formatter={(value: any, name: any) => [`${value}%`, name]}
+                                                formatter={(value: any, name?: string) => [`${value}%`, name ?? '']}
                                             />
                                             <Legend
                                                 wrapperStyle={{ paddingTop: '15px' }}
@@ -1063,7 +1063,7 @@ export default function AssessmentReportPage() {
                                                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                     }}
                                                     labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                    formatter={(value: any, name: any) => [`${value}%`, name]}
+                                                    formatter={(value: any, name?: string) => [`${value}%`, name ?? '']}
                                                 />
                                                 <Funnel
                                                     dataKey="value"
@@ -1595,8 +1595,8 @@ export default function AssessmentReportPage() {
                                                                     <Badge
                                                                         variant="outline"
                                                                         className={`text-xs ${q.difficulty === 'easy' ? 'bg-green-50 text-green-700' :
-                                                                            q.difficulty === 'hard' ? 'bg-red-50 text-red-700' :
-                                                                                'bg-yellow-50 text-yellow-700'
+                                                                                q.difficulty === 'hard' ? 'bg-red-50 text-red-700' :
+                                                                                    'bg-yellow-50 text-yellow-700'
                                                                             }`}
                                                                     >
                                                                         {q.difficulty}
@@ -1731,8 +1731,8 @@ export default function AssessmentReportPage() {
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className={`text-xl sm:text-2xl font-bold ${value >= 80 ? 'text-green-600' :
-                                                                        value >= 60 ? 'text-yellow-600' :
-                                                                            'text-red-600'
+                                                                            value >= 60 ? 'text-yellow-600' :
+                                                                                'text-red-600'
                                                                         }`}>
                                                                         {formatPercentage(value, 2)}%
                                                                     </div>
