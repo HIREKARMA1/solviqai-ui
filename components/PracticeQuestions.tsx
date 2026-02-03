@@ -20,7 +20,7 @@ interface Category {
     hoverBorder: string;
     textColor: string;
     iconGradient: string;
-    component: React.ComponentType;
+    component: React.ComponentType<{ isFreeUser?: boolean }>;
     fullWidth?: boolean;
 }
 

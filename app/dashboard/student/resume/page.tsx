@@ -10,11 +10,12 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { 
-    Upload, 
-    FileText, 
-    CheckCircle, 
-    AlertCircle, 
+import { config } from '@/lib/config'
+import {
+    Upload,
+    FileText,
+    CheckCircle,
+    AlertCircle,
     X,
     BarChart,
     TrendingUp,
@@ -24,7 +25,8 @@ import {
     BarChart3,
     Home,
     User,
-    Briefcase
+    Briefcase,
+    Lock
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
@@ -77,21 +79,50 @@ export default function ResumePage() {
     const [uploadSuccess, setUploadSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [dragActive, setDragActive] = useState(false)
-    
+
     // ATS Score states
     const [atsScore, setAtsScore] = useState<ATSScore | null>(null)
     const [isCalculatingATS, setIsCalculatingATS] = useState(false)
     const [jobDescription, setJobDescription] = useState('')
-    
+
     // ✅ NEW: Resume status
     const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null)
     const [loadingStatus, setLoadingStatus] = useState(true)
     const [showUploadSection, setShowUploadSection] = useState(false)
-    
+    const [isLimitReached, setIsLimitReached] = useState(false)
+
+    // Check Subscription Status for expiry
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const statusData = await response.json();
+                    const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+                    if (isExpired) {
+                        setIsLimitReached(true);
+                        setSubscriptionFeature('premium features');
+                        setShowSubscriptionModal(true);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
+    }, [])
+
     // Subscription modal state
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
     const [subscriptionFeature, setSubscriptionFeature] = useState('this feature')
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // ✅ NEW: Fetch resume status on mount
@@ -104,7 +135,7 @@ export default function ResumePage() {
         try {
             const status = await apiClient.getResumeStatus()
             setResumeStatus(status)
-            
+
             // If no resume exists, show upload section
             if (!status.data.has_resume) {
                 setShowUploadSection(true)
@@ -121,27 +152,27 @@ export default function ResumePage() {
         if (file.size > MAX_FILE_SIZE) {
             return `File size exceeds 5MB limit. Your file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
         }
-        
+
         const extension = file.name.split('.').pop()?.toLowerCase()
         if (!extension || !ALLOWED_EXTENSIONS.includes(`.${extension}`)) {
             return 'Only PDF and DOCX files are allowed'
         }
-        
+
         if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
             return 'Invalid file type. Only PDF and DOCX files are supported'
         }
-        
+
         return null
     }
 
     const handleFileSelect = (selectedFile: File) => {
         const validationError = validateFile(selectedFile)
-        
+
         if (validationError) {
             setError(validationError)
             return
         }
-        
+
         setFile(selectedFile)
         setError(null)
         setUploadSuccess(false)
@@ -163,7 +194,7 @@ export default function ResumePage() {
         e.preventDefault()
         e.stopPropagation()
         setDragActive(false)
-        
+
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFileSelect(e.dataTransfer.files[0])
         }
@@ -177,28 +208,40 @@ export default function ResumePage() {
 
     const handleUpload = async () => {
         if (!file) return
-        
+
         setIsUploading(true)
         setError(null)
         setUploadProgress(0)
-        
+
         try {
             await apiClient.uploadResume(file, (progress) => {
                 setUploadProgress(progress)
             })
-            
+
             setUploadSuccess(true)
             setUploadProgress(100)
-            
+
             // ✅ Refresh resume status after upload
             await fetchResumeStatus()
             setShowUploadSection(false)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to upload resume'
-            
+
             // Check if it's a subscription error
-            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                (errorDetail && (
+                    errorDetail.toLowerCase().includes('contact hirekarma') ||
+                    errorDetail.toLowerCase().includes('subscription') ||
+                    errorDetail.toLowerCase().includes('free plan') ||
+                    errorDetail.toLowerCase().includes('expired') ||
+                    errorDetail.toLowerCase().includes('limit')
+                ));
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
                 setSubscriptionFeature('resume uploads')
                 setShowSubscriptionModal(true)
             } else {
@@ -213,16 +256,28 @@ export default function ResumePage() {
     const handleCalculateATS = async () => {
         setIsCalculatingATS(true)
         setError(null)
-        
+
         try {
             const result = await apiClient.getATSScore(jobDescription || undefined)
             setAtsScore(result)
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>
             const errorDetail = axiosError.response?.data?.detail || axiosError.message || 'Failed to calculate ATS score'
-            
+
             // Check if it's a subscription error
-            if (axiosError.response?.status === 403 || errorDetail.includes('Contact HireKarma') || errorDetail.includes('subscription')) {
+            const isSubscriptionError =
+                axiosError.response?.status === 403 ||
+                axiosError.response?.status === 402 ||
+                (errorDetail && (
+                    errorDetail.toLowerCase().includes('contact hirekarma') ||
+                    errorDetail.toLowerCase().includes('subscription') ||
+                    errorDetail.toLowerCase().includes('free plan') ||
+                    errorDetail.toLowerCase().includes('expired') ||
+                    errorDetail.toLowerCase().includes('limit')
+                ));
+
+            if (isSubscriptionError) {
+                setIsLimitReached(true)
                 setSubscriptionFeature('ATS score calculation')
                 setShowSubscriptionModal(true)
             } else {
@@ -254,13 +309,13 @@ export default function ResumePage() {
     // Extract readable filename from stored resume filename
     const getReadableFilename = (filename: string | undefined): string => {
         if (!filename) return 'Resume.pdf'
-        
+
         // If filename contains an underscore, check if first part is a UUID
         // This handles cases like "uuid_original_filename.pdf" or "d37587a3-4e85-4860-83e6-c2854f19_Management_RHealthcare.pdf"
         if (filename.includes('_')) {
             const parts = filename.split('_')
             const firstPart = parts[0]
-            
+
             // Check if first part looks like a UUID (contains hyphens and is 30+ chars)
             // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
             if (firstPart.includes('-') && firstPart.length >= 30) {
@@ -272,18 +327,18 @@ export default function ResumePage() {
                 }
             }
         }
-        
+
         // If it's just a UUID without extension, return a default name
         // Check if it looks like a UUID (contains hyphens, is long, and has no file extension)
         if (filename.includes('-') && filename.length > 30 && !filename.includes('.')) {
             return 'Resume.pdf'
         }
-        
+
         // If filename doesn't have an extension, add .pdf
         if (!filename.includes('.')) {
             return filename + '.pdf'
         }
-        
+
         // Otherwise return the filename as is
         return filename
     }
@@ -320,7 +375,7 @@ export default function ResumePage() {
                             {/* Decorative shapes */}
                             <div className="absolute -top-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-green-200/30 to-emerald-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
                             <div className="absolute -bottom-8 -left-8 w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-teal-200/25 to-cyan-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
+
                             <CardHeader className="relative z-10 border-b border-green-200 dark:border-green-700 p-4 sm:p-6">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                                     <div className="flex items-center gap-2 sm:gap-3">
@@ -380,7 +435,7 @@ export default function ResumePage() {
                             {/* Decorative shapes */}
                             <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br from-blue-200/30 to-indigo-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
                             <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-200/25 to-teal-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
+
                             <CardHeader className="relative z-10 p-4 sm:p-6">
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -417,8 +472,8 @@ export default function ResumePage() {
                                     className={`
                                         border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 text-center cursor-pointer
                                         transition-colors duration-200
-                                        ${dragActive 
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' 
+                                        ${dragActive
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
                                             : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
                                         }
                                         ${file ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : ''}
@@ -430,84 +485,89 @@ export default function ResumePage() {
                                     onDrop={handleDrop}
                                     onClick={() => !isUploading && fileInputRef.current?.click()}
                                 >
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".pdf,.doc,.docx"
-                                    onChange={handleFileInputChange}
-                                    className="hidden"
-                                    disabled={isUploading}
-                                />
-                                
-                                {!file ? (
-                                    <div className="space-y-2 sm:space-y-4">
-                                        <Upload className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-gray-400" />
-                                        <div>
-                                            <p className="text-sm sm:text-base md:text-lg font-medium">
-                                                Drag and drop your resume here
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                or click to browse files
-                                            </p>
-                                        </div>
-                                        <p className="text-[10px] sm:text-xs text-gray-400">
-                                            Supported formats: PDF, DOC, DOCX (Max 5MB)
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2 sm:space-y-4">
-                                        <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-green-500" />
-                                        <div>
-                                            <p className="text-sm sm:text-base md:text-lg font-medium flex items-center justify-center gap-2 flex-wrap">
-                                                <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                                <span className="truncate max-w-[200px] sm:max-w-none">{file.name}</span>
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={handleFileInputChange}
+                                        className="hidden"
+                                        disabled={isUploading}
+                                    />
+
+                                    {!file ? (
+                                        <div className="space-y-2 sm:space-y-4">
+                                            <Upload className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-gray-400" />
+                                            <div>
+                                                <p className="text-sm sm:text-base md:text-lg font-medium">
+                                                    Drag and drop your resume here
+                                                </p>
+                                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                    or click to browse files
+                                                </p>
+                                            </div>
+                                            <p className="text-[10px] sm:text-xs text-gray-400">
+                                                Supported formats: PDF, DOC, DOCX (Max 5MB)
                                             </p>
                                         </div>
+                                    ) : (
+                                        <div className="space-y-2 sm:space-y-4">
+                                            <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-green-500" />
+                                            <div>
+                                                <p className="text-sm sm:text-base md:text-lg font-medium flex items-center justify-center gap-2 flex-wrap">
+                                                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                                                    <span className="truncate max-w-[200px] sm:max-w-none">{file.name}</span>
+                                                </p>
+                                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Error Message */}
+                                {error && (
+                                    <Alert variant="destructive" className="text-xs sm:text-sm">
+                                        <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                        <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* Success Message */}
+                                {uploadSuccess && (
+                                    <Alert className="border-green-500 bg-green-50 dark:bg-green-900/10 text-xs sm:text-sm">
+                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                                        <AlertDescription className="text-green-600 dark:text-green-500 text-xs sm:text-sm">
+                                            Resume uploaded successfully! You can now calculate your ATS score.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* Progress Bar */}
+                                {isUploading && (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs sm:text-sm">
+                                            <span className="font-medium">Uploading...</span>
+                                            <span className="font-semibold">{uploadProgress}%</span>
+                                        </div>
+                                        <Progress value={uploadProgress} className="h-1.5 sm:h-2" />
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Error Message */}
-                            {error && (
-                                <Alert variant="destructive" className="text-xs sm:text-sm">
-                                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                    <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
-                                </Alert>
-                            )}
-
-                            {/* Success Message */}
-                            {uploadSuccess && (
-                                <Alert className="border-green-500 bg-green-50 dark:bg-green-900/10 text-xs sm:text-sm">
-                                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-                                    <AlertDescription className="text-green-600 dark:text-green-500 text-xs sm:text-sm">
-                                        Resume uploaded successfully! You can now calculate your ATS score.
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-
-                            {/* Progress Bar */}
-                            {isUploading && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs sm:text-sm">
-                                        <span className="font-medium">Uploading...</span>
-                                        <span className="font-semibold">{uploadProgress}%</span>
-                                    </div>
-                                    <Progress value={uploadProgress} className="h-1.5 sm:h-2" />
-                                </div>
-                            )}
 
                                 {/* Action Buttons */}
                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                                         <Button
                                             onClick={handleUpload}
-                                            disabled={!file || isUploading || uploadSuccess}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
+                                            disabled={!file || isUploading || uploadSuccess || isLimitReached}
+                                            className={`w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            {isUploading ? (
+                                            {isLimitReached ? (
+                                                <>
+                                                    <Lock className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                                    Subscription Required
+                                                </>
+                                            ) : isUploading ? (
                                                 <>
                                                     <Loader className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                                     <span className="hidden sm:inline">Uploading </span>{uploadProgress}%
@@ -526,7 +586,7 @@ export default function ResumePage() {
                                             )}
                                         </Button>
                                     </motion.div>
-                                    
+
                                     {(file || uploadSuccess) && (
                                         <Button
                                             onClick={handleReset}
@@ -555,7 +615,7 @@ export default function ResumePage() {
                             {/* Decorative shapes */}
                             <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br from-purple-200/30 to-pink-200/20 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
                             <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-200/25 to-purple-200/15 blur-3xl group-hover:blur-[40px] transition-all duration-500" />
-                            
+
                             <CardHeader className="relative z-10 border-b border-purple-200 dark:border-purple-700 p-4 sm:p-6">
                                 <div className="flex items-center gap-2 sm:gap-3">
                                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-md flex-shrink-0">
@@ -589,11 +649,16 @@ export default function ResumePage() {
                                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                                     <Button
                                         onClick={handleCalculateATS}
-                                        disabled={isCalculatingATS}
-                                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
+                                        disabled={isCalculatingATS || isLimitReached}
+                                        className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         size="lg"
                                     >
-                                        {isCalculatingATS ? (
+                                        {isLimitReached ? (
+                                            <>
+                                                <Lock className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                                Subscription Required
+                                            </>
+                                        ) : isCalculatingATS ? (
                                             <>
                                                 <Loader className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                                 <span className="hidden sm:inline">Analyzing Resume with AI...</span>
@@ -630,9 +695,9 @@ export default function ResumePage() {
                     </motion.div>
                 )}
             </div>
-            
+
             {/* Subscription Required Modal */}
-            <SubscriptionRequiredModal 
+            <SubscriptionRequiredModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
                 feature={subscriptionFeature}

@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
 import { Zap, CheckCircle2, AlertCircle, Award, TrendingUp, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal'
+import { config } from '@/lib/config'
 
 // Excalidraw is large; load client-side only
 const Excalidraw = dynamic(
@@ -48,6 +50,9 @@ export default function ElectricalCircuitPractice({
   const [roundSubmitted, setRoundSubmitted] = useState(false)
   const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
   const [isRestored, setIsRestored] = useState(false)
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+  const [isLimitReached, setIsLimitReached] = useState(false)
+  const [subscriptionFeature, setSubscriptionFeature] = useState('Electrical Circuit AI')
 
   // Auto-save key for localStorage
   const storageKey = `electrical-circuit-${assessmentId || 'practice'}-${roundId || 'draft'}`
@@ -90,9 +95,25 @@ export default function ElectricalCircuitPractice({
       }
 
       toast.success('Question generated')
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
-      toast.error('Failed to generate question')
+      const msg = e?.response?.data?.detail || e?.message || 'Failed to generate question'
+
+      const isSubscriptionError =
+        e?.response?.status === 403 ||
+        e?.response?.status === 402 ||
+        (msg && (
+          msg.toLowerCase().includes('contact hirekarma') ||
+          msg.toLowerCase().includes('subscription') ||
+          msg.toLowerCase().includes('free plan') ||
+          msg.toLowerCase().includes('expired')
+        ));
+
+      if (isSubscriptionError) {
+        setIsLimitReached(true)
+        setShowSubscriptionModal(true)
+      }
+      toast.error(msg)
     } finally {
       setBusy(false)
     }
@@ -169,13 +190,45 @@ export default function ElectricalCircuitPractice({
           toast.error('Failed to record assessment round')
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
-      toast.error('Failed to evaluate diagram')
+      const msg = e?.response?.data?.detail || e?.message || 'Failed to evaluate diagram'
+      if (e?.response?.status === 403 || e?.response?.status === 402) {
+        setIsLimitReached(true)
+        setShowSubscriptionModal(true)
+      }
+      toast.error(msg)
     } finally {
       setBusy(false)
     }
   }
+
+  // Check Subscription Status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const statusData = await response.json();
+          const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+          if (isExpired) {
+            setIsLimitReached(true);
+            setShowSubscriptionModal(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check subscription", err);
+      }
+    };
+    checkUser();
+  }, [])
 
   // Restore saved work from localStorage on mount
   useEffect(() => {
@@ -207,11 +260,11 @@ export default function ElectricalCircuitPractice({
       console.error('Failed to restore saved work:', error)
     }
 
-    if (!isRestored) {
+    if (!isRestored && !isLimitReached) {
       handleGenerate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [excalidrawAPI])
+  }, [excalidrawAPI, isLimitReached])
 
   useEffect(() => {
     try {
@@ -326,10 +379,20 @@ export default function ElectricalCircuitPractice({
             {!question && (
               <Button
                 onClick={handleGenerate}
-                disabled={busy}
-                className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                disabled={busy || isLimitReached}
+                className={`mt-4 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ${isLimitReached
+                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                  : 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white'
+                  }`}
               >
-                {busy ? (
+                {isLimitReached ? (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+                    </svg>
+                    Subscription Required
+                  </>
+                ) : busy ? (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
                     Generating...
@@ -344,6 +407,13 @@ export default function ElectricalCircuitPractice({
             )}
           </CardContent>
         </Card>
+
+        {/* Subscription Required Modal */}
+        <SubscriptionRequiredModal
+          isOpen={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          feature={subscriptionFeature}
+        />
 
         {/* Drawing Canvas Card */}
         <Card className="shadow-lg border-2 border-yellow-100">
@@ -384,10 +454,15 @@ export default function ElectricalCircuitPractice({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={busy || !question}
-                className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300"
+                disabled={busy || !question || isLimitReached}
+                className={`bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {busy ? (
+                {isLimitReached ? (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" />
+                    Subscription Required
+                  </>
+                ) : busy ? (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
                     Evaluating...

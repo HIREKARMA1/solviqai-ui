@@ -12,7 +12,7 @@ import {
     Clock, Calendar, Zap, TrendingUp, Lock
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import SubscriptionRequiredModal from '../SubscriptionRequiredModal'
+import SubscriptionRequiredModal from './SubscriptionRequiredModal'
 
 interface UsageData {
     subscription_type: string

@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { BookOpen, Sparkles, Target, Rocket, Trophy, Award, TrendingUp } from 'lucide-react';
 import { config } from '@/lib/config';
 import PracticalSkillsQuestionsView from './PracticalSkillsQuestionsView';
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal';
 
 interface Question {
   exam_type: string;
@@ -27,9 +28,10 @@ interface PracticalEvalItem {
 interface PracticalSkillsPracticeProps {
   branch?: string;
   onBack?: () => void;
+  isFreeUser?: boolean;
 }
 
-export default function PracticalSkillsPractice({ branch: initialBranch, onBack }: PracticalSkillsPracticeProps = {}) {
+export default function PracticalSkillsPractice({ branch: initialBranch, onBack, isFreeUser = false }: PracticalSkillsPracticeProps = {}) {
   const [branch, setBranch] = useState<string>(initialBranch || 'Mechanical');
   const [topic, setTopic] = useState<string>('');
   const [limit, setLimit] = useState<number>(6);
@@ -47,6 +49,10 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
   const [evalLoading, setEvalLoading] = useState(false);
   const [evaluation, setEvaluation] = useState<{ score: number; feedback: string; analyses: PracticalEvalItem[] } | null>(null);
 
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState('Practical Skills AI');
+
   const branches = [
     'Mechanical',
     'Civil',
@@ -57,6 +63,30 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
 
   useEffect(() => {
     setIsVisible(true);
+
+    const checkSub = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const statusData = await response.json();
+          const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+          if (isExpired) {
+            setIsLimitReached(true);
+            setShowSubscriptionModal(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check subscription", err);
+      }
+    };
+    checkSub();
   }, []);
 
   const mcqCount = useMemo(() => questions.filter((q) => q.question_type === 'mcq').length, [questions]);
@@ -89,10 +119,27 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
+        const msg = data.detail || data.error || `API error: ${resp.status} ${resp.statusText}`;
+
+        const isSubscriptionError =
+          resp.status === 403 ||
+          resp.status === 402 ||
+          (msg && (
+            msg.toLowerCase().includes('contact hirekarma') ||
+            msg.toLowerCase().includes('subscription') ||
+            msg.toLowerCase().includes('free plan') ||
+            msg.toLowerCase().includes('expired')
+          ));
+
+        if (isSubscriptionError) {
+          setIsLimitReached(true);
+          setShowSubscriptionModal(true);
+          throw new Error('Subscription limit reached');
+        }
+
         if (resp.status === 401) throw new Error('Session expired. Please log in again.');
-        if (resp.status === 403) throw new Error('Access denied. Student access required.');
         if (resp.status === 500) throw new Error('Server error. Please try again later.');
-        throw new Error(data.detail || data.error || `API error: ${resp.status} ${resp.statusText}`);
+        throw new Error(msg);
       }
 
       const data = await resp.json();
@@ -151,10 +198,16 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
+        const msg = data.detail || data.error || `API error: ${resp.status} ${resp.statusText}`;
+
+        if (resp.status === 403 || resp.status === 402) {
+          setIsLimitReached(true);
+          setShowSubscriptionModal(true);
+        }
+
         if (resp.status === 401) throw new Error('Session expired. Please log in again.');
-        if (resp.status === 403) throw new Error('Access denied. Student access required.');
         if (resp.status === 500) throw new Error('Server error. Please try again later.');
-        throw new Error(data.detail || data.error || `API error: ${resp.status} ${resp.statusText}`);
+        throw new Error(msg);
       }
 
       const data = await resp.json();
@@ -605,36 +658,51 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
           </div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500 font-medium">3 questions</span>
+              <span className="text-xs text-gray-500 font-medium">{isFreeUser ? 'Max 2' : '3 questions'}</span>
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
-                {limit}
+                {isFreeUser ? Math.min(limit, 2) : limit}
               </span>
-              <span className="text-xs text-gray-500 font-medium">20 questions</span>
+              <span className="text-xs text-gray-500 font-medium">{isFreeUser ? 'Free Limit' : '20 questions'}</span>
             </div>
             <input
               type="range"
               min="3"
               max="20"
-              value={limit}
+              value={isFreeUser ? 2 : limit}
+              disabled={isFreeUser}
               onChange={(e) => setLimit(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${isFreeUser ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{
-                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+                background: isFreeUser
+                  ? '#e5e7eb'
+                  : `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
               }}
             />
+            {isFreeUser && (
+              <p className="mt-1 text-xs text-indigo-600 font-semibold animate-pulse">
+                Free plan is limited to 2 questions per session.
+              </p>
+            )}
           </div>
         </div>
 
         {/* Generate Button */}
         <button
           onClick={fetchQuestions}
-          disabled={loading}
-          className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] ${loading
+          disabled={loading || isLimitReached}
+          className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] ${loading || isLimitReached
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl'
             }`}
         >
-          {loading ? (
+          {isLimitReached ? (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+              </svg>
+              <span>Subscription Required</span>
+            </>
+          ) : loading ? (
             <>
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               <span>Generating Questions...</span>
@@ -646,6 +714,13 @@ export default function PracticalSkillsPractice({ branch: initialBranch, onBack 
             </>
           )}
         </button>
+
+        {/* Subscription Required Modal */}
+        <SubscriptionRequiredModal
+          isOpen={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          feature={subscriptionFeature}
+        />
 
         {error && (
           <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl animate-shake">

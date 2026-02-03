@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { apiClient } from '@/lib/api';
 import { CodingRound } from '@/components/assessment/CodingRound';
 import PracticeCodingEvaluation from './PracticeCodingEvaluation';
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal';
+import { config } from '@/lib/config';
 
 interface CodingChallengePracticeProps {
   branch: string;
@@ -20,12 +22,47 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [submissionsData, setSubmissionsData] = useState<any>(null);
+
+  const [subscriptionType, setSubscriptionType] = useState<string>('free');
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState('Coding Practice');
   const autoFullscreenAttemptedRef = useRef(false);
 
   // Refs to track CodingRound state
   const codingRoundRef = useRef<any>(null);
   const editorsRef = useRef<Record<string, { language: string; code: string }>>({});
   const resultsRef = useRef<Record<string, any>>({});
+
+  // Check Subscription Status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch(`${config.api.fullUrl}/api/v1/students/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const statusData = await response.json();
+          setSubscriptionType(statusData.subscription_type || 'free');
+
+          // Expiry logic: if days_remaining is negative, it's expired
+          const isExpired = statusData.days_remaining !== null && statusData.days_remaining < 0;
+
+          if (isExpired) {
+            setIsLimitReached(true);
+            setShowSubscriptionModal(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check subscription", err);
+      }
+    };
+    checkUser();
+  }, []);
 
   // Request fullscreen function - more aggressive approach
   const requestFullscreen = async () => {
@@ -114,7 +151,25 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
       toast.success(`Loaded ${items.length} ${difficulty} coding problems!`);
     } catch (e: any) {
       const msg = e?.response?.data?.detail || e?.message || 'Failed to load coding challenges.';
-      setError(msg);
+
+      const isSubscriptionError =
+        e?.response?.status === 403 ||
+        e?.response?.status === 402 ||
+        (msg && (
+          msg.toLowerCase().includes('contact hirekarma') ||
+          msg.toLowerCase().includes('subscription') ||
+          msg.toLowerCase().includes('free plan') ||
+          msg.toLowerCase().includes('expired')
+        ));
+
+      if (isSubscriptionError) {
+        setIsLimitReached(true);
+        setSubscriptionFeature('Advanced Coding AI');
+        setShowSubscriptionModal(true);
+        setError("Subscription limit reached. Please upgrade to continue.");
+      } else {
+        setError(msg);
+      }
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -348,13 +403,20 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
           {/* Start Button */}
           <button
             onClick={fetchQuestions}
-            disabled={loading}
-            className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 transform ${loading
-              ? 'bg-gray-400 cursor-not-allowed'
+            disabled={loading || isLimitReached}
+            className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 transform ${loading || isLimitReached
+              ? 'bg-gray-400 cursor-not-allowed opacity-70'
               : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl hover:scale-[1.02]'
               }`}
           >
-            {loading ? (
+            {isLimitReached ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m10-4V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4z" />
+                </svg>
+                Subscription Required
+              </span>
+            ) : loading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Generating {difficulty} challenges...
@@ -366,6 +428,13 @@ export default function CodingChallengePractice({ branch }: CodingChallengePract
               </span>
             )}
           </button>
+
+          {/* Subscription Required Modal */}
+          <SubscriptionRequiredModal
+            isOpen={showSubscriptionModal}
+            onClose={() => setShowSubscriptionModal(false)}
+            feature={subscriptionFeature}
+          />
 
           {error && (
             <div className="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">

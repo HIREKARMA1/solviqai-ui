@@ -11,7 +11,7 @@ import {
     Crown, Shield, Building2, Calendar, CheckCircle,
     AlertCircle, Info, Sparkles, ArrowUpRight
 } from 'lucide-react'
-import SubscriptionRequiredModal from '../SubscriptionRequiredModal'
+import SubscriptionRequiredModal from './SubscriptionRequiredModal'
 
 interface SubscriptionStatus {
     subscription_type: string
