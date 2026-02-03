@@ -49,16 +49,6 @@ export default function ElectricalCircuitPractice({
   const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
   const [isRestored, setIsRestored] = useState(false)
 
-  // Load Excalidraw CSS on mount (backup if layout import fails)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // @ts-ignore - CSS import doesn't have type declarations
-      import('@excalidraw/excalidraw/index.css').catch((err) => {
-        console.warn('Failed to load Excalidraw CSS:', err)
-      })
-    }
-  }, [])
-
   // Auto-save key for localStorage
   const storageKey = `electrical-circuit-${assessmentId || 'practice'}-${roundId || 'draft'}`
 

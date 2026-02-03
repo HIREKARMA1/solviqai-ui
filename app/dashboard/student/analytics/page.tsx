@@ -18,6 +18,7 @@ import {
     CheckCircle, AlertCircle, ArrowUpRight, ArrowDownRight,
     PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon
 } from 'lucide-react'
+import { SubscriptionStatusCard, UsageAnalyticsCard } from '@/components/subscription'
 
 // Recharts (SSR-safe)
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false })
@@ -403,6 +404,12 @@ export default function StudentAnalyticsPage() {
                         bgColor="bg-orange-100 dark:bg-orange-900/30"
                     />
                     </div>
+
+                {/* Subscription Status & Usage Analytics - Phase 1 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <SubscriptionStatusCard />
+                    <UsageAnalyticsCard />
+                </div>
 
                 {/* Tabs for different views */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
