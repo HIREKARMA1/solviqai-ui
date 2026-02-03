@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Home, Users, GraduationCap, BarChart3 } from 'lucide-react'
+import { Home, Users, GraduationCap, BarChart3, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function CollegeProfile() {
@@ -234,6 +235,32 @@ export default function CollegeProfile() {
                                             disabled
                                             className="bg-gray-100 dark:bg-gray-800"
                                         />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">License Plan</label>
+                                        <div>
+                                            <Badge
+                                                variant={
+                                                    profile?.license_type === 'premium' ? 'default' :
+                                                        profile?.license_type === 'enterprise' ? 'success' :
+                                                            'outline'
+                                                }
+                                                className="capitalize mb-2"
+                                            >
+                                                {profile?.license_type || 'free'}
+                                            </Badge>
+                                            {profile?.license_expiry && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                                    <Calendar className="h-4 w-4" />
+                                                    Expires: {new Date(profile.license_expiry).toLocaleDateString('en-IN', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    })}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

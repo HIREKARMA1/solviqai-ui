@@ -8,12 +8,16 @@ interface SubscriptionRequiredModalProps {
   isOpen: boolean
   onClose: () => void
   feature?: string
+  title?: string
+  message?: string
 }
 
 export default function SubscriptionRequiredModal({ 
   isOpen, 
   onClose,
-  feature = "this feature"
+  feature = "this feature",
+  title = "Subscription Required",
+  message,
 }: SubscriptionRequiredModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -21,10 +25,10 @@ export default function SubscriptionRequiredModal({
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <AlertCircle className="h-6 w-6 text-amber-500" />
-            <DialogTitle className="text-xl">Subscription Required</DialogTitle>
+            <DialogTitle className="text-xl">{title}</DialogTitle>
           </div>
           <DialogDescription className="text-base">
-            Contact HireKarma for subscription to access {feature}.
+            {message ?? `Contact HireKarma for subscription to access ${feature}.`}
           </DialogDescription>
         </DialogHeader>
         
