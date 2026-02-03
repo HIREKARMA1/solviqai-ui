@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Volume2, Mic, Square, CheckCircle2 } from 'lucide-react';
 import { config } from '@/lib/config';
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal';
 
 // Speech Recognition Types
 interface SpeechRecognitionEvent extends Event {
@@ -38,13 +39,15 @@ export default function AssessmentSkillsPractice() {
     const [assessmentType, setAssessmentType] = useState<'aptitude' | 'soft_skills'>('aptitude');
     const [topic, setTopic] = useState<string>('');
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-    const [numQuestions, setNumQuestions] = useState<number>(20);
+    const [numQuestions, setNumQuestions] = useState<number>(5);
     const [loading, setLoading] = useState(false);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [showResults, setShowResults] = useState(false);
     const [audioPlayed, setAudioPlayed] = useState<Record<number, boolean>>({});
+    const [subscriptionType, setSubscriptionType] = useState<string>('free');
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
     // Live Transcription States
     const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
@@ -57,6 +60,9 @@ export default function AssessmentSkillsPractice() {
         setLoading(true);
         const startTime = Date.now();
         try {
+            const token = localStorage.getItem('access_token');
+            if (!token) throw new Error("Please log in");
+
             const params = new URLSearchParams({
                 exam_type: assessmentType,
                 difficulty,
@@ -74,7 +80,7 @@ export default function AssessmentSkillsPractice() {
                 {
                     method: 'GET',
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                        Authorization: `Bearer ${token}`,
                     },
                     signal: controller.signal,
                 }
@@ -82,7 +88,13 @@ export default function AssessmentSkillsPractice() {
 
             clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+            if (!response.ok) {
+                if (response.status === 403 || response.status === 402) {
+                    setShowSubscriptionModal(true);
+                    throw new Error("Subscription limit reached");
+                }
+                throw new Error(`API error: ${response.statusText}`);
+            }
 
             const data = await response.json();
             const elapsed = Date.now() - startTime;
@@ -95,7 +107,7 @@ export default function AssessmentSkillsPractice() {
         } catch (error: any) {
             if (error.name === 'AbortError') {
                 alert('Request timeout. Please try again with fewer questions.');
-            } else {
+            } else if (error.message !== "Subscription limit reached") {
                 console.error('Failed to fetch questions:', error);
                 alert('Failed to load questions. Please try again.');
             }
@@ -189,6 +201,34 @@ export default function AssessmentSkillsPractice() {
             loadVoices();
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
+    }, []);
+
+    // Check Subscription Status
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    const sub = userData.subscription_type || 'free';
+                    setSubscriptionType(sub);
+
+                    // Force limit to 2 for free users
+                    if (sub === 'free') {
+                        setNumQuestions(2);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
     }, []);
 
     // Initialize Web Speech API for voice recording (only once on mount)
@@ -864,26 +904,37 @@ export default function AssessmentSkillsPractice() {
                     <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
                         Number of Questions
+                        {subscriptionType === 'free' && (
+                            <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-bold">
+                                Free Limit: 2
+                            </span>
+                        )}
                     </label>
-                    <div className="relative">
+                    <div className={`relative ${subscriptionType === 'free' ? 'opacity-60 grayscale' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-gray-500 font-medium">5 questions</span>
+                            <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? '2 questions' : '1 question'}</span>
                             <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                                 {numQuestions}
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">25 questions</span>
+                            <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? 'Max 2' : '25 questions'}</span>
                         </div>
                         <input
                             type="range"
-                            min="5"
-                            max="25"
+                            min={subscriptionType === 'free' ? "2" : "1"}
+                            max={subscriptionType === 'free' ? "2" : "25"}
                             value={numQuestions}
                             onChange={(e) => setNumQuestions(parseInt(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                            disabled={subscriptionType === 'free'}
+                            className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${subscriptionType === 'free' ? 'cursor-not-allowed' : ''}`}
                             style={{
-                                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((numQuestions - 5) / 20) * 100}%, #e5e7eb ${((numQuestions - 5) / 20) * 100}%, #e5e7eb 100%)`,
+                                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb 100%)`,
                             }}
                         />
+                        {subscriptionType === 'free' && (
+                            <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                                🔒 <strong>Free Plan Limit Check:</strong> You can only generate 2 questions. Upgrade to Premium for up to 30/day!
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -1299,6 +1350,11 @@ export default function AssessmentSkillsPractice() {
                     </div>
                 </div>
             </div>
+            <SubscriptionRequiredModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature="premium assessment practice"
+            />
         </div>
     );
 }

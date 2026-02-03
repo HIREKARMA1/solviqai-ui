@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { motion } from 'framer-motion'
-import { 
-    Crown, Shield, Building2, Calendar, CheckCircle, 
+import {
+    Crown, Shield, Building2, Calendar, CheckCircle,
     AlertCircle, Info, Sparkles, ArrowUpRight
 } from 'lucide-react'
+import SubscriptionRequiredModal from '../SubscriptionRequiredModal'
 
 interface SubscriptionStatus {
     subscription_type: string
@@ -36,6 +37,7 @@ export function SubscriptionStatusCard() {
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<SubscriptionStatus | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -148,7 +150,7 @@ export function SubscriptionStatusCard() {
         >
             <Card className="overflow-hidden">
                 <div className={`h-2 ${getPlanColor()}`} />
-                
+
                 <CardHeader>
                     <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -233,12 +235,9 @@ export function SubscriptionStatusCard() {
                     {/* Upgrade CTA for Free Users */}
                     {data.subscription_type === 'free' && (
                         <div className="pt-2">
-                            <Button 
+                            <Button
                                 className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-white"
-                                onClick={() => {
-                                    // TODO: Implement upgrade flow
-                                    alert('Upgrade flow coming soon!')
-                                }}
+                                onClick={() => setShowSubscriptionModal(true)}
                             >
                                 <Crown className="h-4 w-4 mr-2" />
                                 Upgrade to Premium
@@ -250,13 +249,10 @@ export function SubscriptionStatusCard() {
                     {/* Expiry Warning for Premium */}
                     {data.subscription_type === 'premium' && data.days_remaining && data.days_remaining <= 30 && (
                         <div className="pt-2">
-                            <Button 
+                            <Button
                                 variant="outline"
                                 className="w-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:hover:bg-yellow-900/20"
-                                onClick={() => {
-                                    // TODO: Implement renewal flow
-                                    alert('Renewal flow coming soon!')
-                                }}
+                                onClick={() => setShowSubscriptionModal(true)}
                             >
                                 <Calendar className="h-4 w-4 mr-2" />
                                 Renew Subscription
@@ -265,6 +261,12 @@ export function SubscriptionStatusCard() {
                     )}
                 </CardContent>
             </Card>
+
+            <SubscriptionRequiredModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature="premium subscription"
+            />
         </motion.div>
     )
 }

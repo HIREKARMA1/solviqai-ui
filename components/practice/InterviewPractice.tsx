@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { config } from '@/lib/config';
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -32,7 +33,11 @@ interface SpeechRecognition extends EventTarget {
   onend: () => void;
 }
 
-export default function InterviewPractice() {
+interface InterviewPracticeProps {
+  isFreeUser?: boolean;
+}
+
+export default function InterviewPractice({ isFreeUser = false }: InterviewPracticeProps) {
   const [mode, setMode] = useState<'technical' | 'hr'>('technical');
   const [jobRole, setJobRole] = useState<string>('');
   const [topic, setTopic] = useState<string>('');
@@ -40,7 +45,8 @@ export default function InterviewPractice() {
   const [limit, setLimit] = useState<number>(6);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [subscriptionType, setSubscriptionType] = useState<string>('free'); // Default to free
+  const [subscriptionType, setSubscriptionType] = useState<string>(isFreeUser ? 'free' : 'premium');
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -124,8 +130,9 @@ export default function InterviewPractice() {
           setSubscriptionType(sub);
 
           // Force limit to 2 for free users
-          if (sub === 'free') {
+          if (sub === 'free' || isFreeUser) {
             setLimit(2);
+            if (isFreeUser) setSubscriptionType('free');
           }
         }
       } catch (err) {
@@ -296,6 +303,10 @@ export default function InterviewPractice() {
       setResponses({});
     } catch (error: any) {
       const msg = error.name === 'AbortError' ? 'Request timeout. Try with fewer questions.' : error.message || 'Failed to load questions.';
+
+      if (error.message && (error.message.includes('Access denied') || error.message.includes('subscription') || error.message.includes('limit'))) {
+        setShowSubscriptionModal(true);
+      }
       setError(msg);
     } finally {
       setLoading(false);
@@ -803,11 +814,12 @@ export default function InterviewPractice() {
                 </p>
               )}
             </div>
-
           </div>
 
+
+
           {/* Navigation */}
-          <div className="bg-white p-4 rounded-lg shadow-lg">
+          <div className="bg-white p-4 rounded-lg shadow-lg mb-6 lg:mb-0">
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
@@ -890,6 +902,13 @@ export default function InterviewPractice() {
           </div>
         </div>
       </div>
+
+      <SubscriptionRequiredModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature="premium interview practice"
+      />
     </div>
+
   );
 }

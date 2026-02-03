@@ -14,8 +14,8 @@ interface SubscriptionRequiredModalProps {
   message?: string
 }
 
-export default function SubscriptionRequiredModal({ 
-  isOpen, 
+export default function SubscriptionRequiredModal({
+  isOpen,
   onClose,
   feature = "this feature",
   title = "Subscription Required",
@@ -59,7 +59,7 @@ export default function SubscriptionRequiredModal({
                 <Lock className="w-10 h-10 text-white" strokeWidth={2.5} />
               </div>
             </motion.div>
-            
+
             {/* Text Content */}
             <div className="space-y-2 mb-8">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -72,15 +72,15 @@ export default function SubscriptionRequiredModal({
 
             {/* Minimal Actions */}
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => router.back()}
                 className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Go Back
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   window.location.href = "mailto:contact@hirekarma.com?subject=Premium Subscription Inquiry"
                 }}

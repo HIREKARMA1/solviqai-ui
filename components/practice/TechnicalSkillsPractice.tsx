@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
+import SubscriptionRequiredModal from '../subscription/SubscriptionRequiredModal';
 
 interface Question {
     id?: string;
@@ -28,6 +29,8 @@ export default function TechnicalSkillsPractice() {
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [showResults, setShowResults] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [subscriptionType, setSubscriptionType] = useState<string>('free');
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
     const branches = [
         { value: 'Computer Science', label: 'Computer Science (DS, Algo, OS, Networks)' },
@@ -74,6 +77,34 @@ export default function TechnicalSkillsPractice() {
         'Textile': ['Textile Chemistry', 'Textile Processing', 'Fabric Manufacturing', 'Textile Testing', 'Dyeing and Printing', 'Textile Machinery'],
     };
 
+    // Check Subscription Status
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${config.api.fullUrl}/api/v1/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    const sub = userData.subscription_type || 'free';
+                    setSubscriptionType(sub);
+
+                    // Force limit to 2 for free users
+                    if (sub === 'free') {
+                        setNumQuestions(2);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check subscription", err);
+            }
+        };
+        checkUser();
+    }, []);
+
     const fetchQuestions = async () => {
         setLoading(true);
         setError(null);
@@ -116,8 +147,9 @@ export default function TechnicalSkillsPractice() {
 
                 if (response.status === 401) {
                     throw new Error('Session expired. Please log in again.');
-                } else if (response.status === 403) {
-                    throw new Error('Access denied. Student access required.');
+                } else if (response.status === 403 || response.status === 402) {
+                    setShowSubscriptionModal(true);
+                    throw new Error('Access denied. Subscription upgrade required.');
                 } else if (response.status === 500) {
                     throw new Error('Server error. Please try again later or contact support.');
                 } else {
@@ -582,31 +614,41 @@ export default function TechnicalSkillsPractice() {
                         <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                             <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
                             Number of Questions
+                            {subscriptionType === 'free' && (
+                                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-bold">
+                                    Free Limit: 2
+                                </span>
+                            )}
                         </label>
-                        <div className="relative">
+                        <div className={`relative ${subscriptionType === 'free' ? 'opacity-60 grayscale' : ''}`}>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-gray-500 font-medium">5 questions</span>
+                                <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? '2 questions' : '1 question'}</span>
                                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                                     {numQuestions}
                                 </span>
-                                <span className="text-xs text-gray-500 font-medium">25 questions</span>
+                                <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? 'Max 2' : '25 questions'}</span>
                             </div>
                             <input
                                 type="range"
-                                min="5"
-                                max="25"
-                                step="5"
+                                min={subscriptionType === 'free' ? "2" : "1"}
+                                max={subscriptionType === 'free' ? "2" : "25"}
+                                step="1"
                                 value={numQuestions}
                                 onChange={(e) => {
                                     setNumQuestions(parseInt(e.target.value));
                                     setError(null);
                                 }}
-                                disabled={loading}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider disabled:cursor-not-allowed"
+                                disabled={loading || subscriptionType === 'free'}
+                                className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${subscriptionType === 'free' ? 'cursor-not-allowed' : ''}`}
                                 style={{
-                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((numQuestions - 5) / 20) * 100}%, #e5e7eb ${((numQuestions - 5) / 20) * 100}%, #e5e7eb 100%)`,
+                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb ${subscriptionType === 'free' ? 100 : ((numQuestions - 1) / 24) * 100}%, #e5e7eb 100%)`,
                                 }}
                             />
+                            {subscriptionType === 'free' && (
+                                <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                                    🔒 <strong>Free Plan Limit Check:</strong> You can only generate 2 questions. Upgrade to Premium for up to 30/day!
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -891,6 +933,12 @@ export default function TechnicalSkillsPractice() {
                     </div>
                 </div>
             </div>
+
+            <SubscriptionRequiredModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
+                feature="premium technical practice"
+            />
         </div>
     );
 }
