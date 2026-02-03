@@ -80,12 +80,11 @@ export function LandingNavbar({
         <div
           className={cn(
             'relative rounded-[24px] h-[72px] px-8',
-            'backdrop-blur-xl',
             'transition-all duration-300',
             scrolled && 'shadow-xl',
             theme === 'dark'
-              ? 'bg-[#191818]/80 border border-white/10'
-              : 'bg-[#02040E0D]'
+              ? 'bg-[#191818] border border-white/10'
+              : 'bg-white'
           )}
         >
           {/* Gradient Border for Light Mode */}
@@ -251,8 +250,8 @@ export function LandingNavbar({
           'lg:hidden fixed top-0 left-0 right-0 z-50 transition-all duration-300',
           'h-16',
           scrolled
-            ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50 dark:border-gray-800/50'
-            : 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/30 dark:border-gray-800/30'
+            ? 'bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200/50 dark:border-gray-800/50'
+            : 'bg-white dark:bg-gray-900 border-b border-gray-200/30 dark:border-gray-800/30'
         )}
       >
         <div className="container mx-auto px-4 h-full">
@@ -326,7 +325,7 @@ export function LandingNavbar({
             exit={{ opacity: 0, y: -10 }}
             className={cn(
               'lg:hidden absolute top-full left-0 right-0',
-              'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl',
+              'bg-white dark:bg-gray-900',
               'border-b border-gray-200/50 dark:border-gray-800/50',
               'shadow-lg'
             )}
