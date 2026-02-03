@@ -5,9 +5,10 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Sparkles, Save, User, Building2, GraduationCap, ShieldCheck, Mail, Phone, Globe, MapPin, Briefcase } from 'lucide-react'
+import { Sparkles, Save, User, Building2, GraduationCap, ShieldCheck, Mail, Phone, Globe, MapPin, Briefcase, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function CollegeProfile() {
