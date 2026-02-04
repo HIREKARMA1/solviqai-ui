@@ -90,8 +90,7 @@ export function Pricing() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6 }}
-                        className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4"
-                        style={{ color: '#1A1A1A' }}
+                        className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[#1A1A1A] dark:text-white"
                     >
                         {t('pricing.title')}
                     </motion.h2>
@@ -101,8 +100,7 @@ export function Pricing() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-lg max-w-3xl mx-auto"
-                        style={{ color: '#1A1A1A' }}
+                        className="text-lg max-w-3xl mx-auto text-[#1A1A1A] dark:text-white"
                     >
                         {t('pricing.subtitle')}
                     </motion.p>
