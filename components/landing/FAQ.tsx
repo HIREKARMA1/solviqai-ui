@@ -52,7 +52,7 @@ export function FAQ() {
   return (
     <section
       id="faq"
-      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-[#d1c88c] dark:bg-[#310139]"
+      className="section-container relative overflow-hidden py-24 px-4 sm:px-6 lg:px-8 bg-[#BDC0D9] dark:bg-[#310139]"
     >
       {/* Gradient Background for Dark Mode */}
       <div
@@ -62,55 +62,43 @@ export function FAQ() {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-          {/* Left Column */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            {/* Title */}
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-gray-900 dark:text-white">
-              FAQs
-            </h2>
+      <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          {/* Title */}
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-[#1A1A1A] dark:text-white">
+            FAQs
+          </h2>
 
-            {/* Description */}
-            <p className="text-lg mb-8 text-gray-600 dark:text-gray-300 leading-relaxed">
-              {t('faq.subtitle')}
-            </p>
+          {/* Description */}
+          <p className="text-lg text-[#4A4A4A] dark:text-gray-300 leading-relaxed max-w-2xl mx-auto">
+            {t('faq.subtitle')}
+          </p>
+        </motion.div>
 
-            {/* Ask Question Button */}
-            <button
-              className="px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 hover:opacity-90 mb-8"
-              style={{ backgroundColor: '#FF541F' }}
-            >
-              {t('faq.askQuestion')}
-            </button>
-
-          </motion.div>
-
-          {/* Right Column - FAQ List */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="space-y-0"
-          >
-            {faqs.map((faq, index) => (
-              <FAQItem
-                key={faq.id}
-                faq={faq}
-                index={index}
-                isOpen={openId === faq.id}
-                onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
-              />
-            ))}
-          </motion.div>
-        </div>
+        {/* FAQ List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="w-full"
+        >
+          {faqs.map((faq, index) => (
+            <FAQItem
+              key={faq.id}
+              faq={faq}
+              index={index}
+              isOpen={openId === faq.id}
+              onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
+            />
+          ))}
+        </motion.div>
       </div>
     </section>
   );
@@ -132,34 +120,19 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
         viewport={{ once: true }}
         transition={{ duration: 0.4, delay: index * 0.1 }}
         onClick={onToggle}
-        className="w-full flex items-center justify-between py-4 text-left transition-colors text-gray-900 dark:text-white"
+        className="w-full flex items-center justify-between py-5 text-left transition-colors group"
       >
-        <span className="text-lg font-medium pr-4">{faq.question}</span>
+        <span className="text-lg font-medium pr-8 text-[#1A1A1A] dark:text-white group-hover:opacity-80 transition-opacity">
+          {faq.question}
+        </span>
         <ChevronDown
           className={cn(
-            'w-5 h-5 flex-shrink-0 transition-transform duration-300',
+            'w-5 h-5 flex-shrink-0 transition-transform duration-300 ease-in-out',
             isOpen ? 'rotate-180' : '',
-            isOpen ? 'text-[#A6CDFF]' : 'text-gray-400 dark:text-gray-500'
+            'text-[#1A1A1A] dark:text-white opacity-60'
           )}
         />
       </motion.button>
-
-      {/* Active/Highlighted Indicator - Dotted Line */}
-      {isOpen && (
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: '100%' }}
-          transition={{ duration: 0.3 }}
-          className="absolute bottom-0 left-0 h-0.5"
-        >
-
-        </motion.div>
-      )}
-
-      {/* Separator Line */}
-      {index < 5 && (
-        <div className="h-px bg-gray-200 dark:bg-gray-600" />
-      )}
 
       {/* Answer Content */}
       <AnimatePresence>
@@ -168,17 +141,20 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="pt-4 pb-2">
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                {faq.answer}
-              </p>
+            <div className="pb-6 pt-0 text-[#4A4A4A] dark:text-gray-300 leading-relaxed pr-8">
+              {faq.answer}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Separator Line */}
+      {index < 5 && (
+        <div className="h-px w-full bg-[#1A1A1A] opacity-[0.08] dark:bg-white dark:opacity-[0.1]" />
+      )}
     </div>
   );
 }
