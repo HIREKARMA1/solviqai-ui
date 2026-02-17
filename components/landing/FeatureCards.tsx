@@ -293,11 +293,11 @@ function FeatureCard({ feature, index, t }: FeatureCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[450px]"
+      className="flex-shrink-0 w-[220px] min-[375px]:w-[280px] sm:w-[340px] md:w-[450px]"
       style={{ scrollSnapAlign: 'center' }}
     >
       <div className={cn(
-        "relative rounded-2xl p-8 h-full bg-gradient-to-b flex flex-col items-center justify-center min-h-[320px]",
+        "relative rounded-2xl p-4 min-[375px]:p-8 h-full bg-gradient-to-b flex flex-col items-center justify-center min-h-[280px] min-[375px]:min-h-[320px]",
         feature.gradient,
         "dark:from-purple-900/30 dark:to-orange-900/30"
       )}>
@@ -311,7 +311,7 @@ function FeatureCard({ feature, index, t }: FeatureCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white text-center">
+        <h3 className="text-xl min-[375px]:text-2xl font-bold mb-4 text-gray-900 dark:text-white text-center">
           {title}
         </h3>
 
