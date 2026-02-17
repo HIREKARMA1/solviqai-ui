@@ -40,6 +40,7 @@ export default function InterviewPractice() {
   const [limit, setLimit] = useState<number>(6);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionType, setSubscriptionType] = useState<string>('free'); // Default to free
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -104,6 +105,35 @@ export default function InterviewPractice() {
       }
     };
   }, [isLiveTranscribing]);
+
+  // Check Subscription Status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        // Use full URL from config
+        const response = await fetch(`${config.api.fullUrl}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          const sub = userData.subscription_type || 'free';
+          setSubscriptionType(sub);
+
+          // Force limit to 2 for free users
+          if (sub === 'free') {
+            setLimit(2);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check subscription", err);
+      }
+    };
+    checkUser();
+  }, []);
 
   const startLiveTranscription = async () => {
     if (!speechRecognitionRef.current) {
@@ -428,26 +458,37 @@ export default function InterviewPractice() {
             <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <div className="w-1 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full"></div>
               Number of Questions
+              {subscriptionType === 'free' && (
+                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-bold">
+                  Free Limit: 2
+                </span>
+              )}
             </label>
-            <div className="relative">
+            <div className={`relative ${subscriptionType === 'free' ? 'opacity-60 grayscale' : ''}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500 font-medium">3 questions</span>
+                <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? '2 questions' : '1 question'}</span>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                   {limit}
                 </span>
-                <span className="text-xs text-gray-500 font-medium">20 questions</span>
+                <span className="text-xs text-gray-500 font-medium">{subscriptionType === 'free' ? 'Max 2' : '20 questions'}</span>
               </div>
               <input
                 type="range"
-                min="3"
-                max="20"
+                min={subscriptionType === 'free' ? "2" : "1"}
+                max={subscriptionType === 'free' ? "2" : "20"}
                 value={limit}
                 onChange={(e) => setLimit(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                disabled={subscriptionType === 'free'}
+                className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${subscriptionType === 'free' ? 'cursor-not-allowed' : ''}`}
                 style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((limit - 3) / 17) * 100}%, #e5e7eb ${((limit - 3) / 17) * 100}%, #e5e7eb 100%)`,
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${subscriptionType === 'free' ? 100 : ((limit - 1) / 19) * 100}%, #e5e7eb ${subscriptionType === 'free' ? 100 : ((limit - 1) / 19) * 100}%, #e5e7eb 100%)`,
                 }}
               />
+              {subscriptionType === 'free' && (
+                <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                  🔒 <strong>Free Plan Limit Check:</strong> You can only generate 2 questions per day. Upgrade to Premium for up to 30/day!
+                </p>
+              )}
             </div>
           </div>
         </div>
