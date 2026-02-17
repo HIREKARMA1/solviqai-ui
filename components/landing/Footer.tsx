@@ -108,11 +108,11 @@ export function Footer() {
   ];
 
   return (
-    <footer className="relative bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_2px_0_rgba(0,0,0,0.1)] border-t border-gray-200 dark:border-gray-700 overflow-hidden">
+    <footer className="relative bg-white dark:bg-[#2A2C38] text-gray-700 dark:text-gray-300 shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_2px_0_rgba(0,0,0,0.1)] border-t border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Animated Background - Same as Navbar and Sidebar */}
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+      {/* <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <AnimatedBackground variant="subtle" showGrid={true} showLines={false} />
-      </div>
+      </div> */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 relative" style={{ zIndex: 1 }}>
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12">

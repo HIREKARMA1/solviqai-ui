@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
-import { LandingNavbar } from '@/components/landing/LandingNavbar';
+import { Navbar } from '@/components/Navbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -97,7 +97,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Navbar */}
-      <LandingNavbar />
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12 pt-24 md:pt-32 relative z-10">
