@@ -206,17 +206,17 @@ export const FeatureCards = memo(function FeatureCards() {
   }, []);
 
   return (
-    <section id="features" className="section-container bg-white dark:bg-[#2B354B] relative overflow-hidden py-24 lg:py-32 min-h-screen flex flex-col justify-center">
+    <section id="features" className="section-container bg-white dark:bg-[#2B354B] relative overflow-hidden py-20 sm:py-32 lg:py-32 min-h-[auto] sm:min-h-screen flex flex-col justify-center">
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-blue-400/20 blur-[120px] rounded-full pointer-events-none z-0" />
 
-      <div className="text-center mb-12 relative z-10 w-[90%] mx-auto">
+      <div className="text-center mb-16 sm:mb-22 relative z-10 w-[90%] mx-auto">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 text-gray-800 dark:text-white"
+          className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 sm:mb-4 text-gray-800 dark:text-white"
         >
           Powerful <span className="text-orange-500">Features</span> to Help You Succeed
         </motion.h2>

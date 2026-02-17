@@ -11,8 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 // Memoize stats to prevent recreation on each render
 const STATS = [
   { label: 'Jobs', value: '120k+' },
-  { label: 'Users', value: '150k+' },
-  { label: 'Reviews', value: '32k+' },
+  { label: 'Students', value: '150k+' },
+  { label: 'Companies', value: '50+' },
 ] as const;
 
 export const HeroSection = memo(function HeroSection() {
@@ -33,7 +33,7 @@ export const HeroSection = memo(function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black pt-32 pb-12 md:py-32"
+      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black pt-32 pb-12 md:py-32 lg:pt-[160px]"
     >
       <div className="w-[90%] mx-auto max-w-[1600px]">
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-center w-full">

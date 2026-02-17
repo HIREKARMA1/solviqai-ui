@@ -125,7 +125,7 @@ export function Partners() {
   return (
     <section
       id="partners"
-      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900"
+      className="section-container relative overflow-hidden py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-[#2A2C38]"
     >
       {/* Subtle gradient overlay for dark mode */}
       <div
@@ -173,6 +173,7 @@ export function Partners() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
+        
         >
           <div className="flex flex-col items-center mb-10">
             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Our University Partners</h3>
@@ -185,8 +186,8 @@ export function Partners() {
           {/* Marquee Container */}
           <div className="relative w-full overflow-hidden">
             {/* Gradient Masks for smooth fade out at edges */}
-            <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-l from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div>
+            {/* {/* <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div> */}
+            {/* <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-l from-gray-50 to-transparent dark:from-gray-900 pointer-events-none"></div> */}   
 
             <motion.div
               className="flex gap-2 sm:gap-4 items-center py-4"
@@ -194,7 +195,7 @@ export function Partners() {
               transition={{
                 repeat: Infinity,
                 ease: "linear",
-                duration: 60,
+                duration: 30,
                 repeatType: "loop"
               }}
               style={{ width: "fit-content" }}
@@ -209,7 +210,7 @@ export function Partners() {
                       <img
                         src={partner.logo}
                         alt={partner.name}
-                        className="max-w-full max-h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100 transform group-hover:scale-110"
+                        className="max-w-full max-h-full object-contain transition-all duration-500 transform group-hover:scale-110"
                         onError={(e) => {
                           const target = e.currentTarget;
                           target.style.display = 'none';

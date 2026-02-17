@@ -52,15 +52,15 @@ export function FAQ() {
   return (
     <section
       id="faq"
-      className="section-container relative overflow-hidden py-24 px-4 sm:px-6 lg:px-8 bg-[#BDC0D9] dark:bg-[#310139]"
+      className="section-container relative overflow-hidden py-24 px-4 sm:px-6 lg:px-8 bg-[#BCBCDB] dark:bg-[#1E1E63]"
     >
       {/* Gradient Background for Dark Mode */}
-      <div
+      {/* <div
         className="absolute inset-0 dark:block hidden"
         style={{
           background: 'linear-gradient(135deg, #1A1A1A 0%, #2B354B 50%, #4A3F6B 100%)'
         }}
-      />
+      /> */}
 
       <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center">
         <motion.div
@@ -76,7 +76,7 @@ export function FAQ() {
           </h2>
 
           {/* Description */}
-          <p className="text-lg text-[#4A4A4A] dark:text-gray-300 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg text-[#4A4A4A] dark:text-[#939CAA] leading-relaxed max-w-2xl mx-auto">
             {t('faq.subtitle')}
           </p>
         </motion.div>
@@ -122,7 +122,7 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
         onClick={onToggle}
         className="w-full flex items-center justify-between py-5 text-left transition-colors group"
       >
-        <span className="text-lg font-medium pr-8 text-[#1A1A1A] dark:text-white group-hover:opacity-80 transition-opacity">
+        <span className="text-lg font-medium pr-8 text-[#1A1A1A] dark:text-[#E1E4EA] group-hover:opacity-80 transition-opacity">
           {faq.question}
         </span>
         <ChevronDown
@@ -153,7 +153,7 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
 
       {/* Separator Line */}
       {index < 5 && (
-        <div className="h-px w-full bg-[#1A1A1A] opacity-[0.08] dark:bg-white dark:opacity-[0.1]" />
+        <div className="h-px w-full bg-[#1A1A1A] opacity-[0.08] dark:bg-[#636363] dark:opacity-100" />
       )}
     </div>
   );
