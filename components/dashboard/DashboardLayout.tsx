@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { LandingNavbar } from '@/components/landing/LandingNavbar'
+import { Navbar } from '@/components/Navbar'
 import { LandingSidebar } from '@/components/landing/LandingSidebar'
 import { MobileTopNavbar } from '@/components/landing/MobileTopNavbar'
 import { MobileSidebar } from '@/components/landing/MobileSidebar'
@@ -119,7 +119,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             {/* Landing Page Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
             {!hideNavigation && (
                 <div className="hidden lg:block">
-                    <LandingNavbar
+                    <Navbar
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         isSidebarCollapsed={isSidebarCollapsed}
                         onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
