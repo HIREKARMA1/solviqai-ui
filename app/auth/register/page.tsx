@@ -286,7 +286,7 @@ export default function RegisterPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-[50px] text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-[8px] transition-all duration-200"
+                className="w-full h-[50px] text-base font-medium bg-[#00BAE8] hover:bg-[#009bc2] text-white rounded-[8px] transition-all duration-200"
                 disabled={loading || !agreedToTerms}
               >
                 {loading ? (
