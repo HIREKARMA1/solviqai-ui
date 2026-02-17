@@ -17,6 +17,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { config } from '@/lib/config';
 
 interface Video {
   id: string;
@@ -73,7 +74,7 @@ export function StreamingPlaylist({ assessmentId, onComplete }: StreamingPlaylis
     }
 
     // EventSource doesn't support custom headers, so pass token as query param
-    const url = `http://localhost:8000/api/v1/assessments/${assessmentId}/playlist/stream?token=${encodeURIComponent(token)}`;
+    const url = `${config.api.baseUrl}/api/v1/assessments/${assessmentId}/playlist/stream?token=${encodeURIComponent(token)}`;
     console.log('Starting EventSource connection to:', url);
     
     const eventSource = new EventSource(url);

@@ -213,7 +213,7 @@ export default function LoginPage() {
                 </motion.div>
 
                 {/* Forgot Password */}
-                {/* <motion.div
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
@@ -223,9 +223,9 @@ export default function LoginPage() {
                     href="/auth/forgot-password"
                     className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
                   >
-                    {t('auth.login.forgotPassword')}
+                    Forgot Password?
                   </Link>
-                </motion.div> */}
+                </motion.div>
 
                 {/* Submit Button */}
                 <motion.div

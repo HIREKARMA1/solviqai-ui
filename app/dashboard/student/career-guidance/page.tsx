@@ -25,6 +25,8 @@ import CareerTreeVisualization from '@/components/career-guidance/CareerTreeVisu
 import CareerPlaylistTab from '@/components/career-guidance/CareerPlaylistTab';
 import CareerCalendarTab from '@/components/career-guidance/CareerCalendarTab';
 import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModal';
+import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
+import { AxiosError } from 'axios';
 
 interface Message {
   role: 'ai' | 'user';
@@ -46,6 +48,9 @@ export default function CareerGuidancePage() {
   const [activeTab, setActiveTab] = useState('playlist');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const [error, setError] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionFeature, setSubscriptionFeature] = useState('this feature');
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
   // Flowchart state
   const [nodes, setNodes] = useState<any[]>([]);
@@ -60,7 +65,7 @@ export default function CareerGuidancePage() {
 
   // Get SSE URL from config
   const getSSEUrl = useCallback((sessionId: string) => {
-    const baseUrl = config.api.baseUrl;
+    const baseUrl = config.api.baseUrl.replace(/\/+$/, ''); // Remove trailing slash
     const token = localStorage.getItem('access_token');
     // Add token as query parameter for authentication
     const url = `${baseUrl}/api/v1/career-guidance/sse/${sessionId}`;
@@ -106,6 +111,7 @@ export default function CareerGuidancePage() {
     try {
       setIsInitializing(true);
       setError(null);
+      setIsLimitReached(false);
       const data = await api.careerGuidance.getSession(id);
       setSessionId(data.session_id);
       setMessages(data.conversation_history || []);
@@ -135,6 +141,7 @@ export default function CareerGuidancePage() {
     setIsLoading(true);
     setLoadingPercentage(0);
     setError(null);
+    setIsLimitReached(false);
 
     // Animate progress during session initialization
     const initProgressInterval = setInterval(() => {
@@ -168,8 +175,6 @@ export default function CareerGuidancePage() {
 
       connectSSE(response.session_id);
 
-      // Complete to 100% when session starts
-      clearInterval(initProgressInterval);
       setLoadingPercentage(100);
 
       toast.success('Career guidance session started!');
@@ -181,9 +186,27 @@ export default function CareerGuidancePage() {
     } catch (error: any) {
       clearInterval(initProgressInterval);
       setLoadingPercentage(0);
-      const errorMessage = error.response?.data?.detail || 'Failed to start session. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const axiosError = error as AxiosError<{ detail: string }>;
+      const errorMessage = axiosError.response?.data?.detail || 'Failed to start session. Please try again.';
+
+      // Check if it's a subscription error - be more specific with checks
+      const isSubscriptionError =
+        axiosError.response?.status === 403 ||
+        (errorMessage && (
+          errorMessage.toLowerCase().includes('contact hirekarma') ||
+          errorMessage.toLowerCase().includes('subscription') ||
+          errorMessage.toLowerCase().includes('free plan')
+        ));
+
+      if (isSubscriptionError) {
+        setIsLimitReached(true);
+        setSubscriptionFeature('AI Career Guidance');
+        setShowSubscriptionModal(true);
+        // Don't set error state or show toast for subscription errors
+      } else {
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
       console.error('Session start error:', error);
     } finally {
       setIsLoading(false);
@@ -387,9 +410,27 @@ export default function CareerGuidancePage() {
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Failed to send message. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const axiosError = error as AxiosError<{ detail: string }>;
+      const errorMessage = axiosError.response?.data?.detail || 'Failed to send message. Please try again.';
+
+      // Check if it's a subscription error - be more specific with checks
+      const isSubscriptionError =
+        axiosError.response?.status === 403 ||
+        (errorMessage && (
+          errorMessage.toLowerCase().includes('contact hirekarma') ||
+          errorMessage.toLowerCase().includes('subscription') ||
+          errorMessage.toLowerCase().includes('free plan')
+        ));
+
+      if (isSubscriptionError) {
+        setIsLimitReached(true);
+        setSubscriptionFeature('AI Career Guidance');
+        setShowSubscriptionModal(true);
+        // Don't set error state or show toast for subscription errors
+      } else {
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
       console.error('Send message error:', error);
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -741,13 +782,13 @@ export default function CareerGuidancePage() {
                   placeholder="Share your thoughts, interests, and goals..."
                   className="flex-1 resize-none rounded-lg sm:rounded-xl border border-gray-300 dark:border-gray-600 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   rows={2}
-                  disabled={isLoading || connectionStatus !== 'connected'}
+                  disabled={isLoading || (connectionStatus !== 'connected' && !!sessionId) || isLimitReached}
                   style={{ maxHeight: '100px' }}
                   aria-label="Message input"
                 />
                 <Button
                   onClick={sendMessage}
-                  disabled={!inputMessage.trim() || isLoading || connectionStatus !== 'connected'}
+                  disabled={!inputMessage.trim() || isLoading || (connectionStatus !== 'connected' && !!sessionId) || isLimitReached}
                   className="self-end bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg h-auto px-3 sm:px-4 py-2 sm:py-3 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   size="sm"
                   aria-label="Send message"
@@ -757,8 +798,12 @@ export default function CareerGuidancePage() {
               </div>
               <div className="flex items-center justify-between mt-1.5 sm:mt-2 flex-wrap gap-1">
                 <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">Press Enter to send, Shift+Enter for new line</p>
-                {connectionStatus !== 'connected' && (
-                  <p className="text-[10px] sm:text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
+                {isLimitReached ? (
+                  <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-500 font-medium">Free limit reached. Upgrade to continue.</p>
+                ) : (
+                  connectionStatus !== 'connected' && sessionId && (
+                    <p className="text-[10px] sm:text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
+                  )
                 )}
               </div>
             </div>
@@ -867,6 +912,13 @@ export default function CareerGuidancePage() {
         </div>
       </div>
       <SessionHistoryModal open={showHistory} onClose={() => setShowHistory(false)} onLoadSession={loadSession} />
+
+      {/* Subscription Required Modal */}
+      <SubscriptionRequiredModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        feature={subscriptionFeature}
+      />
     </DashboardLayout>
   );
 }

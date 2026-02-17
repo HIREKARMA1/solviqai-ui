@@ -1,6 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Volume2, Mic, Square, CheckCircle2 } from 'lucide-react';
+import { config } from '@/lib/config';
+
+// Speech Recognition Types
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+    resultIndex: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    start(): void;
+    stop(): void;
+    onresult: (event: SpeechRecognitionEvent) => void;
+    onerror: (event: any) => void;
+    onend: () => void;
+}
 
 interface Question {
     id?: string;
@@ -25,6 +44,14 @@ export default function AssessmentSkillsPractice() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [showResults, setShowResults] = useState(false);
+    const [audioPlayed, setAudioPlayed] = useState<Record<number, boolean>>({});
+
+    // Live Transcription States
+    const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
+    const [liveTranscript, setLiveTranscript] = useState('');
+    const [interimTranscript, setInterimTranscript] = useState('');
+    const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+    const isTranscribingRef = useRef(false); // Track state via ref to avoid stale closures
 
     const fetchQuestions = async () => {
         setLoading(true);
@@ -43,7 +70,7 @@ export default function AssessmentSkillsPractice() {
             const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/practice/assessment?${params}`,
+                `${config.api.fullUrl}/api/v1/practice/assessment?${params}`,
                 {
                     method: 'GET',
                     headers: {
@@ -77,11 +104,306 @@ export default function AssessmentSkillsPractice() {
         }
     };
 
+    const startLiveTranscription = () => {
+        if (!speechRecognitionRef.current) {
+            alert('Speech recognition not available. Use Chrome or Edge browser.');
+            return;
+        }
+
+        if (isLiveTranscribing) {
+            return; // Already recording
+        }
+
+        try {
+            // Clear previous transcripts
+            setLiveTranscript('');
+            setInterimTranscript('');
+
+            // Update ref before starting
+            isTranscribingRef.current = true;
+
+            // Start recognition
+            speechRecognitionRef.current.start();
+            setIsLiveTranscribing(true);
+        } catch (error: any) {
+            console.error('Error starting speech recognition:', error);
+            isTranscribingRef.current = false;
+            // If already started, just set the state
+            if (error.message && error.message.includes('already')) {
+                setIsLiveTranscribing(true);
+                isTranscribingRef.current = true;
+            } else {
+                alert('Failed to start recording. Please try again.');
+            }
+        }
+    };
+
+    const stopLiveTranscription = () => {
+        if (!speechRecognitionRef.current || !isLiveTranscribing) {
+            return;
+        }
+
+        // Update ref immediately to prevent restart
+        isTranscribingRef.current = false;
+
+        try {
+            speechRecognitionRef.current.stop();
+        } catch (e) {
+            console.log('Error stopping recognition:', e);
+        }
+
+        // Use a timeout to ensure we get the final transcript
+        setTimeout(() => {
+            setIsLiveTranscribing(false);
+
+            // Get the final transcript
+            const fullTranscript = (liveTranscript + ' ' + interimTranscript).trim();
+
+            if (fullTranscript) {
+                handleAnswer(fullTranscript);
+            }
+
+            // Clear transcripts after saving
+            setLiveTranscript('');
+            setInterimTranscript('');
+        }, 100);
+    };
+
     const handleAnswer = (answer: string) => {
         setUserAnswers((prev) => ({
             ...prev,
             [currentQuestionIndex]: answer,
         }));
+    };
+
+    // Initialize speech synthesis voices
+    useEffect(() => {
+        if ('speechSynthesis' in window) {
+            // Load voices when they become available
+            const loadVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    console.log('Voices loaded:', voices.length);
+                }
+            };
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []);
+
+    // Initialize Web Speech API for voice recording (only once on mount)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event: any) => {
+                    let interim = '';
+                    let final = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+
+                        if (event.results[i].isFinal) {
+                            final += transcript + ' ';
+                        } else {
+                            interim += transcript;
+                        }
+                    }
+
+                    setInterimTranscript(interim);
+
+                    if (final) {
+                        setLiveTranscript(prev => prev + final);
+                    }
+                };
+
+                recognition.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'no-speech') {
+                        // Don't show alert for no-speech, it's common during pauses
+                        console.log('No speech detected');
+                    } else if (event.error === 'audio-capture') {
+                        alert('No microphone found. Check your device.');
+                        setIsLiveTranscribing(false);
+                    } else if (event.error === 'not-allowed') {
+                        alert('Microphone permission denied. Please allow access.');
+                        setIsLiveTranscribing(false);
+                    } else if (event.error === 'aborted') {
+                        // Recognition was stopped, this is normal
+                        console.log('Recognition aborted');
+                    } else {
+                        console.error('Speech recognition error:', event.error);
+                    }
+                };
+
+                recognition.onend = () => {
+                    // Only restart if we're still supposed to be transcribing
+                    // Use ref to check current state (avoids stale closure)
+                    if (isTranscribingRef.current && speechRecognitionRef.current === recognition) {
+                        try {
+                            recognition.start();
+                        } catch (e: any) {
+                            // If already started or aborted, that's fine
+                            if (e.message && !e.message.includes('already') && !e.message.includes('aborted')) {
+                                console.log('Recognition restart skipped:', e);
+                            }
+                        }
+                    }
+                };
+
+                speechRecognitionRef.current = recognition;
+            } else {
+                console.warn('Web Speech API not supported in this browser');
+            }
+        }
+
+        return () => {
+            if (speechRecognitionRef.current) {
+                try {
+                    speechRecognitionRef.current.stop();
+                } catch (e) {
+                    // Already stopped
+                }
+                speechRecognitionRef.current = null;
+            }
+        };
+    }, []); // Only run once on mount
+
+    // Handle isLiveTranscribing changes separately
+    useEffect(() => {
+        if (!speechRecognitionRef.current) return;
+
+        // This effect handles the restart logic when isLiveTranscribing changes
+        // but doesn't recreate the recognition instance
+    }, [isLiveTranscribing]);
+
+    // Reset transcription when question changes
+    useEffect(() => {
+        if (speechRecognitionRef.current && isLiveTranscribing) {
+            isTranscribingRef.current = false;
+            try {
+                speechRecognitionRef.current.stop();
+            } catch (e) {
+                console.log('Already stopped');
+            }
+            setIsLiveTranscribing(false);
+        }
+        setLiveTranscript('');
+        setInterimTranscript('');
+    }, [currentQuestionIndex]);
+
+    const playDictationAudio = (text: string, retryCount: number = 0) => {
+        console.log('🔊 TTS called with text:', text);
+
+        if (!text || text.trim() === '') {
+            console.error('❌ Empty or undefined text');
+            alert('No text to play!');
+            return;
+        }
+
+        if (!('speechSynthesis' in window)) {
+            console.error('❌ Speech synthesis not supported');
+            alert('Text-to-speech not supported. Try Chrome or Edge.');
+            return;
+        }
+
+        if (retryCount >= 3) {
+            console.error('❌ Max retries reached');
+            alert('Unable to play audio. Please try refreshing the page.');
+            return;
+        }
+
+        // Cancel any ongoing speech first
+        window.speechSynthesis.cancel();
+
+        // Small delay to ensure cancellation completes
+        setTimeout(() => {
+            try {
+                // Get available voices and prefer high-quality ones
+                const voices = window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(v =>
+                    v.lang.startsWith('en') &&
+                    (v.name.toLowerCase().includes('neural') ||
+                        v.name.toLowerCase().includes('premium') ||
+                        v.name.toLowerCase().includes('enhanced'))
+                ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
+
+                const utterance = new SpeechSynthesisUtterance(text.trim());
+
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                    utterance.lang = preferredVoice.lang;
+                } else {
+                    utterance.lang = 'en-US';
+                }
+
+                // Optimized settings for clarity
+                utterance.rate = 0.88;  // Slightly slower for better comprehension
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;  // Maximum volume
+
+                let hasStarted = false;
+                const timeout = setTimeout(() => {
+                    if (!hasStarted && retryCount < 2) {
+                        console.warn('TTS timeout, retrying...');
+                        window.speechSynthesis.cancel();
+                        playDictationAudio(text, retryCount + 1);
+                    }
+                }, 2000);
+
+                utterance.onstart = () => {
+                    hasStarted = true;
+                    clearTimeout(timeout);
+                    console.log('✅ Speech STARTED');
+                    // Mark audio as played for the current question
+                    setAudioPlayed(prev => ({
+                        ...prev,
+                        [currentQuestionIndex]: true
+                    }));
+                };
+
+                utterance.onend = () => {
+                    clearTimeout(timeout);
+                    console.log('✅ Speech ENDED');
+                };
+
+                utterance.onerror = (event: any) => {
+                    clearTimeout(timeout);
+                    console.error('❌ TTS Error:', event.error, event);
+
+                    // Retry on certain errors
+                    if ((event.error === 'synthesis-failed' ||
+                        event.error === 'synthesis-unavailable' ||
+                        event.error === 'audio-busy') && retryCount < 2) {
+                        console.log('Retrying TTS...');
+                        setTimeout(() => {
+                            playDictationAudio(text, retryCount + 1);
+                        }, 500);
+                    } else {
+                        alert(`Audio error: ${event.error || 'Unknown error'}`);
+                    }
+                };
+
+                console.log('📢 Calling speak()...');
+                window.speechSynthesis.speak(utterance);
+                console.log('📢 speak() called successfully');
+            } catch (err) {
+                console.error('Error creating utterance:', err);
+                if (retryCount < 2) {
+                    setTimeout(() => {
+                        playDictationAudio(text, retryCount + 1);
+                    }, 500);
+                } else {
+                    alert('Failed to play audio. Please try again.');
+                }
+            }
+        }, 150);
     };
 
     const goToQuestion = (index: number) => {
@@ -95,7 +417,17 @@ export default function AssessmentSkillsPractice() {
     const calculateScore = () => {
         let correct = 0;
         questions.forEach((q, idx) => {
-            if (q.correct_answer && userAnswers[idx] === q.correct_answer) {
+            const userAnswer = userAnswers[idx];
+            if (!userAnswer) return;
+
+            if (q.question_type === 'dictation') {
+                // For dictation, compare case-insensitively and normalize whitespace
+                const normalizedUser = userAnswer.trim().toLowerCase().replace(/\s+/g, ' ');
+                const normalizedCorrect = (q.correct_answer || q.question_text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                if (normalizedUser === normalizedCorrect) {
+                    correct++;
+                }
+            } else if (q.correct_answer && userAnswer === q.correct_answer) {
                 correct++;
             }
         });
@@ -209,27 +541,35 @@ export default function AssessmentSkillsPractice() {
                     <div className="space-y-6">
                         {questions.map((question, idx) => {
                             const userAnswer = userAnswers[idx];
-                            const isCorrect = userAnswer === question.correct_answer;
+                            let isCorrect = false;
+                            if (question.question_type === 'dictation') {
+                                // For dictation, compare case-insensitively
+                                const normalizedUser = (userAnswer || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                                const normalizedCorrect = (question.correct_answer || question.question_text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                                isCorrect = normalizedUser === normalizedCorrect;
+                            } else {
+                                isCorrect = userAnswer === question.correct_answer;
+                            }
                             const isAnswered = idx in userAnswers;
 
                             return (
                                 <div
                                     key={idx}
                                     className={`p-6 border-l-4 rounded-lg shadow-sm transition-all hover:shadow-md ${isAnswered && isCorrect
-                                            ? 'border-green-600 bg-green-50'
-                                            : isAnswered && !isCorrect
-                                                ? 'border-red-600 bg-red-50'
-                                                : 'border-gray-300 bg-gray-50'
+                                        ? 'border-green-600 bg-green-50'
+                                        : isAnswered && !isCorrect
+                                            ? 'border-red-600 bg-red-50'
+                                            : 'border-gray-300 bg-gray-50'
                                         }`}
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isAnswered && isCorrect
-                                                        ? 'bg-green-600 text-white'
-                                                        : isAnswered && !isCorrect
-                                                            ? 'bg-red-600 text-white'
-                                                            : 'bg-gray-500 text-white'
+                                                    ? 'bg-green-600 text-white'
+                                                    : isAnswered && !isCorrect
+                                                        ? 'bg-red-600 text-white'
+                                                        : 'bg-gray-500 text-white'
                                                     }`}>
                                                     Question {idx + 1}
                                                 </span>
@@ -258,7 +598,13 @@ export default function AssessmentSkillsPractice() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <h4 className="text-lg font-semibold text-gray-900 leading-relaxed">{question.question_text}</h4>
+                                            {question.question_type === 'dictation' ? (
+                                                <h4 className="text-lg font-semibold text-gray-900 leading-relaxed">
+                                                    Listen and write down the following sentence:
+                                                </h4>
+                                            ) : (
+                                                <h4 className="text-lg font-semibold text-gray-900 leading-relaxed">{question.question_text}</h4>
+                                            )}
                                         </div>
                                     </div>
 
@@ -270,26 +616,34 @@ export default function AssessmentSkillsPractice() {
                                                 const isUserSelected = userAnswer === optionLetter;
                                                 const isCorrectAnswer = optionLetter === question.correct_answer;
 
+                                                // Clean option text - remove any existing letter prefix (A., B., etc.)
+                                                let cleanOption = String(option).trim();
+                                                // Remove patterns like "A. ", "A.", "A) ", "A)", etc.
+                                                const letterPrefixPattern = /^[A-Z]\.?\s*/i;
+                                                if (letterPrefixPattern.test(cleanOption)) {
+                                                    cleanOption = cleanOption.replace(letterPrefixPattern, '').trim();
+                                                }
+
                                                 return (
                                                     <div
                                                         key={optIdx}
                                                         className={`p-4 rounded-lg border-2 transition-all ${isCorrectAnswer
-                                                                ? 'border-green-600 bg-green-100 shadow-sm'
-                                                                : isUserSelected && !isCorrect
-                                                                    ? 'border-red-600 bg-red-100 shadow-sm'
-                                                                    : 'border-gray-300 bg-white'
+                                                            ? 'border-green-600 bg-green-100 shadow-sm'
+                                                            : isUserSelected && !isCorrect
+                                                                ? 'border-red-600 bg-red-100 shadow-sm'
+                                                                : 'border-gray-300 bg-white'
                                                             }`}
                                                     >
                                                         <div className="flex items-start">
                                                             <span className={`font-bold mr-3 mt-1 ${isCorrectAnswer
-                                                                    ? 'text-green-700'
-                                                                    : isUserSelected && !isCorrect
-                                                                        ? 'text-red-700'
-                                                                        : 'text-gray-600'
+                                                                ? 'text-green-700'
+                                                                : isUserSelected && !isCorrect
+                                                                    ? 'text-red-700'
+                                                                    : 'text-gray-600'
                                                                 }`}>
                                                                 {optionLetter}.
                                                             </span>
-                                                            <span className="flex-1 text-gray-800">{option}</span>
+                                                            <span className="flex-1 text-gray-800">{cleanOption}</span>
                                                             {isCorrectAnswer && (
                                                                 <svg className="w-5 h-5 text-green-600 ml-2" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -306,10 +660,29 @@ export default function AssessmentSkillsPractice() {
                                             })}
                                         </div>
                                     ) : (
-                                        // Text answer display
-                                        <div className="mb-4 p-4 bg-white rounded-lg border-2 border-gray-300">
-                                            <p className="text-sm font-semibold text-gray-700 mb-2">Your Answer:</p>
-                                            <p className="text-sm text-gray-800">{userAnswer || 'No answer provided'}</p>
+                                        // Text/Dictation/Voice answer display
+                                        <div className="mb-4 space-y-3">
+                                            <div className="p-4 bg-white rounded-lg border-2 border-gray-300">
+                                                <p className="text-sm font-semibold text-gray-700 mb-2">Your Answer:</p>
+                                                {question.question_type === 'voice_reading' || question.question_type === 'voice_speaking' ? (
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm text-gray-800">{userAnswer || 'No answer provided'}</p>
+                                                        {userAnswer && (
+                                                            <p className="text-xs text-gray-500 italic">
+                                                                (Transcribed from your voice recording)
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-gray-800">{userAnswer || 'No answer provided'}</p>
+                                                )}
+                                            </div>
+                                            {question.question_type === 'dictation' && (question.correct_answer || question.question_text) && (
+                                                <div className="p-4 bg-green-50 rounded-lg border-2 border-green-300">
+                                                    <p className="text-sm font-semibold text-green-700 mb-2">Correct Answer:</p>
+                                                    <p className="text-sm text-green-800">{question.correct_answer || question.question_text}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
@@ -368,8 +741,8 @@ export default function AssessmentSkillsPractice() {
                         <button
                             onClick={() => setAssessmentType('aptitude')}
                             className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${assessmentType === 'aptitude'
-                                    ? 'text-white scale-105 shadow-md'
-                                    : 'text-gray-700 hover:scale-[1.02]'
+                                ? 'text-white scale-105 shadow-md'
+                                : 'text-gray-700 hover:scale-[1.02]'
                                 }`}
                         >
                             <div className="flex items-center justify-center gap-2">
@@ -382,8 +755,8 @@ export default function AssessmentSkillsPractice() {
                         <button
                             onClick={() => setAssessmentType('soft_skills')}
                             className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${assessmentType === 'soft_skills'
-                                    ? 'text-white scale-105 shadow-md'
-                                    : 'text-gray-700 hover:scale-[1.02]'
+                                ? 'text-white scale-105 shadow-md'
+                                : 'text-gray-700 hover:scale-[1.02]'
                                 }`}
                         >
                             <div className="flex items-center justify-center gap-2">
@@ -411,7 +784,7 @@ export default function AssessmentSkillsPractice() {
                                 ? "e.g., 'work and time', 'percentages' — leave empty for AI-curated mix"
                                 : "e.g., 'communication', 'leadership' — leave empty for AI-curated mix"
                         }
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md bg-white/90 backdrop-blur-sm text-gray-900"
                     />
                 </div>
 
@@ -474,8 +847,8 @@ export default function AssessmentSkillsPractice() {
                                     key={level}
                                     onClick={() => setDifficulty(level)}
                                     className={`relative z-10 flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 capitalize flex items-center justify-center gap-2 ${isSelected
-                                            ? 'scale-105 shadow-md'
-                                            : 'hover:scale-102'
+                                        ? 'scale-105 shadow-md'
+                                        : 'hover:scale-102'
                                         } ${colors[level]}`}
                                 >
                                     {icons[level]}
@@ -519,8 +892,8 @@ export default function AssessmentSkillsPractice() {
                     onClick={fetchQuestions}
                     disabled={loading}
                     className={`w-full py-4 rounded-xl font-bold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none ${loading
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
                         }`}
                 >
                     {loading ? (
@@ -562,8 +935,8 @@ export default function AssessmentSkillsPractice() {
                             <div className="text-right">
                                 <p className="text-sm text-gray-500 mb-1">Difficulty</p>
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                                        difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
+                                    difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
                                     }`}>
                                     {difficulty.toUpperCase()}
                                 </span>
@@ -586,9 +959,17 @@ export default function AssessmentSkillsPractice() {
                             <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full mb-4">
                                 Question {currentQuestionIndex + 1}
                             </span>
-                            <h3 className="text-xl font-semibold text-gray-900 leading-relaxed">
-                                {currentQuestion.question_text}
-                            </h3>
+                            {/* Hide question text for DICTATION - it's the answer! */}
+                            {currentQuestion.question_type !== 'dictation' && (
+                                <h3 className="text-xl font-semibold text-gray-900 leading-relaxed">
+                                    {currentQuestion.question_text}
+                                </h3>
+                            )}
+                            {currentQuestion.question_type === 'dictation' && (
+                                <h3 className="text-xl font-semibold text-gray-900 leading-relaxed">
+                                    Listen and write down the following sentence:
+                                </h3>
+                            )}
                         </div>
 
                         {/* MCQ Options */}
@@ -597,13 +978,22 @@ export default function AssessmentSkillsPractice() {
                                 {currentQuestion.options.map((option, idx) => {
                                     const optionLetter = String.fromCharCode(65 + idx);
                                     const isSelected = userAnswers[currentQuestionIndex] === optionLetter;
+
+                                    // Clean option text - remove any existing letter prefix (A., B., etc.)
+                                    let cleanOption = String(option).trim();
+                                    // Remove patterns like "A. ", "A.", "A) ", "A)", etc.
+                                    const letterPrefixPattern = /^[A-Z]\.?\s*/i;
+                                    if (letterPrefixPattern.test(cleanOption)) {
+                                        cleanOption = cleanOption.replace(letterPrefixPattern, '').trim();
+                                    }
+
                                     return (
                                         <button
                                             key={idx}
                                             onClick={() => handleAnswer(optionLetter)}
                                             className={`w-full text-left p-4 border-2 rounded-lg transition-all duration-200 ${isSelected
-                                                    ? 'border-blue-600 bg-blue-50 shadow-md transform scale-[1.01]'
-                                                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm'
+                                                ? 'border-blue-600 bg-blue-50 shadow-md transform scale-[1.01]'
+                                                : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm'
                                                 }`}
                                         >
                                             <div className="flex items-start">
@@ -611,7 +1001,7 @@ export default function AssessmentSkillsPractice() {
                                                     }`}>
                                                     {optionLetter}.
                                                 </span>
-                                                <span className="flex-1 text-gray-800">{option}</span>
+                                                <span className="flex-1 text-gray-800">{cleanOption}</span>
                                                 {isSelected && (
                                                     <svg className="w-5 h-5 text-blue-600 ml-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -621,6 +1011,159 @@ export default function AssessmentSkillsPractice() {
                                         </button>
                                     );
                                 })}
+                            </div>
+                        ) : currentQuestion.question_type === 'dictation' ? (
+                            // Dictation Question - Listen and Type
+                            <div className="space-y-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-sm text-blue-800 mb-3 flex items-center gap-2">
+                                        🎧 Click the button below to hear a sentence. Listen carefully and type exactly what you hear.
+                                    </p>
+                                    <p className="text-xs text-blue-700 mb-3">
+                                        <strong>Note:</strong> You can only play the audio once. Listen carefully and type every word correctly, including punctuation.
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            // Use question_text (the sentence) for TTS
+                                            const textToSpeak = currentQuestion.question_text || currentQuestion.correct_answer || '';
+                                            console.log('Playing dictation:', textToSpeak);
+                                            playDictationAudio(textToSpeak);
+                                        }}
+                                        disabled={audioPlayed[currentQuestionIndex] === true}
+                                        className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all flex items-center justify-center gap-2 shadow-md ${audioPlayed[currentQuestionIndex] === true
+                                            ? 'bg-gray-400 cursor-not-allowed text-white'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg'
+                                            }`}
+                                    >
+                                        <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        <span>{audioPlayed[currentQuestionIndex] === true ? 'Audio Already Played' : 'Play Audio'}</span>
+                                    </button>
+                                    {audioPlayed[currentQuestionIndex] === true && (
+                                        <p className="text-xs text-red-600 mt-2 font-medium">
+                                            ⚠️ Audio has been played. You cannot replay it.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Your Answer
+                                    </label>
+                                    <textarea
+                                        value={userAnswers[currentQuestionIndex] || ''}
+                                        onChange={(e) => handleAnswer(e.target.value)}
+                                        placeholder="Type the sentence you heard here..."
+                                        className="w-full h-24 p-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-mono bg-white text-gray-900 placeholder:text-gray-400"
+                                    />
+                                    {userAnswers[currentQuestionIndex] && (
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            {userAnswers[currentQuestionIndex].length} characters
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : currentQuestion.question_type === 'voice_reading' ? (
+                            // Voice Reading Question - Read Aloud
+                            <div className="space-y-3 sm:space-y-4">
+                                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-purple-800 mb-2 sm:mb-3">
+                                        📖 Read the text above aloud clearly. Click "Start Recording" when ready.
+                                    </p>
+                                </div>
+
+                                {!isLiveTranscribing ? (
+                                    <button
+                                        onClick={startLiveTranscription}
+                                        className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
+                                    >
+                                        <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        <span>Start Recording</span>
+                                    </button>
+                                ) : (
+                                    <div className="space-y-2 sm:space-y-3">
+                                        <button
+                                            onClick={stopLiveTranscription}
+                                            className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
+                                        >
+                                            <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                                            <span>Stop Recording</span>
+                                        </button>
+
+                                        {/* Live Transcription Display */}
+                                        <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[60px]">
+                                            <p className="text-xs sm:text-sm text-gray-600 mb-2">Recording... (Live transcription):</p>
+                                            <p className="text-sm sm:text-base text-gray-800">
+                                                {liveTranscript}
+                                                {interimTranscript && (
+                                                    <span className="text-gray-500 italic"> {interimTranscript}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {userAnswers[currentQuestionIndex] && (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                                        <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
+                                            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                            Your recorded response:
+                                        </p>
+                                        <p className="text-sm sm:text-base text-gray-800">{userAnswers[currentQuestionIndex]}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : currentQuestion.question_type === 'voice_speaking' ? (
+                            // Voice Speaking Question - Spontaneous Speech
+                            <div className="space-y-3 sm:space-y-4">
+                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-orange-800 mb-2">
+                                        🎤 Speak for 45-60 seconds on the topic above. Click "Start Speaking" when ready.
+                                    </p>
+                                    <p className="text-xs text-orange-700">
+                                        Tip: Organize your thoughts, speak clearly, and use relevant examples.
+                                    </p>
+                                </div>
+
+                                {!isLiveTranscribing ? (
+                                    <button
+                                        onClick={startLiveTranscription}
+                                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md flex items-center justify-center gap-2 sm:gap-3"
+                                    >
+                                        <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        <span>Start Speaking</span>
+                                    </button>
+                                ) : (
+                                    <div className="space-y-2 sm:space-y-3">
+                                        <button
+                                            onClick={stopLiveTranscription}
+                                            className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg text-sm sm:text-base font-medium transition-all shadow-md animate-pulse flex items-center justify-center gap-2 sm:gap-3"
+                                        >
+                                            <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                                            <span>Stop & Save</span>
+                                        </button>
+
+                                        {/* Live Transcription Display */}
+                                        <div className="bg-gray-50 border rounded-lg p-3 sm:p-4 min-h-[80px] sm:min-h-[100px]">
+                                            <p className="text-xs sm:text-sm text-gray-600 mb-2">Speaking... (Live transcription):</p>
+                                            <p className="text-sm sm:text-base text-gray-800">
+                                                {liveTranscript}
+                                                {interimTranscript && (
+                                                    <span className="text-gray-500 italic"> {interimTranscript}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {userAnswers[currentQuestionIndex] && (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                                        <p className="text-xs sm:text-sm text-green-800 mb-2 flex items-center gap-2">
+                                            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                            Your recorded response:
+                                        </p>
+                                        <p className="text-sm sm:text-base text-gray-800">{userAnswers[currentQuestionIndex]}</p>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             // Text / Open-ended question
@@ -632,8 +1175,15 @@ export default function AssessmentSkillsPractice() {
                                     value={userAnswers[currentQuestionIndex] || ''}
                                     onChange={(e) => handleAnswer(e.target.value)}
                                     placeholder="Type your answer here..."
-                                    className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                    className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-gray-900 placeholder:text-gray-400 text-base"
                                     rows={6}
+                                    style={{
+                                        color: '#111827',
+                                        backgroundColor: '#ffffff',
+                                        fontFamily: 'inherit',
+                                        fontSize: '16px',
+                                        lineHeight: '1.5',
+                                    }}
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
                                     {userAnswers[currentQuestionIndex]?.length || 0} characters
@@ -705,27 +1255,24 @@ export default function AssessmentSkillsPractice() {
                             Progress
                         </h4>
                         <p className="text-xs text-gray-500 mb-4">
-                            {Object.keys(userAnswers).length} of {questions.length} answered
+                            {Object.keys(userAnswers).filter(idx => userAnswers[parseInt(idx)]?.trim() !== '').length} of {questions.length} answered
                         </p>
                         <div className="grid grid-cols-5 gap-2 mb-4">
                             {questions.map((_, idx) => {
                                 const isCurrent = currentQuestionIndex === idx;
-                                const isAnswered = idx in userAnswers;
-                                const isCorrect = isAnswered && questions[idx].correct_answer === userAnswers[idx];
+                                const isAnswered = idx in userAnswers && (userAnswers[idx]?.trim() !== '');
 
                                 return (
                                     <button
                                         key={idx}
                                         onClick={() => goToQuestion(idx)}
                                         className={`w-full aspect-square rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-110 ${isCurrent
-                                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
-                                                : isAnswered
-                                                    ? isCorrect
-                                                        ? 'bg-green-500 text-white shadow-md'
-                                                        : 'bg-red-500 text-white shadow-md'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
+                                            ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
+                                            : isAnswered
+                                                ? 'bg-yellow-500 text-white shadow-md'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
                                             }`}
-                                        title={isAnswered ? `Question ${idx + 1} - ${isCorrect ? 'Correct' : 'Incorrect'}` : `Question ${idx + 1} - Not answered`}
+                                        title={isAnswered ? `Question ${idx + 1} - Answered (Marked for Review)` : `Question ${idx + 1} - Not answered`}
                                     >
                                         {idx + 1}
                                     </button>
@@ -740,12 +1287,8 @@ export default function AssessmentSkillsPractice() {
                                     <span className="text-gray-600">Current</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
-                                    <span className="text-gray-600">Correct</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
-                                    <span className="text-gray-600">Incorrect</span>
+                                    <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
+                                    <span className="text-gray-600">Answered (Marked for Review)</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 bg-gray-200 rounded flex-shrink-0"></div>

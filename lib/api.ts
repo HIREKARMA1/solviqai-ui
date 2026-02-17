@@ -16,18 +16,30 @@ class ApiClient {
   public client: AxiosInstance;
 
   constructor() {
+    const shouldLog =
+      typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+    // Validate API base URL
+    if (shouldLog && !config.api.fullUrl) {
+      console.warn(
+        "⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.",
+      );
+    }
+
     this.client = axios.create({
       baseURL: config.api.fullUrl,
-      timeout: 120000, // 120 seconds timeout (2 minutes) for web scraping operations
+      timeout: 180000, // 180 seconds timeout (3 minutes) for web scraping operations
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    console.log("🚀 API Client initialized:", {
-      baseURL: config.api.fullUrl,
-      timeout: "120s (2 minutes)",
-    });
+    if (shouldLog) {
+      console.log("🚀 API Client initialized:", {
+        baseURL: config.api.fullUrl || "(not configured)",
+        timeout: "180s (3 minutes)",
+      });
+    }
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use(
@@ -91,7 +103,7 @@ class ApiClient {
 
           // Check if error message indicates session was invalidated (logged in on another device)
           const errorMessage = error.response?.data?.detail || "";
-          const isSessionInvalidated = 
+          const isSessionInvalidated =
             errorMessage.includes("Session expired or invalid") ||
             errorMessage.includes("Session not found");
 
@@ -132,6 +144,26 @@ class ApiClient {
             if (window.location.pathname !== "/auth/login") {
               window.location.href = "/auth/login";
             }
+          }
+        }
+
+        // Handle subscription/license enforcement (403) globally
+        if (error.response?.status === 403) {
+          const detail = error.response?.data?.detail || "";
+          const msg = typeof detail === "string" ? detail : "";
+          const msgLower = msg.toLowerCase();
+          const looksLikeEntitlement =
+            (msgLower.includes("subscription") || msgLower.includes("license")) &&
+            (msgLower.includes("expired") ||
+              msgLower.includes("contact hirekarma") ||
+              msgLower.includes("free plan"));
+
+          if (looksLikeEntitlement && typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("subscription-required", {
+                detail: { message: msg },
+              }),
+            );
           }
         }
 
@@ -247,6 +279,18 @@ class ApiClient {
     return response.data;
   }
 
+  async updateCollegeLicense(id: string, data: {
+    license_type: string;
+    license_expiry?: string;
+    total_students?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/admin/colleges/${id}/license`,
+      data,
+    );
+    return response.data;
+  }
+
   async getStudents(params?: any): Promise<any> {
     const response: AxiosResponse = await this.client.get("/admin/students", {
       params,
@@ -291,6 +335,17 @@ class ApiClient {
     return response.data;
   }
 
+  async updateStudentSubscription(id: string, data: {
+    subscription_type: 'free' | 'premium' | 'college_license';
+    subscription_expiry?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/admin/students/${id}/subscription`,
+      data,
+    );
+    return response.data;
+  }
+
   async uploadStudentsCSV(file: File, collegeId?: string): Promise<any> {
     const formData = new FormData();
     formData.append("file", file);
@@ -315,6 +370,11 @@ class ApiClient {
   // College endpoints
   async getCollegeDashboard(): Promise<any> {
     const response: AxiosResponse = await this.client.get("/college/dashboard");
+    return response.data;
+  }
+
+  async getCollegeAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get("/college/analytics");
     return response.data;
   }
 
@@ -361,9 +421,27 @@ class ApiClient {
     return response.data;
   }
 
+  async getCollegeStudentAnalytics(studentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/college/students/${studentId}/analytics`
+    );
+    return response.data;
+  }
+
   async activateCollegeStudent(id: string): Promise<any> {
     const response: AxiosResponse = await this.client.put(
       `/college/students/${id}/activate`,
+    );
+    return response.data;
+  }
+
+  async updateCollegeStudentSubscription(id: string, data: {
+    subscription_type: 'free' | 'premium' | 'college_license';
+    subscription_expiry?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      `/college/students/${id}/subscription`,
+      data,
     );
     return response.data;
   }
@@ -498,12 +576,12 @@ class ApiClient {
     if (keywords) {
       params.keywords = keywords;
     }
-    // Use extended timeout for web scraping operations (2 minutes)
+    // Use extended timeout for web scraping operations (3 minutes)
     const response: AxiosResponse = await this.client.get(
       "/students/market-jobs",
       {
         params,
-        timeout: 120000, // 2 minutes for web scraping
+        timeout: 180000, // 3 minutes for web scraping (increased from 2 minutes)
       },
     );
     return response.data;
@@ -628,23 +706,6 @@ class ApiClient {
     return response.data;
   }
 
-  // Practice Coding Challenge methods
-  async getPracticeCodingQuestions(branch: string, difficulty: string = 'medium'): Promise<any> {
-    const response: AxiosResponse = await this.client.get(`/practice/coding`, {
-      params: { branch, difficulty }
-    });
-    return response.data;
-  }
-
-  async executePracticeCode(payload: {question_id: string; language: string; code: string; stdin?: string}): Promise<any> {
-    const response: AxiosResponse = await this.client.post(
-      `/practice/coding/execute`,
-      payload,
-      { timeout: 60000 } // 60s
-    );
-    return response.data;
-  }
-
   async getAssessmentStatus(assessmentId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/assessments/${assessmentId}/status`,
@@ -737,6 +798,84 @@ class ApiClient {
     return response.data;
   }
 
+  async getStudentSubscriptionStatus(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/subscription-status",
+    );
+    return response.data;
+  }
+
+  async getStudentUsageAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/usage-analytics",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 2: COLLEGE SUBSCRIPTION & LICENSE ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getCollegeLicenseOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/license-overview",
+    );
+    return response.data;
+  }
+
+  async getStudentSubscriptionDistribution(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-distribution",
+    );
+    return response.data;
+  }
+
+  async getUsageAnalyticsBySubscription(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/usage-analytics-by-subscription",
+    );
+    return response.data;
+  }
+
+  async getSubscriptionHealth(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-health",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 3: ADMIN SUBSCRIPTION & BUSINESS ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getAdminSubscriptionOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-overview",
+    );
+    return response.data;
+  }
+
+  async getAdminCollegeLicenses(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/college-licenses",
+    );
+    return response.data;
+  }
+
+  async getAdminSubscriptionTrends(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-trends",
+    );
+    return response.data;
+  }
+
+  async getAdminRevenueMetrics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/revenue-metrics",
+    );
+    return response.data;
+  }
+
   // Career Guidance API
   careerGuidance = {
     startSession: async (data: {
@@ -781,8 +920,400 @@ class ApiClient {
     );
     return response.data;
   }
+
+  // Admin Analytics API
+  async getAdminAnalytics(
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+
+    const response = await this.client.get("/admin/analytics", { params });
+    return response.data;
+  }
+
+  async exportAnalytics(
+    format: string = 'json',
+    startDate?: string,
+    endDate?: string,
+    collegeId?: string
+  ): Promise<any> {
+    const params: any = { format };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (collegeId) params.college_id = collegeId;
+
+    const response = await this.client.post("/admin/analytics/export", null, { params });
+    return response.data;
+  }
+
+  // Admin - Student Assessment Reports
+  async getStudentAssessmentsAdmin(studentId: string): Promise<any> {
+    const response = await this.client.get(`/admin/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportAdmin(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+
+    const response = await this.client.get(
+      `/admin/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // College - Student Assessment Reports
+  async getStudentAssessmentsCollege(studentId: string): Promise<any> {
+    const response = await this.client.get(`/college/students/${studentId}/assessments`);
+    return response.data;
+  }
+
+  async getStudentAssessmentReportCollege(
+    studentId: string,
+    assessmentId: string,
+    includeQuestions: boolean = false
+  ): Promise<any> {
+    const params: any = {};
+    if (includeQuestions) params.include = 'questions';
+
+    const response = await this.client.get(
+      `/college/students/${studentId}/assessments/${assessmentId}/report`,
+      { params }
+    );
+    return response.data;
+  }
+
+  // Electrical endpoints
+  async generateElectricalQuestion(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/generate');
+    return response.data;
+  }
+
+  async evaluateElectricalDiagram(payload: { question: string; drawing: any }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/electrical/evaluate', payload, {
+      timeout: 180000,
+    });
+    return response.data;
+  }
+
+  // Civil Engineering endpoints
+  async generateCivilProblem(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/problem');
+    return response.data;
+  }
+
+  async evaluateCivilQuantities(payload: {
+    problem: Record<string, any>;  // Complete problem object for AI evaluation
+    student_answers: Record<string, number>;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/assessments/civil/evaluate', payload, {
+      timeout: 60000,  // AI evaluation may take longer
+    });
+    return response.data;
+  }
+
+  // Practice Coding endpoints
+  async getPracticeCodingQuestions(branch: string, difficulty: string, timestamp?: number): Promise<any> {
+    const params: any = { branch, difficulty };
+    // Add timestamp for cache-busting to ensure fresh question generation
+    if (timestamp) {
+      params._t = timestamp;
+    }
+    const response: AxiosResponse = await this.client.get('/practice/coding', { params });
+    return response.data;
+  }
+
+  async executePracticeCode(payload: {
+    question_id: string;
+    language: string;
+    code: string;
+    stdin?: string;
+  }): Promise<any> {
+    // Use extended timeout for code execution
+    const response: AxiosResponse = await this.client.post('/practice/coding/execute', payload, {
+      timeout: 60000
+    });
+    return response.data;
+  }
+
+  async evaluatePracticeCodingSubmission(payload: {
+    branch: string;
+    difficulty: string;
+    items: Array<{
+      question_id: string;
+      question_text: string;
+      code: string;
+      language: string;
+      test_results?: any;
+    }>;
+  }): Promise<any> {
+    // Use extended timeout for AI evaluation
+    const response: AxiosResponse = await this.client.post('/practice/coding/evaluate', payload, {
+      timeout: 120000
+    });
+    return response.data;
+  }
+
+  // Excel Accountant Assessment endpoints
+  public excelAssessment = {
+    getAssessments: async (): Promise<any[]> => {
+      const response: AxiosResponse = await this.client.get('/excel-assessment/assessments');
+      return response.data;
+    },
+
+    createAssessment: async (payload: {
+      title: string;
+      description: string;
+      num_questions: number;
+      difficulty_level?: string;
+    }): Promise<any> => {
+      const response: AxiosResponse = await this.client.post('/excel-assessment/assessments', payload);
+      return response.data;
+    },
+
+    getAssessmentDetail: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}`);
+      return response.data;
+    },
+
+    // Backwards-compatible alias used by some components
+    getAssessment: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}`);
+      return response.data;
+    },
+
+    getAssessmentReport: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.get(`/excel-assessment/assessments/${id}/report`);
+      return response.data;
+    },
+
+    startAssessment: async (id: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(`/excel-assessment/assessments/${id}/start`, {});
+      return response.data;
+    },
+
+    submitExcelFile: async (assessmentId: string, questionId: string, file: File): Promise<any> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/questions/${questionId}/submit-file`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    },
+
+    submitSpreadsheetData: async (assessmentId: string, questionId: string, data: any): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/submit-data/${questionId}`,
+        data
+      );
+      return response.data;
+    },
+
+    completeAssessment: async (assessmentId: string): Promise<any> => {
+      const response: AxiosResponse = await this.client.post(
+        `/excel-assessment/assessments/${assessmentId}/complete`
+      );
+      return response.data;
+    },
+  };
+
+  // Disha Assessment endpoints
+  async getDishaPackageStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}`
+    );
+    return response.data;
+  }
+
+  async getDishaGenerationStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/generation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageQuestions(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/questions`
+    );
+    return response.data;
+  }
+
+  async triggerDishaQuestionGeneration(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/generate-questions`
+    );
+    return response.data;
+  }
+
+  async getAllDishaPackages(params?: {
+    status?: string;
+    mode?: string;
+    include_expired?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async deleteDishaPackage(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/disha/admin/packages/${packageId}`
+    );
+    return response.data;
+  }
+
+  // DISHA Exam APIs
+  async startDishaAssessment(packageId: string, dishaStudentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/start`,
+      { disha_student_id: dishaStudentId }
+    );
+    return response.data;
+  }
+
+  async getDishaRoundQuestions(
+    packageId: string,
+    roundId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/rounds/${roundId}`,
+      { params: { attempt_id: attemptId } }
+    );
+    return response.data;
+  }
+
+  async submitDishaRound(
+    packageId: string,
+    roundId: string,
+    attemptId: string,
+    answers: Record<string, any>
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/submit`,
+      {
+        attempt_id: attemptId,
+        answers: answers
+      }
+    );
+    return response.data;
+  }
+
+  async executeDishaCode(
+    packageId: string,
+    roundId: string,
+    payload: {
+      question_id: string;
+      language: string;
+      code: string;
+      stdin?: string;
+    },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/code/execute`,
+      payload,
+      { timeout: 60000 },
+    );
+    return response.data;
+  }
+
+
+  async getDishaAttemptStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/status`
+    );
+    return response.data;
+  }
+
+  async getDishaEvaluationStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/evaluation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaReport(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  // Admin DISHA APIs
+  async getDishaPackageAttempts(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageReport(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
+
+  async getDishaIndividualStudentReport(
+    packageId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  async validateDishaToken(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/sso/validate-token`,
+      null,
+      { params: { token } }
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
 export const api = apiClient; // Export as 'api' for cleaner imports
 export default apiClient;
+
+// ============================================================================
+// STANDALONE EXPORT FUNCTIONS FOR CONVENIENCE
+// ============================================================================
+
+// Phase 1: Student Subscription Analytics
+export const getStudentSubscriptionStatus = () => apiClient.getStudentSubscriptionStatus();
+export const getStudentUsageAnalytics = () => apiClient.getStudentUsageAnalytics();
+
+// Phase 2: College Subscription Analytics
+export const getCollegeLicenseOverview = () => apiClient.getCollegeLicenseOverview();
+export const getStudentSubscriptionDistribution = () => apiClient.getStudentSubscriptionDistribution();
+export const getUsageAnalyticsBySubscription = () => apiClient.getUsageAnalyticsBySubscription();
+export const getSubscriptionHealth = () => apiClient.getSubscriptionHealth();
+// Phase 3: Admin Subscription & Business Analytics
+export const getAdminSubscriptionOverview = () => apiClient.getAdminSubscriptionOverview();
+export const getAdminCollegeLicenses = () => apiClient.getAdminCollegeLicenses();
+export const getAdminSubscriptionTrends = () => apiClient.getAdminSubscriptionTrends();
+export const getAdminRevenueMetrics = () => apiClient.getAdminRevenueMetrics();

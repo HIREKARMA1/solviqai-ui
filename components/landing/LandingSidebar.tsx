@@ -6,7 +6,6 @@ import {
   FileText,
   Briefcase,
   ClipboardList,
-  Zap,
   LayoutGrid,
   Users,
   BarChart3,
@@ -61,12 +60,6 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: 'Mock Assessment',
     onClick: undefined,
   },
-  {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
-    onClick: undefined,
-  },
   // {
   //   id: 'jobs',
   //   icon: <Briefcase className="w-5 h-5" />,
@@ -79,6 +72,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
   //   label: 'Auto Job Apply',
   //   onClick: undefined,
   // },
+  {
+    id: 'practice',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Practice',
+    onClick: undefined,
+  },
   {
     id: 'analytics',
     icon: <BarChart3 className="w-5 h-5" />,
@@ -142,15 +141,15 @@ export const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
-    id: 'profile',
-    icon: <User className="w-5 h-5" />,
-    label: 'Profile',
+    id: 'disha',
+    icon: <FileText className="w-5 h-5" />,
+    label: 'Disha Assessments',
     onClick: undefined,
   },
   {
-    id: 'practice',
-    icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice Assessment',
+    id: 'profile',
+    icon: <User className="w-5 h-5" />,
+    label: 'Profile',
     onClick: undefined,
   },
 ];
@@ -187,13 +186,12 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // Student routes
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
-        'dashboard': baseRoute,
+        dashboard: baseRoute,
         'career-guidance': `${baseRoute}/career-guidance`,
-        'resume': `${baseRoute}/resume`,
-        'assessment': `${baseRoute}/assessment`,
-        // 'jobs': `${baseRoute}/jobs`,
-        // 'auto-apply': `${baseRoute}/auto-apply`,
-        'analytics': `${baseRoute}/analytics`,
+        resume: `${baseRoute}/resume`,
+        assessment: `${baseRoute}/assessment`,
+        analytics: `${baseRoute}/analytics`,
+        practice: `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;
     }
@@ -201,10 +199,10 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/college`,
-        'students': `/dashboard/college/students`,
-        'analytics': `/dashboard/college/analytics`,
-        'profile': `/dashboard/college/profile`,
+        dashboard: `/dashboard/college`,
+        students: `/dashboard/college/students`,
+        analytics: `/dashboard/college/analytics`,
+        profile: `/dashboard/college/profile`,
       };
       return routeMap[featureId] || null;
     }
@@ -212,11 +210,12 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     // Admin routes
     if (user.user_type === 'admin') {
       const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/admin`,
-        'colleges': `/dashboard/admin/colleges`,
-        'students': `/dashboard/admin/students`,
-        'analytics': `/dashboard/admin/analytics`,
-        'profile': `/dashboard/admin/profile`,
+        dashboard: `/dashboard/admin`,
+        colleges: `/dashboard/admin/colleges`,
+        students: `/dashboard/admin/students`,
+        analytics: `/dashboard/admin/analytics`,
+        disha: `/dashboard/admin/disha`,
+        profile: `/dashboard/admin/profile`,
       };
       return routeMap[featureId] || null;
     }
@@ -297,13 +296,13 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
             <nav className="space-y-1">
               {features.map((item) => {
                 // Determine active state based on context
-                let isActive = false;
+                let isActive: boolean = false;
                 if (isDashboardContext) {
                   // In dashboard, check if current path matches the feature route
                   const route = getFeatureRoute(item.id);
                   if (route) {
                     // For exact matches or nested routes
-                    isActive = pathname === route || pathname?.startsWith(route + '/');
+                    isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                     // Special case: dashboard route should match exactly or be the base dashboard
                     if (item.id === 'dashboard') {
                       isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;

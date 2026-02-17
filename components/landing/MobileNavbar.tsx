@@ -20,7 +20,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
   // Get sidebar features based on user type
   const getSidebarFeatures = (): SidebarItem[] => {
     if (!user) return studentSidebarFeatures; // Default to student features when not logged in
-    
+
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
@@ -36,7 +36,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
     const baseRoute = `/dashboard/${user.user_type}`;
-    
+
     // Student routes
     if (user.user_type === 'student') {
       const routeMap: Record<string, string> = {
@@ -47,10 +47,11 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
         // 'jobs': `${baseRoute}/jobs`,
         // 'auto-apply': `${baseRoute}/auto-apply`,
         'analytics': `${baseRoute}/analytics`,
+        'practice': `${baseRoute}/practice`,
       };
       return routeMap[featureId] || null;
     }
-    
+
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
@@ -61,7 +62,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
       };
       return routeMap[featureId] || null;
     }
-    
+
     // Admin routes
     if (user.user_type === 'admin') {
       const routeMap: Record<string, string> = {
@@ -73,7 +74,7 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
       };
       return routeMap[featureId] || null;
     }
-    
+
     return null;
   };
 
@@ -92,18 +93,18 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
           return;
         }
       }
-      
+
       // If in dashboard context but no user/route, do nothing
       if (isDashboardContext) {
         return;
       }
-      
+
       // For dashboard link when logged out, redirect to login
       if (item.id === 'dashboard') {
         router.push('/auth/login');
         return;
       }
-      
+
       // On homepage without user, use feature change callback (show inline preview)
       onFeatureChange?.(item.id);
     },
@@ -113,20 +114,20 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
     <motion.nav
       className="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-md"
     >
-      <div 
+      <div
         className="overflow-x-auto scrollbar-hide"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         <div className="flex items-center justify-start gap-3 px-4 py-3">
           {features.map((item, index) => {
             // Determine active state based on context
-            let isActive = false;
+            let isActive: boolean = false;
             if (isDashboardContext) {
               // In dashboard, check if current path matches the feature route
               const route = getFeatureRoute(item.id);
               if (route) {
                 // For exact matches or nested routes
-                isActive = pathname === route || pathname?.startsWith(route + '/');
+                isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
                 // Special case: dashboard route should match exactly or be the base dashboard
                 if (item.id === 'dashboard') {
                   isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;
