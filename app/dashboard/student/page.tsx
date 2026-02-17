@@ -21,32 +21,7 @@ import {
 
 const robotoExtraBold = Roboto({ weight: '700', subsets: ['latin'] })
 
-// ─── Real data usage: fallbacks removed ───
-// const DEMO_ACTIVITY_DATES = ['2025-12-02', '2025-12-05', '2025-12-10', '2025-12-13', '2025-12-16', '2025-12-19', '2025-12-20', '2025-12-24']
-// function getDemoRecentActivities(): Array<{ id: string; date: string; score?: number; title: string }> {
-//     const now = new Date()
-//     return [
-//         { id: 'demo-1', date: now.toISOString(), title: 'Technical Assessment- Javascript' },
-//         { id: 'demo-2', date: new Date(now.getTime() - 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
-//         { id: 'demo-3', date: new Date(now.getTime() - 2 * 86400000).toISOString(), score: 82, title: 'System Design Interview Prepare' },
-//         { id: 'demo-4', date: new Date(now.getTime() - 3 * 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
-//     ]
-// }
-// const DEMO_RECENT_ACTIVITIES = getDemoRecentActivities()
-// const DEMO_STREAKS = 10
-// const DEMO_PERFORMANCE_TREND = [
-//     { date: '2025-01-01', month: 'Jan', score: 80 },
-//     { date: '2025-02-01', month: 'Feb', score: 55 },
-//     { date: '2025-03-01', month: 'Mar', score: 60 },
-//     { date: '2025-04-01', month: 'Apr', score: 73 },
-//     { date: '2025-05-01', month: 'May', score: 105 },
-//     { date: '2025-06-01', month: 'Jun', score: 20 },
-//     { date: '2025-07-01', month: 'Jul', score: 48 },
-//     { date: '2025-08-01', month: 'Aug', score: 40 },
-//     { date: '2025-09-01', month: 'Sep', score: 47 },
-//     { date: '2025-10-01', month: 'Oct', score: 62 },
-//     { date: '2025-11-01', month: 'Nov', score: 100 },
-// ]
+
 
 function timeAgo(dateStr: string): string {
     const d = new Date(dateStr)
@@ -193,26 +168,41 @@ export default function StudentDashboard() {
                 setStats(calculatedStats)
 
                 // Set latest completed report, last 3 reports, recent activities, and activity dates
+                // Set latest completed report, last 3 reports from completed only
                 if (completed.length > 0) {
-                    const sorted = [...completed].sort((b: any, c: any) => new Date(c.completed_at || c.started_at).getTime() - new Date(b.completed_at || b.started_at).getTime())
-                    const latest = sorted[0]
+                    const sortedCompleted = [...completed].sort((b: any, c: any) => new Date(c.completed_at || c.started_at).getTime() - new Date(b.completed_at || b.started_at).getTime())
+                    const latest = sortedCompleted[0]
                     setLatestReport({ id: latest.assessment_id, date: latest.completed_at || latest.started_at })
 
-                    const last3Reports = sorted.slice(0, 3).map((assessment: any) => ({
+                    const last3Reports = sortedCompleted.slice(0, 3).map((assessment: any) => ({
                         id: assessment.assessment_id,
                         date: assessment.completed_at || assessment.started_at,
                         score: assessment.overall_score,
                         readiness: assessment.readiness_index
                     }))
                     setRecentReports(last3Reports)
+                }
 
-                    setRecentActivities(sorted.slice(0, 8).map((a: any) => ({
-                        id: a.assessment_id,
-                        date: a.completed_at || a.started_at,
-                        score: a.overall_score,
-                        title: (a.job_role || a.assessment_type || 'Assessment').replace(/_/g, ' ')
-                    })))
-                    setActivityDates(Array.from(new Set(sorted.map((a: any) => (a.completed_at || a.started_at)?.toString().slice(0, 10)))).filter(Boolean) as string[])
+                // Set recent activities from ALL assessments (including pending)
+                if (allAssessments.length > 0) {
+                    const sortedAll = [...allAssessments].sort((b: any, c: any) => new Date(c.started_at).getTime() - new Date(b.started_at).getTime())
+
+                    setRecentActivities(sortedAll.slice(0, 8).map((a: any) => {
+                        // Handle job_role being an object or string
+                        const roleTitle = typeof a.job_role === 'object' && a.job_role?.title
+                            ? a.job_role.title
+                            : (a.job_role || a.assessment_type || 'Assessment')
+
+                        return {
+                            id: a.assessment_id,
+                            date: a.completed_at || a.started_at,
+                            score: a.overall_score,
+                            title: String(roleTitle).replace(/_/g, ' ')
+                        }
+                    }))
+
+                    // Show activity dots for all started assessments
+                    setActivityDates(Array.from(new Set(sortedAll.map((a: any) => (a.completed_at || a.started_at)?.toString().slice(0, 10)))).filter(Boolean) as string[])
                 }
             } catch (err) {
                 console.error('Error calculating stats:', err)
