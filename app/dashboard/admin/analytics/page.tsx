@@ -31,6 +31,10 @@ import {
   PieChartCard,
   DataTableCard
 } from '@/components/analytics'
+import AdminSubscriptionOverviewCard from '@/components/subscription/AdminSubscriptionOverviewCard'
+import AdminCollegeLicensesCard from '@/components/subscription/AdminCollegeLicensesCard'
+import AdminRevenueMetricsCard from '@/components/subscription/AdminRevenueMetricsCard'
+import AdminSubscriptionTrendsCard from '@/components/subscription/AdminSubscriptionTrendsCard'
 import toast from 'react-hot-toast'
 import { config } from '@/lib/config'
 
@@ -286,6 +290,29 @@ export default function AdminAnalytics() {
 
                     {/* Overview Tab */}
                     <TabsContent value="overview" className="space-y-6">
+                        {/* License & Subscription Management Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2">
+                                <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                                <h2 className="text-xl font-semibold">License & Subscription Management</h2>
+                            </div>
+                            
+                            {/* Subscription Overview */}
+                            <AdminSubscriptionOverviewCard />
+                            
+                            {/* Revenue & Trends */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <AdminRevenueMetricsCard />
+                                <AdminSubscriptionTrendsCard />
+                            </div>
+                            
+                            {/* College Licenses Management */}
+                            <AdminCollegeLicensesCard />
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-gray-200 dark:border-gray-700"></div>
+
                         {/* Platform Overview Metrics */}
                         <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${(platformOverview.total_metrics?.job_applications || 0) > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                             <MetricCard

@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Target01Icon } from "hugeicons-react";
+
 
 const sidebarItems = [
   { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -351,7 +351,7 @@ export default function AssessmentPage() {
           <Card className="bg-[#E3F2FD] dark:bg-blue-900/20 border-none shadow-md rounded-2xl">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-blue-200/50 dark:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                <Target01Icon size={24} className="text-blue-600 dark:text-blue-400" />
+                <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Score</p>

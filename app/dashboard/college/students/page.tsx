@@ -92,7 +92,7 @@ export default function CollegeStudents() {
             console.error('Error creating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to create student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -100,7 +100,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setCreating(false)
@@ -137,7 +137,7 @@ export default function CollegeStudents() {
             console.error('Error updating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -145,7 +145,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdating(false)
@@ -163,7 +163,7 @@ export default function CollegeStudents() {
             console.error('Error deactivating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to deactivate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -171,7 +171,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -187,7 +187,7 @@ export default function CollegeStudents() {
             console.error('Error activating student:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to activate student'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -195,7 +195,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         }
     }
@@ -217,9 +217,13 @@ export default function CollegeStudents() {
 
     const handleOpenSubscriptionModal = (student: any) => {
         setSelectedStudent(student)
+        // Load existing subscription data including expiry date
+        const existingExpiry = student.subscription_expiry
+            ? new Date(student.subscription_expiry).toISOString().split('T')[0]
+            : ''
         setSubscriptionData({
             subscription_type: student.subscription_type || 'free',
-            subscription_expiry: ''
+            subscription_expiry: existingExpiry
         })
         setShowSubscriptionModal(true)
     }
@@ -233,17 +237,17 @@ export default function CollegeStudents() {
             const payload: any = {
                 subscription_type: subscriptionData.subscription_type
             }
-            
+
             // Only include expiry date if it's set
             if (subscriptionData.subscription_expiry) {
                 payload.subscription_expiry = new Date(subscriptionData.subscription_expiry).toISOString()
             }
 
             const response = await apiClient.updateCollegeStudentSubscription(selectedStudent.id, payload)
-            
+
             // Refresh the student list to show updated data
             await fetchStudents()
-            
+
             toast.success(`Subscription updated! ${selectedStudent.name} is now on ${response.new_subscription} plan`)
             setShowSubscriptionModal(false)
             setSelectedStudent(null)
@@ -251,7 +255,7 @@ export default function CollegeStudents() {
             console.error('Error updating subscription:', error)
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update subscription'
-            
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -259,7 +263,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
-            
+
             toast.error(errorMessage)
         } finally {
             setUpdatingSubscription(false)
@@ -271,13 +275,13 @@ export default function CollegeStudents() {
         const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.phone?.includes(searchTerm)
-        
+
         // Filter by status
         const matchesStatus = showInactive || student.status?.toUpperCase() === 'ACTIVE'
-        
+
         return matchesSearch && matchesStatus
     })
-    
+
     const activeCount = students.filter(s => s.status?.toUpperCase() === 'ACTIVE').length
     const inactiveCount = students.filter(s => s.status?.toUpperCase() === 'INACTIVE').length
 
@@ -385,26 +389,34 @@ export default function CollegeStudents() {
                                                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.branch || '-'}</td>
                                                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.graduation_year || '-'}</td>
                                                 <td className="py-3 px-4">
-                                                    <Badge 
-                                                        variant={
-                                                            student.subscription_type === 'premium' ? 'default' :
-                                                            student.subscription_type === 'college_license' ? 'success' :
-                                                            'outline'
-                                                        }
-                                                        className="capitalize"
-                                                    >
-                                                        {student.subscription_type || 'free'}
-                                                    </Badge>
+                                                    <div>
+                                                        <Badge
+                                                            variant={
+                                                                student.subscription_type === 'premium' ? 'default' :
+                                                                    student.subscription_type === 'college_license' ? 'success' :
+                                                                        'outline'
+                                                            }
+                                                            className="capitalize"
+                                                        >
+                                                            {student.subscription_type || 'free'}
+                                                        </Badge>
+                                                        {student.subscription_expiry && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                <Calendar className="h-3 w-3 inline mr-1" />
+                                                                Expires: {new Date(student.subscription_expiry).toLocaleDateString()}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <Badge 
+                                                    <Badge
                                                         variant={student.status?.toUpperCase() === 'ACTIVE' ? 'default' : 'secondary'}
                                                         className={
-                                                            student.status?.toUpperCase() === 'INACTIVE' 
-                                                                ? 'bg-gray-500 hover:bg-gray-600' 
-                                                                : student.status?.toUpperCase() === 'SUSPENDED' 
-                                                                ? 'bg-red-500 hover:bg-red-600'
-                                                                : ''
+                                                            student.status?.toUpperCase() === 'INACTIVE'
+                                                                ? 'bg-gray-500 hover:bg-gray-600'
+                                                                : student.status?.toUpperCase() === 'SUSPENDED'
+                                                                    ? 'bg-red-500 hover:bg-red-600'
+                                                                    : ''
                                                         }
                                                     >
                                                         {student.status?.toUpperCase() || 'ACTIVE'}
@@ -443,10 +455,10 @@ export default function CollegeStudents() {
                                                             Subscription
                                                         </Button>
                                                         {student.status?.toUpperCase() === 'ACTIVE' ? (
-                                                        <Button
+                                                            <Button
                                                                 variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleDeleteStudent(student.id)}
+                                                                size="sm"
+                                                                onClick={() => handleDeleteStudent(student.id)}
                                                                 className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                                                                 title="Mark student as inactive"
                                                             >
@@ -463,7 +475,7 @@ export default function CollegeStudents() {
                                                             >
                                                                 <Users className="w-4 h-4 mr-1" />
                                                                 Activate
-                                                        </Button>
+                                                            </Button>
                                                         )}
                                                     </div>
                                                 </td>
@@ -743,11 +755,11 @@ export default function CollegeStudents() {
                                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm font-medium">Current Plan:</span>
-                                        <Badge 
+                                        <Badge
                                             variant={
                                                 selectedStudent.subscription_type === 'premium' ? 'default' :
-                                                selectedStudent.subscription_type === 'college_license' ? 'success' :
-                                                'outline'
+                                                    selectedStudent.subscription_type === 'college_license' ? 'success' :
+                                                        'outline'
                                             }
                                             className="capitalize"
                                         >
@@ -756,6 +768,14 @@ export default function CollegeStudents() {
                                     </div>
                                     <div className="text-xs text-gray-600 dark:text-gray-400">
                                         <p><strong>Email:</strong> {selectedStudent.email}</p>
+                                        {selectedStudent.subscription_expiry && (
+                                            <p className="mt-1">
+                                                <strong><Calendar className="h-3 w-3 inline mr-1" />Current Expiry:</strong>
+                                                <span className="text-blue-600 dark:text-blue-400 ml-1">
+                                                    {new Date(selectedStudent.subscription_expiry).toLocaleDateString()}
+                                                </span>
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -826,14 +846,14 @@ export default function CollegeStudents() {
                                 </div>
 
                                 {/* Important Note */}
-                                {selectedStudent.subscription_type === 'free' && 
-                                 (subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
-                                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                        <p className="text-sm text-green-700 dark:text-green-300">
-                                            <strong>✓ Upgrading:</strong> This will grant the student immediate unlimited access.
-                                        </p>
-                                    </div>
-                                )}
+                                {selectedStudent.subscription_type === 'free' &&
+                                    (subscriptionData.subscription_type === 'premium' || subscriptionData.subscription_type === 'college_license') && (
+                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                <strong>✓ Upgrading:</strong> This will grant the student immediate unlimited access.
+                                            </p>
+                                        </div>
+                                    )}
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-2 justify-end pt-4">

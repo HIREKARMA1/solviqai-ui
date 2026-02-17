@@ -161,6 +161,13 @@ export function GroupDiscussionRound({
     const speechRecognition = useRef<any>(null);
     const audioContext = useRef<AudioContext | null>(null);
     const audioAnalyser = useRef<AnalyserNode | null>(null);
+    const isSubmittingRef = useRef(false);
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => { isMountedRef.current = false; };
+    }, []);
 
     // Auto-scroll to bottom of chat
     useEffect(() => {
@@ -358,6 +365,10 @@ export function GroupDiscussionRound({
 
         try {
             setLoading(true);
+            isSubmittingRef.current = true;
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
             // toast.loading('Submitting your discussion...', { id: 'submitting' });
 
             // Get assessment ID from prop or URL
@@ -539,6 +550,11 @@ export function GroupDiscussionRound({
                 return;
             }
 
+            if (isSubmittingRef.current || !isMountedRef.current) {
+                resolve();
+                return;
+            }
+
             // Wait for voices to load if not ready
             if (!voicesLoaded && availableVoices.current.length === 0) {
                 console.log('Voices not loaded yet, waiting...');
@@ -561,7 +577,7 @@ export function GroupDiscussionRound({
                 const sentences = speechText.match(/[^.!?]+[.!?]+/g) || [speechText];
                 let idx = 0;
                 const speakNext = () => {
-                    if (idx >= sentences.length) {
+                    if (idx >= sentences.length || isSubmittingRef.current || !isMountedRef.current) {
                         setCurrentSpeakingAgent(null);
                         setIsAISpeaking(false);
                         resolve();
@@ -582,6 +598,11 @@ export function GroupDiscussionRound({
                             console.error('Failed to speak after 3 attempts');
                             idx++;
                             speakNext();
+                            return;
+                        }
+
+                        if (isSubmittingRef.current || !isMountedRef.current) {
+                            resolve();
                             return;
                         }
 
@@ -622,7 +643,11 @@ export function GroupDiscussionRound({
                                 utterance.onend = () => {
                                     clearTimeout(timeout);
                                     idx++;
-                                    speakNext();
+                                    if (!isSubmittingRef.current && isMountedRef.current) {
+                                        speakNext();
+                                    } else {
+                                        resolve();
+                                    }
                                 };
 
                                 utterance.onerror = (event: any) => {
@@ -646,7 +671,9 @@ export function GroupDiscussionRound({
 
                     speakChunk();
                 };
-                speakNext();
+                if (!isSubmittingRef.current && isMountedRef.current) {
+                    speakNext();
+                }
                 return;
             }
 
@@ -656,6 +683,11 @@ export function GroupDiscussionRound({
                     console.error('Failed to speak after 3 attempts');
                     setCurrentSpeakingAgent(null);
                     setIsAISpeaking(false);
+                    resolve();
+                    return;
+                }
+
+                if (isSubmittingRef.current || !isMountedRef.current) {
                     resolve();
                     return;
                 }
