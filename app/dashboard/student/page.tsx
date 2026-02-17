@@ -21,32 +21,32 @@ import {
 
 const robotoExtraBold = Roboto({ weight: '700', subsets: ['latin'] })
 
-// ─── Demo data for UI development: used when real data is empty. Replace with backend data later. ───
-const DEMO_ACTIVITY_DATES = ['2025-12-02', '2025-12-05', '2025-12-10', '2025-12-13', '2025-12-16', '2025-12-19', '2025-12-20', '2025-12-24']
-function getDemoRecentActivities(): Array<{ id: string; date: string; score?: number; title: string }> {
-    const now = new Date()
-    return [
-        { id: 'demo-1', date: now.toISOString(), title: 'Technical Assessment- Javascript' },
-        { id: 'demo-2', date: new Date(now.getTime() - 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
-        { id: 'demo-3', date: new Date(now.getTime() - 2 * 86400000).toISOString(), score: 82, title: 'System Design Interview Prepare' },
-        { id: 'demo-4', date: new Date(now.getTime() - 3 * 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
-    ]
-}
-const DEMO_RECENT_ACTIVITIES = getDemoRecentActivities()
-const DEMO_STREAKS = 10
-const DEMO_PERFORMANCE_TREND = [
-    { date: '2025-01-01', month: 'Jan', score: 80 },
-    { date: '2025-02-01', month: 'Feb', score: 55 },
-    { date: '2025-03-01', month: 'Mar', score: 60 },
-    { date: '2025-04-01', month: 'Apr', score: 73 },
-    { date: '2025-05-01', month: 'May', score: 105 },
-    { date: '2025-06-01', month: 'Jun', score: 20 },
-    { date: '2025-07-01', month: 'Jul', score: 48 },
-    { date: '2025-08-01', month: 'Aug', score: 40 },
-    { date: '2025-09-01', month: 'Sep', score: 47 },
-    { date: '2025-10-01', month: 'Oct', score: 62 },
-    { date: '2025-11-01', month: 'Nov', score: 100 },
-]
+// ─── Real data usage: fallbacks removed ───
+// const DEMO_ACTIVITY_DATES = ['2025-12-02', '2025-12-05', '2025-12-10', '2025-12-13', '2025-12-16', '2025-12-19', '2025-12-20', '2025-12-24']
+// function getDemoRecentActivities(): Array<{ id: string; date: string; score?: number; title: string }> {
+//     const now = new Date()
+//     return [
+//         { id: 'demo-1', date: now.toISOString(), title: 'Technical Assessment- Javascript' },
+//         { id: 'demo-2', date: new Date(now.getTime() - 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
+//         { id: 'demo-3', date: new Date(now.getTime() - 2 * 86400000).toISOString(), score: 82, title: 'System Design Interview Prepare' },
+//         { id: 'demo-4', date: new Date(now.getTime() - 3 * 86400000).toISOString(), score: 92, title: 'Technical Assessment- Javascript' },
+//     ]
+// }
+// const DEMO_RECENT_ACTIVITIES = getDemoRecentActivities()
+// const DEMO_STREAKS = 10
+// const DEMO_PERFORMANCE_TREND = [
+//     { date: '2025-01-01', month: 'Jan', score: 80 },
+//     { date: '2025-02-01', month: 'Feb', score: 55 },
+//     { date: '2025-03-01', month: 'Mar', score: 60 },
+//     { date: '2025-04-01', month: 'Apr', score: 73 },
+//     { date: '2025-05-01', month: 'May', score: 105 },
+//     { date: '2025-06-01', month: 'Jun', score: 20 },
+//     { date: '2025-07-01', month: 'Jul', score: 48 },
+//     { date: '2025-08-01', month: 'Aug', score: 40 },
+//     { date: '2025-09-01', month: 'Sep', score: 47 },
+//     { date: '2025-10-01', month: 'Oct', score: 62 },
+//     { date: '2025-11-01', month: 'Nov', score: 100 },
+// ]
 
 function timeAgo(dateStr: string): string {
     const d = new Date(dateStr)
@@ -226,6 +226,21 @@ export default function StudentDashboard() {
         }
     }
 
+
+    // Calculate trend data and growth for Performance Trend chart
+    const trendRaw = analytics?.interview_performance?.trend as any[] | undefined
+    const trendData = trendRaw && trendRaw.length > 0
+        ? trendRaw.map((t: any) => ({
+            label: t.date || '',
+            score: t.score ?? 0,
+        }))
+        : []
+
+    let growth = 0
+    if (trendData.length >= 2) {
+        growth = trendData[trendData.length - 1].score - trendData[0].score
+    }
+
     return (
         <DashboardLayout requiredUserType="student">
             <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-1 sm:pt-6 lg:pt-0">
@@ -352,7 +367,7 @@ export default function StudentDashboard() {
                                                 } else {
                                                     const d = i - start + 1
                                                     const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                                                    const active = (activityDates.length ? activityDates : DEMO_ACTIVITY_DATES).includes(dateKey)
+                                                    const active = activityDates.includes(dateKey)
                                                     cells.push(
                                                         <div
                                                             key={d}
@@ -408,30 +423,35 @@ export default function StudentDashboard() {
                                                 <Flame className="h-5 w-5 text-white" />
                                             </span>
                                             <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {stats?.assessments_completed ?? DEMO_STREAKS}
+                                                {stats?.assessments_completed ?? 0}
                                             </span>
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        {(recentActivities.length ? recentActivities : DEMO_RECENT_ACTIVITIES).map((a) => (
-                                            <div
-                                                key={a.id}
-                                                className="flex cursor-pointer items-center gap-3 rounded-lg bg-blue-50/80 px-3 py-2 transition-all duration-200 hover:bg-blue-100 hover:shadow-sm dark:bg-[#0D1338] dark:hover:bg-[#1A2C58]"
-                                            >
-                                                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
-                                                    <Check className="h-3.5 w-3.5 text-white" />
+                                        {recentActivities.length > 0 ? (
+                                            recentActivities.map((a) => (
+                                                <div
+                                                    key={a.id}
+                                                    className="flex cursor-pointer items-center gap-3 rounded-lg bg-blue-50/80 px-3 py-2 transition-all duration-200 hover:bg-blue-100 hover:shadow-sm dark:bg-[#0D1338] dark:hover:bg-[#1A2C58]"
+                                                >
+                                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
+                                                        <Check className="h-3.5 w-3.5 text-white" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{a.title}</p>
+                                                        <p className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(a.date)}</p>
+                                                    </div>
+                                                    {a.score != null && (
+                                                        <span className="shrink-0 rounded-full bg-[#1C7CD5] px-3 py-1 text-xs font-semibold text-white">
+                                                            {Number(a.score).toFixed(0)}%
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{a.title}</p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(a.date)}</p>
-                                                </div>
-                                                {a.score != null && (
-                                                    <span className="shrink-0 rounded-full bg-[#1C7CD5] px-3 py-1 text-xs font-semibold text-white">
-                                                        {Number(a.score).toFixed(0)}%
-                                                    </span>
-                                                )}
+                                            ))) : (
+                                            <div className="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-gray-400">
+                                                No recent activity found.
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -448,50 +468,48 @@ export default function StudentDashboard() {
                                             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-300">Your assessment scores over time</p>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">{stats?.average_score ?? 85}%</p>
-                                            <p className="text-sm font-medium text-green-600 dark:text-green-400">+20% growth</p>
+                                            <p className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">{stats?.average_score ?? 0}%</p>
+                                            {trendData.length > 1 && (
+                                                <p className={`text-sm font-medium ${growth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                    {growth > 0 ? '+' : ''}{growth.toFixed(0)}% growth
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="min-h-0 w-full flex-1" style={{ minHeight: '220px' }}>
-                                        {(() => {
-                                            const trendRaw = analytics?.trend as any[] | undefined
-                                            const trendData =
-                                                trendRaw && trendRaw.length > 0
-                                                    ? trendRaw.map((t: any) => ({
-                                                        label: new Date(t.date).toLocaleDateString('en-US', { month: 'short' }),
-                                                        score: t.overall_score ?? t.score ?? 0,
-                                                    }))
-                                                    : DEMO_PERFORMANCE_TREND.map((d) => ({ label: d.month, score: d.score }))
-                                            return (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <BarChart data={trendData} margin={{ top: 8, right: 8, bottom: 20, left: 24 }} barCategoryGap="32%">
-                                                        <defs>
-                                                            <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
-                                                                <stop offset="0%" stopColor="#1d4ed8" />
-                                                                <stop offset="100%" stopColor="#60a5fa" />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        {[0, 20, 40, 60, 80, 100].map((y) => (
-                                                            <ReferenceLine key={y} y={y} stroke="#3b82f6" strokeWidth={1} />
-                                                        ))}
-                                                        <XAxis
-                                                            dataKey="label"
-                                                            tick={{ fontSize: 14, fill: isDark ? '#ffffff' : '#1e3a5f', fontWeight: 700 }}
-                                                            axisLine={{ stroke: '#d1d5db' }}
-                                                            tickMargin={10}
-                                                        />
-                                                        <YAxis
-                                                            domain={[0, 110]}
-                                                            ticks={[0, 20, 40, 60, 80, 100]}
-                                                            tick={{ fontSize: 14, fill: isDark ? '#ffffff' : '#1e3a5f', fontWeight: 700 }}
-                                                            axisLine={{ stroke: '#d1d5db' }}
-                                                        />
-                                                        <Tooltip formatter={(v: number) => [`${v}%`, 'Score']} contentStyle={{ borderRadius: 8 }} />
-                                                        <Bar dataKey="score" fill="url(#barGradient)" radius={[10, 10, 0, 0]} />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            )
-                                        })()}
+                                        {trendData.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={trendData} margin={{ top: 8, right: 8, bottom: 20, left: 24 }} barCategoryGap="32%">
+                                                    <defs>
+                                                        <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
+                                                            <stop offset="0%" stopColor="#1d4ed8" />
+                                                            <stop offset="100%" stopColor="#60a5fa" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    {[0, 20, 40, 60, 80, 100].map((y) => (
+                                                        <ReferenceLine key={y} y={y} stroke="#3b82f6" strokeWidth={1} />
+                                                    ))}
+                                                    <XAxis
+                                                        dataKey="label"
+                                                        tick={{ fontSize: 14, fill: isDark ? '#ffffff' : '#1e3a5f', fontWeight: 700 }}
+                                                        axisLine={{ stroke: '#d1d5db' }}
+                                                        tickMargin={10}
+                                                    />
+                                                    <YAxis
+                                                        domain={[0, 110]}
+                                                        ticks={[0, 20, 40, 60, 80, 100]}
+                                                        tick={{ fontSize: 14, fill: isDark ? '#ffffff' : '#1e3a5f', fontWeight: 700 }}
+                                                        axisLine={{ stroke: '#d1d5db' }}
+                                                    />
+                                                    <Tooltip formatter={(v: number) => [`${v}%`, 'Score']} contentStyle={{ borderRadius: 8 }} />
+                                                    <Bar dataKey="score" fill="url(#barGradient)" radius={[10, 10, 0, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                                No performance data available yet.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -601,7 +619,7 @@ export default function StudentDashboard() {
                         type="button"
                         onClick={() => setQuickActionOpen((o) => !o)}
                         className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#FF541F] focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                                    style={{ backgroundColor: '#FF541F' }}
+                        style={{ backgroundColor: '#FF541F' }}
                         aria-label={quickActionOpen ? 'Close Quick Action' : 'Open Quick Action'}
                     >
                         {quickActionOpen ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
