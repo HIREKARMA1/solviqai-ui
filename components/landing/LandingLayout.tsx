@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LandingNavbar } from './LandingNavbar';
+import { Navbar } from '../Navbar';
 import { MobileTopNavbar } from './MobileTopNavbar';
 import { MobileSidebar } from './MobileSidebar';
 import { Footer } from './Footer';
 import { cn } from '@/lib/utils';
+import { LandingNavbar } from './LandingNavbar';
 
 interface LandingLayoutProps {
   children: React.ReactNode;

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface FAQItem {
   id: string;
+  category: string;
   question: string;
   answer: string;
 }
@@ -19,33 +20,63 @@ export function FAQ() {
   const faqs: FAQItem[] = [
     {
       id: '1',
+      category: 'general',
       question: 'What is Solviq AI?',
       answer: 'Solviq AI is an advanced AI Employability Engine powered by artificial intelligence. It helps job seekers prepare for interviews through mock interviews, AI-powered feedback, resume building, and automated job applications. Solviq doesn\'t just test you — it reads you.',
     },
     {
       id: '2',
+      category: 'features',
       question: 'How does the AI Interview Copilot work?',
       answer: 'Our AI Interview Copilot provides real-time assistance during mock interviews. It analyzes your responses, provides instant feedback on your answers, body language, and communication skills, and suggests improvements to help you perform better.',
     },
     {
       id: '3',
-      question: 'How do the updates work?',
-      answer: 'We regularly update our platform with new features, questions, and improvements. Updates are automatically applied to your account, and you\'ll receive notifications about major updates. All updates are included in your subscription at no additional cost.',
+      category: 'features',
+      question: 'What types of questions are included in the question bank?',
+      answer: 'Our question bank includes over 10,000 questions covering technical interviews (coding, system design), behavioral questions, aptitude tests, domain-specific questions, and company-specific interview patterns from top tech companies.',
     },
     {
       id: '4',
+      category: 'pricing',
       question: 'Is there a free trial available?',
       answer: 'Yes! We offer a 14-day free trial with access to all basic features. You can practice mock interviews, build your resume, and explore the question bank. No credit card required to start.',
     },
     {
       id: '5',
+      category: 'features',
       question: 'How does the AI Job Hunter feature work?',
       answer: 'The AI Job Hunter automatically scans job boards, matches your profile with relevant positions, and applies on your behalf. It customizes each application based on the job requirements and your skills, saving you hours of manual work.',
     },
     {
       id: '6',
+      category: 'technical',
       question: 'Is my data secure?',
       answer: 'Absolutely! We take data security seriously. All your personal information, resumes, and practice sessions are encrypted and stored securely. We never share your data with third parties without your explicit consent.',
+    },
+    {
+      id: '7',
+      category: 'pricing',
+      question: 'Can I cancel my subscription anytime?',
+      answer: 'Yes, you can cancel your subscription at any time. There are no long-term contracts or cancellation fees. If you cancel, you\'ll have access to premium features until the end of your billing period.',
+    },
+    {
+      id: '8',
+      category: 'features',
+      question: 'Does SolviQ AI support multiple languages?',
+      answer: 'Currently, SolviQ AI supports English, Hindi, and Odia languages. We\'re continuously working to add more languages to make the platform accessible to job seekers across India and beyond.',
+    },
+    {
+      id: '9',
+      category: 'general',
+      question: 'How effective is SolviQ AI in helping land a job?',
+      answer: 'Over 10,000 users have successfully landed jobs using SolviQ AI, with a 95% success rate among active users. The combination of AI-powered practice, real-time feedback, and automated job applications significantly increases your chances.',
+    },
+    {
+      id: '10',
+      category: 'technical',
+      question: 'What devices can I use SolviQ AI on?',
+      answer: 'SolviQ AI is a web-based platform that works on all modern browsers. You can access it from your desktop, laptop, tablet, or smartphone. For the best experience, we recommend using a desktop or laptop with a webcam for mock interviews.',
     },
   ];
 
@@ -152,8 +183,8 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
       </AnimatePresence>
 
       {/* Separator Line */}
-      {index < 5 && (
-        <div className="h-px w-full bg-[#1A1A1A] opacity-[0.08] dark:bg-[#636363] dark:opacity-100" />
+      {index < 9 && (
+        <div className="h-px w-full bg-[#DCE0E5] dark:bg-[#636363] dark:opacity-100" />
       )}
     </div>
   );

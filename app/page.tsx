@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 // Critical above-the-fold components - load immediately
 import { LandingLayout } from '@/components/landing';
 import { HeroSection } from '@/components/landing/HeroSection';
-
+import { LandingNavbar } from '@/components/landing';
 // Lazy load below-the-fold components for better performance
 const FeatureCards = dynamic(() => import('@/components/landing/FeatureCards').then(mod => ({ default: mod.FeatureCards })), {
   loading: () => <div className="min-h-[400px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading features...</div></div>,
@@ -93,6 +93,7 @@ export default function Home() {
       ) : (
         // Render landing page sections with lazy loading
         <>
+        {/* <LandingNavbar /> */}
           {/* Hero Section with animated background - Above the fold */}
           <HeroSection />
 
