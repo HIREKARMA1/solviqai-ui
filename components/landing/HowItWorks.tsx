@@ -41,7 +41,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative overflow-hidden py-16 bg-[#6c6e9a] dark:bg-[#310139] lg:py-32"
+      className="relative overflow-hidden py-16 bg-[#310139] dark:bg-[#310139] lg:py-32"
     >
       <div className="w-[90vw] mx-auto px-4">
         {/* Header Section */}

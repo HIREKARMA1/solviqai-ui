@@ -33,7 +33,7 @@ export const HeroSection = memo(function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black pt-28 pb-12 md:py-32"
+      className="relative min-h-0 sm:min-h-[70vh] md:min-h-screen flex items-start sm:items-center overflow-hidden bg-[#F7F5EA] dark:bg-black pt-32 pb-12 md:py-32"
     >
       <div className="w-[90%] mx-auto max-w-[1600px]">
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-center w-full">

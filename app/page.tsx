@@ -112,9 +112,9 @@ export default function Home() {
           </Suspense>
 
           {/* Pricing Section - Lazy loaded */}
-          <Suspense fallback={<div className="min-h-[400px]" />}>
+          {/* <Suspense fallback={<div className="min-h-[400px]" />}>
             <Pricing />
-          </Suspense>
+          </Suspense> */}
 
           {/* FAQ Section - Lazy loaded */}
           <Suspense fallback={<div className="min-h-[300px]" />}>
