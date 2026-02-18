@@ -10,12 +10,16 @@ interface SubscriptionRequiredModalProps {
   isOpen: boolean
   onClose?: () => void
   feature?: string
+  title?: string
+  message?: string
 }
 
 export default function SubscriptionRequiredModal({ 
   isOpen, 
   onClose,
-  feature = "this feature"
+  feature = "this feature",
+  title = "Subscription Required",
+  message,
 }: SubscriptionRequiredModalProps) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()

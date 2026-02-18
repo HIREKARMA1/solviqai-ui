@@ -24,7 +24,7 @@ interface Branch {
     requiresBranch?: boolean;
 }
 
-export default function PracticalSkillsBranchSelection() {
+export default function PracticalSkillsBranchSelection({ onBack }: { onBack?: () => void }) {
     const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -131,144 +131,112 @@ export default function PracticalSkillsBranchSelection() {
 
     // Branch Selection
     return (
-        <div className="w-full relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-4 sm:p-6 lg:p-8 lg:p-12 pb-12">
-            {/* Background Effects */}
-            <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-            <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-200/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-
-            {/* Top Glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-gradient-to-b from-blue-400/10 via-transparent to-transparent pointer-events-none"></div>
-
+        <div className="w-full relative min-h-screen bg-white p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto relative z-10">
-                {/* Header Section */}
-                <div className="text-center mb-8 sm:mb-12">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-lg shadow-blue-500/50"></div>
-                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-lg shadow-cyan-400/50" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-lg shadow-indigo-500/50" style={{ animationDelay: '0.4s' }}></div>
+                {onBack && (
+                    <div className="mb-6 sm:mb-0 sm:absolute sm:top-0 sm:left-0 z-20">
+                        <button
+                            onClick={onBack}
+                            className="text-gray-500 hover:text-gray-700 font-medium flex items-center gap-2 transition-colors"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Back
+                        </button>
                     </div>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                )}
+
+                {/* Header Section */}
+                <div className="text-center mb-12 mt-4">
+                    <h1 className="text-4xl sm:text-5xl font-bold text-black mb-4">
                         Choose Your Branch
                     </h1>
-                    <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto">
+                    <p className="text-gray-800 text-lg font-medium">
                         Select your engineering branch to start practicing situation-based questions
                     </p>
                 </div>
 
                 {/* Branches Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                    {branches.map((branch, index) => (
-                        <button
-                            key={branch.id}
-                            onClick={() => setSelectedBranch(branch.id)}
-                            className={`group relative text-left p-6 sm:p-8 rounded-2xl border-2 ${branch.borderColor} ${branch.hoverBorder} 
-                                bg-gradient-to-br ${branch.bgGradient} backdrop-blur-sm
-                                transition-all duration-500 ease-out
-                                transform hover:scale-[1.02] hover:-translate-y-1
-                                overflow-hidden
-                                ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                            style={{
-                                transitionDelay: `${index * 100}ms`,
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(37, 99, 235, 0.3), 0 10px 10px -5px rgba(37, 99, 235, 0.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-                            }}
-                        >
-                            {/* Gradient Overlay on Hover */}
-                            <div
-                                className={`absolute inset-0 bg-gradient-to-br ${branch.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
-                            ></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {branches.map((branch, index) => {
+                        // Define precise styles based on branch ID
+                        let bgHex = '#FFFFFF';
+                        let borderHex = '#E5E7EB';
+                        let iconBgHex = '#3B82F6';
 
-                            {/* Content */}
-                            <div className="relative z-10">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        {/* Icon */}
-                                        <div
-                                            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${branch.iconGradient} 
-                                                flex items-center justify-center text-white
-                                                shadow-lg group-hover:scale-110 group-hover:shadow-xl
-                                                transition-all duration-500 ease-out`}
-                                            style={{
-                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.boxShadow = `0 10px 20px -5px rgba(37, 99, 235, 0.5)`;
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-                                            }}
-                                        >
-                                            {branch.icon}
-                                        </div>
-                                        <div className="group-hover:translate-x-1 transition-transform duration-300">
-                                            <div className="text-xs sm:text-sm font-semibold text-gray-500 mb-1 group-hover:text-gray-700 transition-colors duration-300">
-                                                Branch {branch.number}
-                                            </div>
-                                            <div
-                                                className={`font-bold text-xl sm:text-2xl ${branch.textColor} 
-                                                    group-hover:text-blue-800 
-                                                    transition-all duration-300`}
-                                                style={{
-                                                    transform: 'translateX(0)',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.transform = 'translateX(4px)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.transform = 'translateX(0)';
-                                                }}
-                                            >
-                                                {branch.title}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/* Arrow */}
-                                    <svg
-                                        className="w-6 h-6 text-gray-400 group-hover:text-blue-600 transition-all duration-300"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        style={{
-                                            transform: 'translateX(0)',
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'translateX(8px)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = 'translateX(0)';
-                                        }}
+                        switch (branch.id) {
+                            case 'civil':
+                                bgHex = '#FFF5EE'; // Use provided Figma value
+                                borderHex = '#F7A66C'; // Use provided Figma value
+                                iconBgHex = '#F97316'; // Orange-500
+                                break;
+                            case 'electrical':
+                                bgHex = '#FFFCF2'; // Ivory/Light Yellow
+                                borderHex = '#FBBF24'; // Amber-400
+                                iconBgHex = '#EAB308'; // Yellow-500
+                                break;
+                            case 'cse':
+                                bgHex = '#EEF4FF'; // Use provided Figma value
+                                borderHex = '#95BAFF'; // Use provided Figma value
+                                iconBgHex = '#3B82F6'; // Blue-500
+                                break;
+                            case 'mechanical':
+                                bgHex = '#F8FAFC'; // Slate-50
+                                borderHex = '#94A3B8'; // Slate-400
+                                iconBgHex = '#64748B'; // Slate-500
+                                break;
+                            case 'accountant':
+                                bgHex = '#F0FDF4'; // Green-50
+                                borderHex = '#4ADE80'; // Green-400
+                                iconBgHex = '#10B981'; // Emerald-500
+                                break;
+                        }
+
+                        return (
+                            <button
+                                key={branch.id}
+                                onClick={() => setSelectedBranch(branch.id)}
+                                className={`w-full text-left p-6 transition-all duration-300 hover:shadow-lg flex items-start gap-5`}
+                                style={{
+                                    backgroundColor: bgHex,
+                                    borderColor: borderHex,
+                                    borderWidth: '1px',
+                                    borderRadius: '16px', // Fixed 16px radius
+                                    boxShadow: '0px 4px 4px 0px rgba(0, 0, 0, 0.25)' // Specific shadow
+                                }}
+                            >
+                                {/* Icon Box */}
+                                <div
+                                    className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-white`}
+                                    style={{
+                                        backgroundColor: iconBgHex,
+                                        borderRadius: '16px'
+                                    }}
+                                >
+                                    {branch.icon}
+                                </div>
+
+                                {/* Text Content */}
+                                <div className="flex flex-col">
+                                    <span className="text-sm text-gray-500 font-medium mb-1">
+                                        Branch {branch.number}
+                                    </span>
+                                    <h3
+                                        className="text-2xl font-bold mb-2"
+                                        style={{ color: iconBgHex === '#F97316' ? '#C2410C' : iconBgHex === '#EAB308' ? '#A16207' : iconBgHex }} // Darker text for readability
                                     >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
+                                        {branch.title}
+                                    </h3>
+                                    <p className="text-black/80 text-sm leading-relaxed font-medium">
+                                        {branch.description}
+                                    </p>
                                 </div>
-                                {/* Description */}
-                                <div className="text-gray-600 text-sm sm:text-base leading-relaxed group-hover:text-gray-800 transition-colors duration-300">
-                                    {branch.description}
-                                </div>
-                            </div>
-
-                            {/* Shine effect on hover */}
-                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Footer */}
-                <div className="mt-12 text-center">
-                    <div className="inline-flex items-center gap-2 text-gray-400 text-sm">
-                        <div className="w-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent"></div>
-                        <span>Choose your branch to get started</span>
-                        <div className="w-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent"></div>
-                    </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 }
-
