@@ -2,21 +2,20 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Minus } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 
 interface FAQItem {
   id: string;
+  category: string;
   question: string;
   answer: string;
-  category: 'general' | 'pricing' | 'features' | 'technical';
 }
 
 export function FAQ() {
   const { t } = useTranslation();
-  const [openId, setOpenId] = useState<string | null>('1');
+  const [openId, setOpenId] = useState<string | null>('3');
 
   const faqs: FAQItem[] = [
     {
@@ -81,136 +80,112 @@ export function FAQ() {
     },
   ];
 
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'general', label: 'General' },
-    { id: 'features', label: 'Features' },
-    { id: 'pricing', label: 'Pricing' },
-    { id: 'technical', label: 'Technical' },
-  ];
-
-  const [activeCategory, setActiveCategory] = useState('all');
-
-  const filteredFaqs = activeCategory === 'all' 
-    ? faqs 
-    : faqs.filter(faq => faq.category === activeCategory);
-
   return (
-    <section id="faq" className="section-container relative overflow-hidden bg-gray-50 dark:bg-gray-900/50">
-      <AnimatedBackground variant="alternate" />
-      <div className="text-center mb-16 relative z-10">
-        <motion.h2
+    <section
+      id="faq"
+      className="section-container relative overflow-hidden py-24 px-4 sm:px-6 lg:px-8 bg-[#BCBCDB] dark:bg-[#1E1E63]"
+    >
+      {/* Gradient Background for Dark Mode */}
+      {/* <div
+        className="absolute inset-0 dark:block hidden"
+        style={{
+          background: 'linear-gradient(135deg, #1A1A1A 0%, #2B354B 50%, #4A3F6B 100%)'
+        }}
+      /> */}
+
+      <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900 dark:text-white"
+          className="text-center mb-16"
         >
-          {t('faq.title')}
-        </motion.h2>
-        
-        <motion.p
+          {/* Title */}
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-[#1A1A1A] dark:text-white">
+            FAQs
+          </h2>
+
+          {/* Description */}
+          <p className="text-lg text-[#4A4A4A] dark:text-[#939CAA] leading-relaxed max-w-2xl mx-auto">
+            {t('faq.subtitle')}
+          </p>
+        </motion.div>
+
+        {/* FAQ List */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="w-full"
         >
-          {t('faq.subtitle')}
-        </motion.p>
-      </div>
-
-      {/* Category Filter */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-3 mb-12"
-      >
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setActiveCategory(category.id)}
-            className={cn(
-              'px-6 py-2 rounded-full font-medium transition-all',
-              activeCategory === category.id
-                ? 'bg-primary-500 text-white shadow-md'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-            )}
-          >
-            {category.label}
-          </button>
-        ))}
-      </motion.div>
-
-      {/* FAQ Accordion */}
-      <div className="max-w-4xl mx-auto space-y-4 relative z-10">
-        {filteredFaqs.map((faq, index) => (
-          <FAQAccordion
-            key={faq.id}
-            faq={faq}
-            index={index}
-            isOpen={openId === faq.id}
-            onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
-          />
-        ))}
+          {faqs.map((faq, index) => (
+            <FAQItem
+              key={faq.id}
+              faq={faq}
+              index={index}
+              isOpen={openId === faq.id}
+              onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
+            />
+          ))}
+        </motion.div>
       </div>
     </section>
   );
 }
 
-interface FAQAccordionProps {
+interface FAQItemProps {
   faq: FAQItem;
   index: number;
   isOpen: boolean;
   onToggle: () => void;
 }
 
-function FAQAccordion({ faq, index, isOpen, onToggle }: FAQAccordionProps) {
+function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="card overflow-hidden"
-    >
-      <button
+    <div className="relative">
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.4, delay: index * 0.1 }}
         onClick={onToggle}
-        className="w-full px-6 py-5 flex items-center justify-between gap-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center justify-between py-5 text-left transition-colors group"
       >
-        <span className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
+        <span className="text-lg font-medium pr-8 text-[#1A1A1A] dark:text-[#E1E4EA] group-hover:opacity-80 transition-opacity">
           {faq.question}
         </span>
-        <div className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors',
-          isOpen 
-            ? 'bg-primary-500 text-white' 
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-        )}>
-          {isOpen ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-        </div>
-      </button>
+        <ChevronDown
+          className={cn(
+            'w-5 h-5 flex-shrink-0 transition-transform duration-300 ease-in-out',
+            isOpen ? 'rotate-180' : '',
+            'text-[#1A1A1A] dark:text-white opacity-60'
+          )}
+        />
+      </motion.button>
 
+      {/* Answer Content */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-5 pt-2">
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                {faq.answer}
-              </p>
+            <div className="pb-6 pt-0 text-[#4A4A4A] dark:text-gray-300 leading-relaxed pr-8">
+              {faq.answer}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+
+      {/* Separator Line */}
+      {index < 9 && (
+        <div className="h-px w-full bg-[#DCE0E5] dark:bg-[#636363] dark:opacity-100" />
+      )}
+    </div>
   );
 }
-

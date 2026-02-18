@@ -40,6 +40,7 @@ export default function InterviewPractice({ onBack }: { onBack?: () => void }) {
   const [limit, setLimit] = useState<number>(6);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionType, setSubscriptionType] = useState<string>('free'); // Default to free
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -104,6 +105,35 @@ export default function InterviewPractice({ onBack }: { onBack?: () => void }) {
       }
     };
   }, [isLiveTranscribing]);
+
+  // Check Subscription Status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        // Use full URL from config
+        const response = await fetch(`${config.api.fullUrl}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          const sub = userData.subscription_type || 'free';
+          setSubscriptionType(sub);
+
+          // Force limit to 2 for free users
+          if (sub === 'free') {
+            setLimit(2);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check subscription", err);
+      }
+    };
+    checkUser();
+  }, []);
 
   const startLiveTranscription = async () => {
     if (!speechRecognitionRef.current) {
