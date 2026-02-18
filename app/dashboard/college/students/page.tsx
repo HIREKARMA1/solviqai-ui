@@ -93,6 +93,7 @@ export default function CollegeStudents() {
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to create student'
 
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -100,6 +101,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
+
 
             toast.error(errorMessage)
         } finally {
@@ -138,6 +140,7 @@ export default function CollegeStudents() {
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update student'
 
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -145,6 +148,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
+
 
             toast.error(errorMessage)
         } finally {
@@ -164,6 +168,7 @@ export default function CollegeStudents() {
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to deactivate student'
 
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -171,6 +176,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
+
 
             toast.error(errorMessage)
         }
@@ -188,6 +194,7 @@ export default function CollegeStudents() {
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to activate student'
 
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -195,6 +202,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
+
 
             toast.error(errorMessage)
         }
@@ -238,6 +246,7 @@ export default function CollegeStudents() {
                 subscription_type: subscriptionData.subscription_type
             }
 
+
             // Only include expiry date if it's set
             if (subscriptionData.subscription_expiry) {
                 payload.subscription_expiry = new Date(subscriptionData.subscription_expiry).toISOString()
@@ -245,8 +254,10 @@ export default function CollegeStudents() {
 
             const response = await apiClient.updateCollegeStudentSubscription(selectedStudent.id, payload)
 
+
             // Refresh the student list to show updated data
             await fetchStudents()
+
 
             toast.success(`Subscription updated! ${selectedStudent.name} is now on ${response.new_subscription} plan`)
             setShowSubscriptionModal(false)
@@ -256,6 +267,7 @@ export default function CollegeStudents() {
             const errorDetail = error.response?.data?.detail
             let errorMessage = 'Failed to update subscription'
 
+
             if (typeof errorDetail === 'string') {
                 errorMessage = errorDetail
             } else if (Array.isArray(errorDetail)) {
@@ -263,6 +275,7 @@ export default function CollegeStudents() {
             } else if (typeof errorDetail === 'object' && errorDetail !== null) {
                 errorMessage = errorDetail.msg || JSON.stringify(errorDetail)
             }
+
 
             toast.error(errorMessage)
         } finally {
@@ -276,30 +289,40 @@ export default function CollegeStudents() {
             student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.phone?.includes(searchTerm)
 
+
         // Filter by status
         const matchesStatus = showInactive || student.status?.toUpperCase() === 'ACTIVE'
 
+
         return matchesSearch && matchesStatus
     })
+
 
     const activeCount = students.filter(s => s.status?.toUpperCase() === 'ACTIVE').length
     const inactiveCount = students.filter(s => s.status?.toUpperCase() === 'INACTIVE').length
 
     return (
         <DashboardLayout requiredUserType="college">
-            <div className="space-y-6">
+            <div className="space-y-8 max-w-[1250px] mx-auto">
                 {/* Header */}
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center bg-[#DBEAFF]/30 dark:bg-[#2A2C38] border border-[#989898] dark:border-[#5B5B5B] rounded-[16px] p-6 md:p-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Students Management</h1>
-                        <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your students</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Students Management</h1>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Manage your students</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button onClick={() => setShowBulkUploadModal(true)} variant="outline">
+                    <div className="flex gap-3">
+                        <Button
+                            onClick={() => setShowBulkUploadModal(true)}
+                            variant="outline"
+                            className="h-[34px] border-[#AEAEAE] dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-[8px] px-4 font-medium"
+                        >
                             <Upload className="w-4 h-4 mr-2" />
                             Bulk Upload
                         </Button>
-                        <Button onClick={() => setShowCreateModal(true)}>
+                        <Button
+                            onClick={() => setShowCreateModal(true)}
+                            className="h-[34px] bg-[#1E7BFF] hover:bg-[#1E7BFF]/90 text-white rounded-[8px] px-4 font-medium"
+                        >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Student
                         </Button>
@@ -307,186 +330,136 @@ export default function CollegeStudents() {
                 </div>
 
                 {/* Search and Filters */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle>Search & Filter Students</CardTitle>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <span className="font-medium text-green-600">{activeCount} Active</span>
-                                <span>•</span>
-                                <span className="font-medium text-gray-500">{inactiveCount} Inactive</span>
-                            </div>
+                <div className="bg-white dark:bg-[#2A2C38] border border-[#989898] dark:border-[#5B5B5B] rounded-[16px] p-[10px] flex flex-col gap-[20px]">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center px-2">
+                        <div className="flex items-center gap-2">
+                            <Search className="w-5 h-5 text-gray-900 dark:text-white" />
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Search & Filter Students</h2>
                         </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <span className="text-[#00C853]">{activeCount} Active</span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-900 dark:text-gray-400">{inactiveCount} Inactive</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-[20px]">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <Input
                                 type="text"
-                                placeholder="Search by name, email, or phone..."
+                                placeholder="Search by name, email, or phone.."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
+                                className="pl-4 h-[50px] rounded-[16px] border-[#B7B7B7] dark:border-gray-600 bg-white dark:bg-gray-800 text-base shadow-none focus-visible:ring-1 focus-visible:ring-gray-400"
                             />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 px-2">
                             <input
                                 type="checkbox"
                                 id="showInactive"
                                 checked={showInactive}
                                 onChange={(e) => setShowInactive(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                             />
-                            <label htmlFor="showInactive" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <label htmlFor="showInactive" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                                 Show inactive students
                             </label>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
                 {/* Students List */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Students ({filteredStudents.length})</CardTitle>
-                        <CardDescription>All students in your college</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? (
-                            <div className="flex justify-center py-12">
-                                <Loader />
-                            </div>
-                        ) : filteredStudents.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-gray-500 dark:text-gray-400">No students found</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b dark:border-gray-700">
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Email</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Phone</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Degree</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Branch</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Year</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Subscription</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredStudents.map((student) => (
-                                            <tr key={student.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                <td className="py-3 px-4">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white">{student.name}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.email}</td>
-                                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.phone}</td>
-                                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.degree || '-'}</td>
-                                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.branch || '-'}</td>
-                                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{student.graduation_year || '-'}</td>
-                                                <td className="py-3 px-4">
-                                                    <div>
-                                                        <Badge
-                                                            variant={
-                                                                student.subscription_type === 'premium' ? 'default' :
-                                                                    student.subscription_type === 'college_license' ? 'success' :
-                                                                        'outline'
-                                                            }
-                                                            className="capitalize"
-                                                        >
-                                                            {student.subscription_type || 'free'}
-                                                        </Badge>
-                                                        {student.subscription_expiry && (
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                <Calendar className="h-3 w-3 inline mr-1" />
-                                                                Expires: {new Date(student.subscription_expiry).toLocaleDateString()}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge
-                                                        variant={student.status?.toUpperCase() === 'ACTIVE' ? 'default' : 'secondary'}
-                                                        className={
-                                                            student.status?.toUpperCase() === 'INACTIVE'
-                                                                ? 'bg-gray-500 hover:bg-gray-600'
-                                                                : student.status?.toUpperCase() === 'SUSPENDED'
-                                                                    ? 'bg-red-500 hover:bg-red-600'
-                                                                    : ''
-                                                        }
+                <div className="px-2 mb-2">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Students ({filteredStudents.length})</h2>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">All students in your college</p>
+                </div>
+                <div className="bg-white dark:bg-[#090C0C] border border-[#989898] dark:border-[#5B5B5B] rounded-[16px] overflow-hidden px-[8px] py-[16px] flex flex-col gap-[24px]">
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-[#5B5B5B] bg-white dark:bg-[#090C0C]">
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Name</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Email</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Phone</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Degree</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Branch</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Year</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Status</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Subscription</th>
+                                    <th className="text-left py-4 px-4 font-semibold text-sm text-gray-700 dark:text-gray-300">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={10} className="py-12 text-center">
+                                            <div className="flex justify-center">
+                                                <Loader />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : filteredStudents.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={10} className="py-12 text-center text-gray-500 dark:text-gray-400">
+                                            No students found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredStudents.map((student) => (
+                                        <tr key={student.id} className="border-b border-gray-50 dark:border-[#5B5B5B] dark:bg-[#090C0C] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+
+                                            <td className="py-4 px-4 font-medium text-gray-900 dark:text-white">{student.name}</td>
+                                            <td className="py-4 px-4 text-gray-600 dark:text-gray-400 text-sm">{student.email}</td>
+                                            <td className="py-4 px-4 text-gray-600 dark:text-gray-400 text-sm">{student.phone}</td>
+                                            <td className="py-4 px-4 text-gray-600 dark:text-gray-400 text-sm">{student.degree || '-'}</td>
+                                            <td className="py-4 px-4 text-gray-600 dark:text-gray-400 text-sm">{student.branch || '-'}</td>
+                                            <td className="py-4 px-4 text-gray-600 dark:text-gray-400 text-sm">{student.graduation_year || '-'}</td>
+                                            <td className="py-4 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full ${student.status?.toUpperCase() === 'ACTIVE' ? 'bg-[#00C951]' : 'bg-gray-400'}`} />
+                                                    <span className={`text-sm font-medium ${student.status?.toUpperCase() === 'ACTIVE' ? 'text-[#00C951]' : 'text-gray-500'}`}>
+                                                        {student.status?.toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className="bg-[#00C951] text-white text-xs px-3 py-1 rounded-full font-medium">
+                                                    {student.subscription_type || 'college_license'}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => window.location.href = `/dashboard/college/students/${student.id}/analytics`}
+                                                        className="bg-[#6F30FD] hover:bg-[#6F30FD]/90 text-white h-8 px-4 text-xs font-medium rounded-[6px]"
                                                     >
-                                                        {student.status?.toUpperCase() || 'ACTIVE'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => window.location.href = `/dashboard/college/students/${student.id}/analytics`}
-                                                            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                                            title="View student analytics"
-                                                        >
-                                                            <BarChart3 className="w-4 h-4 mr-1" />
-                                                            Analytics
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleEditStudent(student)}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            title="Edit student details"
-                                                        >
-                                                            <Pencil className="w-4 h-4 mr-1" />
-                                                            Edit
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleOpenSubscriptionModal(student)}
-                                                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                            title="Manage subscription plan"
-                                                        >
-                                                            <CreditCard className="w-4 h-4 mr-1" />
-                                                            Subscription
-                                                        </Button>
-                                                        {student.status?.toUpperCase() === 'ACTIVE' ? (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteStudent(student.id)}
-                                                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                                                title="Mark student as inactive"
-                                                            >
-                                                                <UserX className="w-4 h-4 mr-1" />
-                                                                Deactivate
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleActivateStudent(student.id)}
-                                                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                                title="Activate student"
-                                                            >
-                                                                <Users className="w-4 h-4 mr-1" />
-                                                                Activate
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                                        Analytics
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleEditStudent(student)}
+                                                        className="bg-[#0065F4] hover:bg-[#0065F4]/90 text-white h-8 px-4 text-xs font-medium rounded-[6px]"
+                                                    >
+                                                        edit
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleOpenSubscriptionModal(student)}
+                                                        className="bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-white h-8 px-4 text-xs font-medium rounded-[6px]"
+                                                    >
+                                                        Subscription
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             {/* Create Student Modal */}
@@ -889,4 +862,3 @@ export default function CollegeStudents() {
         </DashboardLayout>
     )
 }
-
