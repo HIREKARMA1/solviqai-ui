@@ -108,16 +108,16 @@ export function Footer() {
   ];
 
   return (
-    <footer className="relative bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_2px_0_rgba(0,0,0,0.1)] border-t border-gray-200 dark:border-gray-700 overflow-hidden">
+    <footer className="relative bg-white dark:bg-[#2A2C38] text-gray-700 dark:text-gray-300 shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_2px_0_rgba(0,0,0,0.1)] border-t border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Animated Background - Same as Navbar and Sidebar */}
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+      {/* <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <AnimatedBackground variant="subtle" showGrid={true} showLines={false} />
-      </div>
+      </div> */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 relative" style={{ zIndex: 1 }}>
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12 text-center md:text-left">
           {/* Brand Column */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 flex flex-col items-center md:items-start">
             <Link href="/" className="flex items-center gap-3 mb-6">
               <div className="relative w-[150px] h-16">
                 <Image
@@ -134,8 +134,8 @@ export function Footer() {
             </p>
 
             {/* Contact Info */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
+            <div className="space-y-3 w-full flex flex-col items-center md:items-start">
+              <div className="flex items-center gap-3 justify-center md:justify-start w-full">
                 <Mail className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 <a 
                   href="mailto:info@hirekarma.in" 
@@ -144,7 +144,7 @@ export function Footer() {
                   info@hirekarma.in
                 </a>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 justify-center md:justify-start w-full">
                 <Phone className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 <a 
                   href="tel:+919078683876" 
@@ -153,9 +153,9 @@ export function Footer() {
                   +91 90786 83876
                 </a>
               </div>
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 justify-center md:justify-start w-full text-left md:text-left">
                 <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                <span className="leading-relaxed">
+                <span className="leading-relaxed text-center md:text-left">
                   Room No: 109, 1st Floor, Tower A, O-HUB, Bhubaneswar
                 </span>
               </div>
@@ -163,11 +163,11 @@ export function Footer() {
           </div>
 
           {/* Product Links */}
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4">
+          <div className="flex flex-col items-center md:items-start w-full">
+            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4 text-center md:text-left">
               {t('footer.product')}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 w-full text-center md:text-left">
               {productLinks.map((link) => (
                 <li key={link.href}>
                   <Link 
@@ -183,11 +183,11 @@ export function Footer() {
           </div>
 
           {/* Company Links */}
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4">
+          <div className="flex flex-col items-center md:items-start w-full">
+            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4 text-center md:text-left">
               {t('footer.company')}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 w-full text-center md:text-left">
               {companyLinks.map((link) => (
                 <li key={link.href}>
                   {link.href.startsWith('http') ? (
@@ -214,11 +214,11 @@ export function Footer() {
           </div>
 
           {/* Support Links */}
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4">
+          <div className="flex flex-col items-center md:items-start w-full">
+            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4 text-center md:text-left">
               {t('footer.support')}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 w-full text-center md:text-left">
               {supportLinks.map((link) => (
                 <li key={link.href}>
                   {link.href.startsWith('http') ? (
@@ -245,11 +245,11 @@ export function Footer() {
           </div>
 
           {/* Legal Links */}
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4">
+          <div className="flex flex-col items-center md:items-start w-full">
+            <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-4 text-center md:text-left">
               {t('footer.legal')}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 w-full text-center md:text-left">
               {legalLinks.map((link) => (
                 <li key={link.href}>
                   <Link 

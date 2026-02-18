@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
-import { Building2, Users, GraduationCap, UserPlus, BarChart3 } from 'lucide-react'
+import { Building2, Users, GraduationCap, UserPlus, BarChart3, FileText } from 'lucide-react'
 
 export default function AdminDashboard() {
     const router = useRouter()
@@ -81,8 +81,8 @@ export default function AdminDashboard() {
                                 <CardDescription>Manage platform and view insights</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid md:grid-cols-4 gap-4">
-                                    <Button 
+                                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    <Button
                                         onClick={() => router.push('/dashboard/admin/colleges')}
                                         className="h-24 flex flex-col items-center justify-center gap-2"
                                         variant="outline"
@@ -90,8 +90,8 @@ export default function AdminDashboard() {
                                         <Building2 className="h-8 w-8" />
                                         <span>Manage Colleges</span>
                                     </Button>
-                                    
-                                    <Button 
+
+                                    <Button
                                         onClick={() => router.push('/dashboard/admin/students')}
                                         className="h-24 flex flex-col items-center justify-center gap-2"
                                         variant="outline"
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
                                         <span>Manage Students</span>
                                     </Button>
 
-                                    <Button 
+                                    <Button
                                         onClick={() => router.push('/dashboard/admin/analytics')}
                                         className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
                                     >
@@ -108,7 +108,16 @@ export default function AdminDashboard() {
                                         <span>View Analytics</span>
                                     </Button>
 
-                                    <Button 
+                                    <Button
+                                        onClick={() => router.push('/dashboard/admin/disha')}
+                                        className="h-24 flex flex-col items-center justify-center gap-2"
+                                        variant="outline"
+                                    >
+                                        <FileText className="h-8 w-8" />
+                                        <span>Disha Assessments</span>
+                                    </Button>
+
+                                    <Button
                                         onClick={() => router.push('/dashboard/admin/colleges')}
                                         className="h-24 flex flex-col items-center justify-center gap-2"
                                         variant="outline"
@@ -132,7 +141,7 @@ export default function AdminDashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Button 
+                                <Button
                                     onClick={() => router.push('/dashboard/admin/analytics')}
                                     className="bg-purple-600 hover:bg-purple-700"
                                 >

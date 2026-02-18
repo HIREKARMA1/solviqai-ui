@@ -17,6 +17,9 @@ export type CodingRoundProps = {
   executeCodeFn?: (payload: { question_id: string; language: string; code: string; stdin?: string }) => Promise<any>
   submitFn?: (responses: any[]) => Promise<any>
   showSubmitButton?: boolean
+  onChange?: (questionId: string, code: string, language: string) => void
+  activeQuestionId?: string
+  hideFooter?: boolean
 }
 
 const LANGS = [
@@ -46,7 +49,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange, activeQuestionId, hideFooter = false }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -80,13 +83,20 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
       const next = { ...prev }
       const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
       const starter = (meta.starter_code || {}) as Record<string, string>
-      next[qid] = { language: lang, code: starter[lang] || next[qid]?.code || '' }
+      const newCode = starter[lang] || next[qid]?.code || ''
+      next[qid] = { language: lang, code: newCode }
+      onChange?.(qid, newCode, lang)
       return next
     })
   }
 
   const setCode = (qid: string, code: string) => {
-    setEditors(prev => ({ ...prev, [qid]: { ...(prev[qid] || { language: 'python', code: '' }), code } }))
+    setEditors(prev => {
+      const current = prev[qid] || { language: 'python', code: '' }
+      const next = { ...prev, [qid]: { ...current, code } }
+      onChange?.(qid, code, current.language)
+      return next
+    })
   }
 
   const handleSubmit = async () => {
@@ -183,6 +193,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
         } else {
           toast.success(`Passed ${res.passed}/${res.total} tests (${passRate}%)`)
         }
+      } else if (res.subscription_error) {
+        toast.error('Code execution service is currently unavailable. Please contact support.')
       } else if (res.quota_exceeded) {
         toast.error('API quota exceeded. Please try again later or contact support.')
       } else if (res.network_error) {
@@ -243,227 +255,316 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-hidden p-4">
-        <div className="h-full flex flex-col gap-6">
-          {(roundData?.questions || []).map((q: any, idx: number) => {
-            const editor = editors[q.id] || { language: 'python', code: '' }
-            const meta = q.metadata || {}
-            const isFullscreen = fullscreen === q.id
-            const currentTab = activeTab[q.id] || 'problem'
+      <div className="flex-1 overflow-hidden p-0 sm:p-4">
+        <div className="h-full flex flex-col">
+          {(roundData?.questions || [])
+            .filter((q: any) => !activeQuestionId || q.id === activeQuestionId)
+            .map((q: any, idx: number) => {
+              const editor = editors[q.id] || { language: 'python', code: '' }
+              const meta = q.metadata || {}
+              const isFullscreen = fullscreen === q.id
+              const currentTab = activeTab[q.id] || 'problem'
 
-            return (
-              <div key={q.id} className="flex-1 flex flex-col min-h-0 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-0">
+              return (
+                <div key={q.id} className="flex-1 flex flex-col min-h-0 bg-white shadow-sm border border-gray-200 sm:rounded-xl overflow-hidden">
 
-                  {/* LEFT PANEL: Problem Description */}
-                  <div className="flex flex-col min-h-0 bg-white">
-                    {/* Tabs Row */}
-                    <div className="flex border-b border-gray-100">
+                  {/* Question Header Bar */}
+                  <div className="bg-white border-b border-gray-100 p-4 pb-0">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="font-semibold text-gray-500">Problem {idx + 1}</span>
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded ${DIFFICULTY_CONFIG[meta.difficulty as keyof typeof DIFFICULTY_CONFIG]?.color || 'bg-gray-100 text-gray-600'}`}>
+                        {meta.difficulty || 'Easy'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h2 className="text-2xl font-bold text-gray-900">{meta.title || q.question_text.slice(0, 50)}</h2>
+                      <button onClick={() => setFullscreen(isFullscreen ? null : q.id)} className="text-gray-400 hover:text-gray-600">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                      </button>
+                    </div>
+                    <div className="text-sm text-gray-500 pb-4">{meta.category || 'Matrix Operations'}</div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-6 border-b border-gray-200">
                       {['problem', 'tests', 'submissions'].map(tab => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab as any }))}
-                          className={`px-6 py-3 text-sm font-semibold capitalize transition-all border-b-2 ${currentTab === tab
-                            ? 'text-blue-600 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-500 border-transparent hover:text-gray-800'
+                          className={`pb-3 text-sm font-semibold capitalize transition-all border-b-2 ${currentTab === tab
+                            ? 'text-blue-600 border-blue-600'
+                            : 'text-gray-500 border-transparent hover:text-gray-700'
                             }`}
                         >
-                          {tab}
+                          {tab === 'tests' ? 'Tests' : tab}
                         </button>
                       ))}
                     </div>
+                  </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-                      {currentTab === 'problem' && (
-                        <>
-                          <div>
-                            <h2 className="text-xl font-bold text-gray-900 mb-2">{meta.title || q.question_text.slice(0, 50)}</h2>
-                            <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed">
-                              {/* Create a cleaner text display */}
-                              <p>{q.question_text}</p>
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-0">
+
+                    {/* LEFT PANEL: Problem Description */}
+                    <div className="flex flex-col min-h-0 bg-white overflow-y-auto">
+                      <div className="p-6 space-y-6">
+                        {currentTab === 'problem' && (
+                          <>
+                            {/* Problem Text */}
+                            <div className="prose prose-sm max-w-none text-gray-800 font-medium">
+                              <p className="mb-4">{q.question_text.split(/\*\*Input Format:\*\*|\*\*Output Format:\*\*|\*\*Examples?:\*\*|\*\*Constraints?:\*\*/i)[0].trim()}</p>
                             </div>
-                          </div>
 
-                          {/* Examples Section */}
-                          {meta.examples?.length > 0 ? (
-                            meta.examples.map((ex: any, i: number) => (
-                              <div key={i} className="space-y-2">
-                                <h3 className="font-bold text-gray-900 text-sm">Example {i + 1}:</h3>
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700 space-y-1">
-                                  <div><span className="font-semibold text-gray-900">Input:</span> {ex.input}</div>
-                                  <div><span className="font-semibold text-gray-900">Output:</span> {ex.output}</div>
-                                  {ex.explanation && <div><span className="font-semibold text-gray-900">Explanation:</span> {ex.explanation}</div>}
+                            {/* Formats */}
+                            <div className="space-y-4">
+                              {(() => {
+                                // Input Format
+                                const inputMatch = q.question_text.match(/\*\*Input Format:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
+                                const inputFormat = inputMatch ? inputMatch[1].trim() : meta.input_format;
+
+                                // Output Format
+                                const outputMatch = q.question_text.match(/\*\*Output Format:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
+                                const outputFormat = outputMatch ? outputMatch[1].trim() : meta.output_format;
+
+                                return (
+                                  <>
+                                    {/* Example Input/Output Box style from Figma */}
+                                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                      <div className="p-4 space-y-4">
+                                        {inputFormat && (
+                                          <div>
+                                            <h4 className="font-bold text-gray-900 mb-1 text-sm">Input Format:</h4>
+                                            <div className="bg-gray-50 border border-gray-200 rounded p-2 text-sm text-gray-600">
+                                              {inputFormat}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {outputFormat && (
+                                          <div>
+                                            <h4 className="font-bold text-gray-900 mb-1 text-sm">Output Format:</h4>
+                                            <div className="bg-gray-50 border border-gray-200 rounded p-2 text-sm text-gray-600">
+                                              {outputFormat}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Example Section */}
+                                    <div>
+                                      <h4 className="font-bold text-gray-900 mb-2 text-sm">Example:</h4>
+                                      {(() => {
+                                        // Same example parsing logic
+                                        const examplesMatch = q.question_text.match(/\*\*Examples?:\*\*\s*([\s\S]+?)(?=\*\*Constraints?:\*\*|$)/i);
+                                        if (examplesMatch) {
+                                          const examplesText = examplesMatch[1];
+                                          // Simple parsing for first example
+                                          const inputEx = examplesText.match(/Input:\s*([\s\S]+?)(?:\n|Output:|$)/i)?.[1]?.trim();
+                                          const outputEx = examplesText.match(/Output:\s*([\s\S]+?)(?:\n|$)/i)?.[1]?.trim();
+
+                                          return (
+                                            <div className="bg-gray-50 p-4 rounded-lg text-sm border border-gray-200">
+                                              <div className="mb-2">
+                                                <span className="text-gray-500 block mb-1">Input:</span>
+                                                <span className="font-mono text-gray-800">{inputEx || 'hello'}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-gray-500 block mb-1">Output:</span>
+                                                <span className="font-mono text-gray-800">{outputEx || 'olleh'}</span>
+                                              </div>
+                                            </div>
+                                          )
+                                        }
+                                        return null;
+                                      })()}
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
+
+                            {/* Blue Info Box */}
+                            <div className="bg-[#E3F2FD] border-l-4 border-[#2196F3] p-4 rounded-r-md flex gap-3">
+                              <div className="mt-0.5">
+                                <svg className="w-5 h-5 text-[#2196F3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-[#1565C0] text-sm">Input/Output Instructions</h4>
+                                <p className="text-sm text-[#1E88E5] mt-1">
+                                  Read input using <code className="font-mono bg-blue-100 px-1 rounded">input()</code> or <code className="font-mono bg-blue-100 px-1 rounded">sys.stdin.read()</code>, then print the result. Do not include test cases in your code.
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Orange Constraint Box */}
+                            <div className="bg-[#FFF3E0] border border-[#FFE0B2] p-4 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <svg className="w-5 h-5 text-[#F57C00]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <h4 className="font-bold text-[#EF6C00]">Constraints</h4>
+                              </div>
+                              <ul className="space-y-2 ml-1">
+                                {(() => {
+                                  const constraintsMatch = q.question_text.match(/\*\*Constraints?:\*\*\s*([\s\S]+?)(?=\*\*|$)/i);
+                                  const list = constraintsMatch
+                                    ? constraintsMatch[1].split(/\n|•|\*/).filter((c: string) => c.trim().length > 0)
+                                    : ["1 <= number of tasks <= 10^4", "1 <= start_time < end_time <= 10^5"];
+
+                                  return list.map((c: string, i: number) => (
+                                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+                                      <span>{c.trim().replace(/^[-•]\s*/, '')}</span>
+                                    </li>
+                                  ))
+                                })()}
+                              </ul>
+                            </div>
+                          </>
+                        )}
+
+                        {/* RE-USE EXISTING TABS LOGIC FOR TESTS & SUBMISSIONS (SIMPLIFIED) */}
+                        {currentTab === 'tests' && (
+                          <div className="space-y-4">
+                            <div className="border border-blue-200 bg-blue-50 p-4 rounded-lg">
+                              <h3 className="font-bold text-gray-900 text-base mb-2">Test Cases</h3>
+                              <p className="text-sm text-gray-600">Run your code to see results against these cases.</p>
+                            </div>
+                            {results[q.id]?.results?.length > 0 ? (
+                              results[q.id].results.map((r: any, i: number) => (
+                                <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                  <div className="font-bold mb-1 text-sm">{r.passed ? 'Test Case Passed' : 'Test Case Failed'}</div>
+                                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                                    <div className="bg-white p-2 rounded border border-gray-200">
+                                      <div className="text-gray-500 mb-1">Input</div>
+                                      <div>{String(r.input || '-')}</div>
+                                    </div>
+                                    <div className="bg-white p-2 rounded border border-gray-200">
+                                      <div className="text-gray-500 mb-1">Expected</div>
+                                      <div>{String(r.expected || '-')}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="space-y-3">
+                                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                                  <div className="font-bold text-gray-800 text-sm mb-1">Test Case 1</div>
+                                  <div className="text-xs text-gray-600">Input: [2, 7, 11, 15], target = 9</div>
+                                  <div className="text-xs text-gray-600">Expected: [0, 1]</div>
+                                </div>
+                                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                                  <div className="font-bold text-gray-800 text-sm mb-1">Test Case 2</div>
+                                  <div className="text-xs text-gray-600">Input: [3, 2, 4], target = 6</div>
+                                  <div className="text-xs text-gray-600">Expected: [1, 2]</div>
                                 </div>
                               </div>
-                            ))
-                          ) : (
-                            // Fallback UI if no structured examples
-                            <div className="space-y-2">
-                              <h3 className="font-bold text-gray-900 text-sm">Example:</h3>
-                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono text-gray-700">
-                                Input: nums = [2,7,11,15], target = 9 <br />
-                                Output: [0,1]
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Constraints */}
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-sm mb-2">Constraints:</h3>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 marker:text-gray-400">
-                              {meta.constraints?.map((c: string, i: number) => (
-                                <li key={i}>{c}</li>
-                              )) || (
-                                  <>
-                                    <li>2 &lt;= nums.length &lt;= 10^4</li>
-                                    <li>-10^9 &lt;= nums[i] &lt;= 10^9</li>
-                                  </>
-                                )}
-                            </ul>
+                            )}
                           </div>
-                        </>
-                      )}
+                        )}
 
-                      {/* RE-USE EXISTING TABS LOGIC FOR TESTS & SUBMISSIONS (SIMPLIFIED) */}
-                      {currentTab === 'tests' && (
-                        <div className="space-y-4">
-                          <h3 className="font-bold text-gray-900">Test Cases</h3>
-                          {results[q.id]?.results?.map((r: any, i: number) => (
-                            <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                              <div className="flex justify-between mb-2">
-                                <span className="font-semibold text-sm">Case {i + 1}</span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${r.passed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                                  {r.passed ? 'PASSED' : 'FAILED'}
-                                </span>
+                        {currentTab === 'submissions' && (
+                          <div className="space-y-2">
+                            {submissionHistory[q.id]?.map((sub) => (
+                              <div key={sub.id} className="border p-3 rounded bg-gray-50 text-sm flex justify-between">
+                                <span>{new Date(sub.timestamp).toLocaleTimeString()}</span>
+                                <span className={sub.status === 'success' ? 'text-green-600' : 'text-red-600'}>{sub.status}</span>
                               </div>
-                              <div className="font-mono text-xs space-y-1">
-                                <div>In: {String(r.input)}</div>
-                                <div>Exp: {String(r.expected)}</div>
-                                <div>Out: {String(r.stdout || r.stderr)}</div>
-                              </div>
-                            </div>
-                          )) || <div className="text-gray-500 text-sm">Run your code to see results.</div>}
+                            )) || <div className="text-gray-500 text-sm">No submissions yet available.</div>}
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+
+                    {/* RIGHT PANEL: Code Editor */}
+                    <div className="flex flex-col min-h-0 bg-[#1e1e1e]">
+                      {/* Toolbar */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-[#F5F5F5] border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-900 text-sm font-bold">Select Language:</span>
+                          <select
+                            value={editor.language}
+                            onChange={(e) => setLang(q.id, e.target.value)}
+                            className="bg-white text-gray-900 border border-gray-300 text-sm rounded-md px-3 py-1 outline-none focus:border-blue-500 shadow-sm"
+                          >
+                            {LANGS.map(l => (
+                              <option key={l.key} value={l.key}>{l.label}</option>
+                            ))}
+                          </select>
                         </div>
-                      )}
-
-                      {currentTab === 'submissions' && (
-                        <div className="space-y-2">
-                          {submissionHistory[q.id]?.map((sub) => (
-                            <div key={sub.id} className="border p-3 rounded bg-gray-50 text-sm flex justify-between">
-                              <span>{new Date(sub.timestamp).toLocaleTimeString()}</span>
-                              <span className={sub.status === 'success' ? 'text-green-600' : 'text-red-600'}>{sub.status}</span>
-                            </div>
-                          )) || <div className="text-gray-500">No history.</div>}
-                        </div>
-                      )}
-
-                      {/* Test Cases Summary - Moved inside scrollable area */}
-                      <div className="mt-8 pt-6 border-t border-gray-200">
-                        <h4 className="font-medium text-xs uppercase text-gray-500 mb-3">Test Cases Summary</h4>
-                        <div className="space-y-2">
-                          <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-800">
-                            <span className="font-bold">Test Case 1:</span> Failed
-                          </div>
-                          <div className="bg-green-50 border border-green-100 rounded p-2 text-xs text-green-800">
-                            <span className="font-bold">Test Case 2:</span> Passed
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => runTests(q.id)}
+                            disabled={running[q.id]}
+                            className="bg-[#2979FF] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 h-auto rounded flex items-center gap-2 shadow-sm transition-all"
+                          >
+                            {running[q.id] ? <Loader size="sm" className="w-3 h-3 text-white" /> : (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            Run code
+                          </Button>
                         </div>
                       </div>
 
+                      {/* Editor Area */}
+                      <div className="flex-1 relative">
+                        {MonacoEditor ? (
+                          <MonacoEditor
+                            height="100%"
+                            language={editor.language === 'cpp' ? 'cpp' : editor.language}
+                            value={editor.code}
+                            onChange={(v: string) => setCode(q.id, v || '')}
+                            theme="vs-dark"
+                            options={{
+                              minimap: { enabled: false },
+                              fontSize: 14,
+                              padding: { top: 16 },
+                              fontFamily: "'Fira Code', monospace",
+                              scrollBeyondLastLine: false,
+                            }}
+                          />
+                        ) : (
+                          <textarea
+                            className="w-full h-full bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none"
+                            value={editor.code}
+                            onChange={(e) => setCode(q.id, e.target.value)}
+                          />
+                        )}
+                      </div>
                     </div>
+
                   </div>
-
-                  {/* RIGHT PANEL: Code Editor */}
-                  <div className="flex flex-col min-h-0 bg-[#1e1e1e]">
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#3e3e3e]">
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-400 text-sm font-medium">Language:</span>
-                        <select
-                          value={editor.language}
-                          onChange={(e) => setLang(q.id, e.target.value)}
-                          className="bg-[#3e3e3e] text-white text-sm rounded px-2 py-1 outline-none border border-transparent focus:border-blue-500"
-                        >
-                          {LANGS.map(l => (
-                            <option key={l.key} value={l.key}>{l.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setFullscreen(isFullscreen ? null : q.id)}
-                          className="p-1.5 hover:bg-[#3e3e3e] rounded text-gray-400"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                        </button>
-                        <Button
-                          onClick={() => runTests(q.id)}
-                          disabled={running[q.id]}
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 h-auto rounded flex items-center gap-2"
-                        >
-                          {running[q.id] ? <Loader size="sm" className="w-3 h-3 text-white" /> : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                          Run Code
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Editor Area */}
-                    <div className="flex-1 relative">
-                      {MonacoEditor ? (
-                        <MonacoEditor
-                          height="100%"
-                          language={editor.language === 'cpp' ? 'cpp' : editor.language}
-                          value={editor.code}
-                          onChange={(v: string) => setCode(q.id, v || '')}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            padding: { top: 16 },
-                            fontFamily: "'Fira Code', monospace",
-                          }}
-                        />
-                      ) : (
-                        <textarea
-                          className="w-full h-full bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none"
-                          value={editor.code}
-                          onChange={(e) => setCode(q.id, e.target.value)}
-                        />
-                      )}
-                    </div>
-                  </div>
-
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </div>
-      </div>
+      </div >
 
       {/* Footer Submit Bar */}
-      {showSubmitButton && (
-        <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-          <div>
-            <h3 className="font-bold text-gray-900">Ready to Submit?</h3>
-            <p className="text-sm text-gray-500">Make sure you've tested all solutions before submitting.</p>
+      {
+        showSubmitButton && !hideFooter && (
+          <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <Button
+              onClick={handleSubmit}
+              disabled={busy}
+              className="bg-[#2979FF] hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg shadow-sm transition-all text-sm"
+            >
+              {busy ? (
+                <span className="flex items-center gap-2"><Loader size="sm" /> Submitting...</span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  Submit Solutions
+                </span>
+              )}
+            </Button>
           </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={busy}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-sm transition-all text-sm"
-          >
-            {busy ? (
-              <span className="flex items-center gap-2"><Loader size="sm" /> Submitting...</span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                Submit
-              </span>
-            )}
-          </Button>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 

@@ -931,6 +931,7 @@ export default function AssessmentRoundPage() {
                 <GroupDiscussionRound
                     roundId={roundData.round_id || roundData.id}
                     assessmentId={assessmentId!}
+                    maxResponses={roundData.config?.number_of_rounds || 5}
                     onComplete={async (responses) => {
                         try {
                             setSubmitting(true);

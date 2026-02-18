@@ -141,6 +141,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'disha',
+    icon: <FileText className="w-5 h-5" />,
+    label: 'Disha Assessments',
+    onClick: undefined,
+  },
+  {
     id: 'profile',
     icon: <User className="w-5 h-5" />,
     label: 'Profile',
@@ -208,6 +214,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         colleges: `/dashboard/admin/colleges`,
         students: `/dashboard/admin/students`,
         analytics: `/dashboard/admin/analytics`,
+        disha: `/dashboard/admin/disha`,
         profile: `/dashboard/admin/profile`,
       };
       return routeMap[featureId] || null;

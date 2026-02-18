@@ -16,9 +16,14 @@ class ApiClient {
   public client: AxiosInstance;
 
   constructor() {
+    const shouldLog =
+      typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
     // Validate API base URL
-    if (!config.api.fullUrl) {
-      console.error("⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.");
+    if (shouldLog && !config.api.fullUrl) {
+      console.warn(
+        "⚠️ API Base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.",
+      );
     }
 
     this.client = axios.create({
@@ -29,10 +34,12 @@ class ApiClient {
       },
     });
 
-    console.log("🚀 API Client initialized:", {
-      baseURL: config.api.fullUrl || "(not configured)",
-      timeout: "180s (3 minutes)",
-    });
+    if (shouldLog) {
+      console.log("🚀 API Client initialized:", {
+        baseURL: config.api.fullUrl || "(not configured)",
+        timeout: "180s (3 minutes)",
+      });
+    }
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use(
@@ -137,6 +144,26 @@ class ApiClient {
             if (window.location.pathname !== "/auth/login") {
               window.location.href = "/auth/login";
             }
+          }
+        }
+
+        // Handle subscription/license enforcement (403) globally
+        if (error.response?.status === 403) {
+          const detail = error.response?.data?.detail || "";
+          const msg = typeof detail === "string" ? detail : "";
+          const msgLower = msg.toLowerCase();
+          const looksLikeEntitlement =
+            (msgLower.includes("subscription") || msgLower.includes("license")) &&
+            (msgLower.includes("expired") ||
+              msgLower.includes("contact hirekarma") ||
+              msgLower.includes("free plan"));
+
+          if (looksLikeEntitlement && typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("subscription-required", {
+                detail: { message: msg },
+              }),
+            );
           }
         }
 
@@ -771,6 +798,84 @@ class ApiClient {
     return response.data;
   }
 
+  async getStudentSubscriptionStatus(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/subscription-status",
+    );
+    return response.data;
+  }
+
+  async getStudentUsageAnalytics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/students/usage-analytics",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 2: COLLEGE SUBSCRIPTION & LICENSE ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getCollegeLicenseOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/license-overview",
+    );
+    return response.data;
+  }
+
+  async getStudentSubscriptionDistribution(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-distribution",
+    );
+    return response.data;
+  }
+
+  async getUsageAnalyticsBySubscription(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/usage-analytics-by-subscription",
+    );
+    return response.data;
+  }
+
+  async getSubscriptionHealth(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/college/subscription-health",
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // PHASE 3: ADMIN SUBSCRIPTION & BUSINESS ANALYTICS ENDPOINTS
+  // ============================================================================
+
+  async getAdminSubscriptionOverview(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-overview",
+    );
+    return response.data;
+  }
+
+  async getAdminCollegeLicenses(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/college-licenses",
+    );
+    return response.data;
+  }
+
+  async getAdminSubscriptionTrends(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/subscription-trends",
+    );
+    return response.data;
+  }
+
+  async getAdminRevenueMetrics(): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      "/admin/revenue-metrics",
+    );
+    return response.data;
+  }
+
   // Career Guidance API
   careerGuidance = {
     startSession: async (data: {
@@ -1027,8 +1132,188 @@ class ApiClient {
       return response.data;
     },
   };
+
+  // Disha Assessment endpoints
+  async getDishaPackageStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}`
+    );
+    return response.data;
+  }
+
+  async getDishaGenerationStatus(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/generation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageQuestions(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/questions`
+    );
+    return response.data;
+  }
+
+  async triggerDishaQuestionGeneration(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/generate-questions`
+    );
+    return response.data;
+  }
+
+  async getAllDishaPackages(params?: {
+    status?: string;
+    mode?: string;
+    include_expired?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async deleteDishaPackage(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/disha/admin/packages/${packageId}`
+    );
+    return response.data;
+  }
+
+  // DISHA Exam APIs
+  async startDishaAssessment(packageId: string, dishaStudentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/start`,
+      { disha_student_id: dishaStudentId }
+    );
+    return response.data;
+  }
+
+  async getDishaRoundQuestions(
+    packageId: string,
+    roundId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/rounds/${roundId}`,
+      { params: { attempt_id: attemptId } }
+    );
+    return response.data;
+  }
+
+  async submitDishaRound(
+    packageId: string,
+    roundId: string,
+    attemptId: string,
+    answers: Record<string, any>
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/submit`,
+      {
+        attempt_id: attemptId,
+        answers: answers
+      }
+    );
+    return response.data;
+  }
+
+  async executeDishaCode(
+    packageId: string,
+    roundId: string,
+    payload: {
+      question_id: string;
+      language: string;
+      code: string;
+      stdin?: string;
+    },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/rounds/${roundId}/code/execute`,
+      payload,
+      { timeout: 60000 },
+    );
+    return response.data;
+  }
+
+
+  async getDishaAttemptStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/status`
+    );
+    return response.data;
+  }
+
+  async getDishaEvaluationStatus(packageId: string, attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/evaluation-status`
+    );
+    return response.data;
+  }
+
+  async getDishaReport(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/assessments/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  // Admin DISHA APIs
+  async getDishaPackageAttempts(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts`
+    );
+    return response.data;
+  }
+
+  async getDishaPackageReport(packageId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
+
+  async getDishaIndividualStudentReport(
+    packageId: string,
+    attemptId: string
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.get(
+      `/disha/admin/packages/${packageId}/attempts/${attemptId}/report`
+    );
+    return response.data;
+  }
+
+  async validateDishaToken(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/disha/sso/validate-token`,
+      null,
+      { params: { token } }
+    );
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
 export const api = apiClient; // Export as 'api' for cleaner imports
 export default apiClient;
+
+// ============================================================================
+// STANDALONE EXPORT FUNCTIONS FOR CONVENIENCE
+// ============================================================================
+
+// Phase 1: Student Subscription Analytics
+export const getStudentSubscriptionStatus = () => apiClient.getStudentSubscriptionStatus();
+export const getStudentUsageAnalytics = () => apiClient.getStudentUsageAnalytics();
+
+// Phase 2: College Subscription Analytics
+export const getCollegeLicenseOverview = () => apiClient.getCollegeLicenseOverview();
+export const getStudentSubscriptionDistribution = () => apiClient.getStudentSubscriptionDistribution();
+export const getUsageAnalyticsBySubscription = () => apiClient.getUsageAnalyticsBySubscription();
+export const getSubscriptionHealth = () => apiClient.getSubscriptionHealth();
+// Phase 3: Admin Subscription & Business Analytics
+export const getAdminSubscriptionOverview = () => apiClient.getAdminSubscriptionOverview();
+export const getAdminCollegeLicenses = () => apiClient.getAdminCollegeLicenses();
+export const getAdminSubscriptionTrends = () => apiClient.getAdminSubscriptionTrends();
+export const getAdminRevenueMetrics = () => apiClient.getAdminRevenueMetrics();
