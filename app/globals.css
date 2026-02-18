@@ -41,29 +41,33 @@
     --toast-color: #ffffff;
     --toast-border: #374151;
 
-    /* Dark mode - Optimized for professional look */
-    --background: 222 47% 11%;
+    /* Dark mode - Figma SolviQ theme (#1A2C58 navy, stat card colors) */
+    --background: 224 54% 22%;
+    /* #1A2C58 */
     --foreground: 210 40% 98%;
-    --card: 217 33% 17%;
+    --card: 224 54% 26%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 224 54% 22%;
     --popover-foreground: 210 40% 98%;
     --primary: 195 100% 45%;
-    /* Bright Blue for dark mode */
-    --primary-foreground: 222 47% 11%;
+    --primary-foreground: 224 54% 22%;
     --secondary: 212 77% 37%;
-    /* Dark Blue */
     --secondary-foreground: 0 0% 100%;
-    --muted: 217 33% 17%;
+    --muted: 224 40% 28%;
     --muted-foreground: 215 20% 65%;
     --accent: 37 95% 52%;
-    /* Orange */
     --accent-foreground: 0 0% 100%;
     --destructive: 356 63% 54%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 224 40% 32%;
+    --input: 224 40% 28%;
     --ring: 195 100% 45%;
+    /* Figma stat card dark mode hex (for inline use) */
+    --solviq-dark-bg: #1A2C58;
+    --solviq-stat-blue: #3D97EF;
+    --solviq-stat-purple: #3B0069;
+    --solviq-stat-magenta: #A30057;
+    --solviq-stat-gold: #BEA300;
   }
 }
 
@@ -73,7 +77,7 @@
   }
 
   body {
-    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
+    @apply bg-white text-gray-900 dark:bg-[#080e23] dark:text-white;
   }
 
   /* Prevent layout shift when scrollbar appears/disappears */
@@ -337,4 +341,102 @@ body {
   .overflow-x-hidden {
     overflow-x: hidden !important;
   }
+}
+
+/* Custom slider styling for Assessment Practice */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+}
+
+.slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+}
+
+/* Enhanced animations for Practice Category Cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Smooth transitions for category cards */
+.category-card {
+  will-change: transform, box-shadow;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.category-card:hover {
+  will-change: transform, box-shadow;
+}
+
+/* Icon glow effect */
+.icon-glow {
+  filter: drop-shadow(0 4px 6px rgba(37, 99, 235, 0.3));
+  transition: filter 0.5s ease-out;
+}
+
+.icon-glow:hover {
+  filter: drop-shadow(0 10px 20px rgba(37, 99, 235, 0.5));
+}
+
+/* Glass morphism effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
