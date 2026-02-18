@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev ",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 ",
+    "start": "next start -H 0.0.0.0",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
@@ -37,6 +37,7 @@
     "framer-motion": "^10.16.16",
     "handsontable": "^16.2.0",
     "html2pdf.js": "^0.11.2",
+    "hugeicons-react": "^0.3.1",
     "hyperformula": "^3.1.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
