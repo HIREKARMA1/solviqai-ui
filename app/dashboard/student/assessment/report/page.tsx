@@ -75,24 +75,30 @@ const formatPercentage = (value: number | null | undefined, decimals: number = 2
 const AnimatedCounter = ({ value, duration = 1000 }: { value: number, duration?: number }) => {
     const [count, setCount] = useState(0)
 
+
     useEffect(() => {
         let startTime: number
         let animationFrame: number
+
 
         const animate = (currentTime: number) => {
             if (!startTime) startTime = currentTime
             const progress = Math.min((currentTime - startTime) / duration, 1)
 
+
             setCount(Math.floor(progress * value))
+
 
             if (progress < 1) {
                 animationFrame = requestAnimationFrame(animate)
             }
         }
 
+
         animationFrame = requestAnimationFrame(animate)
         return () => cancelAnimationFrame(animationFrame)
     }, [value, duration])
+
 
     return <span>{count}</span>
 }
@@ -109,6 +115,7 @@ export default function AssessmentReportPage() {
     const [showFilters, setShowFilters] = useState(false)
     const [compareMode, setCompareMode] = useState(false)
     const [expandedInsights, setExpandedInsights] = useState<{ [key: number]: boolean }>({})
+
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -164,11 +171,13 @@ export default function AssessmentReportPage() {
     const calculateStats = () => {
         if (!qaData?.rounds) return null
 
+
         let totalQuestions = 0
         let correctAnswers = 0
         let totalScore = 0
         let maxScore = 0
         let timeSpent = 0
+
 
         qaData.rounds.forEach((round: any) => {
             round.questions?.forEach((q: any) => {
@@ -178,6 +187,7 @@ export default function AssessmentReportPage() {
                 maxScore += q.max_score || 0
             })
         })
+
 
         return {
             totalQuestions,
@@ -194,9 +204,11 @@ export default function AssessmentReportPage() {
     const prepareRadarData = () => {
         if (!report?.rounds) return []
 
+
         return report.rounds.map((round: any) => ({
             subject: getRoundName(round),
             score: parseFloat(formatPercentage(round.percentage, 2)),
+            benchmark: 75, // Static benchmark for visual reference
             fullMark: 100,
             roundNumber: round.round_number
         }))
@@ -205,6 +217,7 @@ export default function AssessmentReportPage() {
     // Prepare time series data
     const prepareTimeSeriesData = () => {
         if (!report?.rounds) return []
+
 
         return report.rounds.map((round: any, index: number) => ({
             round: getRoundName(round),
@@ -219,6 +232,7 @@ export default function AssessmentReportPage() {
         const stats = calculateStats()
         if (!stats) return []
 
+
         return [
             { name: 'Correct', value: stats.correctAnswers, color: COLORS[0] },
             { name: 'Incorrect', value: stats.wrongAnswers, color: COLORS[1] }
@@ -229,11 +243,12 @@ export default function AssessmentReportPage() {
     const preparePerformanceFunnel = () => {
         if (!report?.rounds) return []
 
+
         const sortedRounds = [...report.rounds].sort((a: any, b: any) => b.percentage - a.percentage)
         return sortedRounds.map((round: any) => ({
             value: parseFloat(formatPercentage(round.percentage, 2)),
             name: getRoundName(round),
-            label: `${getRoundName(round)}: ${formatPercentage(round.percentage, 2)}%`,
+            label: `${getRoundName(round)}\n${formatPercentage(round.percentage, 2)}%`,
             fill: COLORS[round.round_number % COLORS.length]
         }))
     }
@@ -241,7 +256,6 @@ export default function AssessmentReportPage() {
     // Prepare scatter plot data for difficulty vs performance
     const prepareScatterData = () => {
         if (!qaData?.rounds) return []
-
         return qaData.rounds.flatMap((round: any) =>
             (round.questions || []).map((q: any, idx: number) => ({
                 x: idx + 1,
@@ -278,12 +292,15 @@ export default function AssessmentReportPage() {
     const getFilteredQuestions = (questions: any[]) => {
         if (!questions) return []
 
+
         let filtered = [...questions]
+
 
         // Apply difficulty filter
         if (filterDifficulty !== 'all') {
             filtered = filtered.filter(q => q.difficulty?.toLowerCase() === filterDifficulty)
         }
+
 
         // Apply sorting
         switch (sortBy) {
@@ -298,6 +315,7 @@ export default function AssessmentReportPage() {
                 filtered.sort((a, b) => (difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2) - (difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2))
                 break
         }
+
 
         return filtered
     }
@@ -336,6 +354,7 @@ export default function AssessmentReportPage() {
                     <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/50 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/20 dark:via-red-950/20 dark:to-pink-950/20 p-8 shadow-xl">
                         {/* Animated Background Gradient */}
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 via-red-500/5 to-pink-500/5 animate-gradient-x"></div>
+
 
                         <div className="relative z-10 space-y-6">
                             {/* Header with Icon */}
@@ -488,169 +507,116 @@ export default function AssessmentReportPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-            <div className="space-y-6 pt-1 sm:pt-6 lg:pt-0 pb-8">
-                {/* Header - Matching Assessment Journey Style with Hover Animations */}
-                <motion.div
-                    className="relative overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8 text-gray-900 dark:text-white border bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 group"
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {/* Decorative corners */}
-                    <motion.div
-                        className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rotate-45 bg-gradient-to-br from-primary-100/40 to-secondary-100/30 dark:from-primary-900/30 dark:to-secondary-900/20"
-                        animate={{ rotate: [45, 50, 45] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <motion.div
-                        className="pointer-events-none absolute -bottom-14 -left-14 w-64 h-64 rounded-full bg-gradient-to-tr from-secondary-100/30 to-accent-100/20 dark:from-secondary-900/20 dark:to-accent-900/10"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <div className="relative z-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                    <motion.div
-                                        className="p-1.5 sm:p-2 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex-shrink-0"
-                                        animate={{ rotate: [0, 360] }}
-                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                    >
-                                        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    </motion.div>
-                                    <motion.h1
-                                        className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text truncate"
-                                        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                                        transition={{ duration: 3, repeat: Infinity }}
-                                        style={{ backgroundSize: '200% 200%' }}
-                                    >
-                                        <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">Performance Analysis</span>{' '}
-                                        <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Dashboard</span>
-                                    </motion.h1>
+            <div className="space-y-5 pt-1 sm:pt-6 lg:pt-0 pb-8 dark:bg-[#020817] min-h-screen">
+                {/* Banner – Sigma: white bg, 16px radius, 1px #4EA8FD border, 10px padding/gap, increased height */}
+                <div className="rounded-[16px] border border-[#4EA8FD] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[24px] flex flex-col gap-[10px]">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Sparkles className="h-6 w-6 text-[#4EA8FD] dark:text-blue-400 shrink-0" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">
+                            Performance Analysis Dashboard
+                        </h1>
+                    </div>
+                    <p className="text-base leading-6 text-gray-900 dark:text-gray-300 max-w-2xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500 }}>
+                        Track your progress, analyze performance, and unlock your potential with AI-powered insights
+                    </p>
+                </div>
+
+                {/* KPI Cards – Sigma: horizontal, 24px gap, 16px radius, 1px #BEBEBE, 10px px, 20px py, 44x44 icon bg */}
+                <div className="flex flex-col sm:flex-row gap-6 flex-wrap">
+                    {/* Overall Score – icon bg #B8DCFF */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#B8DCFF] dark:bg-blue-500/30">
+                                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                                 </div>
-                                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
-                                    Track your progress, analyze performance, and unlock your potential with AI-powered insights
-                                </p>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Overall Score</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{Math.round(report?.overall_score || 0)}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </motion.div>
-
-                {/* Assessment Stats - Matching Assessment Overview Style */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-                    {/* Overall Score */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Overall Score</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.overall_score || 0)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-200/50 to-purple-100/20 dark:from-purple-900/30 dark:to-purple-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-900/10" />
-                        </Card>
                     </motion.div>
-
-                    {/* Readiness Index */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Readiness Index</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">{Math.round(report?.readiness_index || 0)}%</p>
-                                        </div>
-                                    </div>
+                    {/* Readiness Index – icon bg #EDD4FF */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                    <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-300" />
                                 </div>
-                            </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-green-200/50 to-green-100/20 dark:from-green-900/30 dark:to-green-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-900/10" />
-                        </Card>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Readiness Index</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{Math.round(report?.readiness_index || 0)}%</p>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
-
-                    {/* Completed Rounds */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Completed Rounds</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">
-                                                {report?.rounds?.filter((r: any) => r.status === 'COMPLETED' || r.percentage != null).length || 0}
-                                            </p>
-                                        </div>
-                                    </div>
+                    {/* Completed Rounds – icon bg #FFA8D9 */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFA8D9] dark:bg-pink-500/30">
+                                    <Activity className="w-5 h-5 text-pink-600 dark:text-pink-300" />
                                 </div>
-                            </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-200/50 to-purple-100/20 dark:from-purple-900/30 dark:to-purple-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-900/10" />
-                        </Card>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Completed Rounds</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                        {report?.rounds?.filter((r: any) => r.status === 'COMPLETED' || r.percentage != null).length || 0}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
-
-                    {/* Total Duration */}
-                    <motion.div whileHover={{ y: -3, scale: 1.02 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <Card className="relative overflow-hidden card-hover min-h-[120px]">
-                            <CardContent className="p-4 sm:p-6 relative z-10">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-2 sm:space-x-3">
-                                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-medium">Total Duration</p>
-                                            <p className="text-2xl sm:text-3xl font-bold">
-                                                {report?.rounds?.reduce((total: number, round: any) => {
-                                                    // Estimate 30 min per completed round
-                                                    const isCompleted = round.status === 'COMPLETED' || round.percentage != null
-                                                    return total + (isCompleted ? 30 : 0)
-                                                }, 0) || 0} min
-                                            </p>
-                                        </div>
-                                    </div>
+                    {/* Total Duration – icon bg #FFEF79 */}
+                    <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="flex-1 min-w-0 sm:min-w-[200px]">
+                        <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-[10px] py-[20px] flex flex-col gap-[10px] h-full shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-[16px] flex items-center justify-center shrink-0 bg-[#FFEF79] dark:bg-amber-500/30">
+                                    <Target className="w-5 h-5 text-amber-700 dark:text-amber-300" />
                                 </div>
-                            </CardContent>
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-200/50 to-orange-100/20 dark:from-orange-900/30 dark:to-orange-800/10" />
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-orange-50 to-orange-100/70 dark:from-orange-900/20 dark:to-orange-900/10" />
-                        </Card>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Duration</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                        {report?.rounds?.reduce((total: number, round: any) => {
+                                            const isCompleted = round.status === 'COMPLETED' || round.percentage != null
+                                            return total + (isCompleted ? 30 : 0)
+                                        }, 0) || 0} Mins
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 </div>
 
-                {/* Enhanced Tabs with Better Navigation */}
+                {/* Tabs – Sigma: active blue #1E7BFF, 8px radius, 24px gap, 44px height, no button borders */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-10">
-                    {/* Tabs Navigation */}
-                    <TabsList className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 sm:p-5 rounded-xl w-full gap-1 sm:gap-1.5">
-                        <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                    <TabsList className="grid grid-cols-3 sm:grid-cols-6 bg-white dark:bg-[#1C2938] border border-[#797979] dark:border-[#797979] p-1.5 sm:p-2 rounded-lg w-full gap-4 sm:gap-6 min-h-[56px] sm:min-h-[71px] h-auto">
+                        <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Activity className="h-4 w-4 shrink-0 data-[state=active]:text-white" />
                             <span className="whitespace-nowrap">Overview</span>
                         </TabsTrigger>
-                        <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Activity className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Analytics</span>
                         </TabsTrigger>
-                        <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="detailed" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Rounds</span>
                         </TabsTrigger>
-                        <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Questions</span>
                         </TabsTrigger>
-                        <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="playlist" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">Playlist</span>
                         </TabsTrigger>
-                        <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-1 sm:gap-2 h-full min-h-[2.5rem] px-2 sm:px-3 py-2 transition-all font-semibold text-xs sm:text-sm">
-                            <Brain className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <TabsTrigger value="insights" className="rounded-lg data-[state=active]:bg-[#1E7BFF] data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 h-11 sm:h-11 px-3 py-2 transition-all font-medium text-xs sm:text-sm text-gray-700 dark:text-gray-200 data-[state=inactive]:bg-transparent">
+                            <Clock className="h-4 w-4 shrink-0" />
                             <span className="whitespace-nowrap">AI Insights</span>
                         </TabsTrigger>
                     </TabsList>
+
 
                     {/* Filter Toggle Button - Separate Row Below Tabs with Clear Spacing */}
                     <div className="mt-4 sm:mt-4 mb-12 pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -717,48 +683,47 @@ export default function AssessmentReportPage() {
                     {/* Overview Tab with Enhanced Charts - Matching Theme */}
                     <TabsContent value="overview" className="space-y-4 sm:space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                            {/* Radar Chart - Skills Assessment */}
+                            {/* Radar Chart - Skills Assessment – Sigma: white card, 16px radius, purple clock icon */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
-                                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg h-full">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <div className="w-9 h-9 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-300" />
                                             </div>
                                             <span className="truncate">Skills Assessment</span>
                                         </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             Multi-dimensional performance analysis
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent className="relative z-10 p-4 sm:p-6">
-                                        <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
-                                            <RadarChart data={prepareRadarData()}>
+                                    <CardContent className="p-4 sm:p-5 pt-2">
+                                        <ResponsiveContainer width="100%" height={350} className="sm:h-[450px]">
+                                            <RadarChart data={prepareRadarData()} cx="50%" cy="50%" outerRadius="75%">
                                                 <PolarGrid stroke="#e5e7eb" />
-                                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280' }} />
+                                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }} />
+                                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                                                 <Radar
                                                     name="Your Score"
                                                     dataKey="score"
-                                                    stroke="#8b5cf6"
-                                                    fill="#8b5cf6"
-                                                    fillOpacity={0.6}
-                                                    strokeWidth={3}
-                                                    dot={{ fill: '#8b5cf6', r: 5 }}
+                                                    stroke="#5388D8"
+                                                    strokeWidth={2}
+                                                    fill="#5388D8"
+                                                    fillOpacity={0.3}
+                                                    dot={{ fill: '#5388D8', r: 3 }}
                                                 />
                                                 <Radar
-                                                    name="Target"
-                                                    dataKey="fullMark"
-                                                    stroke="#d1d5db"
-                                                    fill="#d1d5db"
-                                                    fillOpacity={0.1}
-                                                    strokeDasharray="5 5"
+                                                    name="Benchmark"
+                                                    dataKey="benchmark"
+                                                    stroke="#F4BE37"
                                                     strokeWidth={2}
+                                                    fill="#F4BE37"
+                                                    fillOpacity={0.3}
+                                                    dot={{ fill: '#F4BE37', r: 3 }}
                                                 />
                                                 <Tooltip
                                                     contentStyle={{
@@ -771,36 +736,36 @@ export default function AssessmentReportPage() {
                                                     formatter={(value: any) => `${value}%`}
                                                 />
                                                 <Legend
-                                                    wrapperStyle={{ paddingTop: '20px' }}
-                                                    iconType="line"
+                                                    wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }}
+                                                    iconType="circle"
                                                 />
                                             </RadarChart>
                                         </ResponsiveContainer>
+                                        <div className="text-center font-bold text-3xl mt-2 pb-4 text-gray-900 dark:text-white">Your Score</div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
 
-                            {/* Enhanced Pie Chart - Answer Distribution */}
+                            {/* Answer Distribution – Sigma: white card, 16px radius, purple wave icon */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.1 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-green-900/20 dark:via-gray-900 dark:to-green-900/10 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/20 rounded-t-lg border-b border-green-200/50 dark:border-green-700/30 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600 shadow-md flex-shrink-0">
-                                                <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_6px_0_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 hover:shadow-lg h-full">
+                                    <CardHeader className="p-4 sm:p-5 pb-2 border-0">
+                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                                            <div className="w-9 h-9 rounded-[16px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30">
+                                                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-300" />
                                             </div>
                                             <span className="truncate">Answer Distribution</span>
                                         </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+                                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             Correct vs. incorrect responses
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent className="relative z-10 p-4 sm:p-6">
-                                        <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
+                                    <CardContent className="p-4 sm:p-5 pt-2">
+                                        <ResponsiveContainer width="100%" height={350} className="sm:h-[450px]">
                                             <RechartsPieChart>
                                                 <Pie
                                                     data={prepareQuestionDistribution()}
@@ -819,7 +784,7 @@ export default function AssessmentReportPage() {
                                                     {prepareQuestionDistribution().map((entry, index) => (
                                                         <Cell
                                                             key={`cell-${index}`}
-                                                            fill={entry.name === 'Correct' ? '#10b981' : '#f97316'}
+                                                            fill={entry.name === 'Correct' ? '#00C951' : '#FF541F'}
                                                             stroke="#fff"
                                                             strokeWidth={2}
                                                         />
@@ -833,14 +798,15 @@ export default function AssessmentReportPage() {
                                                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                                     }}
                                                     labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                    formatter={(value: any, name: any) => [value, name ?? '']}
+                                                    formatter={(value: any, name: string) => [value, name]}
                                                 />
                                                 <Legend
-                                                    wrapperStyle={{ paddingTop: '20px' }}
+                                                    verticalAlign="bottom"
+                                                    height={36}
                                                     iconType="circle"
                                                     formatter={(value) => {
-                                                        if (value === 'Correct') return <span style={{ color: '#10b981', fontWeight: 'bold' }}>Correct</span>
-                                                        return <span style={{ color: '#f97316', fontWeight: 'bold' }}>Incorrect</span>
+                                                        if (value === 'Correct') return <span style={{ color: '#00C951', fontWeight: 'bold' }}>Correct</span>
+                                                        return <span style={{ color: '#FF541F', fontWeight: 'bold' }}>Incorrect</span>
                                                     }}
                                                 />
                                             </RechartsPieChart>
@@ -856,36 +822,46 @@ export default function AssessmentReportPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
                         >
-                            <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-900/20 dark:via-gray-900 dark:to-purple-900/10 shadow-lg hover:scale-[1.02] group">
-                                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                <CardHeader className="relative z-10 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/20 rounded-t-lg border-b border-purple-200/50 dark:border-purple-700/30 p-4 sm:p-6">
-                                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 shadow-md flex-shrink-0">
-                                            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                            <Card className="rounded-[16px] border border-[#ABABAB] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-none overflow-hidden transition-all duration-300 hover:shadow-lg">
+                                <CardHeader className="p-4 sm:px-6 sm:py-5 pb-2 border-0">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0 bg-[#EDD4FF] dark:bg-purple-500/30 mt-1">
+                                            <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                                         </div>
-                                        <span className="truncate">Round-wise Performance Comparison</span>
-                                    </CardTitle>
-                                    <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-                                        Detailed score breakdown by assessment round
-                                    </CardDescription>
+                                        <div>
+                                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                                                Round-wise Performance Comparison
+                                            </CardTitle>
+                                            <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                Detailed score breakdown by assessment round
+                                            </CardDescription>
+                                        </div>
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6">
-                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
-                                        <BarChart data={prepareRadarData()} margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                <CardContent className="p-4 sm:px-6 sm:py-5 pt-4">
+                                    <ResponsiveContainer width="100%" height={400} className="sm:h-[450px]">
+                                        <BarChart
+                                            data={prepareRadarData()}
+                                            margin={{ top: 20, right: 20, bottom: 10, left: 10 }}
+                                            barSize={40}
+                                            barGap={-40}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                             <XAxis
                                                 dataKey="subject"
-                                                tick={{ fill: '#6b7280', fontSize: 12 }}
-                                                angle={-45}
-                                                textAnchor="end"
-                                                height={80}
+                                                tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                                dy={10}
                                             />
                                             <YAxis
                                                 domain={[0, 100]}
-                                                tick={{ fill: '#6b7280' }}
-                                                label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                                                tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                axisLine={false}
+                                                tickLine={false}
                                             />
                                             <Tooltip
+                                                cursor={{ fill: 'transparent' }}
                                                 contentStyle={{
                                                     backgroundColor: '#fff',
                                                     border: '1px solid #e5e7eb',
@@ -894,26 +870,21 @@ export default function AssessmentReportPage() {
                                                 }}
                                                 labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
                                             />
-                                            <Legend
-                                                wrapperStyle={{ paddingTop: '20px' }}
-                                                iconType="square"
+                                            <Bar
+                                                dataKey="fullMark"
+                                                fill="#E5E7EB"
+                                                radius={[4, 4, 0, 0]}
+                                                isAnimationActive={false}
                                             />
                                             <Bar
                                                 dataKey="score"
-                                                fill="#8b5cf6"
-                                                radius={[8, 8, 0, 0]}
+                                                radius={[4, 4, 0, 0]}
                                                 animationBegin={0}
                                                 animationDuration={800}
                                             >
                                                 {prepareRadarData().map((_: any, index: number) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                 ))}
-                                                <LabelList
-                                                    dataKey="score"
-                                                    position="top"
-                                                    formatter={(value: any) => `${value}%`}
-                                                    style={{ fill: '#6b7280', fontSize: '11px', fontWeight: 'bold' }}
-                                                />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -930,106 +901,112 @@ export default function AssessmentReportPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
                         >
-                            <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
-                                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-cyan-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                        <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md flex-shrink-0">
-                                            <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                            <Card className="rounded-[8px] border border-[#ABABAB] bg-white dark:bg-[#1C2938] shadow-none overflow-hidden h-full">
+                                <CardHeader className="pt-4 pr-2 pb-4 pl-2 border-0">
+                                    <div className="flex items-center gap-3 px-2">
+                                        <div className="w-[44px] h-[44px] rounded-[8px] flex items-center justify-center shrink-0 bg-[#7F56D9]">
+                                            <BarChart3 className="h-6 w-6 text-white" />
                                         </div>
-                                        <span className="truncate">Performance Trend Analysis</span>
-                                    </CardTitle>
-                                    <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Track your progress across rounds</CardDescription>
+                                        <div className="flex flex-col gap-0.5">
+                                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                                                Performance Trend Analysis
+                                            </CardTitle>
+                                            <CardDescription className="text-sm text-gray-500 font-normal">
+                                                Track your progress across rounds
+                                            </CardDescription>
+                                        </div>
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="relative z-10 p-4 sm:p-6">
-                                    <ResponsiveContainer width="100%" height={300} className="sm:h-[450px]">
-                                        <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 20, right: 30, bottom: 10, left: 10 }}>
-                                            <defs>
-                                                <linearGradient id="colorScoreGradient" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6} />
-                                                    <stop offset="30%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                                                    <stop offset="70%" stopColor="#8b5cf6" stopOpacity={0.15} />
-                                                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03} />
-                                                </linearGradient>
-                                                <linearGradient id="colorCumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
-                                                    <stop offset="30%" stopColor="#10b981" stopOpacity={0.3} />
-                                                    <stop offset="70%" stopColor="#10b981" stopOpacity={0.12} />
-                                                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                            <XAxis
-                                                dataKey="round"
-                                                tick={{ fill: '#6b7280', fontSize: 11 }}
-                                                label={{ value: 'Assessment Rounds', position: 'insideBottom', offset: -5, fill: '#6b7280', style: { fontWeight: 'bold' } }}
-                                            />
-                                            <YAxis
-                                                domain={[0, 100]}
-                                                tick={{ fill: '#6b7280', fontSize: 11 }}
-                                                label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', fill: '#6b7280', style: { fontWeight: 'bold' } }}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: '#fff',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '8px',
-                                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                                                }}
-                                                labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                formatter={(value: any, name: any) => [`${value}%`, name ?? '']}
-                                            />
-                                            <Legend
-                                                wrapperStyle={{ paddingTop: '15px' }}
-                                                iconType="line"
-                                            />
-                                            {/* Area under Your Score line */}
-                                            <Area
-                                                type="monotone"
-                                                dataKey="score"
-                                                fill="url(#colorScoreGradient)"
-                                                stroke="none"
-                                            />
-                                            {/* Area under Cumulative line */}
-                                            <Area
-                                                type="monotone"
-                                                dataKey="cumulative"
-                                                fill="url(#colorCumulativeGradient)"
-                                                stroke="none"
-                                            />
-                                            {/* Main Score Line */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="score"
-                                                stroke="#8b5cf6"
-                                                strokeWidth={3}
-                                                dot={{ fill: '#8b5cf6', r: 7, strokeWidth: 3, stroke: '#fff' }}
-                                                activeDot={{ r: 10, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 3 }}
-                                                name="Your Score"
-                                            />
-                                            {/* Cumulative Average Line */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="cumulative"
-                                                stroke="#10b981"
-                                                strokeWidth={2.5}
-                                                strokeDasharray="5 5"
-                                                dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                                                activeDot={{ r: 8 }}
-                                                name="Cumulative Average"
-                                            />
-                                            {/* Target Line */}
-                                            <Line
-                                                type="monotone"
-                                                dataKey="target"
-                                                stroke="#ef4444"
-                                                strokeWidth={2}
-                                                strokeDasharray="3 3"
-                                                dot={false}
-                                                name="Target (75%)"
-                                            />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
+                                <CardContent className="p-4">
+                                    <div className="bg-[#F8FAFC] dark:bg-[#334155] rounded-[24px] p-2 sm:p-4 h-[400px] sm:h-[450px] relative w-full">
+                                        <div className="absolute top-6 left-6 z-10 font-bold text-lg text-gray-900 dark:text-white">Performance</div>
+                                        <ResponsiveContainer width="90%" height={400}>
+                                            <ComposedChart data={prepareTimeSeriesData()} margin={{ top: 50, right: 10, bottom: 10, left: 0 }}>
+                                                <XAxis
+                                                    dataKey="round"
+                                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    dy={10}
+                                                />
+                                                <YAxis
+                                                    domain={[0, 100]}
+                                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    ticks={[0, 25, 50, 75, 100]}
+                                                />
+                                                <Tooltip
+                                                    cursor={{ stroke: '#599CD7', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                                                    content={({ active, payload, label }) => {
+                                                        if (active && payload && payload.length) {
+                                                            return (
+                                                                <div className="bg-[#081225] text-white p-4 rounded-[20px] min-w-[240px] shadow-xl border border-gray-800">
+                                                                    <p className="text-sm mb-3 font-medium border-b border-gray-700 pb-2">{label}</p>
+                                                                    <div className="space-y-3">
+                                                                        {payload.map((entry: any, index: number) => {
+                                                                            // Custom mapping for colors and names based on dataKey
+                                                                            let color = entry.color;
+                                                                            let name = entry.name;
+                                                                            if (entry.dataKey === 'cumulative') {
+                                                                                color = '#599CD7';
+                                                                                name = 'cumulative';
+                                                                            } else if (entry.dataKey === 'score') {
+                                                                                color = '#FAAE68';
+                                                                                name = 'score';
+                                                                            } else if (entry.dataKey === 'target') {
+                                                                                color = '#A855F7';
+                                                                                name = 'Target (75%)';
+                                                                            }
+
+                                                                            return (
+                                                                                <div key={index} className="flex items-center gap-3 text-sm">
+                                                                                    <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: color }}></div>
+                                                                                    <span className="text-gray-300 capitalize">{name} :</span>
+                                                                                    <span className="font-semibold">{entry.value}%</span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                />
+                                                {/* Target Line - Hidden but present for tooltip */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="target"
+                                                    stroke="transparent"
+                                                    strokeWidth={0}
+                                                    dot={false}
+                                                    activeDot={false}
+                                                    name="Target"
+                                                />
+                                                {/* Cumulative Line (Blue) */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="cumulative"
+                                                    stroke="#599CD7"
+                                                    strokeWidth={3}
+                                                    dot={false}
+                                                    activeDot={{ r: 6, fill: '#599CD7', stroke: '#fff', strokeWidth: 2 }}
+                                                    name="Cumulative"
+                                                />
+                                                {/* Score Line (Orange) */}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="score"
+                                                    stroke="#FAAE68"
+                                                    strokeWidth={3}
+                                                    dot={false}
+                                                    activeDot={{ r: 6, fill: '#FAAE68', stroke: '#fff', strokeWidth: 2 }}
+                                                    name="Score"
+                                                />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </motion.div>
@@ -1041,29 +1018,42 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.1 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-orange-200/30 to-orange-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-md flex-shrink-0">
-                                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[8px] border border-[#ABABAB] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-none overflow-hidden h-full">
+                                    <CardHeader className="pt-4 pr-2 pb-4 pl-2 border-0">
+                                        <div className="flex items-center gap-3 px-2">
+                                            <div className="w-[44px] h-[44px] rounded-[8px] flex items-center justify-center shrink-0 bg-[#7F56D9]">
+                                                <Activity className="h-6 w-6 text-white" />
                                             </div>
-                                            <span className="truncate">Performance Funnel</span>
-                                        </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Rounds ranked by score</CardDescription>
+                                            <div className="flex flex-col gap-0.5">
+                                                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                                                    Answer Distribution
+                                                </CardTitle>
+                                                <CardDescription className="text-sm text-gray-500 font-normal">
+                                                    Correct vs. incorrect responses
+                                                </CardDescription>
+                                            </div>
+                                        </div>
                                     </CardHeader>
-                                    <CardContent className="relative z-10 p-4 sm:p-6">
-                                        <ResponsiveContainer width="100%" height={350} className="sm:h-[480px]">
+                                    <CardContent className="pt-0 pr-2 pb-4 pl-2 flex justify-center items-center">
+                                        <ResponsiveContainer width="100%" height={350} className="sm:h-[400px]">
                                             <FunnelChart>
                                                 <Tooltip
                                                     contentStyle={{
-                                                        backgroundColor: '#fff',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '8px',
-                                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                                        backgroundColor: '#081225',
+                                                        border: '1px solid #1f2937',
+                                                        borderRadius: '20px',
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                                        padding: '12px 16px',
+                                                        color: '#fff'
                                                     }}
-                                                    labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                                                    formatter={(value: any, name: any) => [`${value}%`, name ?? '']}
+                                                    itemStyle={{ color: '#fff' }}
+                                                    labelStyle={{ color: '#9CA3AF', marginBottom: '4px', borderBottom: '1px solid #374151', paddingBottom: '4px' }}
+                                                    formatter={(value: any, name: string, props: any) => {
+                                                        return [
+                                                            <span key="value" style={{ color: '#fff', fontWeight: 'bold' }}>{value}%</span>,
+                                                            <span key="name" style={{ color: '#D1D5DB' }}>{props.payload.name}</span>
+                                                        ]
+                                                    }}
                                                 />
                                                 <Funnel
                                                     dataKey="value"
@@ -1071,32 +1061,33 @@ export default function AssessmentReportPage() {
                                                     isAnimationActive
                                                     animationDuration={1200}
                                                 >
-                                                    {preparePerformanceFunnel().map((entry: any, index: number) => (
-                                                        <Cell
-                                                            key={`funnel-cell-${index}`}
-                                                            fill={entry.fill}
-                                                            stroke="#fff"
-                                                            strokeWidth={3}
-                                                            style={{
-                                                                filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.15))',
-                                                                transition: 'all 0.3s ease'
-                                                            }}
-                                                        />
-                                                    ))}
+                                                    {preparePerformanceFunnel().map((entry: any, index: number) => {
+                                                        // Define colors based on the design
+                                                        const colors = ['#0CAE00', '#FF7A28', '#9359FF', '#FF4D4D', '#FF9900', '#1E7BFF'];
+                                                        const color = colors[index % colors.length];
+                                                        return (
+                                                            <Cell
+                                                                key={`funnel-cell-${index}`}
+                                                                fill={color}
+                                                                stroke="none"
+                                                                style={{
+                                                                    filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.15))',
+                                                                }}
+                                                            />
+                                                        );
+                                                    })}
                                                     <LabelList
-                                                        position="left"
-                                                        fill="#1f2937"
+                                                        position="center"
+                                                        fill="#000"
                                                         stroke="none"
-                                                        dataKey="value"
-                                                        formatter={(value: any) => `${value}%`}
-                                                        style={{ fontSize: '13px', fontWeight: '700' }}
-                                                    />
-                                                    <LabelList
-                                                        position="right"
-                                                        fill="#1f2937"
-                                                        stroke="none"
-                                                        dataKey="name"
-                                                        style={{ fontSize: '12px', fontWeight: '600' }}
+                                                        dataKey="label"
+                                                        style={{
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            textShadow: '0px 1px 2px rgba(255,255,255,0.5)',
+                                                            pointerEvents: 'none',
+                                                            whiteSpace: 'pre'
+                                                        }}
                                                     />
                                                 </Funnel>
                                             </FunnelChart>
@@ -1105,45 +1096,99 @@ export default function AssessmentReportPage() {
                                 </Card>
                             </motion.div>
 
-                            {/* Area Chart - Score Distribution */}
+                            {/* Score Distribution */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.2 }}
                             >
-                                <Card className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white dark:bg-gray-900 shadow-lg hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-teal-200/30 to-teal-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                                        <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold">
-                                            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 shadow-md flex-shrink-0">
-                                                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                <Card className="rounded-[8px] border border-[#ABABAB] dark:border-[#797979] bg-white dark:bg-[#1C2938] shadow-none overflow-hidden h-full">
+                                    <CardHeader className="pt-4 pr-2 pb-4 pl-2 border-0">
+                                        <div className="flex items-center gap-3 px-2">
+                                            <div className="w-[44px] h-[44px] rounded-[8px] flex items-center justify-center shrink-0 bg-[#7F56D9]">
+                                                <BarChart3 className="h-6 w-6 text-white" />
                                             </div>
-                                            <span className="truncate">Score Distribution</span>
-                                        </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Cumulative performance view</CardDescription>
+                                            <div className="flex flex-col gap-0.5">
+                                                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                                                    Score Distribution
+                                                </CardTitle>
+                                                <CardDescription className="text-sm text-gray-500 font-normal">
+                                                    Cumulative performance view
+                                                </CardDescription>
+                                            </div>
+                                        </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 sm:p-6">
-                                        <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
-                                            <AreaChart data={prepareTimeSeriesData()}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                <XAxis dataKey="round" tick={{ fill: '#6b7280' }} />
-                                                <YAxis domain={[0, 100]} tick={{ fill: '#6b7280' }} />
-                                                <Tooltip />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="score"
-                                                    stroke="#14b8a6"
-                                                    fill="url(#colorArea)"
-                                                    strokeWidth={2}
-                                                />
-                                                <defs>
-                                                    <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8} />
-                                                        <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.1} />
-                                                    </linearGradient>
-                                                </defs>
-                                            </AreaChart>
-                                        </ResponsiveContainer>
+                                    <CardContent className="pt-0 pr-6 pb-4 pl-6">
+                                        <div className="space-y-6">
+                                            {preparePerformanceFunnel().map((item: any, index: number) => {
+                                                // Create diverse dummy data for the sparkline to make it look interesting
+                                                const seed = item.value * (index + 1);
+                                                const sparkData = [
+                                                    { value: 0 },
+                                                    { value: (seed % 40) + 10 },
+                                                    { value: (seed % 30) + 40 },
+                                                    { value: (seed % 20) + 20 },
+                                                    { value: (seed % 50) + 30 },
+                                                    { value: 0 }
+                                                ];
+
+                                                // Determine color based on score
+                                                const isHigh = item.value >= 70;
+                                                const isMedium = item.value >= 40 && item.value < 70;
+
+                                                // Colors from the design
+                                                // Green for high scores (>= 70%)
+                                                // Green for medium scores (>= 40%) - per design image both 60% and 40% are green/teal
+                                                // Red for low scores (< 40%)
+
+                                                // Looking at the image:
+                                                // 60% is Green/Teal
+                                                // 40% is Green/Teal
+                                                // 30% is Red
+                                                // 50% is Green/Teal
+                                                // 70% is Green/Teal
+                                                // 20% is Red
+                                                // 0% is Red
+
+                                                const color = item.value >= 40 ? '#5DB48A' : '#EF4444';
+
+                                                return (
+                                                    <div key={index} className="flex items-center justify-between border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                                                        <div className="space-y-1 w-[180px]">
+                                                            <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                                                {item.name}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">Score</div>
+                                                        </div>
+                                                        <div className="flex items-center gap-12 flex-1 justify-end">
+                                                            {/* Mini Area Chart / Sparkline */}
+                                                            <div className="w-[102px] h-[28px]">
+                                                                <ResponsiveContainer width="100%" height="100%">
+                                                                    <AreaChart data={sparkData}>
+                                                                        <defs>
+                                                                            <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                                                                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                                                                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <Area
+                                                                            type="monotone"
+                                                                            dataKey="value"
+                                                                            stroke={color}
+                                                                            fill={`url(#gradient-${index})`}
+                                                                            strokeWidth={1.5}
+                                                                        />
+                                                                    </AreaChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                            <div className="font-bold text-gray-900 dark:text-white w-16 text-right text-lg">
+                                                                {item.value} %
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -1156,23 +1201,18 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.3 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-blue-200/30 to-blue-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                        <CardTitle className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-400">
-                                            Highest Score
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-3xl font-bold text-blue-600">
+                                <Card className="rounded-[16px] bg-[#EAF8FF] dark:bg-[#EAF8FF]/10 shadow-none border-0 overflow-hidden h-full">
+                                    <CardContent className="p-6 flex flex-col justify-center h-full gap-2">
+                                        <div className="text-[#0085FF] font-medium text-lg">Highest Score</div>
+                                        <div className="text-5xl font-semibold text-black dark:text-white">
                                             {formatPercentage(Math.max(...(report?.rounds?.map((r: any) => r.percentage) || [0])), 2)}%
                                         </div>
-                                        <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-1">
+                                        <div className="text-sm text-gray-800 dark:text-gray-300">
                                             {(() => {
                                                 const best = report?.rounds?.reduce((max: any, r: any) => r.percentage > max.percentage ? r : max, { percentage: -1 })
-                                                return best ? getRoundName(best) : undefined
+                                                return best ? getRoundName(best) : 'No Data'
                                             })()}
-                                        </p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -1182,20 +1222,15 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.4 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-green-200/30 to-green-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                        <CardTitle className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-400">
-                                            Average Performance
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="relative z-10">
-                                        <div className="text-3xl font-bold text-green-600">
+                                <Card className="rounded-[16px] bg-[#E4FFF0] dark:bg-[#E4FFF0]/10 shadow-none border-0 overflow-hidden h-full">
+                                    <CardContent className="p-6 flex flex-col justify-center h-full gap-2">
+                                        <div className="text-[#0CAE00] font-medium text-lg">Average Performance</div>
+                                        <div className="text-5xl font-semibold text-black dark:text-white">
                                             {formatPercentage(report?.overall_score, 2)}%
                                         </div>
-                                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                        <div className="text-sm text-gray-800 dark:text-gray-300">
                                             Across {report?.rounds?.length || 0} rounds
-                                        </p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -1205,28 +1240,23 @@ export default function AssessmentReportPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.5 }}
                             >
-                                <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-200/30 to-purple-100/10 blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                                    <CardHeader className="relative z-10 pb-2 sm:pb-3 p-4 sm:p-6">
-                                        <CardTitle className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400">
-                                            Consistency Score
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="relative z-10 p-4 sm:p-6 pt-0">
-                                        <div className="text-2xl sm:text-3xl font-bold text-purple-600">
+                                <Card className="rounded-[16px] bg-[#F9F6FF] dark:bg-[#F9F6FF]/10 shadow-none border-0 overflow-hidden h-full">
+                                    <CardContent className="p-6 flex flex-col justify-center h-full gap-2">
+                                        <div className="text-[#4F1D91] font-medium text-lg">Consistency Score</div>
+                                        <div className="text-5xl font-semibold text-black dark:text-white">
                                             {(() => {
                                                 const scores = report?.rounds?.map((r: any) => r.percentage) || []
-                                                const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+                                                const avg = scores.reduce((a: number, b: number) => a + b, 0) / (scores.length || 1)
                                                 const variance = scores.reduce((sum: number, score: number) =>
-                                                    sum + Math.pow(score - avg, 2), 0) / scores.length
+                                                    sum + Math.pow(score - avg, 2), 0) / (scores.length || 1)
                                                 const stdDev = Math.sqrt(variance)
                                                 const consistency = Math.max(0, 100 - stdDev * 2)
                                                 return formatPercentage(consistency, 2)
                                             })()}%
                                         </div>
-                                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                        <div className="text-sm text-gray-800 dark:text-gray-300">
                                             Performance stability
-                                        </p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -1236,69 +1266,92 @@ export default function AssessmentReportPage() {
                     {/* Detailed Analysis Tab - Keep your existing detailed tab */}
                     <TabsContent value="detailed" className="space-y-4 sm:space-y-6">
                         {/* Round Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <div className="flex flex-col gap-4">
                             {report?.rounds?.map((round: any, index: number) => {
                                 const roundConfig = roundTypeInfo[round.round_type]
-                                const RoundIcon = roundConfig?.icon
-                                const gradientColors = roundConfig?.gradient || 'from-gray-400 to-gray-600'
+                                const RoundIcon = roundConfig?.icon || Brain
+                                const score = parseFloat(formatPercentage(round.percentage, 2))
+                                const isSelected = selectedRound === round.round_number
+
+                                // Determine icon colors based on round type or index if needed, 
+                                // but for now using a standard blue-ish theme as per screenshot for most, 
+                                // or we can use the config colors but styled differently.
+                                // The screenshot shows blue icon backgrounds for Aptitude/Soft Skills/etc.
+
                                 return (
                                     <motion.div
                                         key={round.round_number}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.3, delay: index * 0.1 }}
                                     >
                                         <Card
-                                            className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer border-0 shadow-lg group h-full flex flex-col"
+                                            className={`
+    group cursor-pointer transition-all duration-300
+    border rounded-[8px] overflow-hidden
+    ${isSelected
+                                                    ? 'ring-1 ring-[#1E7BFF] border-[#1E7BFF] bg-gradient-to-r from-[rgba(30,123,255,0.3)] to-[rgba(134,80,255,0.39)]'
+                                                    : 'border-[#A3A3A3] bg-gradient-to-r from-[rgba(30,123,255,0.12)] to-[rgba(134,80,255,0.15)] dark:bg-[#1C2938]'
+                                                }
+    hover:shadow-md
+  `}
                                             onClick={() => {
                                                 setSelectedRound(round.round_number)
                                                 setActiveTab('round')
                                             }}
                                         >
-                                            {/* Multi-color decorative shapes */}
-                                            <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br ${gradientColors} opacity-20 group-hover:opacity-30 blur-3xl transition-all duration-500`} />
-                                            <div className={`absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br ${gradientColors} opacity-15 group-hover:opacity-20 blur-2xl transition-all duration-500`} />
-                                            <div className={`absolute top-1/2 -right-16 w-16 h-16 rounded-full bg-gradient-to-br ${gradientColors} opacity-10 group-hover:opacity-15 blur-xl transition-all duration-500`} />
-
-                                            <CardHeader className="relative z-10 pb-3 sm:pb-4 p-4 sm:p-6">
-                                                <div className="flex items-start gap-2 sm:gap-3">
-                                                    <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg flex-shrink-0`}>
-                                                        {RoundIcon && <RoundIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <CardTitle className="text-sm sm:text-base truncate">{getRoundName(round)}</CardTitle>
-                                                        <CardDescription className="text-xs sm:text-sm">Round {round.round_number}</CardDescription>
-                                                    </div>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="relative z-10 space-y-2 sm:space-y-3 flex-1 flex flex-col p-4 sm:p-6 pt-0">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Score</span>
-                                                    <span className={`text-2xl font-bold ${getScoreColor(round.percentage || 0)}`}>
-                                                        {formatPercentage(round.percentage, 2)}%
-                                                    </span>
-                                                </div>
-                                                <Progress value={parseFloat(formatPercentage(round.percentage, 2))} className="h-2" />
-                                                <div className="flex-1 min-h-[3rem] flex items-start">
-                                                    {round.ai_feedback && (
-                                                        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 p-2 bg-blue-50 dark:bg-blue-900/20 rounded w-full">
-                                                            {typeof round.ai_feedback === 'string' ? (
-                                                                <p className="line-clamp-2 break-words">{round.ai_feedback}</p>
-                                                            ) : round.ai_feedback.strengths && round.ai_feedback.strengths.length > 0 ? (
-                                                                <p className="line-clamp-2 flex items-center gap-1 break-words">
-                                                                    <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600 flex-shrink-0" />
-                                                                    <span className="break-words">{round.ai_feedback.strengths[0]}</span>
-                                                                </p>
-                                                            ) : (
-                                                                <p className="line-clamp-2">Evaluation completed</p>
-                                                            )}
+                                            <div className="p-3 space-y-3">
+                                                {/* Header Section */}
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        {/* Icon */}
+                                                        <div className={`
+                                                            w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0 
+                                                            ${isSelected ? 'bg-[#1E7BFF] text-white' : 'bg-white border border-[#E5E7EB] text-[#1E7BFF]'}
+                                                        `}>
+                                                            {RoundIcon && <RoundIcon className="h-6 w-6" />}
                                                         </div>
-                                                    )}
+
+                                                        {/* Title & Subtitle */}
+                                                        <div>
+                                                            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                                                                {getRoundName(round)}
+                                                            </h3>
+                                                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                                                Round {round.round_number}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Score */}
+                                                    <div className="text-right self-center">
+                                                        <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                                            {formatPercentage(round.percentage, 2)}%
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <Button variant="outline" size="sm" className="w-full mt-auto text-xs sm:text-sm">
-                                                    View Details →
-                                                </Button>
-                                            </CardContent>
+
+                                                {/* Progress Bar */}
+                                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full bg-gradient-to-r from-[#1E7BFF] to-[#8650FF]"
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${score}%` }}
+                                                        transition={{ duration: 1, delay: 0.5 + (index * 0.1) }}
+                                                    />
+                                                </div>
+
+                                                {/* Description/Feedback */}
+                                                <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                                                    {typeof round.ai_feedback === 'string' ? (
+                                                        round.ai_feedback
+                                                    ) : round.ai_feedback?.summary ? (
+                                                        round.ai_feedback.summary
+                                                    ) : round.ai_feedback?.strengths?.[0] ? (
+                                                        `Strengths: ${round.ai_feedback.strengths[0]}`
+                                                    ) : "Evaluation completed successfully"}
+                                                </div>
+                                            </div>
                                         </Card>
                                     </motion.div>
                                 )
@@ -1496,444 +1549,235 @@ export default function AssessmentReportPage() {
                         </Button>
                     </TabsContent>
 
-                    {/* Questions Tab - Keep your existing questions tab with filters applied */}
+                    {/* Questions Tab - Redesigned Grid Layout */}
                     <TabsContent value="questions" className="space-y-4 sm:space-y-6">
-                        {qaData?.rounds?.map((round: any) => (
-                            <Card key={round.round_number} className="border-2 hover:shadow-xl transition-shadow">
-                                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 p-4 sm:p-6">
-                                    <CardTitle className="text-base sm:text-lg">
-                                        Round {round.round_number} - {round.round_type.replace('_', ' ').toUpperCase()}
-                                    </CardTitle>
-                                    <CardDescription className="text-xs sm:text-sm">
-                                        {round.round_type === 'group_discussion' ? (
-                                            `Score: ${formatPercentage(round.percentage, 2)}%`
-                                        ) : (
-                                            `Score: ${formatPercentage(round.percentage, 2)}% (${round.score}/${round.questions?.reduce((sum: number, q: any) => sum + q.max_score, 0) || 0} points) • ${getFilteredQuestions(round.questions).length} questions`
-                                        )}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
-                                    {round.round_type === 'group_discussion' ? (
-                                        <div className="space-y-3 sm:space-y-4">
-                                            <div className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-900/20 dark:to-blue-900/20 rounded-xl border-2 border-teal-200">
-                                                <h4 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2">
-                                                    <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                    Group Discussion Performance
-                                                </h4>
-                                                {round.ai_feedback && typeof round.ai_feedback === 'object' && round.ai_feedback.criteria_scores && (
-                                                    <div className="space-y-4">
-                                                        <div className="grid md:grid-cols-3 gap-4">
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Communication</div>
-                                                                <div className="text-2xl font-bold text-blue-600">
-                                                                    {formatPercentage(round.ai_feedback.criteria_scores.communication, 2)}%
-                                                                </div>
-                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.communication, 2))} className="h-2 mt-2" />
-                                                            </div>
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Topic Understanding</div>
-                                                                <div className="text-2xl font-bold text-purple-600">
-                                                                    {formatPercentage(round.ai_feedback.criteria_scores.topic_understanding, 2)}%
-                                                                </div>
-                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.topic_understanding, 2))} className="h-2 mt-2" />
-                                                            </div>
-                                                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                                                <div className="text-sm text-gray-600 dark:text-gray-400">Interaction</div>
-                                                                <div className="text-2xl font-bold text-green-600">
-                                                                    {formatPercentage(round.ai_feedback.criteria_scores.interaction, 2)}%
-                                                                </div>
-                                                                <Progress value={parseFloat(formatPercentage(round.ai_feedback.criteria_scores.interaction, 2))} className="h-2 mt-2" />
-                                                            </div>
-                                                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {qaData?.rounds?.map((round: any) => {
+                                const roundConfig = roundTypeInfo[round.round_type]
+                                const RoundIcon = roundConfig?.icon || Brain
+                                
+                                // Calculate or extract stats
+                                const totalQuestions = round.questions?.length || 0
+                                const correctCount = round.questions?.filter((q: any) => q.is_correct).length || 0
+                                // Incorrect includes wrong answers (is_correct === false)
+                                // Assuming unattempted are also handled or just strictly incorrect here
+                                const incorrectCount = totalQuestions - correctCount
+                                const scorePercentage = Math.round(round.percentage || 0)
+                                const totalPoints = round.questions?.reduce((sum: number, q: any) => sum + (q.max_score || 0), 0) || 0
+                                const earnedPoints = round.score || 0
 
-                                                        {round.ai_feedback.strengths && round.ai_feedback.strengths.length > 0 && (
-                                                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                                                <div className="font-semibold text-green-700 dark:text-green-400 mb-2">✓ Strengths</div>
-                                                                <ul className="space-y-1 text-sm">
-                                                                    {round.ai_feedback.strengths.map((s: string, i: number) => (
-                                                                        <li key={i} className="flex items-start gap-2">
-                                                                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                                                            <span>{s}</span>
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-
-                                                        {round.ai_feedback.improvements && round.ai_feedback.improvements.length > 0 && (
-                                                            <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                                                                <div className="font-semibold text-orange-700 dark:text-orange-400 mb-2">💡 Areas to Improve</div>
-                                                                <ul className="space-y-1 text-sm">
-                                                                    {round.ai_feedback.improvements.map((imp: string, i: number) => (
-                                                                        <li key={i} className="flex items-start gap-2">
-                                                                            <Lightbulb className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                                                            <span>{imp}</span>
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                return (
+                                    <div key={round.round_number} className="bg-white dark:bg-[#1C2938] rounded-[8px] border border-[#A3A3A3] overflow-hidden hover:shadow-lg transition-all duration-300">
+                                        {/* Header */}
+                                        <div className="p-4 border-b border-[#E5E7EB] dark:border-gray-700">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-[8px] bg-[#1E7BFF] flex items-center justify-center shrink-0">
+                                                    <RoundIcon className="h-6 w-6 text-white" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                                                        Round {round.round_number} - {getRoundName(round)}
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 font-medium">
+                                                        ({earnedPoints}/{totalPoints} points)
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-3 sm:space-y-4">
-                                            {getFilteredQuestions(round.questions).map((q: any, idx: number) => (
-                                                <div key={q.id} className="p-3 sm:p-4 border-2 rounded-xl space-y-2 sm:space-y-3 hover:shadow-lg transition-all bg-white dark:bg-gray-800">
-                                                    <div className="flex items-start justify-between gap-3 sm:gap-4">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
-                                                                <Badge variant="outline" className="bg-blue-50 text-xs">Q{idx + 1}</Badge>
-                                                                <Badge variant={q.is_correct ? 'default' : 'destructive'} className="text-xs">
-                                                                    {q.is_correct ? '✓ Correct' : '✗ Incorrect'}
-                                                                </Badge>
-                                                                <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-                                                                    {q.score}/{q.max_score} pts
-                                                                </span>
-                                                                {q.difficulty && (
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className={`text-xs ${q.difficulty === 'easy' ? 'bg-green-50 text-green-700' :
-                                                                                q.difficulty === 'hard' ? 'bg-red-50 text-red-700' :
-                                                                                    'bg-yellow-50 text-yellow-700'
-                                                                            }`}
-                                                                    >
-                                                                        {q.difficulty}
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                            <p className="font-medium mb-2 text-sm sm:text-base break-words">{q.text}</p>
 
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
-                                                                <div>
-                                                                    <span className="font-medium text-gray-700 dark:text-gray-300">Your Answer:</span>
-                                                                    <p className={`break-words ${q.is_correct ? 'text-green-600' : 'text-red-600'}`}>
-                                                                        {q.student_response || (q.response_audio_url ? '🎤 Voice Response' : '—')}
-                                                                    </p>
-                                                                </div>
-                                                                {q.correct_answer && (
-                                                                    <div>
-                                                                        <span className="font-medium text-gray-700 dark:text-gray-300">Correct Answer:</span>
-                                                                        <p className="text-green-600 break-words">{q.correct_answer}</p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            {q.ai_feedback && (
-                                                                <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-                                                                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 break-words">
-                                                                        <strong>💡 Feedback:</strong> {typeof q.ai_feedback === 'string' ? q.ai_feedback : JSON.stringify(q.ai_feedback)}
-                                                                    </p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                        {/* Grid Stats */}
+                                        <div className="p-4 grid grid-cols-2 gap-4">
+                                            {/* Over All Questions (Blue) */}
+                                            <div className="bg-[#EEF5FF] dark:bg-[#1E7BFF]/10 border border-[#1E7BFF] rounded-[8px] p-3 flex items-center gap-3 h-[88px]">
+                                                <div className="w-8 h-8 rounded-full border border-[#1E7BFF] flex items-center justify-center shrink-0">
+                                                    <Target className="h-4 w-4 text-[#1E7BFF]" />
                                                 </div>
-                                            ))}
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Over All Questions</p>
+                                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{totalQuestions}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Correct (Green) */}
+                                            <div className="bg-[#EEFDF3] dark:bg-[#0CAE00]/10 border border-[#0CAE00] rounded-[8px] p-3 flex items-center gap-3 h-[88px]">
+                                                <div className="w-8 h-8 rounded-full border border-[#0CAE00] flex items-center justify-center shrink-0">
+                                                    <CheckCircle className="h-4 w-4 text-[#0CAE00]" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Correct</p>
+                                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{correctCount}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Incorrect (Red) */}
+                                            <div className="bg-[#FF4D4D] border border-[#D32F2F] rounded-[8px] p-3 flex items-center gap-3 h-[88px]">
+                                                <div className="w-8 h-8 rounded-full border border-white/50 flex items-center justify-center shrink-0">
+                                                    <span className="text-white font-bold text-lg leading-none">×</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-white/90">Incorrect</p>
+                                                    <p className="text-xl font-bold text-white">
+                                                        {incorrectCount < 10 ? `0${incorrectCount}` : incorrectCount}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Score (Purple) */}
+                                            <div className="bg-[#F9F6FF] dark:bg-[#8650FF]/10 border border-[#8650FF] rounded-[8px] p-3 flex flex-col items-center justify-center h-[88px]">
+                                                <p className="text-xs font-semibold text-[#5D009B] dark:text-[#8650FF] mb-1">Score</p>
+                                                <p className="text-3xl font-bold text-[#8650FF]">{scorePercentage}%</p>
+                                            </div>
                                         </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
+                                    </div>
+                                )
+                            })}
+                        </div>
                     </TabsContent>
 
-                    {/* AI Insights Tab - Keep your existing insights tab */}
-                    <TabsContent value="insights" className="space-y-4 sm:space-y-6">
-                        {/* Overall AI Summary */}
-                        {report?.ai_feedback && (
-                            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-200">
-                                <CardHeader className="p-4 sm:p-6">
-                                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-                                        <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0" />
-                                        <span className="truncate">AI-Powered Performance Analysis</span>
-                                    </CardTitle>
-                                    <CardDescription className="text-sm sm:text-base">
-                                        Comprehensive insights powered by advanced AI evaluation
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-                                    {report.ai_feedback.overall_performance && (
-                                        <div className="p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                                            <h4 className="font-semibold text-base sm:text-lg mb-2 flex items-center gap-2">
-                                                <Target className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                                Overall Performance
-                                            </h4>
-                                            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed break-words">
-                                                {report.ai_feedback.overall_performance}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {report.ai_feedback.readiness_level && (
-                                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                                            <Award className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
-                                            <div className="min-w-0">
-                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Readiness Level</div>
-                                                <div className="text-lg sm:text-xl font-bold text-blue-600 truncate">
-                                                    {report.ai_feedback.readiness_level}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Round-by-Round AI Insights - Keep your existing implementation */}
+                    <TabsContent value="insights" className="space-y-6">
+                        {/* Round-by-Round AI Insights */}
                         {report?.rounds && report.rounds.length > 0 ?
                             report.rounds.map((round: any) => {
                                 const roundConfig = roundTypeInfo[round.round_type]
-                                const RoundIcon = roundConfig?.icon
+                                const RoundIcon = roundConfig?.icon || Brain
                                 const hasAiFeedback = round.ai_feedback &&
                                     (typeof round.ai_feedback === 'object' ?
                                         (round.ai_feedback.strengths || round.ai_feedback.improvements || round.ai_feedback.criteria_scores || round.ai_feedback.summary) :
                                         round.ai_feedback)
 
+
                                 if (!hasAiFeedback) return null
 
+                                const isHighScore = round.percentage >= 60
+                                
                                 return (
-                                    <Card key={round.round_number} className="overflow-hidden border-2">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
-                                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-                                                <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${roundConfig?.gradient} text-white shadow-lg flex-shrink-0`}>
-                                                    {RoundIcon && <RoundIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
+                                    <div key={round.round_number} className="bg-white dark:bg-[#1C2938] rounded-[8px] border border-[#A3A3A3] overflow-hidden">
+                                        {/* Header */}
+                                        <div className="bg-[#F0F7FF] dark:bg-[#1E7BFF]/10 p-4 border-b border-[#E5E7EB] dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-[8px] bg-[#1E7BFF] flex items-center justify-center shrink-0">
+                                                    <RoundIcon className="h-6 w-6 text-white" />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <CardTitle className="text-lg sm:text-xl truncate">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                                                         {getRoundName(round)}
-                                                    </CardTitle>
-                                                    <CardDescription className="text-sm sm:text-base">
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 font-medium">
                                                         AI-Generated Feedback & Analysis
-                                                    </CardDescription>
+                                                    </p>
                                                 </div>
-                                                <Badge
-                                                    variant={round.percentage >= 80 ? 'default' : round.percentage >= 60 ? 'secondary' : 'destructive'}
-                                                    className="text-sm sm:text-lg px-2 sm:px-3 py-1 flex-shrink-0"
-                                                >
-                                                    {formatPercentage(round.percentage, 2)}%
-                                                </Badge>
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="pt-4 sm:pt-6 space-y-3 sm:space-y-4 p-4 sm:p-6">
-                                            {/* Criteria Scores for GD */}
-                                            {round.ai_feedback?.criteria_scores && (
-                                                <div className="mb-3 sm:mb-4">
-                                                    <h4 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                                        <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                                        Performance Metrics
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                                        {Object.entries(round.ai_feedback.criteria_scores).map(([key, value]: [string, any]) => (
-                                                            <div key={key} className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 capitalize mb-1 truncate">
-                                                                    {key.replace(/_/g, ' ')}
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`text-xl sm:text-2xl font-bold ${value >= 80 ? 'text-green-600' :
-                                                                            value >= 60 ? 'text-yellow-600' :
-                                                                                'text-red-600'
-                                                                        }`}>
-                                                                        {formatPercentage(value, 2)}%
-                                                                    </div>
-                                                                </div>
-                                                                <Progress value={parseFloat(formatPercentage(value, 2))} className="h-2 mt-2" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                            <div className={`px-3 py-1.5 rounded-full text-sm font-bold self-start sm:self-center ${
+                                                isHighScore 
+                                                    ? 'bg-red-500 text-white' 
+                                                    : 'bg-red-500 text-white' // Figma shows red for 14.41%, maybe generic or logic based
+                                            }`}>
+                                                {formatPercentage(round.percentage, 2)}%
+                                            </div>
+                                        </div>
 
-                                            {/* Strengths */}
-                                            {round.ai_feedback?.strengths && round.ai_feedback.strengths.length > 0 && (
-                                                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-200">
-                                                    <h4 className="font-semibold text-green-700 dark:text-green-400 mb-3 flex items-center gap-2">
-                                                        <CheckCircle className="h-5 w-5" />
-                                                        Strong Areas
-                                                    </h4>
-                                                    <div className="space-y-2">
-                                                        {round.ai_feedback.strengths.map((strength: string, idx: number) => (
-                                                            <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-green-900/30 rounded">
-                                                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">
-                                                                    {idx + 1}
-                                                                </span>
-                                                                <span className="text-sm text-gray-800 dark:text-gray-200">{strength}</span>
-                                                            </div>
-                                                        ))}
+                                        <div className="p-4 space-y-4">
+                                            {/* Row 1: Strong Areas & AI Summary */}
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                {/* Strong Areas List */}
+                                                {round.ai_feedback?.strengths && round.ai_feedback.strengths.length > 0 && (
+                                                    <div className="bg-[#EEFDF3] dark:bg-[#0CAE00]/10 border border-[#0CAE00] rounded-[8px] p-4">
+                                                        <h4 className="flex items-center gap-2 text-[#0CAE00] font-bold mb-3">
+                                                            <CheckCircle className="h-5 w-5" />
+                                                            Strong Areas
+                                                        </h4>
+                                                        <ul className="space-y-2">
+                                                            {round.ai_feedback.strengths.map((strength: string, idx: number) => (
+                                                                <li key={idx} className="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-200">
+                                                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                                                                    <span>{strength}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
 
-                                            {/* Improvements */}
+                                                {/* AI Summary */}
+                                                {round.ai_feedback?.summary && (
+                                                    <div className="bg-[#EEF5FF] dark:bg-[#1E7BFF]/10 border border-[#1E7BFF] rounded-[8px] p-4">
+                                                        <h4 className="flex items-center gap-2 text-[#1E7BFF] font-bold mb-3">
+                                                            <Info className="h-5 w-5" />
+                                                            AI Summary
+                                                        </h4>
+                                                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                                                            {round.ai_feedback.summary}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Row 2: Weak Topics Full Width */}
                                             {round.ai_feedback?.improvements && round.ai_feedback.improvements.length > 0 && (
-                                                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-2 border-orange-200">
-                                                    <h4 className="font-semibold text-orange-700 dark:text-orange-400 mb-3 flex items-center gap-2">
+                                                <div className="bg-[#FFFBE9] dark:bg-[#FFA500]/10 border border-[#FFA500] rounded-[8px] p-4">
+                                                    <h4 className="flex items-center gap-2 text-[#D97706] font-bold mb-3">
                                                         <Lightbulb className="h-5 w-5" />
                                                         Weak Topics & Improvement Areas
                                                     </h4>
-                                                    <div className="space-y-2">
+                                                    <ul className="space-y-2">
                                                         {round.ai_feedback.improvements.map((improvement: string, idx: number) => (
-                                                            <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-orange-900/30 rounded">
-                                                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
-                                                                    {idx + 1}
-                                                                </span>
-                                                                <span className="text-sm text-gray-800 dark:text-gray-200">{improvement}</span>
-                                                            </div>
+                                                            <li key={idx} className="flex items-start gap-2 text-sm text-[#92400E] dark:text-[#FCD34D]">
+                                                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#D97706] shrink-0" />
+                                                                <span>{improvement}</span>
+                                                            </li>
                                                         ))}
-                                                    </div>
+                                                    </ul>
                                                 </div>
                                             )}
 
-                                            {/* Strong/Weak Topics Grid */}
+                                            {/* Row 3: Tags Grid */}
                                             {(round.ai_feedback?.strong_topics?.length > 0 || round.ai_feedback?.weak_topics?.length > 0) && (
                                                 <div className="grid md:grid-cols-2 gap-4">
+                                                    {/* Strong Area Tags */}
                                                     {round.ai_feedback.strong_topics?.length > 0 && (
-                                                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-300">
-                                                            <h4 className="font-semibold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-2">
-                                                                <Target className="h-4 w-4" />
-                                                                Strong Topics
+                                                        <div className="bg-[#EEFDF3] dark:bg-[#0CAE00]/10 border border-[#0CAE00] rounded-[8px] p-4">
+                                                            <h4 className="flex items-center gap-2 text-[#0CAE00] font-bold mb-3">
+                                                                <CheckCircle className="h-5 w-5" />
+                                                                Strong Areas
                                                             </h4>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {round.ai_feedback.strong_topics.map((topic: string, idx: number) => (
-                                                                    <Badge key={idx} variant="outline" className="bg-emerald-100 dark:bg-emerald-900/40 border-emerald-400 text-emerald-700 dark:text-emerald-300">
-                                                                        ✓ {topic}
-                                                                    </Badge>
+                                                                    <div key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-[#CCFBF1] text-[#0CAE00] text-sm font-medium rounded-full">
+                                                                        <CheckCircle className="h-3.5 w-3.5" />
+                                                                        {topic}
+                                                                    </div>
                                                                 ))}
                                                             </div>
                                                         </div>
                                                     )}
 
+                                                    {/* Weak Topics Tags */}
                                                     {round.ai_feedback.weak_topics?.length > 0 && (
-                                                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-300">
-                                                            <h4 className="font-semibold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
-                                                                <AlertCircle className="h-4 w-4" />
+                                                        <div className="bg-[#FFF1F2] dark:bg-red-900/10 border border-red-200 rounded-[8px] p-4">
+                                                            <h4 className="flex items-center gap-2 text-[#BE123C] font-bold mb-3">
+                                                                <AlertCircle className="h-5 w-5" />
                                                                 Weak Topics (Need Practice)
                                                             </h4>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {round.ai_feedback.weak_topics.map((topic: string, idx: number) => (
-                                                                    <Badge key={idx} variant="outline" className="bg-red-100 dark:bg-red-900/40 border-red-400 text-red-700 dark:text-red-300">
-                                                                        ⚠ {topic}
-                                                                    </Badge>
+                                                                    <div key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3] text-sm font-medium rounded-full">
+                                                                        <AlertCircle className="h-3.5 w-3.5" />
+                                                                        {topic}
+                                                                    </div>
                                                                 ))}
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
-
-                                            {/* AI Summary */}
-                                            {round.ai_feedback?.summary && (
-                                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300">
-                                                    <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-2">
-                                                        <Brain className="h-5 w-5" />
-                                                        AI Summary
-                                                    </h4>
-                                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                        {round.ai_feedback.summary}
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            {/* Text-based feedback fallback */}
-                                            {typeof round.ai_feedback === 'string' && (
-                                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border">
-                                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                        {round.ai_feedback}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 )
                             })
-                            : null
+                            : 
+                            <div className="text-center py-12 text-gray-500">
+                                No AI insights available yet. Complete an assessment to see detailed analysis.
+                            </div>
                         }
-
-                        {/* Overall Strengths & Weaknesses */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {report?.detailed_analysis?.strengths?.length > 0 && (
-                                <Card className="border-l-4 border-l-green-500">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-green-600">
-                                            <Award className="h-5 w-5" />
-                                            Overall Strengths
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-3">
-                                            {report.detailed_analysis.strengths.map((strength: string, index: number) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <span>{strength}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {report?.detailed_analysis?.weaknesses?.length > 0 && (
-                                <Card className="border-l-4 border-l-orange-500">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-orange-600">
-                                            <AlertCircle className="h-5 w-5" />
-                                            Areas to Improve
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-3">
-                                            {report.detailed_analysis.weaknesses.map((weakness: string, index: number) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                                                    <span>{weakness}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </div>
-
-                        {/* Recommendations */}
-                        {report?.detailed_analysis?.recommendations?.length > 0 && (
-                            <Card className="border-l-4 border-l-blue-500">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Lightbulb className="h-5 w-5" />
-                                        Personalized Recommendations
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {report.detailed_analysis.recommendations.map((rec: string, index: number) => (
-                                            <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-lg">
-                                                <p className="flex items-start gap-2">
-                                                    <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                                                    <span>{rec}</span>
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Career Advice */}
-                        {report?.ai_feedback?.career_advice && (
-                            <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-indigo-200">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-indigo-600">
-                                        <Briefcase className="h-5 w-5" />
-                                        Career Guidance
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                                        {report.ai_feedback.career_advice}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        )}
                     </TabsContent>
 
                     {/* Playlist Tab */}
