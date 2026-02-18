@@ -75,24 +75,30 @@ const formatPercentage = (value: number | null | undefined, decimals: number = 2
 const AnimatedCounter = ({ value, duration = 1000 }: { value: number, duration?: number }) => {
     const [count, setCount] = useState(0)
 
+
     useEffect(() => {
         let startTime: number
         let animationFrame: number
+
 
         const animate = (currentTime: number) => {
             if (!startTime) startTime = currentTime
             const progress = Math.min((currentTime - startTime) / duration, 1)
 
+
             setCount(Math.floor(progress * value))
+
 
             if (progress < 1) {
                 animationFrame = requestAnimationFrame(animate)
             }
         }
 
+
         animationFrame = requestAnimationFrame(animate)
         return () => cancelAnimationFrame(animationFrame)
     }, [value, duration])
+
 
     return <span>{count}</span>
 }
@@ -109,6 +115,7 @@ export default function AssessmentReportPage() {
     const [showFilters, setShowFilters] = useState(false)
     const [compareMode, setCompareMode] = useState(false)
     const [expandedInsights, setExpandedInsights] = useState<{ [key: number]: boolean }>({})
+
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -164,11 +171,13 @@ export default function AssessmentReportPage() {
     const calculateStats = () => {
         if (!qaData?.rounds) return null
 
+
         let totalQuestions = 0
         let correctAnswers = 0
         let totalScore = 0
         let maxScore = 0
         let timeSpent = 0
+
 
         qaData.rounds.forEach((round: any) => {
             round.questions?.forEach((q: any) => {
@@ -178,6 +187,7 @@ export default function AssessmentReportPage() {
                 maxScore += q.max_score || 0
             })
         })
+
 
         return {
             totalQuestions,
@@ -194,6 +204,7 @@ export default function AssessmentReportPage() {
     const prepareRadarData = () => {
         if (!report?.rounds) return []
 
+
         return report.rounds.map((round: any) => ({
             subject: getRoundName(round),
             score: parseFloat(formatPercentage(round.percentage, 2)),
@@ -206,6 +217,7 @@ export default function AssessmentReportPage() {
     // Prepare time series data
     const prepareTimeSeriesData = () => {
         if (!report?.rounds) return []
+
 
         return report.rounds.map((round: any, index: number) => ({
             round: getRoundName(round),
@@ -220,6 +232,7 @@ export default function AssessmentReportPage() {
         const stats = calculateStats()
         if (!stats) return []
 
+
         return [
             { name: 'Correct', value: stats.correctAnswers, color: COLORS[0] },
             { name: 'Incorrect', value: stats.wrongAnswers, color: COLORS[1] }
@@ -229,6 +242,7 @@ export default function AssessmentReportPage() {
     // Prepare performance funnel
     const preparePerformanceFunnel = () => {
         if (!report?.rounds) return []
+
 
         const sortedRounds = [...report.rounds].sort((a: any, b: any) => b.percentage - a.percentage)
         return sortedRounds.map((round: any) => ({
@@ -242,7 +256,6 @@ export default function AssessmentReportPage() {
     // Prepare scatter plot data for difficulty vs performance
     const prepareScatterData = () => {
         if (!qaData?.rounds) return []
-
         return qaData.rounds.flatMap((round: any) =>
             (round.questions || []).map((q: any, idx: number) => ({
                 x: idx + 1,
@@ -279,12 +292,15 @@ export default function AssessmentReportPage() {
     const getFilteredQuestions = (questions: any[]) => {
         if (!questions) return []
 
+
         let filtered = [...questions]
+
 
         // Apply difficulty filter
         if (filterDifficulty !== 'all') {
             filtered = filtered.filter(q => q.difficulty?.toLowerCase() === filterDifficulty)
         }
+
 
         // Apply sorting
         switch (sortBy) {
@@ -299,6 +315,7 @@ export default function AssessmentReportPage() {
                 filtered.sort((a, b) => (difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2) - (difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2))
                 break
         }
+
 
         return filtered
     }
@@ -337,6 +354,7 @@ export default function AssessmentReportPage() {
                     <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/50 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/20 dark:via-red-950/20 dark:to-pink-950/20 p-8 shadow-xl">
                         {/* Animated Background Gradient */}
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 via-red-500/5 to-pink-500/5 animate-gradient-x"></div>
+
 
                         <div className="relative z-10 space-y-6">
                             {/* Header with Icon */}
@@ -598,6 +616,7 @@ export default function AssessmentReportPage() {
                             <span className="whitespace-nowrap">AI Insights</span>
                         </TabsTrigger>
                     </TabsList>
+
 
                     {/* Filter Toggle Button - Separate Row Below Tabs with Clear Spacing */}
                     <div className="mt-4 sm:mt-4 mb-12 pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -1625,6 +1644,7 @@ export default function AssessmentReportPage() {
                                     (typeof round.ai_feedback === 'object' ?
                                         (round.ai_feedback.strengths || round.ai_feedback.improvements || round.ai_feedback.criteria_scores || round.ai_feedback.summary) :
                                         round.ai_feedback)
+
 
                                 if (!hasAiFeedback) return null
 
