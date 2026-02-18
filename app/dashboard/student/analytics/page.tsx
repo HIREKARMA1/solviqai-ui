@@ -12,13 +12,14 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient } from '@/lib/api'
 import { motion } from 'framer-motion'
-import { 
-    BarChart3, Target, ShieldCheck, TrendingUp, TrendingDown, 
+import {
+    BarChart3, Target, ShieldCheck, TrendingUp, TrendingDown,
     Award, Brain, Users, FileText, Briefcase, Calendar, Filter,
     ClipboardList, MessageCircle, Clock, Activity, Zap, Sparkles,
     CheckCircle, AlertCircle, ArrowUpRight,
     PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon
 } from 'lucide-react'
+import { SubscriptionStatusCard, UsageAnalyticsCard } from '@/components/subscription'
 
 // Recharts (SSR-safe)
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false })
@@ -43,15 +44,15 @@ const AreaChart = dynamic(() => import('recharts').then(m => m.AreaChart), { ssr
 const Area = dynamic(() => import('recharts').then(m => m.Area), { ssr: false })
 
 // Metric card per Figma: Frame 92973410 / 2087328159 – 284×162, radius 16px, padding 10px, gap 10px; icon 44×44 radius 8px; status pill radius 28px
-function StatCard({ 
-    icon: Icon, 
-    label, 
-    value, 
-    subtitle, 
+function StatCard({
+    icon: Icon,
+    label,
+    value,
+    subtitle,
     statusTag,
     iconBgClass,
     iconColor,
-}: { 
+}: {
     icon: any
     label: string
     value: string | number
@@ -61,24 +62,24 @@ function StatCard({
     iconColor: string
 }) {
     return (
-        <div 
+        <div
             className="flex flex-col w-full min-w-0 rounded-[16px] p-2 sm:p-[10px] gap-2 sm:gap-[10px] min-h-0 sm:min-h-[162px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] dark:shadow-[0_2px_4px_0_rgba(0,0,0,0.4)]"
         >
             <div className="flex items-start justify-between gap-2 flex-shrink-0">
-                <div 
+                <div
                     className={`w-11 h-11 rounded-[8px] flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
                 >
                     <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} />
                 </div>
                 {statusTag && (
-                    <span 
+                    <span
                         className={`
                             inline-flex items-center gap-1 sm:gap-[8px] h-8 sm:h-[33px] px-2 sm:px-3 rounded-[28px] text-[10px] sm:text-xs font-semibold flex-shrink-0 max-w-full truncate
-                            ${statusTag.variant === 'need-improvement' 
-                                ? 'bg-[#FFE1E2] text-red-700 dark:bg-red-900/40 dark:text-red-300' 
+                            ${statusTag.variant === 'need-improvement'
+                                ? 'bg-[#FFE1E2] text-red-700 dark:bg-red-900/40 dark:text-red-300'
                                 : statusTag.variant === 'developing'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                    : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}
                         `}
                     >
                         <ArrowUpRight className="w-3 h-3" />
@@ -118,19 +119,19 @@ export default function StudentAnalyticsPage() {
     }, [])
 
     const loadData = async () => {
-            try {
+        try {
             setLoading(true)
-                const params = buildParams()
-                const analytics = await apiClient.getStudentAnalyticsWithFilters(params)
-                const tl = await apiClient.getStudentTimeline(params)
-                setData(analytics)
-                setTimeline(tl?.timeline || [])
-            } catch (e) {
-                console.error('Failed to load analytics', e)
-            } finally {
-                setLoading(false)
-            }
+            const params = buildParams()
+            const analytics = await apiClient.getStudentAnalyticsWithFilters(params)
+            const tl = await apiClient.getStudentTimeline(params)
+            setData(analytics)
+            setTimeline(tl?.timeline || [])
+        } catch (e) {
+            console.error('Failed to load analytics', e)
+        } finally {
+            setLoading(false)
         }
+    }
 
     const buildParams = () => {
         const categories = Object.entries(filters.categories)
@@ -187,7 +188,7 @@ export default function StudentAnalyticsPage() {
             subject: t.name,
             average: t.average ?? 0,
             benchmark: Math.min(80, Math.round((t.average ?? 0) * 0.85 + 12)),
-          }))
+        }))
         : []
     const weeklyActivity = data?.weekly_activity || []
     const assessmentTotal = data?.assessments?.total || 0
@@ -201,8 +202,8 @@ export default function StudentAnalyticsPage() {
     const showPortfolio = !!filters.categories.portfolio
 
     if (loading) {
-    return (
-        <DashboardLayout requiredUserType="student">
+        return (
+            <DashboardLayout requiredUserType="student">
                 <div className="w-full flex items-center justify-center py-24">
                     <Loader size="lg" />
                 </div>
@@ -212,9 +213,9 @@ export default function StudentAnalyticsPage() {
 
     return (
         <DashboardLayout requiredUserType="student">
-                <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-6 lg:pt-0 overflow-x-hidden min-w-0">
+            <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-6 lg:pt-0 overflow-x-hidden min-w-0">
                 {/* Header - Analytics Dashboard (Figma: light + dark mode) */}
-                <motion.div 
+                <motion.div
                     className="relative overflow-hidden rounded-[16px] py-3 px-3 sm:py-4 sm:px-4 flex flex-col min-h-0 sm:min-h-[140px] gap-3 sm:gap-[15px] dark:gap-6 bg-[#F6FBFF] dark:bg-[#1C2938] border border-transparent dark:border dark:border-[#CACACA] shadow-[inset_0_1px_1.5px_0_rgba(0,0,0,0.25)] dark:shadow-none"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -222,7 +223,7 @@ export default function StudentAnalyticsPage() {
                 >
                     <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                         <div className="flex-1 min-w-0">
-                            <h1 
+                            <h1
                                 className="text-3xl sm:text-[40px] sm:leading-[40px] font-bold tracking-normal truncate mb-0 bg-gradient-to-r from-[#0068FC] to-[#8D5AFF] dark:from-[#1C6FE6] dark:to-[#8C59FF] bg-clip-text text-transparent"
                                 style={{ fontFamily: 'var(--font-poppins), sans-serif' }}
                             >
@@ -264,46 +265,46 @@ export default function StudentAnalyticsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-sm font-medium mb-2 block">Start Date</label>
-                                            <input 
-                                                type="date" 
-                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 value={filters.start_date || ''}
-                                                onChange={e => setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))} 
+                                                onChange={e => setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))}
                                             />
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium mb-2 block">End Date</label>
-                                            <input 
-                                                type="date" 
-                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 value={filters.end_date || ''}
-                                                onChange={e => setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))} 
+                                                onChange={e => setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))}
                                             />
                                         </div>
-                        </div>
+                                    </div>
                                     <div>
                                         <label className="text-sm font-medium mb-2 block">Categories</label>
                                         <div className="flex flex-wrap gap-3">
-                            {Object.keys(filters.categories).map((key) => (
+                                            {Object.keys(filters.categories).map((key) => (
                                                 <label key={key} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         checked={filters.categories[key as keyof typeof filters.categories]}
                                                         onChange={e => setFilters(prev => ({ ...prev, categories: { ...prev.categories, [key]: e.target.checked } }))}
                                                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                     />
                                                     <span className="text-sm font-medium capitalize">{key}</span>
-                                </label>
-                            ))}
-                        </div>
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
                                     <div className="flex gap-3">
                                         <Button onClick={handleFilterApply} className="flex items-center gap-2">
                                             <Filter className="w-4 h-4" />
                                             Apply Filters
                                         </Button>
-                                        <Button 
-                                            variant="outline" 
+                                        <Button
+                                            variant="outline"
                                             onClick={() => {
                                                 setFilters({
                                                     start_date: undefined,
@@ -365,33 +366,33 @@ export default function StudentAnalyticsPage() {
                         iconBgClass="bg-[#FFECD2] dark:bg-orange-900/40"
                         iconColor="text-orange-600 dark:text-orange-400"
                     />
-                    </div>
+                </div>
 
                 {/* Tabs – Figma Frame 2087328303: horizontal, h 57px, radius 8px, padding 10px, gap 90px, bg #FDFDFD, border #C0C0C0 */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                     <TabsList className="flex flex-row items-center w-full min-h-[48px] sm:h-[57px] rounded-[8px] border border-[#C0C0C0] dark:border-gray-600 px-2 sm:px-[10px] gap-2 sm:gap-4 md:gap-8 lg:gap-[90px] bg-[#FDFDFD] dark:bg-gray-800 p-0 overflow-x-auto">
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="overview"
                             className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
                             <Activity className="w-4 h-4 shrink-0" />
                             <span className="whitespace-nowrap">Overview</span>
                         </TabsTrigger>
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="skills"
                             className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
                             <Brain className="w-4 h-4 shrink-0" />
                             <span className="whitespace-nowrap">Skills</span>
                         </TabsTrigger>
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="performance"
                             className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
                             <TrendingUp className="w-4 h-4 shrink-0" />
                             <span className="whitespace-nowrap">Performance</span>
                         </TabsTrigger>
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="timeline"
                             className="flex-1 min-w-0 rounded-md min-h-[40px] sm:h-[calc(57px-16px)] bg-transparent data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-0 flex items-center justify-center gap-2 py-2 transition-all font-semibold text-xs sm:text-sm data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 data-[state=inactive]:!bg-transparent data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-700 border-0 outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
@@ -409,10 +410,10 @@ export default function StudentAnalyticsPage() {
                                     <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                                         <Target className="w-5 h-5 text-blue-600 shrink-0" />
                                         Overall Performance Score
-                                </CardTitle>
+                                    </CardTitle>
                                     <CardDescription className="text-xs sm:text-sm">Your average score across all assessments</CardDescription>
-                            </CardHeader>
-                            <CardContent>
+                                </CardHeader>
+                                <CardContent>
                                     <div className="space-y-4">
                                         <div>
                                             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -422,8 +423,8 @@ export default function StudentAnalyticsPage() {
                                                         ${overallScore >= 70
                                                             ? "bg-[#00C951]"
                                                             : overallScore >= 50
-                                                            ? "bg-[#FFB800]"
-                                                            : "bg-[#FF2B3A]"
+                                                                ? "bg-[#FFB800]"
+                                                                : "bg-[#FF2B3A]"
                                                         }`}
                                                 >
                                                     {overallScore >= 70 ? "Excellent" : overallScore >= 50 ? "Good" : "Needs Improvement"}
@@ -448,18 +449,18 @@ export default function StudentAnalyticsPage() {
                                             </div>
                                         </div>
                                     </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
                             <Card className="border border-gray-200 dark:border-gray-700 shadow-md rounded-2xl">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                                         <ShieldCheck className="w-5 h-5 text-green-600 shrink-0" />
                                         Job Readiness Index
-                                </CardTitle>
+                                    </CardTitle>
                                     <CardDescription className="text-xs sm:text-sm">Your average score across all assessments</CardDescription>
-                            </CardHeader>
-                            <CardContent>
+                                </CardHeader>
+                                <CardContent>
                                     <div className="space-y-4">
                                         <div>
                                             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -469,8 +470,8 @@ export default function StudentAnalyticsPage() {
                                                         ${readinessIndex >= 75
                                                             ? "bg-[#00C951]"
                                                             : readinessIndex >= 50
-                                                            ? "bg-[#1E7BFF]"
-                                                            : "bg-[#FF6800]"
+                                                                ? "bg-[#1E7BFF]"
+                                                                : "bg-[#FF6800]"
                                                         }`}
                                                 >
                                                     {readinessIndex >= 75 ? "Ready" : readinessIndex >= 50 ? "Almost Ready" : "In Progress"}
@@ -495,9 +496,9 @@ export default function StudentAnalyticsPage() {
                                             </div>
                                         </div>
                                     </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
 
                         {/* Application Funnel – layout per design: white card, chart 0–100 scale, summary columns below */}
                         {showApplication && (
@@ -677,12 +678,12 @@ export default function StudentAnalyticsPage() {
                                             <AreaChart data={interviewTrend}>
                                                 <defs>
                                                     <linearGradient id="colorJobReadinessLight" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#8D34F9" stopOpacity={0.22}/>
-                                                        <stop offset="95%" stopColor="#8D34F9" stopOpacity={0.05}/>
+                                                        <stop offset="5%" stopColor="#8D34F9" stopOpacity={0.22} />
+                                                        <stop offset="95%" stopColor="#8D34F9" stopOpacity={0.05} />
                                                     </linearGradient>
                                                     <linearGradient id="colorJobReadinessDark" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#7F56D9" stopOpacity={0.5}/>
-                                                        <stop offset="95%" stopColor="#7F56D9" stopOpacity={0.08}/>
+                                                        <stop offset="5%" stopColor="#7F56D9" stopOpacity={0.5} />
+                                                        <stop offset="95%" stopColor="#7F56D9" stopOpacity={0.08} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid stroke={isDark ? '#6B7280' : '#e5e7eb'} strokeDasharray="3 3" vertical={false} />
@@ -905,7 +906,7 @@ export default function StudentAnalyticsPage() {
                         </Card>
                     </TabsContent>
                 </Tabs>
-                </div>
+            </div>
         </DashboardLayout>
     )
 }

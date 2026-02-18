@@ -54,6 +54,7 @@ export default function CareerGuidancePage() {
   const [error, setError] = useState<string | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionFeature, setSubscriptionFeature] = useState('this feature');
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
   // Flowchart state
   const [nodes, setNodes] = useState<any[]>([]);
@@ -114,6 +115,7 @@ export default function CareerGuidancePage() {
     try {
       setIsInitializing(true);
       setError(null);
+      setIsLimitReached(false);
       const data = await api.careerGuidance.getSession(id);
       setSessionId(data.session_id);
       setMessages(data.conversation_history || []);
@@ -143,6 +145,7 @@ export default function CareerGuidancePage() {
     setIsLoading(true);
     setLoadingPercentage(0);
     setError(null);
+    setIsLimitReached(false);
 
     // Animate progress during session initialization
     const initProgressInterval = setInterval(() => {
@@ -176,8 +179,6 @@ export default function CareerGuidancePage() {
 
       connectSSE(response.session_id);
 
-      // Complete to 100% when session starts
-      clearInterval(initProgressInterval);
       setLoadingPercentage(100);
 
       toast.success('Career guidance session started!');
@@ -191,17 +192,18 @@ export default function CareerGuidancePage() {
       setLoadingPercentage(0);
       const axiosError = error as AxiosError<{ detail: string }>;
       const errorMessage = axiosError.response?.data?.detail || 'Failed to start session. Please try again.';
-      
+
       // Check if it's a subscription error - be more specific with checks
-      const isSubscriptionError = 
-        axiosError.response?.status === 403 || 
+      const isSubscriptionError =
+        axiosError.response?.status === 403 ||
         (errorMessage && (
-          errorMessage.toLowerCase().includes('contact hirekarma') || 
+          errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||
           errorMessage.toLowerCase().includes('free plan')
         ));
-      
+
       if (isSubscriptionError) {
+        setIsLimitReached(true);
         setSubscriptionFeature('AI Career Guidance');
         setShowSubscriptionModal(true);
         // Don't set error state or show toast for subscription errors
@@ -414,17 +416,18 @@ export default function CareerGuidancePage() {
     } catch (error: any) {
       const axiosError = error as AxiosError<{ detail: string }>;
       const errorMessage = axiosError.response?.data?.detail || 'Failed to send message. Please try again.';
-      
+
       // Check if it's a subscription error - be more specific with checks
-      const isSubscriptionError = 
-        axiosError.response?.status === 403 || 
+      const isSubscriptionError =
+        axiosError.response?.status === 403 ||
         (errorMessage && (
-          errorMessage.toLowerCase().includes('contact hirekarma') || 
+          errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||
           errorMessage.toLowerCase().includes('free plan')
         ));
-      
+
       if (isSubscriptionError) {
+        setIsLimitReached(true);
         setSubscriptionFeature('AI Career Guidance');
         setShowSubscriptionModal(true);
         // Don't set error state or show toast for subscription errors
@@ -960,9 +963,9 @@ export default function CareerGuidancePage() {
         </div>
       </div>
       <SessionHistoryModal open={showHistory} onClose={() => setShowHistory(false)} onLoadSession={loadSession} />
-      
+
       {/* Subscription Required Modal */}
-      <SubscriptionRequiredModal 
+      <SubscriptionRequiredModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
         feature={subscriptionFeature}

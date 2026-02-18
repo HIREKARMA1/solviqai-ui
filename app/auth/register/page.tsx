@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
-import { LandingNavbar } from '@/components/landing/LandingNavbar';
+import { Navbar } from '@/components/Navbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -92,7 +92,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-white dark:bg-[#0f172a]">
       {/* Navbar */}
-      <LandingNavbar />
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12 pt-24 md:pt-32 relative z-10">
@@ -286,7 +286,7 @@ export default function RegisterPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-[50px] text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-[8px] transition-all duration-200"
+                className="w-full h-[50px] text-base font-medium bg-[#00BAE8] hover:bg-[#009bc2] text-white rounded-[8px] transition-all duration-200"
                 disabled={loading || !agreedToTerms}
               >
                 {loading ? (
