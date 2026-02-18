@@ -8,7 +8,6 @@ import { apiClient } from "@/lib/api";
 import SubscriptionRequiredModal from "@/components/subscription/SubscriptionRequiredModal";
 
 export default function PracticePage() {
-    const [inPractice, setInPractice] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
     const [isFreeUser, setIsFreeUser] = useState(false);
@@ -21,7 +20,7 @@ export default function PracticePage() {
         try {
             const user = await apiClient.getCurrentUser();
             const subscriptionType = user?.subscription_type || 'free';
-            
+
             // Free users should be blocked
             if (subscriptionType === 'free') {
                 setIsFreeUser(true);
@@ -45,9 +44,9 @@ export default function PracticePage() {
     }
 
     return (
-        <DashboardLayout requiredUserType="student" hideNavigation={inPractice}>
+        <DashboardLayout requiredUserType="student">
             {!isFreeUser ? (
-                <PracticeQuestions onPracticeModeChange={setInPractice} />
+                <PracticeQuestions />
             ) : (
                 <div className="flex flex-col items-center justify-center py-12 px-4">
                     <div className="text-center max-w-md">
@@ -58,8 +57,8 @@ export default function PracticePage() {
                     </div>
                 </div>
             )}
-            
-            <SubscriptionRequiredModal 
+
+            <SubscriptionRequiredModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
                 feature="practice section"
