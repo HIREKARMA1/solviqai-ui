@@ -52,11 +52,11 @@ export function LandingNavbar({
   }, []);
 
   const navigationItems = [
-    { label: 'HOME', href: '/' },
-    { label: 'FEATURES', href: '#features' },
-    { label: 'INTERNSHIPS', href: '#internships' },
-    { label: 'ABOUT', href: '#about' },
-    { label: 'CONTACT', href: '#contact' },
+    // { label: 'HOME', href: '/' },
+    // { label: 'FEATURES', href: '#features' },
+    // { label: 'INTERNSHIPS', href: '#internships' },
+    // { label: 'ABOUT', href: '#about' },
+    // { label: 'CONTACT', href: '#contact' },
   ];
 
   if (!mounted) {
