@@ -26,6 +26,11 @@ interface LandingNavbarProps {
   isMobileSidebarOpen?: boolean;
 }
 
+type NavigationItem = {
+  label: string;
+  href: string;
+};
+
 export function LandingNavbar({
   className,
   onToggleSidebar,
@@ -51,7 +56,7 @@ export function LandingNavbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     // { label: 'HOME', href: '/' },
     // { label: 'FEATURES', href: '#features' },
     // { label: 'INTERNSHIPS', href: '#internships' },
