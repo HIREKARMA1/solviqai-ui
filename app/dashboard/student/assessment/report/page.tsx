@@ -1048,7 +1048,7 @@ export default function AssessmentReportPage() {
                                                     }}
                                                     itemStyle={{ color: '#fff' }}
                                                     labelStyle={{ color: '#9CA3AF', marginBottom: '4px', borderBottom: '1px solid #374151', paddingBottom: '4px' }}
-                                                    formatter={(value: any, name?: string, props?: any) => {
+                                                    formatter={(value: any, name?: string | number, props?: any) => {
                                                         return [
                                                             <span key="value" style={{ color: '#fff', fontWeight: 'bold' }}>{value}%</span>,
                                                             <span key="name" style={{ color: '#D1D5DB' }}>{props?.payload?.name ?? name ?? ''}</span>
