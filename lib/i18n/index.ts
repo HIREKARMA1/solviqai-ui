@@ -458,7 +458,7 @@ const translations: Translations = {
 
     // Footer
     'footer.tagline': 'The Engine That Defines Readiness',
-    'footer.copyright': '© 2025 Solviq AI. All rights reserved.',
+    'footer.copyright': '© 2026 Solviq AI. All rights reserved.',
     'footer.product': 'Product',
     'footer.company': 'Company',
     'footer.support': 'Support',

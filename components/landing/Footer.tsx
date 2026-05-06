@@ -52,35 +52,32 @@ export function Footer() {
   };
 
   const productLinks = [
-    { label: 'Mock Interview', href: '/features/mock-interview' },
-    { label: 'AI Copilot', href: '/features/copilot' },
-    { label: 'Resume Builder', href: '/features/resume' },
-    { label: 'Job Hunter', href: '/features/jobs' },
-    { label: 'Question Bank', href: '/features/questions' },
-    { label: 'Analytics', href: '/features/analytics' },
+    { label: 'Dashboard', href: '/dashboard/student' },
+    // { label: 'Career Guidance', href: '/dashboard/student/career-guidance' },
+    { label: 'Resume Analysis', href: '/dashboard/student/resume' },
+    { label: 'Mock Assesment', href: '/dashboard/student/jobs' },
+    { label: 'Analytics', href: '/dashboard/student/analytics' },
   ];
 
   const companyLinks = [
     { label: 'About Us', href: 'https://www.hirekarma.in/about-us/our-story' },
-    { label: 'Careers', href: '/careers' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Press', href: '/press' },
-    { label: 'Partners', href: '/partners' },
+    { label: 'Mission & Value', href: 'https://www.hirekarma.in/about-us/mission-value' },
+    { label: 'People', href: 'https://www.hirekarma.in/about-us/people' }
   ];
 
   const supportLinks = [
-    { label: 'Help Center', href: '/help' },
+    // { label: 'Help Center', href: '/help' },
     { label: 'Contact Us', href: 'https://www.hirekarma.in/contact' },
     { label: 'FAQ', href: '/#faq' },
-    { label: 'Community', href: '/community' },
-    { label: 'Tutorials', href: '/tutorials' },
+    // { label: 'Community', href: '/community' },
+    // { label: 'Tutorials', href: '/tutorials' },
   ];
 
   const legalLinks = [
     { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Cookie Policy', href: '/cookies' },
-    { label: 'Refund Policy', href: '/refund' },
+    // { label: 'Terms of Service', href: '/terms' },
+    // { label: 'Cookie Policy', href: '/cookies' },
+    // { label: 'Refund Policy', href: '/refund' },
     { label: 'Release Notes', href: '/release-notes' },
   ];
 
@@ -150,13 +147,13 @@ export function Footer() {
                   href="tel:+919078683876" 
                   className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                 >
-                  +91 90786 83876
+                  +91 91243 64762
                 </a>
               </div>
               <div className="flex items-start gap-3 justify-center md:justify-start w-full text-left md:text-left">
                 <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed text-center md:text-left">
-                  Room No: 109, 1st Floor, Tower A, O-HUB, Bhubaneswar
+                2nd Floor, SS Niwas, Hirekarma Private Limited, Raghunathpur, Bhubaneswar, Raghunathpurjali, Odisha 751024
                 </span>
               </div>
             </div>
@@ -273,9 +270,7 @@ export function Footer() {
           {/* Copyright & Powered By */}
           <div className="text-sm text-gray-600 dark:text-gray-400 text-center md:text-left">
             <p className="flex items-center gap-1 flex-wrap justify-center md:justify-start mb-2">
-              {t('footer.copyright')} Made with 
-              <Heart className="w-4 h-4 text-red-500 fill-red-500 mx-1" /> 
-              in India
+              {t('footer.copyright')}
             </p>
             <p className="text-gray-600 dark:text-gray-500">
               Powered by{' '}
