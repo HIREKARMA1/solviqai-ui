@@ -20,7 +20,7 @@ const nextConfig = {
       },
     ],
     // Optimize images
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
@@ -38,7 +38,10 @@ const nextConfig = {
   experimental: {},
   async rewrites() {
     // Get API configuration from environment variables directly (no localhost fallback)
-    const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
+    const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(
+      /\/+$/,
+      "",
+    );
 
     // Only add rewrite if API URL is configured
     if (!apiBaseUrl) {
