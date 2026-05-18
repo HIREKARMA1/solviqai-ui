@@ -24,10 +24,28 @@ export default function StudentDishaExamPage() {
                 const info = await apiClient.getDishaPackageStatus(packageId);
                 setPackageInfo(info);
 
-                // Get student ID from localStorage or user context
-                // For now, using a placeholder - you may need to get this from auth context
-                const storedStudentId = localStorage.getItem('disha_student_id') || 'student_' + Date.now();
-                setStudentId(storedStudentId);
+                // Must match DISHA AssessmentAttempt.student_id for the results callback.
+                let resolvedStudentId = localStorage.getItem('disha_student_id') || ''
+                if (!resolvedStudentId) {
+                    const token = localStorage.getItem('access_token')
+                    if (token) {
+                        try {
+                            const payload = JSON.parse(atob(token.split('.')[1]))
+                            resolvedStudentId =
+                                payload.disha_student_id || payload.student_id || payload.sub || ''
+                        } catch {
+                            /* ignore decode errors */
+                        }
+                    }
+                }
+                if (!resolvedStudentId) {
+                    toast.error(
+                        'Your DISHA session was not found. Close this tab and open the exam again from the link HireKarma sent you.'
+                    )
+                    router.push('/dashboard/student')
+                    return
+                }
+                setStudentId(resolvedStudentId)
             } catch (error: any) {
                 console.error('Failed to load package:', error);
                 toast.error('Failed to load assessment package');
