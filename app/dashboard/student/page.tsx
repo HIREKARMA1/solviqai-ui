@@ -491,7 +491,7 @@ export default function StudentDashboard() {
                                                         tick={{ fontSize: 14, fill: isDark ? '#ffffff' : '#1e3a5f', fontWeight: 700 }}
                                                         axisLine={{ stroke: '#d1d5db' }}
                                                     />
-                                                    <Tooltip formatter={(v: number) => [`${v}%`, 'Score']} contentStyle={{ borderRadius: 8 }} />
+                                                    <Tooltip formatter={(v) => [`${v ?? 0}%`, 'Score']} contentStyle={{ borderRadius: 8 }} />
                                                     <Bar dataKey="score" fill="url(#barGradient)" radius={[10, 10, 0, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
