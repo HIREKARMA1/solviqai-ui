@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
     Clock, CheckCircle2, AlertCircle, Loader2, Mic, Square, Volume2,
@@ -16,6 +17,8 @@ import {
     normalizeMcqOptions,
     resolveDishaQuestionType,
 } from '@/lib/disha-question-utils';
+import { useExamCamera } from '@/hooks/useExamCamera';
+import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import {
@@ -335,6 +338,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [showTerminationModal, setShowTerminationModal] = useState(false);
+    const [showCameraLostModal, setShowCameraLostModal] = useState(false);
+    const examCamera = useExamCamera();
     // Helper to add/remove a class to body for hiding sidebar
     function setSidebarHidden(hidden: boolean) {
         if (typeof document !== 'undefined') {
@@ -518,6 +523,72 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             }
         }
     }, [isFullscreen, examState, isSubmitting, loading, showTerminationModal]);
+
+    const isProctoredPhase = ['round_instructions', 'exam', 'round_complete'].includes(examState);
+
+    useEffect(() => {
+        if (isProctoredPhase && examCamera.status === 'lost') {
+            setShowCameraLostModal(true);
+        }
+        if (examCamera.status === 'active') {
+            setShowCameraLostModal(false);
+        }
+    }, [isProctoredPhase, examCamera.status]);
+
+    useEffect(() => {
+        if (examState === 'assessment_complete') {
+            examCamera.stopCamera();
+        }
+    }, [examState, examCamera.stopCamera]);
+
+    const renderFloatingCamera = useCallback(() => {
+        if (!isProctoredPhase || typeof document === 'undefined') return null;
+        return createPortal(
+            <ExamCameraPanel
+                variant="floating"
+                videoRef={examCamera.videoRef}
+                status={examCamera.status}
+                onEnableCamera={examCamera.startCamera}
+            />,
+            document.body
+        );
+    }, [isProctoredPhase, examCamera.videoRef, examCamera.status, examCamera.startCamera]);
+
+    const renderCameraLostModal = () =>
+        showCameraLostModal && examCamera.status !== 'active' ? (
+            <div className="fixed inset-0 z-[10002] bg-gray-900/95 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 border-amber-500">
+                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Video className="w-10 h-10 text-amber-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        Camera required
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-8">
+                        Your camera was turned off or disconnected. Turn it back on to continue the
+                        assessment.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => void examCamera.startCamera()}
+                        disabled={examCamera.isCameraPending}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                        {examCamera.isCameraPending ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Enabling camera…
+                            </>
+                        ) : (
+                            <>
+                                <Video className="w-5 h-5" />
+                                Turn camera on
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        ) : null;
 
     // Fullscreen toggle
     const toggleFullscreen = async () => {
@@ -727,6 +798,11 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     }, [attemptId, examState, packageId]); // Removed currentRound and isSubmitting to prevent spam
 
     const startAssessment = async () => {
+        if (!examCamera.isCameraActive) {
+            const ok = await examCamera.startCamera();
+            if (!ok) return;
+        }
+
         try {
             setLoading(true);
             const response = await apiClient.startDishaAssessment(packageId, studentId);
@@ -753,6 +829,14 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     };
 
     const startRound = async (roundId: string) => {
+        if (!examCamera.isCameraActive) {
+            const ok = await examCamera.startCamera();
+            if (!ok) {
+                toast.error('Camera must remain on for the entire assessment.');
+                return;
+            }
+        }
+
         try {
             setLoading(true);
             const response = await apiClient.getDishaRoundQuestions(packageId, roundId, attemptId!);
@@ -1144,12 +1228,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
                             <div className="flex items-start gap-4 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30">
                                 <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-lg shrink-0">
-                                    <CheckCircle2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                    <Video className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">Proctored Environment</h3>
                                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                        We monitor your tab activity and full-screen status. Ensure your environment is quiet and free from distractions.
+                                        Your webcam must stay on for the full assessment. We also monitor tab activity and full-screen mode.
                                     </p>
                                 </div>
                             </div>
@@ -1166,6 +1250,14 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                 </div>
                             </div>
                         </div>
+
+                        <ExamCameraPanel
+                            variant="setup"
+                            videoRef={examCamera.videoRef}
+                            status={examCamera.status}
+                            onEnableCamera={examCamera.startCamera}
+                            className="mb-8"
+                        />
 
                         {/* Critical Warning */}
                         <div className="mb-10 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-5 md:p-6 flex items-start md:items-center gap-5">
@@ -1187,7 +1279,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={startAssessment}
-                                disabled={loading}
+                                disabled={loading || !examCamera.isCameraActive || examCamera.isCameraPending}
                                 className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full md:w-auto min-w-[300px] py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
@@ -1208,7 +1300,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                 </div>
                             </button>
                             <p className="text-xs text-gray-400 mt-2">
-                                By clicking above, you agree to our proctoring and data terms.
+                                {examCamera.isCameraActive
+                                    ? 'By clicking above, you agree to our proctoring and data terms.'
+                                    : 'Enable your camera above before beginning the assessment.'}
                             </p>
                         </div>
                     </div>
@@ -1232,6 +1326,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         }
 
         return (
+            <>
+                {renderFloatingCamera()}
+                {renderCameraLostModal()}
             <div className="fixed inset-0 z-[9999] bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
                 <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
                     <h2 className="text-3xl font-bold mb-4">
@@ -1242,10 +1339,13 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                             <strong>Duration:</strong> {roundDetails.duration_minutes} minutes
                         </p>
                         <p>Click "Start Round" when you are ready to begin. The timer will start immediately.</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                            Keep your camera on — it must remain active for the entire assessment.
+                        </p>
                     </div>
                     <button
                         onClick={() => startRound(roundDetails.round_id || '')}
-                        disabled={loading}
+                        disabled={loading || !examCamera.isCameraActive || examCamera.isCameraPending}
                         className="mt-6 w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? (
@@ -1259,6 +1359,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     </button>
                 </div>
             </div>
+            </>
         );
     }
 
@@ -1267,6 +1368,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         const isLastRound = packageInfo && packageInfo.current_round >= packageInfo.total_rounds;
 
         return (
+            <>
+                {renderFloatingCamera()}
+                {renderCameraLostModal()}
             <div className="w-full max-w-4xl mx-auto p-6">
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
@@ -1290,6 +1394,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     )}
                 </div>
             </div>
+            </>
         );
     }
 
@@ -1377,6 +1482,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
         if (isGroupDiscussion) {
             return (
+                <>
+                {renderFloatingCamera()}
+                {renderCameraLostModal()}
                 <div className="fullscreen-exam">
                     <GroupDiscussionRound
                         roundId={currentRound.round_id || currentRound.id || ''}
@@ -1410,6 +1518,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     />
                     {terminationModal}
                 </div>
+                </>
             );
         }
 
@@ -1509,6 +1618,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             const totalCodingQuestions = codingQuestions.length;
 
             return (
+                <>
+                {renderFloatingCamera()}
+                {renderCameraLostModal()}
                 <div className="fullscreen-exam">
                     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
                         {/* Header - Matching Solviq style */}
@@ -1602,6 +1714,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     </div>
                     {terminationModal}
                 </div>
+                </>
             );
         }
 
@@ -1614,6 +1727,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             const counts = getQuestionCounts();
 
             return (
+                <>
+                {renderFloatingCamera()}
+                {renderCameraLostModal()}
                 <div className="fullscreen-exam">
                     <div className="flex flex-col h-screen font-sans bg-white overflow-hidden">
                         {/* Header Bar - Matching Screenshot Blue/Purple Gradient */}
@@ -1761,6 +1877,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         </div>
                     </div>
                 </div>
+                </>
             );
         }
 
@@ -1772,6 +1889,9 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         const isTimeUp = timeRemaining !== null && timeRemaining <= 0;
 
         return (
+            <>
+            {renderFloatingCamera()}
+            {renderCameraLostModal()}
             <div className="fullscreen-exam font-sans bg-gray-50 flex flex-col h-screen overflow-hidden">
                 {/* Header */}
                 <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
@@ -2492,6 +2612,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 </div >
                 {terminationModal}
             </div >
+            </>
         );
     }
 
