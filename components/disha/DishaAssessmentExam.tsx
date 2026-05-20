@@ -11,6 +11,11 @@ import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRou
 import CodingRound from '@/components/assessment/CodingRound';
 import { VoiceResponseArea } from './VoiceResponseArea';
 import { apiClient } from '@/lib/api';
+import {
+    isDishaMcqQuestion,
+    normalizeMcqOptions,
+    resolveDishaQuestionType,
+} from '@/lib/disha-question-utils';
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import {
@@ -513,42 +518,6 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             }
         }
     }, [isFullscreen, examState, isSubmitting, loading, showTerminationModal]);
-
-    // Normalize options from various backend formats
-    const normalizeMcqOptions = (q: any): string[] => {
-        if (!q) return []
-        // 1) Array of strings/objects
-        if (Array.isArray(q.options)) {
-            return q.options.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
-        }
-        // 2) 'choices' array
-        if (Array.isArray(q.choices)) {
-            return q.choices.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
-        }
-        // 3) JSON string in options/options_json
-        const jsonCandidate = q.options_json || q.options
-        if (typeof jsonCandidate === 'string') {
-            try {
-                const parsed = JSON.parse(jsonCandidate)
-                if (Array.isArray(parsed)) {
-                    return parsed.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
-                }
-                if (parsed && typeof parsed === 'object') {
-                    const vals = Object.values(parsed as Record<string, any>)
-                    return vals.map((o: any) => typeof o === 'string' ? o : (o?.text ?? o?.label ?? JSON.stringify(o)))
-                }
-            } catch { }
-        }
-        // 4) option_a/option_b/option_c/option_d fields
-        const keySet = ['option_a', 'option_b', 'option_c', 'option_d']
-        const fromFields = keySet.map(k => q[k]).filter(Boolean)
-        if (fromFields.length > 0) return fromFields
-        // 5) options as object {A: '...', B: '...'}
-        if (q.options && typeof q.options === 'object') {
-            return Object.values(q.options)
-        }
-        return []
-    }
 
     // Fullscreen toggle
     const toggleFullscreen = async () => {
@@ -1797,6 +1766,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
         // Generic Round (MCQ, Aptitude, Soft Skills, etc.) - Uses New UI
         const currentQuestion = currentRound.questions[currentQuestionIndex];
+        const resolvedQuestionType = resolveDishaQuestionType(currentQuestion, currentRound);
         const counts = getQuestionCounts();
         const t = splitTime(timeRemaining);
         const isTimeUp = timeRemaining !== null && timeRemaining <= 0;
@@ -1847,16 +1817,20 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                                 <p className="font-medium">No active question found</p>
                                                 <p className="text-xs mt-1">Please try refreshing or contact support.</p>
                                             </div>
-                                        ) : currentQuestion.question_type === 'dictation' ? (
+                                        ) : resolvedQuestionType === 'dictation' ? (
                                             <div className="space-y-4">
                                                 <p className="text-lg font-bold text-blue-600">
-                                                    ?? Listening Exercise
+                                                    Listening Exercise
                                                 </p>
                                                 <p className="text-gray-700">
                                                     Click the button below to hear a sentence. Listen carefully and type exactly what you hear in the box.
                                                 </p>
                                                 <button
-                                                    onClick={() => playQuestionAudio(currentQuestion.question_text)}
+                                                    onClick={() => playQuestionAudio(
+                                                        currentQuestion.question_text ||
+                                                        (currentQuestion as { correct_answer?: string }).correct_answer ||
+                                                        ''
+                                                    )}
                                                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
                                                 >
                                                     <Volume2 className="h-5 w-5" />
@@ -1865,7 +1839,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             </div>
                                         ) : (() => {
                                             // Check if this is a listening question (by type or question text pattern)
-                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const questionType = resolvedQuestionType;
                                             const questionText = currentQuestion?.question_text || '';
                                             const isListeningQuestion = questionType === 'listening' ||
                                                 questionType === 'listening_question' ||
@@ -1922,44 +1896,110 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                     <div className="flex-1 p-6 overflow-y-auto bg-gray-50/50">
                                         {/* Speaking Questions for Soft Skills */}
                                         {(() => {
-                                            // Detect if this is a speaking question (check for keywords in question text or if no options available)
                                             const questionText = (currentQuestion?.question_text || '').toLowerCase();
-                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const questionType = resolvedQuestionType;
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
 
-                                            // Detect Listening Questions explicitly first
+                                            if (questionType === 'dictation') {
+                                                return (
+                                                    <div className="h-full flex flex-col">
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                                            <p className="text-sm text-gray-700">
+                                                                <strong>Instructions:</strong> Listen to the audio and type exactly what you hear.
+                                                            </p>
+                                                        </div>
+                                                        <label className="text-sm font-semibold text-gray-600 mb-2">Type what you heard:</label>
+                                                        <textarea
+                                                            className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-base"
+                                                            placeholder="Type here..."
+                                                            value={userAnswers[currentQuestion.question_id] || ''}
+                                                            onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (questionType === 'text') {
+                                                return (
+                                                    <div className="h-full flex flex-col">
+                                                        <label className="text-sm font-semibold text-gray-600 mb-2">Your Answer:</label>
+                                                        <textarea
+                                                            className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
+                                                            placeholder="Type your answer here..."
+                                                            value={userAnswers[currentQuestion.question_id] || ''}
+                                                            onChange={(e) => handleAnswer(currentQuestion.question_id, e.target.value)}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (questionType === 'voice_reading' || questionType === 'voice_speaking') {
+                                                return (
+                                                    <div className="h-full flex flex-col space-y-4">
+                                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                                            <p className="text-sm text-gray-700">
+                                                                <strong>Instructions:</strong>{' '}
+                                                                {questionType === 'voice_reading'
+                                                                    ? 'Read the passage aloud clearly, then save your response.'
+                                                                    : 'Speak on the topic below, then save your response.'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex justify-center">
+                                                            {!isLiveTranscribing ? (
+                                                                <button
+                                                                    onClick={startLiveTranscription}
+                                                                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg font-bold flex items-center gap-3"
+                                                                >
+                                                                    <Mic className="h-5 w-5" />
+                                                                    <span>Start Recording</span>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={stopLiveTranscription}
+                                                                    className="bg-purple-700 text-white px-8 py-4 rounded-lg font-bold flex items-center gap-3 animate-pulse"
+                                                                >
+                                                                    <Mic className="h-5 w-5" />
+                                                                    <span>Stop & Save</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {(isLiveTranscribing || liveTranscript || userAnswers[currentQuestion.question_id]) && (
+                                                            <div className="flex-1 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 whitespace-pre-wrap min-h-[120px]">
+                                                                {userAnswers[currentQuestion.question_id] || liveTranscript || 'Listening...'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
                                             const isListeningQuestion =
                                                 questionType === 'listening' ||
                                                 questionType === 'listening_question' ||
                                                 questionText.includes('listen and write');
 
-                                            // Check if it's a soft skills question and has speaking keywords OR has no options (likely a speaking question)
-                                            // BUT NOT if it is a listening question
-                                            // Check if it's a speaking question
-                                            // 1. Explicit Soft Skills type
-                                            // 2. Keywords in text (speak, read aloud, etc.)
-                                            // 3. No options available (implies subjective/speaking)
                                             const hasSpeakingKeywords =
                                                 questionText.includes('speak') ||
                                                 questionText.includes('read aloud') ||
-                                                /read[\s\S]*?aloud/i.test(questionText) || // specific regex for "read ... aloud"
+                                                /read[\s\S]*?aloud/i.test(questionText) ||
                                                 questionText.includes('read the following') ||
                                                 questionText.includes('verbal') ||
                                                 questionText.includes('tell us') ||
                                                 questionText.includes('describe') ||
                                                 questionText.includes('explain verbally');
 
-                                            // Check for writing-specific keywords to prevent false positives in Soft Skills round
                                             const hasWritingKeywords = /\b(write|type)\b/i.test(questionText) &&
                                                 !questionText.includes('listen and write');
 
-                                            const isSpeakingQuestion = !isListeningQuestion && !hasWritingKeywords && (
-                                                (questionType === 'soft_skills' && hasNoOptions) ||
-                                                (hasSpeakingKeywords && (questionType === 'soft_skills' || hasNoOptions)) ||
-                                                // Fallback: if we are in soft skills round and there are no options, assume speaking
-                                                (currentRound?.round_name?.toLowerCase().includes('soft skill') && hasNoOptions)
-                                            );
+                                            const isSpeakingQuestion =
+                                                questionType === 'voice_speaking' ||
+                                                (!isListeningQuestion &&
+                                                    !hasWritingKeywords &&
+                                                    questionType !== 'dictation' &&
+                                                    questionType !== 'voice_reading' &&
+                                                    questionType !== 'text' &&
+                                                    ((questionType === 'soft_skills' && hasNoOptions) ||
+                                                        (hasSpeakingKeywords && (questionType === 'soft_skills' || hasNoOptions))));
 
                                             if (isSpeakingQuestion) {
                                                 // Show speaking interface for soft skills speaking questions
@@ -2061,10 +2101,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                         })()}
 
                                         {/* MCQ Options */}
-                                        {['mcq', 'aptitude', 'technical_mcq', 'soft_skills'].includes(String(currentQuestion.question_type || '').toLowerCase()) && (() => {
+                                        {isDishaMcqQuestion(currentQuestion, currentRound) && (() => {
                                             // Skip MCQ rendering if this is a speaking question
                                             const questionText = (currentQuestion?.question_text || '').toLowerCase();
-                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const questionType = resolvedQuestionType;
                                             const mcqOptions = normalizeMcqOptions(currentQuestion);
                                             const hasNoOptions = !mcqOptions || mcqOptions.length === 0;
 
@@ -2085,11 +2125,16 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
                                             const hasWritingKeywords = /\b(write|type)\b/i.test(questionText) && !questionText.includes('listen and write');
 
-                                            const isSpeakingQuestion = !isListeningQuestion && !hasWritingKeywords && (
-                                                (questionType === 'soft_skills' && hasNoOptions) ||
-                                                (hasSpeakingKeywords && (questionType === 'soft_skills' || hasNoOptions)) ||
-                                                (currentRound?.round_name?.toLowerCase().includes('soft skill') && hasNoOptions)
-                                            );
+                                            const isSpeakingQuestion =
+                                                !isListeningQuestion &&
+                                                !hasWritingKeywords &&
+                                                questionType !== 'dictation' &&
+                                                questionType !== 'voice_reading' &&
+                                                questionType !== 'voice_speaking' &&
+                                                questionType !== 'text' &&
+                                                ((questionType === 'soft_skills' && hasNoOptions) ||
+                                                    (hasSpeakingKeywords &&
+                                                        (questionType === 'soft_skills' || hasNoOptions)));
 
                                             if (isSpeakingQuestion || isListeningQuestion) return null; // Already rendered as speaking/listening question
 
@@ -2183,9 +2228,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                         })()}
 
                                         {/* Fallback for questions without options */}
-                                        {!['mcq', 'aptitude', 'technical_mcq', 'soft_skills'].includes(String(currentQuestion.question_type || '').toLowerCase()) && (() => {
+                                        {!isDishaMcqQuestion(currentQuestion, currentRound) &&
+                                            !['dictation', 'voice_reading', 'voice_speaking', 'text'].includes(resolvedQuestionType) && (() => {
                                             const questionTextLower = (currentQuestion.question_text || '').toLowerCase();
-                                            const isDistation = currentQuestion.question_type === 'dictation' ||
+                                            const isDistation = resolvedQuestionType === 'dictation' ||
                                                 questionTextLower.includes('listen and write');
 
                                             // Check for explicit voice types OR instructional keywords
@@ -2215,10 +2261,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                             }
 
                                             // Handle listening questions
-                                            const questionType = String(currentQuestion?.question_type || '').toLowerCase();
+                                            const fallbackQuestionType = resolvedQuestionType;
                                             const questionText = currentQuestion?.question_text || '';
-                                            const isListeningQuestion = questionType === 'listening' ||
-                                                questionType === 'listening_question' ||
+                                            const isListeningQuestion = fallbackQuestionType === 'listening' ||
+                                                fallbackQuestionType === 'listening_question' ||
                                                 questionText.toLowerCase().includes('listen and write') ||
                                                 questionText.toLowerCase().includes('listen and write down');
 
