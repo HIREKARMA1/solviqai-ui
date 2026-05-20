@@ -3,19 +3,27 @@
  * Supports new enum values and legacy rows stored as mcq without options.
  */
 
-export function normalizeMcqOptions(q: Record<string, unknown> | null | undefined): string[] {
+/** API/UI question objects (e.g. Question interface) are plain objects without an index signature */
+type DishaQuestionInput = object | null | undefined
+
+function asQuestionRecord(q: object): Record<string, unknown> {
+    return q as Record<string, unknown>
+}
+
+export function normalizeMcqOptions(q: DishaQuestionInput): string[] {
     if (!q) return []
-    if (Array.isArray(q.options)) {
-        return q.options.map((o: unknown) =>
+    const qRec = asQuestionRecord(q)
+    if (Array.isArray(qRec.options)) {
+        return qRec.options.map((o: unknown) =>
             typeof o === 'string' ? o : ((o as { text?: string; label?: string })?.text ?? (o as { label?: string })?.label ?? JSON.stringify(o))
         )
     }
-    if (Array.isArray(q.choices)) {
-        return q.choices.map((o: unknown) =>
+    if (Array.isArray(qRec.choices)) {
+        return qRec.choices.map((o: unknown) =>
             typeof o === 'string' ? o : ((o as { text?: string; label?: string })?.text ?? (o as { label?: string })?.label ?? JSON.stringify(o))
         )
     }
-    const jsonCandidate = q.options_json || q.options
+    const jsonCandidate = qRec.options_json || qRec.options
     if (typeof jsonCandidate === 'string') {
         try {
             const parsed = JSON.parse(jsonCandidate)
@@ -34,24 +42,25 @@ export function normalizeMcqOptions(q: Record<string, unknown> | null | undefine
         }
     }
     const keySet = ['option_a', 'option_b', 'option_c', 'option_d']
-    const fromFields = keySet.map((k) => q[k]).filter(Boolean)
+    const fromFields = keySet.map((k) => qRec[k]).filter(Boolean)
     if (fromFields.length > 0) return fromFields as string[]
-    if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) {
-        return Object.values(q.options as Record<string, unknown>).map(String)
+    if (qRec.options && typeof qRec.options === 'object' && !Array.isArray(qRec.options)) {
+        return Object.values(qRec.options as Record<string, unknown>).map(String)
     }
     return []
 }
 
 export function resolveDishaQuestionType(
-    question: Record<string, unknown> | null | undefined,
+    question: DishaQuestionInput,
     round?: { round_type?: string; round_name?: string } | null
 ): string {
     if (!question) return ''
-    const meta = (question.question_metadata || {}) as Record<string, unknown>
+    const q = asQuestionRecord(question)
+    const meta = (q.question_metadata || {}) as Record<string, unknown>
     const fromMeta = meta.original_question_type || meta.source_question_type
     if (fromMeta) return String(fromMeta).toLowerCase()
 
-    const rawType = String(question.question_type || '').toLowerCase()
+    const rawType = String(q.question_type || '').toLowerCase()
     if (['dictation', 'voice_reading', 'voice_speaking', 'text', 'voice'].includes(rawType)) {
         return rawType
     }
@@ -61,7 +70,7 @@ export function resolveDishaQuestionType(
         (round?.round_name || '').toLowerCase().includes('soft skill')
 
     if (rawType === 'mcq' && isSoftSkillsRound && normalizeMcqOptions(question).length === 0) {
-        const text = String(question.question_text || '').toLowerCase()
+        const text = String(q.question_text || '').toLowerCase()
         if (text.includes('listen and write')) return 'dictation'
         if (
             text.includes('read aloud') ||
@@ -78,7 +87,7 @@ export function resolveDishaQuestionType(
         ) {
             return 'voice_speaking'
         }
-        const raw = String(question.question_text || '').trim()
+        const raw = String(q.question_text || '').trim()
         if (
             raw.length > 20 &&
             !raw.includes('choose') &&
@@ -94,7 +103,7 @@ export function resolveDishaQuestionType(
 }
 
 export function isDishaMcqQuestion(
-    question: Record<string, unknown> | null | undefined,
+    question: DishaQuestionInput,
     round?: { round_type?: string; round_name?: string } | null
 ): boolean {
     const resolved = resolveDishaQuestionType(question, round)
