@@ -347,6 +347,17 @@ export default function AssessmentRoundPage() {
         }
     }, [])
 
+    // Disable right-click during active exam round (Tally/Excel needs context menu)
+    useEffect(() => {
+        if (loading || !roundData) return
+        const type = (roundData?.round_type as string) || roundTypeMap[roundNumber as keyof typeof roundTypeMap]
+        if (type === 'tally_excel_practical' || type === 'TALLY_EXCEL_PRACTICAL') return
+
+        const handleContextMenu = (e: MouseEvent) => e.preventDefault()
+        document.addEventListener('contextmenu', handleContextMenu)
+        return () => document.removeEventListener('contextmenu', handleContextMenu)
+    }, [loading, roundData, roundNumber])
+
     // Load round data
     useEffect(() => {
         if (!assessmentId) {
@@ -1236,7 +1247,10 @@ export default function AssessmentRoundPage() {
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
     return (
         <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-            <div className="h-screen overflow-hidden bg-gray-100 select-none flex flex-col font-sans">
+            <div
+                className="h-screen overflow-hidden bg-gray-100 select-none flex flex-col font-sans"
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 {/* Header */}
                 <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
                     <h1 className="text-xl font-bold truncate">
