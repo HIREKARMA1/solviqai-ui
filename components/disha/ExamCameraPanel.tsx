@@ -1,15 +1,37 @@
 'use client';
 
-import { RefObject, type LegacyRef } from 'react';
+import { type RefCallback } from 'react';
 import { AlertCircle, Loader2, Video, VideoOff } from 'lucide-react';
 import type { ExamCameraStatus } from '@/hooks/useExamCamera';
 
 interface ExamCameraPanelProps {
-    videoRef: RefObject<HTMLVideoElement | null> | LegacyRef<HTMLVideoElement>;
+    videoRef: RefCallback<HTMLVideoElement>;
     status: ExamCameraStatus;
     onEnableCamera: () => void | Promise<void | boolean>;
-    variant?: 'setup' | 'floating';
+    variant?: 'setup' | 'floating' | 'sidebar';
     className?: string;
+}
+
+function CameraVideo({
+    videoRef,
+    isActive,
+    inactiveClassName = 'opacity-0',
+    className = '',
+}: {
+    videoRef: RefCallback<HTMLVideoElement>;
+    isActive: boolean;
+    inactiveClassName?: string;
+    className?: string;
+}) {
+    return (
+        <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover scale-x-[-1] ${isActive ? 'opacity-100' : inactiveClassName} ${className}`}
+        />
+    );
 }
 
 function statusLabel(status: ExamCameraStatus): string {
@@ -37,7 +59,39 @@ export function ExamCameraPanel({
     className = '',
 }: ExamCameraPanelProps) {
     const isSetup = variant === 'setup';
+    const isSidebar = variant === 'sidebar';
     const isActive = status === 'active';
+
+    if (isSidebar) {
+        return (
+            <div
+                className={`relative w-32 h-24 bg-gray-900 rounded-xl overflow-hidden shadow-sm flex-shrink-0 border border-gray-700 ${className}`}
+                aria-label="Exam camera preview"
+            >
+                <CameraVideo videoRef={videoRef} isActive={isActive} />
+                {!isActive && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-1 p-1 text-center">
+                        <VideoOff className="w-6 h-6" />
+                    </div>
+                )}
+                {!isActive && (
+                    <button
+                        type="button"
+                        onClick={() => void onEnableCamera()}
+                        disabled={status === 'requesting'}
+                        title={status === 'requesting' ? 'Starting camera…' : 'Turn camera on'}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-[10px] font-semibold disabled:opacity-60"
+                    >
+                        {status === 'requesting' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            'Enable'
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+    }
 
     if (isSetup) {
         return (
@@ -46,13 +100,7 @@ export function ExamCameraPanel({
             >
                 <div className="flex flex-col md:flex-row gap-5 items-start">
                     <div className="relative w-full md:w-72 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 border border-gray-700">
-                        <video
-                            ref={videoRef as LegacyRef<HTMLVideoElement>}
-                            autoPlay
-                            playsInline
-                            muted
-                            className={`w-full h-full object-cover scale-x-[-1] ${isActive ? 'opacity-100' : 'opacity-0'}`}
-                        />
+                        <CameraVideo videoRef={videoRef} isActive={isActive} />
                         {!isActive && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2 p-4 text-center">
                                 <VideoOff className="w-10 h-10" />
@@ -122,13 +170,7 @@ export function ExamCameraPanel({
             aria-label="Exam camera preview"
         >
             <div className="relative aspect-video bg-black">
-                <video
-                    ref={videoRef as LegacyRef<HTMLVideoElement>}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`w-full h-full object-cover scale-x-[-1] ${isActive ? 'opacity-100' : 'opacity-30'}`}
-                />
+                <CameraVideo videoRef={videoRef} isActive={isActive} inactiveClassName="opacity-30" />
                 {!isActive && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <VideoOff className="w-8 h-8 text-gray-500" />

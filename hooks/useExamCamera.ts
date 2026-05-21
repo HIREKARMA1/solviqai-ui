@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type RefCallback } from 'react';
 import toast from 'react-hot-toast';
 
 export type ExamCameraStatus =
@@ -12,15 +12,20 @@ export type ExamCameraStatus =
     | 'lost';
 
 export function useExamCamera() {
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const videoElementRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const [status, setStatus] = useState<ExamCameraStatus>('idle');
 
-    const attachStreamToVideo = useCallback(async () => {
-        const video = videoRef.current;
+    const bindStreamToVideo = useCallback(async (video: HTMLVideoElement | null) => {
+        if (!video) return;
         const stream = streamRef.current;
-        if (!video || !stream) return;
-        video.srcObject = stream;
+        if (!stream) {
+            video.srcObject = null;
+            return;
+        }
+        if (video.srcObject !== stream) {
+            video.srcObject = stream;
+        }
         video.muted = true;
         try {
             await video.play();
@@ -29,11 +34,24 @@ export function useExamCamera() {
         }
     }, []);
 
+    /** Re-attaches when the <video> node mounts (e.g. setup → exam sidebar). */
+    const videoRef: RefCallback<HTMLVideoElement> = useCallback(
+        (node) => {
+            videoElementRef.current = node;
+            void bindStreamToVideo(node);
+        },
+        [bindStreamToVideo]
+    );
+
+    const attachStreamToVideo = useCallback(async () => {
+        await bindStreamToVideo(videoElementRef.current);
+    }, [bindStreamToVideo]);
+
     const stopCamera = useCallback(() => {
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
+        if (videoElementRef.current) {
+            videoElementRef.current.srcObject = null;
         }
         setStatus('idle');
     }, []);
@@ -88,19 +106,6 @@ export function useExamCamera() {
             return false;
         }
     }, [status, attachStreamToVideo]);
-
-    useEffect(() => {
-        if (status === 'active') {
-            void attachStreamToVideo();
-        }
-    }, [status, attachStreamToVideo]);
-
-    useEffect(() => {
-        return () => {
-            streamRef.current?.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
-        };
-    }, []);
 
     return {
         videoRef,

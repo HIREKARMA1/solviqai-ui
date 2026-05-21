@@ -551,7 +551,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     }, [examState, examCamera.stopCamera]);
 
     const renderFloatingCamera = useCallback(() => {
-        if (!isProctoredPhase || typeof document === 'undefined') return null;
+        if (!isProctoredPhase || examState === 'exam' || typeof document === 'undefined') return null;
         return createPortal(
             <ExamCameraPanel
                 variant="floating"
@@ -561,7 +561,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             />,
             document.body
         );
-    }, [isProctoredPhase, examCamera.videoRef, examCamera.status, examCamera.startCamera]);
+    }, [isProctoredPhase, examState, examCamera.videoRef, examCamera.status, examCamera.startCamera]);
 
     const renderCameraLostModal = () =>
         showCameraLostModal && examCamera.status !== 'active' ? (
@@ -2503,10 +2503,18 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         {/* Profile & Timer Section */}
                         <div className="p-4 border-b border-gray-200 border-dashed border-blue-300 m-2 rounded-lg relative">
                             <div className="flex items-start gap-4">
-                                {/* Large Black User Silhouette */}
-                                <div className="w-20 h-20 bg-black rounded-xl overflow-hidden shadow-sm flex items-end justify-center flex-shrink-0">
-                                    <User className="w-16 h-16 text-gray-400 mb-[-4px]" fill="currentColor" />
-                                </div>
+                                {isProctoredPhase ? (
+                                    <ExamCameraPanel
+                                        variant="sidebar"
+                                        videoRef={examCamera.videoRef}
+                                        status={examCamera.status}
+                                        onEnableCamera={examCamera.startCamera}
+                                    />
+                                ) : (
+                                    <div className="w-20 h-20 bg-black rounded-xl overflow-hidden shadow-sm flex items-end justify-center flex-shrink-0">
+                                        <User className="w-16 h-16 text-gray-400 mb-[-4px]" fill="currentColor" />
+                                    </div>
+                                )}
 
                                 <div className="flex-1 text-center">
                                     <div className="text-lg font-bold text-gray-900 mb-1">Time Left</div>
