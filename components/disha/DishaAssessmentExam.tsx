@@ -505,6 +505,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
 
+    // Disable right-click during active exam
+    useEffect(() => {
+        if (examState !== 'exam') return;
+
+        const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+        document.addEventListener('contextmenu', handleContextMenu);
+        return () => document.removeEventListener('contextmenu', handleContextMenu);
+    }, [examState]);
+
     // Monitor Fullscreen Exit for strict proctoring
     useEffect(() => {
         if (isFullscreen) {
@@ -1784,7 +1793,10 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         const isTimeUp = timeRemaining !== null && timeRemaining <= 0;
 
         return (
-            <div className="fullscreen-exam font-sans bg-gray-50 flex flex-col h-screen overflow-hidden">
+            <div
+                className="fullscreen-exam font-sans bg-gray-50 flex flex-col h-screen overflow-hidden"
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 {/* Header */}
                 <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
                     <h1 className="text-xl font-bold truncate">
