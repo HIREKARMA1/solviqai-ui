@@ -510,6 +510,15 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
 
+    // Disable right-click during active exam
+    useEffect(() => {
+        if (examState !== 'exam') return;
+
+        const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+        document.addEventListener('contextmenu', handleContextMenu);
+        return () => document.removeEventListener('contextmenu', handleContextMenu);
+    }, [examState]);
+
     // Monitor Fullscreen Exit for strict proctoring
     useEffect(() => {
         if (isFullscreen) {
@@ -1133,6 +1142,18 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             return newMarked;
         });
         // Auto advance if not last
+        if (currentRound && currentQuestionIndex < currentRound.questions.length - 1) {
+            navigateToQuestion(currentQuestionIndex + 1);
+        }
+    };
+
+    const handleSaveAndNext = () => {
+        setMarkedQuestions(prev => {
+            if (!prev.has(currentQuestionIndex)) return prev;
+            const newMarked = new Set(prev);
+            newMarked.delete(currentQuestionIndex);
+            return newMarked;
+        });
         if (currentRound && currentQuestionIndex < currentRound.questions.length - 1) {
             navigateToQuestion(currentQuestionIndex + 1);
         }
@@ -2456,7 +2477,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                                         </button>
                                         {currentQuestionIndex < currentRound!.questions.length - 1 ? (
                                             <button
-                                                onClick={() => navigateToQuestion(Math.min(currentRound!.questions.length - 1, currentQuestionIndex + 1))}
+                                                onClick={handleSaveAndNext}
                                                 className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
                                             >
                                                 Save & Next
