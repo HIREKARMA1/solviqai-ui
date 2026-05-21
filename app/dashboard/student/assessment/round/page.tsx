@@ -704,6 +704,12 @@ export default function AssessmentRoundPage() {
 
 
     const handleNextQuestion = () => {
+        setMarkedQuestions(prev => {
+            if (!prev.has(currentQuestion)) return prev
+            const newMarked = new Set(prev)
+            newMarked.delete(currentQuestion)
+            return newMarked
+        })
         if (currentQuestion < roundData.questions.length - 1) {
             setCurrentQuestion(currentQuestion + 1)
             setVisitedQuestions(prev => new Set([...Array.from(prev), currentQuestion + 1]))
