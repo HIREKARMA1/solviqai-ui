@@ -107,8 +107,11 @@ export function useExamCamera() {
         }
     }, [status, attachStreamToVideo]);
 
+    const getVideoElement = useCallback(() => videoElementRef.current, []);
+
     return {
         videoRef,
+        getVideoElement,
         status,
         startCamera,
         stopCamera,

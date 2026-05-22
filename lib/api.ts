@@ -49,6 +49,11 @@ class ApiClient {
           config.url = `/api/v1${config.url}`;
         }
 
+        // FormData must not use application/json — browser sets multipart boundary
+        if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+          delete config.headers["Content-Type"];
+        }
+
         // Add auth token
         const token = localStorage.getItem("access_token");
         if (token) {
@@ -1246,6 +1251,29 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadDishaProctoringSnapshot(
+    packageId: string,
+    attemptId: string,
+    dishaStudentId: string,
+    snapshotIndex: number,
+    imageBlob: Blob,
+    roundNumber?: number
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('snapshot_index', String(snapshotIndex));
+    formData.append('disha_student_id', dishaStudentId);
+    formData.append('file', imageBlob, `snapshot_${snapshotIndex}.jpg`);
+    if (roundNumber != null) {
+      formData.append('round_number', String(roundNumber));
+    }
+    // Let axios set Content-Type with boundary — do not set multipart/form-data manually
+    const response: AxiosResponse = await this.client.post(
+      `/disha/assessments/${packageId}/attempts/${attemptId}/proctoring/snapshots`,
+      formData
+    );
+    return response.data;
+  }
+
   async getDishaEvaluationStatus(packageId: string, attemptId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/assessments/${packageId}/attempts/${attemptId}/evaluation-status`
@@ -1271,6 +1299,14 @@ class ApiClient {
   async getDishaPackageReport(packageId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(
       `/disha/admin/packages/${packageId}/report`
+    );
+    return response.data;
+  }
+
+  async downloadDishaPackageReportCsv(packageId: string): Promise<Blob> {
+    const response: AxiosResponse<Blob> = await this.client.get(
+      `/disha/admin/packages/${packageId}/report`,
+      { params: { format: 'csv' }, responseType: 'blob' }
     );
     return response.data;
   }
