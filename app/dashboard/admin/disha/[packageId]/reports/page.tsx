@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader } from '@/components/ui/loader';
 import { apiClient } from '@/lib/api';
+import { buildProctoringSlots, escapeCsvCell, resolveMediaUrl } from '@/lib/resolveMediaUrl';
 import toast from 'react-hot-toast';
 import {
     Users,
@@ -43,6 +44,13 @@ interface RoundDetail {
     questions: QuestionDetail[];
 }
 
+interface ProctoringSnapshot {
+    index: number;
+    url: string;
+    captured_at: string;
+    round_number?: number;
+}
+
 interface StudentData {
     attempt_id: string;
     student_id: string;
@@ -61,6 +69,11 @@ interface StudentData {
     }>;
     started_at: string | null;
     completed_at: string | null;
+    proctoring_snapshots?: ProctoringSnapshot[];
+    proctoring_snapshot_1_url?: string;
+    proctoring_snapshot_2_url?: string;
+    proctoring_snapshot_3_url?: string;
+    proctoring_snapshot_4_url?: string;
 }
 
 interface DetailedReport {
@@ -110,7 +123,10 @@ export default function AdminDishaReportsPage() {
 
             try {
                 setLoadingDetails(true);
-                const data = await apiClient.getDishaReport(selectedStudent.attempt_id);
+                const data = await apiClient.getDishaIndividualStudentReport(
+                    packageId,
+                    selectedStudent.attempt_id
+                );
                 setDetailedReport(data);
             } catch (error: any) {
                 console.error('Failed to load detailed report:', error);
@@ -121,7 +137,7 @@ export default function AdminDishaReportsPage() {
         };
 
         loadDetailedReport();
-    }, [selectedStudent]);
+    }, [selectedStudent, packageId]);
 
     useEffect(() => {
         const loadReport = async () => {
@@ -145,21 +161,36 @@ export default function AdminDishaReportsPage() {
     const exportToCSV = () => {
         if (!report) return;
 
-        const headers = ['Student ID', 'Status', 'Overall Score', 'Max Score', 'Percentage', 'Pass/Fail', 'Rounds Completed'];
-        const rows = report.students.map(s => [
-            s.student_id,
-            s.status,
-            s.overall_score.toString(),
-            s.max_score.toString(),
-            s.overall_percentage.toFixed(2),
-            s.pass_fail_status || 'N/A',
-            s.rounds_completed.toString()
-        ]);
+        const headers = [
+            'Student ID',
+            'Status',
+            'Overall Score',
+            'Max Score',
+            'Percentage',
+            'Pass/Fail',
+            'Rounds Completed',
+            'Snapshot 1 URL',
+            'Snapshot 2 URL',
+            'Snapshot 3 URL',
+            'Snapshot 4 URL',
+        ];
+        const rows = report.students.map((s) =>
+            [
+                s.student_id,
+                s.status,
+                s.overall_score.toString(),
+                s.max_score.toString(),
+                s.overall_percentage.toFixed(2),
+                s.pass_fail_status || 'N/A',
+                s.rounds_completed.toString(),
+                resolveMediaUrl(s.proctoring_snapshot_1_url),
+                resolveMediaUrl(s.proctoring_snapshot_2_url),
+                resolveMediaUrl(s.proctoring_snapshot_3_url),
+                resolveMediaUrl(s.proctoring_snapshot_4_url),
+            ].map(escapeCsvCell)
+        );
 
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
+        const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -168,6 +199,21 @@ export default function AdminDishaReportsPage() {
         a.download = `${report.assessment_name}_report_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+    };
+
+    const exportServerCsv = async () => {
+        try {
+            const blob = await apiClient.downloadDishaPackageReportCsv(packageId);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${report?.assessment_name || 'assessment'}_report_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error: any) {
+            console.error('Server CSV export failed:', error);
+            toast.error('Failed to export CSV from server');
+        }
     };
 
     if (loading) {
@@ -209,10 +255,16 @@ export default function AdminDishaReportsPage() {
                         <h1 className="text-3xl font-bold">{report.assessment_name}</h1>
                         <p className="text-gray-600 dark:text-gray-400 mt-1">Assessment Report</p>
                     </div>
-                    <Button onClick={exportToCSV} className="flex items-center gap-2">
-                        <Download className="h-4 w-4" />
-                        Export CSV
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button onClick={exportToCSV} variant="outline" className="flex items-center gap-2">
+                            <Download className="h-4 w-4" />
+                            Export CSV
+                        </Button>
+                        <Button onClick={() => void exportServerCsv()} className="flex items-center gap-2">
+                            <Download className="h-4 w-4" />
+                            Export CSV (server)
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -289,6 +341,7 @@ export default function AdminDishaReportsPage() {
                                             <th className="text-left p-3">Pass/Fail</th>
                                         )}
                                         <th className="text-left p-3">Rounds</th>
+                                        <th className="text-left p-3">Photos</th>
                                         <th className="text-left p-3">Actions</th>
                                     </tr>
                                 </thead>
@@ -330,26 +383,23 @@ export default function AdminDishaReportsPage() {
                                                 </td>
                                             )}
                                             <td className="p-3">{student.rounds_completed}</td>
+                                            <td className="p-3 text-sm">
+                                                {(() => {
+                                                    const n = [
+                                                        student.proctoring_snapshot_1_url,
+                                                        student.proctoring_snapshot_2_url,
+                                                        student.proctoring_snapshot_3_url,
+                                                        student.proctoring_snapshot_4_url,
+                                                    ].filter(Boolean).length;
+                                                    return `${n} / 4`;
+                                                })()}
+                                            </td>
                                             <td className="p-3">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={async () => {
+                                                    onClick={() => {
                                                         setSelectedStudent(student);
-                                                        // Fetch detailed report
-                                                        try {
-                                                            setLoadingDetails(true);
-                                                            const details = await apiClient.getDishaIndividualStudentReport(
-                                                                packageId,
-                                                                student.attempt_id
-                                                            );
-                                                            setDetailedReport(details);
-                                                        } catch (error: any) {
-                                                            console.error('Failed to load detailed report:', error);
-                                                            toast.error('Failed to load detailed report');
-                                                        } finally {
-                                                            setLoadingDetails(false);
-                                                        }
                                                     }}
                                                 >
                                                     <Eye className="h-4 w-4 mr-2" />
@@ -401,6 +451,67 @@ export default function AdminDishaReportsPage() {
                                             <Badge variant={selectedStudent.pass_fail_status === 'PASS' ? 'default' : 'destructive'}>
                                                 {selectedStudent.pass_fail_status}
                                             </Badge>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-1">
+                                        Photos captured during assessment
+                                    </h3>
+                                    <p className="text-sm text-gray-500 mb-3">
+                                        Up to 4 identity verification snapshots (silent, spread across the exam).
+                                    </p>
+                                    {loadingDetails ? (
+                                        <div className="flex justify-center py-6">
+                                            <Loader size="sm" />
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {buildProctoringSlots(
+                                                selectedStudent.proctoring_snapshots?.length
+                                                    ? selectedStudent.proctoring_snapshots
+                                                    : detailedReport?.proctoring_snapshots,
+                                                selectedStudent
+                                            ).map((slot) =>
+                                                slot.url ? (
+                                                    <a
+                                                        key={slot.index}
+                                                        href={slot.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="block rounded-lg overflow-hidden border bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-blue-500"
+                                                    >
+                                                        <img
+                                                            src={slot.url}
+                                                            alt={`Snapshot ${slot.index}`}
+                                                            className="w-full aspect-[4/3] object-cover"
+                                                        />
+                                                        <div className="p-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                                                            <p className="font-medium">Photo {slot.index}</p>
+                                                            {slot.captured_at && (
+                                                                <p>{new Date(slot.captured_at).toLocaleString()}</p>
+                                                            )}
+                                                            {slot.round_number != null && (
+                                                                <p>Round {slot.round_number}</p>
+                                                            )}
+                                                            <p className="text-blue-600 truncate" title={slot.url}>
+                                                                Open link
+                                                            </p>
+                                                        </div>
+                                                    </a>
+                                                ) : (
+                                                    <div
+                                                        key={slot.index}
+                                                        className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 flex flex-col items-center justify-center aspect-[4/3] p-3 text-center"
+                                                    >
+                                                        <p className="text-sm font-medium text-gray-500">
+                                                            Photo {slot.index}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 mt-1">Not captured</p>
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
                                     )}
                                 </div>
