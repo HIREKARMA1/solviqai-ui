@@ -18,6 +18,7 @@ import {
     resolveDishaQuestionType,
 } from '@/lib/disha-question-utils';
 import { useExamCamera } from '@/hooks/useExamCamera';
+import { useDishaProctorSnapshots } from '@/hooks/useDishaProctorSnapshots';
 import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
@@ -339,6 +340,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [showTerminationModal, setShowTerminationModal] = useState(false);
     const [showCameraLostModal, setShowCameraLostModal] = useState(false);
+    const [attemptStartedAtIso, setAttemptStartedAtIso] = useState<string | null>(null);
+    const [proctoringCapturedIndexes, setProctoringCapturedIndexes] = useState<number[]>([]);
     const examCamera = useExamCamera();
     // Helper to add/remove a class to body for hiding sidebar
     function setSidebarHidden(hidden: boolean) {
@@ -534,6 +537,49 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     }, [isFullscreen, examState, isSubmitting, loading, showTerminationModal]);
 
     const isProctoredPhase = ['round_instructions', 'exam', 'round_complete'].includes(examState);
+
+    const { runCaptureCheck, captureNow } = useDishaProctorSnapshots({
+        enabled: isProctoredPhase && !!attemptId,
+        packageId,
+        attemptId,
+        studentId,
+        getVideoElement: examCamera.getVideoElement,
+        isCameraActive: examCamera.isCameraActive,
+        startedAtIso: attemptStartedAtIso ?? attemptStartTimeRef.current?.toISOString(),
+        overallTimeRemainingSeconds: overallTimeRemaining,
+        currentRoundNumber: packageInfo?.current_round,
+        serverCapturedIndexes: proctoringCapturedIndexes,
+    });
+
+    const proctorBurstScheduledRef = useRef<string | null>(null);
+    const runCaptureCheckRef = useRef(runCaptureCheck);
+    const captureNowRef = useRef(captureNow);
+    runCaptureCheckRef.current = runCaptureCheck;
+    captureNowRef.current = captureNow;
+
+    useEffect(() => {
+        if (!isProctoredPhase || !attemptId || !examCamera.isCameraActive) return;
+        if (proctorBurstScheduledRef.current === attemptId) return;
+        proctorBurstScheduledRef.current = attemptId;
+
+        const delays = [4_000, 12_000, 22_000, 35_000];
+        const timers = delays.map((ms) =>
+            setTimeout(() => {
+                void runCaptureCheckRef.current();
+            }, ms)
+        );
+        return () => timers.forEach(clearTimeout);
+    }, [isProctoredPhase, attemptId, examCamera.isCameraActive]);
+
+    useEffect(() => {
+        if (examState !== 'exam' || !attemptId || !examCamera.isCameraActive) return;
+        const timers = [
+            setTimeout(() => captureNowRef.current(1), 3_000),
+            setTimeout(() => captureNowRef.current(2), 15_000),
+            setTimeout(() => void runCaptureCheckRef.current(), 28_000),
+        ];
+        return () => timers.forEach(clearTimeout);
+    }, [examState, attemptId, examCamera.isCameraActive]);
 
     useEffect(() => {
         if (isProctoredPhase && examCamera.status === 'lost') {
@@ -788,6 +834,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 if (status.time_window_remaining_seconds !== null && status.time_window_remaining_seconds !== undefined) {
                     setTimeWindowRemaining(status.time_window_remaining_seconds);
                 }
+                if (status.started_at) {
+                    setAttemptStartedAtIso(status.started_at);
+                }
+                if (Array.isArray(status.proctoring_captured_indexes)) {
+                    setProctoringCapturedIndexes(status.proctoring_captured_indexes);
+                }
             } catch (error) {
                 console.error('Failed to update overall timer:', error);
             }
@@ -826,6 +878,12 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             }
             if (status.time_window_remaining_seconds !== null) {
                 setTimeWindowRemaining(status.time_window_remaining_seconds);
+            }
+            if (status.started_at) {
+                setAttemptStartedAtIso(status.started_at);
+            }
+            if (Array.isArray(status.proctoring_captured_indexes)) {
+                setProctoringCapturedIndexes(status.proctoring_captured_indexes);
             }
 
             setExamState('round_instructions');
