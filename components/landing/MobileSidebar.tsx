@@ -3,32 +3,18 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import {
-  FileText,
-  Briefcase,
-  ClipboardList,
-  Zap,
-  LayoutGrid,
-  Users,
-  BarChart3,
-  User,
-  Building2,
-  Sparkles,
-  Target,
-} from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { enterpriseSidebarFeatures } from './LandingSidebar';
-
-export interface SidebarItem {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-}
+import {
+  adminSidebarFeatures,
+  collegeSidebarFeatures,
+  enterpriseSidebarFeatures,
+  studentSidebarFeatures,
+} from './LandingSidebar';
+import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -37,108 +23,6 @@ interface MobileSidebarProps {
   activeFeature?: string | null;
   onFeatureChange?: (featureId: string | null) => void;
 }
-
-// Student sidebar features
-const studentSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'resume',
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Resume Analysis',
-    onClick: undefined,
-  },
-  {
-    id: 'assessment',
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: 'Mock Assessment',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-];
-
-// College sidebar features
-const collegeSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'students',
-    icon: <Users className="w-5 h-5" />,
-    label: 'Students',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-  {
-    id: 'placement-hub',
-    icon: <Target className="w-5 h-5" />,
-    label: 'Placement Hub',
-    onClick: undefined,
-  },
-  {
-    id: 'profile',
-    icon: <User className="w-5 h-5" />,
-    label: 'Profile',
-    onClick: undefined,
-  },
-];
-
-// Admin sidebar features
-const adminSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'colleges',
-    icon: <Building2 className="w-5 h-5" />,
-    label: 'Colleges',
-    onClick: undefined,
-  },
-  {
-    id: 'students',
-    icon: <Users className="w-5 h-5" />,
-    label: 'Students',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-  {
-    id: 'disha',
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Disha Assessments',
-    onClick: undefined,
-  },
-  {
-    id: 'profile',
-    icon: <User className="w-5 h-5" />,
-    label: 'Profile',
-    onClick: undefined,
-  },
-];
 
 export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFeatureChange }: MobileSidebarProps) {
   const { t } = useTranslation();
@@ -175,56 +59,9 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
     }
   };
 
-  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
-    const baseRoute = `/dashboard/${user.user_type}`;
-
-    // Student routes
-    if (user.user_type === 'student') {
-      const routeMap: Record<string, string> = {
-        'dashboard': baseRoute,
-        'resume': `${baseRoute}/resume`,
-        'assessment': `${baseRoute}/assessment`,
-        'analytics': `${baseRoute}/analytics`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    if (user.user_type === 'enterprise') {
-      const routeMap: Record<string, string> = {
-        dashboard: `/dashboard/enterprise`,
-        campaigns: `/dashboard/enterprise/campaigns`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // College routes
-    if (user.user_type === 'college') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/college`,
-        'students': `/dashboard/college/students`,
-        'analytics': `/dashboard/college/analytics`,
-        'placement-hub': `/dashboard/college/placement-hub`,
-        'profile': `/dashboard/college/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // Admin routes
-    if (user.user_type === 'admin') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/admin`,
-        'colleges': `/dashboard/admin/colleges`,
-        'students': `/dashboard/admin/students`,
-        'analytics': `/dashboard/admin/analytics`,
-        'disha': `/dashboard/admin/disha`,
-        'profile': `/dashboard/admin/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    return null;
+    return getDashboardFeatureRoute(user.user_type, featureId);
   };
 
   // Check if we're in dashboard context

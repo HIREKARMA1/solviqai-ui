@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { getSimulationsPathForUser, PUBLIC_SIMULATIONS_PATH } from '@/lib/dashboardNavigation';
 
 interface LandingNavbarProps {
   className?: string;
@@ -53,11 +54,14 @@ export function LandingNavbar({
 
   const navigationItems = [
     { label: 'HOME', href: '/' },
+    { label: 'JOB PREPARE', href: PUBLIC_SIMULATIONS_PATH },
     { label: 'FEATURES', href: '#features' },
     { label: 'INTERNSHIPS', href: '#internships' },
     { label: 'ABOUT', href: '#about' },
     { label: 'CONTACT', href: '#contact' },
   ];
+
+  const simulationsHref = getSimulationsPathForUser(user?.user_type);
 
   if (!mounted) {
     return null;
@@ -217,6 +221,16 @@ export function LandingNavbar({
                         className="w-48"
                         sideOffset={8}
                       >
+                        {(user.user_type === 'student' || user.user_type === 'admin') && (
+                          <DropdownMenuItem asChild>
+                            <Link
+                              href={simulationsHref}
+                              className="cursor-pointer flex items-center gap-2"
+                            >
+                              Job Prep Simulation
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem asChild>
                           <Link
                             href={`/dashboard/${user.user_type}/profile`}
@@ -380,6 +394,19 @@ export function LandingNavbar({
               {/* Logged in user - Mobile */}
               {!authLoading && user && (
                 <div className="pt-2 space-y-2 border-t border-gray-200 dark:border-gray-800">
+                  {(user.user_type === 'student' || user.user_type === 'admin') && (
+                    <Link href={simulationsHref} onClick={() => setMobileMenuOpen(false)}>
+                      <button
+                        className={cn(
+                          'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium',
+                          'text-primary-600 dark:text-primary-400',
+                          'hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                        )}
+                      >
+                        Job Prep Simulation
+                      </button>
+                    </Link>
+                  )}
                   <Link
                     href={`/dashboard/${user.user_type}/profile`}
                     onClick={() => setMobileMenuOpen(false)}

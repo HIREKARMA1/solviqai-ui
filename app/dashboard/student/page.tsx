@@ -10,7 +10,7 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from 'next-themes'
-import { User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Plus, X, ChevronLeft, ChevronRight, Check, Flame, Brain, Clock, Play, ArrowRight } from 'lucide-react'
+import { User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Plus, X, ChevronLeft, ChevronRight, Check, Flame, Brain, Clock, Play, ArrowRight, Workflow } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -580,6 +580,11 @@ export default function StudentDashboard() {
                                                 </div>
                                             </Link>
                                         )}
+                                        <Link href="/dashboard/student/simulations" className="block">
+                                            <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-emerald-50 hover:shadow-md hover:border-emerald-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-emerald-900/20 dark:hover:border-emerald-700">
+                                                Job Prep Simulation
+                                            </div>
+                                        </Link>
                                         <Link href="/dashboard/student/career-guidance" className="block">
                                             <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-purple-50 hover:shadow-md hover:border-purple-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-purple-900/20 dark:hover:border-purple-700">
                                                 Improve Yourself
@@ -619,6 +624,14 @@ export default function StudentDashboard() {
                                 </div>
                             </div>
                             <nav className="flex flex-col gap-1">
+                                <Link
+                                    href="/dashboard/student/simulations"
+                                    className="flex items-center gap-3 rounded-lg bg-emerald-50 px-3 py-2.5 font-medium text-emerald-800 transition-colors hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200"
+                                    onClick={() => setQuickActionOpen(false)}
+                                >
+                                    <Workflow className="h-5 w-5" />
+                                    <span>Job Prep Simulation</span>
+                                </Link>
                                 <Link
                                     href={stats?.next_action ? getNextActionHref(stats.next_action) : '/dashboard/student/jobs'}
                                     className="flex items-center gap-3 rounded-lg bg-[#FF541F]/10 px-3 py-2.5 font-medium text-[#FF541F] transition-colors hover:bg-[#FF541F]/20 dark:bg-[#FF541F]/20"

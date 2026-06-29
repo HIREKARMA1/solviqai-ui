@@ -2,10 +2,12 @@
 
 import React, { useState, memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Target } from 'lucide-react';
+import { ArrowRight, Target, Workflow } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getSimulationsPathForUser } from '@/lib/dashboardNavigation';
 
 export const HeroSection = memo(function HeroSection({
   onStartReadiness,
@@ -14,6 +16,7 @@ export const HeroSection = memo(function HeroSection({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const simulationsHref = getSimulationsPathForUser(user?.user_type);
 
   const handlePrimaryCta = useCallback(() => {
     if (user) {
@@ -50,7 +53,7 @@ export const HeroSection = memo(function HeroSection({
               Upload your resume, take a 3-minute aptitude check, and get a free readiness score with specific gaps to fix
             </p>
 
-            <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
               <button
                 type="button"
                 onClick={handlePrimaryCta}
@@ -60,6 +63,14 @@ export const HeroSection = memo(function HeroSection({
                 Check Your Job Readiness Score — Free
                 <ArrowRight className="h-5 w-5" />
               </button>
+              <Link
+                href={simulationsHref}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[#112C96] px-8 py-4 text-lg font-semibold text-[#112C96] transition hover:bg-[#112C96]/5 dark:border-primary-400 dark:text-primary-300 dark:hover:bg-primary-900/20"
+              >
+                <Workflow className="h-5 w-5" />
+                Job Prep Simulation
+                <ArrowRight className="h-5 w-5" />
+              </Link>
               {user && (
                 <button
                   type="button"

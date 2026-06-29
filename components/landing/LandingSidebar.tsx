@@ -17,12 +17,15 @@ import {
   Layers,
   Mic,
   Send,
+  CreditCard,
+  Workflow,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
 
 export interface SidebarItem {
   id: string;
@@ -77,6 +80,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'simulations',
+    icon: <Workflow className="w-5 h-5" />,
+    label: 'Job Prep Simulation',
+    onClick: undefined,
+  },
+  {
     id: 'mock-interview',
     icon: <Mic className="w-5 h-5" />,
     label: 'AI Interview',
@@ -98,6 +107,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'practice',
     icon: <BookOpen className="w-5 h-5" />,
     label: 'Practice',
+    onClick: undefined,
+  },
+  {
+    id: 'plans',
+    icon: <CreditCard className="w-5 h-5" />,
+    label: 'Plans',
     onClick: undefined,
   },
   {
@@ -178,6 +193,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'coupons',
+    icon: <CreditCard className="w-5 h-5" />,
+    label: 'Coupons',
+    onClick: undefined,
+  },
+  {
     id: 'students',
     icon: <Users className="w-5 h-5" />,
     label: 'Students',
@@ -214,6 +235,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'simulation-pipelines-admin',
+    icon: <Workflow className="w-5 h-5" />,
+    label: 'Simulations',
+    onClick: undefined,
+  },
+  {
     id: 'profile',
     icon: <User className="w-5 h-5" />,
     label: 'Profile',
@@ -247,66 +274,9 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     }
   };
 
-  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
-    const baseRoute = `/dashboard/${user.user_type}`;
-
-    // Student routes
-    if (user.user_type === 'student') {
-      const routeMap: Record<string, string> = {
-        dashboard: baseRoute,
-        'career-guidance': `${baseRoute}/career-guidance`,
-        resume: `${baseRoute}/resume`,
-        assessment: `${baseRoute}/assessment`,
-        'mock-tests': `${baseRoute}/mock-tests`,
-        'placement-drives': `${baseRoute}/placement-drives`,
-        'mock-interview': `${baseRoute}/mock-interview`,
-        analytics: `${baseRoute}/analytics`,
-        practice: `${baseRoute}/practice`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // Enterprise routes
-    if (user.user_type === 'enterprise') {
-      const routeMap: Record<string, string> = {
-        dashboard: `/dashboard/enterprise`,
-        campaigns: `/dashboard/enterprise/campaigns`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // College routes
-    if (user.user_type === 'college') {
-      const routeMap: Record<string, string> = {
-        dashboard: `/dashboard/college`,
-        students: `/dashboard/college/students`,
-        analytics: `/dashboard/college/analytics`,
-        'placement-hub': `/dashboard/college/placement-hub`,
-        profile: `/dashboard/college/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // Admin routes
-    if (user.user_type === 'admin') {
-      const routeMap: Record<string, string> = {
-        dashboard: `/dashboard/admin`,
-        colleges: `/dashboard/admin/colleges`,
-        students: `/dashboard/admin/students`,
-        analytics: `/dashboard/admin/analytics`,
-        disha: `/dashboard/admin/disha`,
-        'question-bank': `/dashboard/admin/question-bank`,
-        'mock-tests-admin': `/dashboard/admin/mock-tests`,
-        'placement-drives-admin': `/dashboard/admin/placement-drives`,
-        enterprises: `/dashboard/admin/enterprises`,
-        profile: `/dashboard/admin/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    return null;
+    return getDashboardFeatureRoute(user.user_type, featureId);
   };
 
   // Check if we're in dashboard context

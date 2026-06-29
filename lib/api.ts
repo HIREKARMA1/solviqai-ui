@@ -1476,6 +1476,90 @@ class ApiClient {
     return response.data;
   }
 
+  async adminListSimulationPipelines(): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/simulation-pipelines');
+    return response.data;
+  }
+
+  async adminSeedSimulationPipelines(): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/simulation-pipelines/seed');
+    return response.data;
+  }
+
+  async adminUpdateSimulationPipeline(id: string, data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.patch(`/admin/cms/simulation-pipelines/${id}`, data);
+    return response.data;
+  }
+
+  async adminListJobRoleCatalog(): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/job-role-catalog');
+    return response.data;
+  }
+
+  async adminListCompanyRolePreps(): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/company-role-preps');
+    return response.data;
+  }
+
+  async adminCreateCompanyRolePrep(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/company-role-preps', data);
+    return response.data;
+  }
+
+  async getSimulationJobRoles(): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/simulations/catalog/job-roles');
+    return response.data;
+  }
+
+  async getSimulationCompanyPreps(company?: string): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/simulations/catalog/company-preps', {
+      params: company ? { company } : undefined,
+    });
+    return response.data;
+  }
+
+  async previewSimulationEntry(params: {
+    job_role_slug: string;
+    company_role_prep_id?: string;
+    company?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/simulations/entry/preview', { params });
+    return response.data;
+  }
+
+  async startSimulationRun(data: {
+    job_role_slug: string;
+    resume_version_id?: string;
+    company_role_prep_id?: string;
+    company?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/simulations/runs/start', data);
+    return response.data;
+  }
+
+  async getSimulationRun(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/simulations/runs/${runId}`);
+    return response.data;
+  }
+
+  async startSimulationMcqStage(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/stages/mcq/start`);
+    return response.data;
+  }
+
+  async completeSimulationStage(
+    runId: string,
+    data: { stage_index: number; score: number; metadata?: Record<string, unknown> }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/complete-stage`, data);
+    return response.data;
+  }
+
+  async listSimulationRuns(limit = 20): Promise<{ runs: any[] }> {
+    const response: AxiosResponse = await this.client.get('/simulations/runs', { params: { limit } });
+    return response.data;
+  }
+
   async getPlacementDriveLibrary(): Promise<{ drives: any[] }> {
     const response: AxiosResponse = await this.client.get('/placement-drives/library');
     return response.data;
@@ -1580,6 +1664,50 @@ class ApiClient {
 
   async getMockInterviewSession(sessionId: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(`/mock-interviews/${sessionId}`);
+    return response.data;
+  }
+
+  async getPaymentPlans(): Promise<{ plans: any[]; monetization_active: boolean }> {
+    const response: AxiosResponse = await this.client.get('/payments/plans');
+    return response.data;
+  }
+
+  async initiateCheckout(data: {
+    plan_slug: string;
+    coupon_code?: string;
+    referral_code?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/payments/checkout', data);
+    return response.data;
+  }
+
+  async validatePaymentCoupon(code: string, planSlug: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/payments/validate-coupon', {
+      code,
+      plan_slug: planSlug,
+    });
+    return response.data;
+  }
+
+  async getMyPaymentTransactions(): Promise<{ transactions: any[] }> {
+    const response: AxiosResponse = await this.client.get('/payments/my-transactions');
+    return response.data;
+  }
+
+  async getMyReferralCode(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/payments/referral');
+    return response.data;
+  }
+
+  async adminCreatePaymentCoupon(data: {
+    code: string;
+    description?: string;
+    discount_percent?: number;
+    discount_amount_inr?: number;
+    max_uses?: number;
+    allowed_plan_slugs?: string[];
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/payments/admin/coupons', data);
     return response.data;
   }
 

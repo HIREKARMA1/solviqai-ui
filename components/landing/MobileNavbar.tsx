@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { sidebarFeatures, SidebarItem, studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures, enterpriseSidebarFeatures } from './LandingSidebar';
+import { studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures, enterpriseSidebarFeatures } from './LandingSidebar';
+import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,59 +35,9 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
     }
   };
 
-  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
-    const baseRoute = `/dashboard/${user.user_type}`;
-
-    // Student routes
-    if (user.user_type === 'student') {
-      const routeMap: Record<string, string> = {
-        'dashboard': baseRoute,
-        'career-guidance': `${baseRoute}/career-guidance`,
-        'resume': `${baseRoute}/resume`,
-        'assessment': `${baseRoute}/assessment`,
-        // 'jobs': `${baseRoute}/jobs`,
-        // 'auto-apply': `${baseRoute}/auto-apply`,
-        'analytics': `${baseRoute}/analytics`,
-        'practice': `${baseRoute}/practice`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    if (user.user_type === 'enterprise') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/enterprise`,
-        'campaigns': `/dashboard/enterprise/campaigns`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // College routes
-    if (user.user_type === 'college') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/college`,
-        'students': `/dashboard/college/students`,
-        'analytics': `/dashboard/college/analytics`,
-        'placement-hub': `/dashboard/college/placement-hub`,
-        'profile': `/dashboard/college/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // Admin routes
-    if (user.user_type === 'admin') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/admin`,
-        'colleges': `/dashboard/admin/colleges`,
-        'students': `/dashboard/admin/students`,
-        'analytics': `/dashboard/admin/analytics`,
-        'profile': `/dashboard/admin/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    return null;
+    return getDashboardFeatureRoute(user.user_type, featureId);
   };
 
   // Check if we're in dashboard context

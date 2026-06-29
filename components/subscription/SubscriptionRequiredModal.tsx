@@ -66,7 +66,7 @@ export default function SubscriptionRequiredModal({
                 Subscription Required
               </h3>
               <p className="text-base font-medium text-gray-600 dark:text-gray-300 max-w-xs mx-auto">
-                Contact HireKarma for subscription to access <span className="text-blue-600 dark:text-blue-400">{feature}</span>.
+                Upgrade your plan to access <span className="text-blue-600 dark:text-blue-400">{feature}</span>.
               </p>
             </div>
 
@@ -82,11 +82,11 @@ export default function SubscriptionRequiredModal({
               </Button>
               <Button 
                 onClick={() => {
-                  window.location.href = "mailto:contact@hirekarma.com?subject=Premium Subscription Inquiry"
+                  window.location.href = "/dashboard/student/plans"
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-full px-8"
               >
-                Contact Us
+                View Plans
               </Button>
             </div>
           </motion.div>

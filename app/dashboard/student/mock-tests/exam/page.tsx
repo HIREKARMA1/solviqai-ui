@@ -14,6 +14,8 @@ export default function MockTestExamPage() {
   const attemptId = searchParams?.get('attempt_id');
   const driveAttemptId = searchParams?.get('drive_attempt_id');
   const driveStageIndex = searchParams?.get('drive_stage_index');
+  const simulationRunId = searchParams?.get('simulation_run_id');
+  const simulationStageIndex = searchParams?.get('simulation_stage_index');
   const [attempt, setAttempt] = useState<any>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -62,13 +64,22 @@ export default function MockTestExamPage() {
           },
         });
         router.push(`/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`);
+      } else if (simulationRunId && simulationStageIndex != null) {
+        await apiClient.completeSimulationStage(simulationRunId, {
+          stage_index: parseInt(simulationStageIndex, 10),
+          score: result.score ?? 0,
+          metadata: {
+            stage_type: result.template?.round_type || 'aptitude',
+          },
+        });
+        router.push(`/dashboard/student/simulations/run?run_id=${simulationRunId}`);
       }
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'Submit failed');
     } finally {
       setSubmitting(false);
     }
-  }, [attemptId, answers, submitting, driveAttemptId, driveStageIndex, router]);
+  }, [attemptId, answers, submitting, driveAttemptId, driveStageIndex, simulationRunId, simulationStageIndex, router]);
 
   useEffect(() => {
     if (timeLeft === null || attempt?.status === 'COMPLETED') return;
