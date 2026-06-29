@@ -12,6 +12,7 @@ import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { getErrorMessage } from '@/lib/utils';
+import { getGuestSessionToken, clearGuestSessionToken } from '@/lib/guestReadiness';
 import { User, Mail, Lock, Phone, ArrowRight, Check, X } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -72,7 +73,10 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
+        guest_session_token: getGuestSessionToken() || undefined,
       });
+
+      clearGuestSessionToken();
 
       router.push('/dashboard/student');
     } catch (err: any) {

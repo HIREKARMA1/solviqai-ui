@@ -13,6 +13,10 @@ import {
   Building2,
   Sparkles,
   BookOpen,
+  Target,
+  Layers,
+  Mic,
+  Send,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -58,6 +62,24 @@ export const studentSidebarFeatures: SidebarItem[] = [
     id: 'assessment',
     icon: <ClipboardList className="w-5 h-5" />,
     label: 'Mock Assessment',
+    onClick: undefined,
+  },
+  {
+    id: 'mock-tests',
+    icon: <Target className="w-5 h-5" />,
+    label: 'Mock Tests',
+    onClick: undefined,
+  },
+  {
+    id: 'placement-drives',
+    icon: <Layers className="w-5 h-5" />,
+    label: 'Placement Drives',
+    onClick: undefined,
+  },
+  {
+    id: 'mock-interview',
+    icon: <Mic className="w-5 h-5" />,
+    label: 'AI Interview',
     onClick: undefined,
   },
   // {
@@ -107,9 +129,30 @@ export const collegeSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'placement-hub',
+    icon: <Target className="w-5 h-5" />,
+    label: 'Placement Hub',
+    onClick: undefined,
+  },
+  {
     id: 'profile',
     icon: <User className="w-5 h-5" />,
     label: 'Profile',
+    onClick: undefined,
+  },
+];
+
+export const enterpriseSidebarFeatures: SidebarItem[] = [
+  {
+    id: 'dashboard',
+    icon: <LayoutGrid className="w-5 h-5" />,
+    label: 'Hiring Hub',
+    onClick: undefined,
+  },
+  {
+    id: 'campaigns',
+    icon: <Send className="w-5 h-5" />,
+    label: 'Campaigns',
     onClick: undefined,
   },
 ];
@@ -129,6 +172,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: 'enterprises',
+    icon: <Briefcase className="w-5 h-5" />,
+    label: 'Enterprise',
+    onClick: undefined,
+  },
+  {
     id: 'students',
     icon: <Users className="w-5 h-5" />,
     label: 'Students',
@@ -144,6 +193,24 @@ export const adminSidebarFeatures: SidebarItem[] = [
     id: 'disha',
     icon: <FileText className="w-5 h-5" />,
     label: 'Disha Assessments',
+    onClick: undefined,
+  },
+  {
+    id: 'question-bank',
+    icon: <BookOpen className="w-5 h-5" />,
+    label: 'Question Bank',
+    onClick: undefined,
+  },
+  {
+    id: 'mock-tests-admin',
+    icon: <Target className="w-5 h-5" />,
+    label: 'Mock Tests',
+    onClick: undefined,
+  },
+  {
+    id: 'placement-drives-admin',
+    icon: <Layers className="w-5 h-5" />,
+    label: 'Placement Drives',
     onClick: undefined,
   },
   {
@@ -170,6 +237,8 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
+      case 'enterprise':
+        return enterpriseSidebarFeatures;
       case 'admin':
         return adminSidebarFeatures;
       case 'student':
@@ -190,8 +259,20 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         'career-guidance': `${baseRoute}/career-guidance`,
         resume: `${baseRoute}/resume`,
         assessment: `${baseRoute}/assessment`,
+        'mock-tests': `${baseRoute}/mock-tests`,
+        'placement-drives': `${baseRoute}/placement-drives`,
+        'mock-interview': `${baseRoute}/mock-interview`,
         analytics: `${baseRoute}/analytics`,
         practice: `${baseRoute}/practice`,
+      };
+      return routeMap[featureId] || null;
+    }
+
+    // Enterprise routes
+    if (user.user_type === 'enterprise') {
+      const routeMap: Record<string, string> = {
+        dashboard: `/dashboard/enterprise`,
+        campaigns: `/dashboard/enterprise/campaigns`,
       };
       return routeMap[featureId] || null;
     }
@@ -202,6 +283,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         dashboard: `/dashboard/college`,
         students: `/dashboard/college/students`,
         analytics: `/dashboard/college/analytics`,
+        'placement-hub': `/dashboard/college/placement-hub`,
         profile: `/dashboard/college/profile`,
       };
       return routeMap[featureId] || null;
@@ -215,6 +297,10 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
         students: `/dashboard/admin/students`,
         analytics: `/dashboard/admin/analytics`,
         disha: `/dashboard/admin/disha`,
+        'question-bank': `/dashboard/admin/question-bank`,
+        'mock-tests-admin': `/dashboard/admin/mock-tests`,
+        'placement-drives-admin': `/dashboard/admin/placement-drives`,
+        enterprises: `/dashboard/admin/enterprises`,
         profile: `/dashboard/admin/profile`,
       };
       return routeMap[featureId] || null;

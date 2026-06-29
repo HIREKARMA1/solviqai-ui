@@ -44,6 +44,10 @@ const ResumePage = dynamic(() => import('@/app/dashboard/student/resume/page'), 
 const AssessmentPage = dynamic(() => import('@/app/dashboard/student/assessment/page'), { ssr: false });
 const JobsPage = dynamic(() => import('@/app/dashboard/student/jobs/page'), { ssr: false });
 const AutoApplyPage = dynamic(() => import('@/app/dashboard/student/auto-apply/page'), { ssr: false });
+const GuestReadinessFlow = dynamic(
+  () => import('@/components/landing/GuestReadinessFlow').then((m) => ({ default: m.GuestReadinessFlow })),
+  { ssr: false }
+);
 
 export default function Home() {
   const pathname = usePathname();
@@ -96,6 +100,8 @@ export default function Home() {
         {/* <LandingNavbar /> */}
           {/* Hero Section with animated background - Above the fold */}
           <HeroSection />
+
+          <GuestReadinessFlow />
 
           {/* Feature Cards Section - Lazy loaded */}
           <Suspense fallback={<div className="min-h-[400px]" />}>

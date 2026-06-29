@@ -10,7 +10,7 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from 'next-themes'
-import { Home, User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Users, BarChart3, Plus, X, ChevronLeft, ChevronRight, Calendar, Check, Flame, Brain, Clock } from 'lucide-react'
+import { User, FileText, Briefcase, ClipboardList, Zap, Target, TrendingUp, Award, Plus, X, ChevronLeft, ChevronRight, Check, Flame, Brain, Clock, Play, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -22,6 +22,52 @@ import {
 const robotoExtraBold = Roboto({ weight: '700', subsets: ['latin'] })
 
 
+
+function formatAssessmentsDelta(deltas: { assessments_this_week?: number } | undefined): string {
+    const n = deltas?.assessments_this_week ?? 0
+    if (n === 0) return 'No assessments this week'
+    return n === 1 ? '+1 this week' : `+${n} this week`
+}
+
+function formatScoreDelta(deltas: { score_change_vs_last_month?: number | null } | undefined): string {
+    const change = deltas?.score_change_vs_last_month
+    if (change == null) return 'Not enough history yet'
+    if (change === 0) return 'Unchanged vs last month'
+    return `${change > 0 ? '+' : ''}${change.toFixed(1)}% vs last month`
+}
+
+function formatAtsDelta(deltas: { ats_change?: number | null }, score: number): string {
+    const change = deltas?.ats_change
+    if (change != null && change !== 0) {
+        return `${change > 0 ? '+' : ''}${change.toFixed(0)}% since last scan`
+    }
+    if (score >= 80) return 'Strong ATS match'
+    if (score >= 60) return 'Room to improve'
+    if (score > 0) return 'Upload an updated resume to improve'
+    return 'Upload resume for ATS score'
+}
+
+function formatJobMatchesDelta(deltas: { new_job_matches?: number } | undefined): string {
+    const n = deltas?.new_job_matches ?? 0
+    if (n === 0) return 'No new matches this week'
+    return n === 1 ? '1 new match this week' : `${n} new matches this week`
+}
+
+function getNextActionHref(action: {
+    type: string
+    assessment_id?: string | null
+}): string {
+    switch (action.type) {
+        case 'continue':
+            return `/dashboard/student/assessment?id=${action.assessment_id}`
+        case 'resume':
+            return '/dashboard/student/resume'
+        case 'start':
+        case 'jobs':
+        default:
+            return '/dashboard/student/jobs'
+    }
+}
 
 function timeAgo(dateStr: string): string {
     const d = new Date(dateStr)
@@ -108,106 +154,67 @@ export default function StudentDashboard() {
 
     const fetchDashboardData = async () => {
         try {
-            const data = await apiClient.getStudentDashboard()
-            const a = await apiClient.getStudentAnalytics()
+            const [data, a, assmts] = await Promise.all([
+                apiClient.getStudentDashboard(),
+                apiClient.getStudentAnalytics(),
+                apiClient.getStudentAssessments(0, 8),
+            ])
+            setStats(data)
             setAnalytics(a)
 
-            // Fetch recent assessments and calculate real stats
-            try {
-                const assmts = await apiClient.getStudentAssessments(0, 100) // Get more to calculate accurate stats
-                const allAssessments = assmts?.assessments || []
-                const completed = allAssessments.filter((x: any) => String(x.status).toLowerCase() === 'completed')
+            const allAssessments = assmts?.assessments || []
+            const completed = allAssessments.filter((x: any) => String(x.status).toLowerCase() === 'completed')
 
-                // Calculate real statistics from actual data
-                const assessmentsCompleted = completed.length
-                console.log('📊 Dashboard Stats Calculation:', {
-                    totalAssessments: allAssessments.length,
-                    completedAssessments: assessmentsCompleted
-                })
+            if (data.activity_dates?.length) {
+                setActivityDates(data.activity_dates)
+            } else if (allAssessments.length > 0) {
+                setActivityDates(
+                    Array.from(
+                        new Set(
+                            allAssessments
+                                .map((x: any) => (x.completed_at || x.started_at)?.toString().slice(0, 10))
+                                .filter(Boolean)
+                        )
+                    ) as string[]
+                )
+            }
 
-                // Calculate average score from completed assessments
-                let totalScore = 0
-                let scoreCount = 0
-                completed.forEach((assessment: any) => {
-                    if (assessment.overall_score && assessment.overall_score > 0) {
-                        totalScore += assessment.overall_score
-                        scoreCount++
-                    }
-                })
-                const averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0
-                console.log('📈 Average Score:', averageScore, 'from', scoreCount, 'assessments')
-
-                // Calculate average readiness index
-                let totalReadiness = 0
-                let readinessCount = 0
-                completed.forEach((assessment: any) => {
-                    if (assessment.readiness_index && assessment.readiness_index > 0) {
-                        totalReadiness += assessment.readiness_index
-                        readinessCount++
-                    }
-                })
-                const readinessIndex = readinessCount > 0 ? Math.round(totalReadiness / readinessCount) : 0
-
-                // Get ATS score from student data (if resume uploaded)
-                const atsScore = data.ats_score || 0
-
-                // Count job recommendations (mock for now - would need actual endpoint)
-                const jobRecommendations = data.job_recommendations || 0
-
-                // Update stats with real values
-                const calculatedStats = {
-                    ...data,
-                    assessments_completed: assessmentsCompleted,
-                    average_score: averageScore,
-                    ats_score: atsScore,
-                    job_recommendations: jobRecommendations,
-                    readiness_index: readinessIndex
-                }
-
-                console.log('✅ Final Dashboard Stats:', calculatedStats)
-                setStats(calculatedStats)
-
-                // Set latest completed report, last 3 reports, recent activities, and activity dates
-                // Set latest completed report, last 3 reports from completed only
-                if (completed.length > 0) {
-                    const sortedCompleted = [...completed].sort((b: any, c: any) => new Date(c.completed_at || c.started_at).getTime() - new Date(b.completed_at || b.started_at).getTime())
-                    const latest = sortedCompleted[0]
-                    setLatestReport({ id: latest.assessment_id, date: latest.completed_at || latest.started_at })
-
-                    const last3Reports = sortedCompleted.slice(0, 3).map((assessment: any) => ({
+            if (completed.length > 0) {
+                const sortedCompleted = [...completed].sort(
+                    (b: any, c: any) =>
+                        new Date(c.completed_at || c.started_at).getTime() -
+                        new Date(b.completed_at || b.started_at).getTime()
+                )
+                const latest = sortedCompleted[0]
+                setLatestReport({ id: latest.assessment_id, date: latest.completed_at || latest.started_at })
+                setRecentReports(
+                    sortedCompleted.slice(0, 3).map((assessment: any) => ({
                         id: assessment.assessment_id,
                         date: assessment.completed_at || assessment.started_at,
                         score: assessment.overall_score,
-                        readiness: assessment.readiness_index
+                        readiness: assessment.readiness_index,
                     }))
-                    setRecentReports(last3Reports)
-                }
+                )
+            }
 
-                // Set recent activities from ALL assessments (including pending)
-                if (allAssessments.length > 0) {
-                    const sortedAll = [...allAssessments].sort((b: any, c: any) => new Date(c.started_at).getTime() - new Date(b.started_at).getTime())
-
-                    setRecentActivities(sortedAll.slice(0, 8).map((a: any) => {
-                        // Handle job_role being an object or string
-                        const roleTitle = typeof a.job_role === 'object' && a.job_role?.title
-                            ? a.job_role.title
-                            : (a.job_role || a.assessment_type || 'Assessment')
-
+            if (allAssessments.length > 0) {
+                const sortedAll = [...allAssessments].sort(
+                    (b: any, c: any) => new Date(c.started_at).getTime() - new Date(b.started_at).getTime()
+                )
+                setRecentActivities(
+                    sortedAll.slice(0, 8).map((item: any) => {
+                        const roleTitle =
+                            typeof item.job_role === 'object' && item.job_role?.title
+                                ? item.job_role.title
+                                : item.job_role || 'Assessment'
                         return {
-                            id: a.assessment_id,
-                            date: a.completed_at || a.started_at,
-                            score: a.overall_score,
-                            title: String(roleTitle).replace(/_/g, ' ')
+                            id: item.assessment_id,
+                            date: item.completed_at || item.started_at,
+                            score: item.overall_score,
+                            title: String(roleTitle).replace(/_/g, ' '),
                         }
-                    }))
-
-                    // Show activity dots for all started assessments
-                    setActivityDates(Array.from(new Set(sortedAll.map((a: any) => (a.completed_at || a.started_at)?.toString().slice(0, 10)))).filter(Boolean) as string[])
-                }
-            } catch (err) {
-                console.error('Error calculating stats:', err)
-                // Fallback to backend data if calculation fails
-                setStats(data)
+                    })
+                )
             }
         } catch (error) {
             console.error('Error fetching dashboard:', error)
@@ -261,13 +268,63 @@ export default function StudentDashboard() {
                     </div>
                 ) : (
                     <>
+                        {/* Primary simulation CTA */}
+                        {stats?.next_action && (
+                            <Link
+                                href={getNextActionHref(stats.next_action)}
+                                className="group flex w-full items-center justify-between gap-4 rounded-[16px] border border-[#FF541F]/30 bg-gradient-to-r from-[#FFF5F0] to-white p-4 shadow-md transition-all hover:shadow-lg dark:from-[#2A1A14] dark:to-[#1A2C58] dark:border-[#FF541F]/40 sm:p-5"
+                            >
+                                <div className="flex min-w-0 items-center gap-4">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FF541F] text-white">
+                                        {stats.next_action.type === 'continue' ? (
+                                            <Play className="h-6 w-6" />
+                                        ) : (
+                                            <Target className="h-6 w-6" />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-[#FF541F]">
+                                            {stats.next_action.type === 'continue'
+                                                ? 'Continue Where You Left Off'
+                                                : 'Start Your Next Simulation'}
+                                        </p>
+                                        <p className="truncate text-lg font-bold text-gray-900 dark:text-white">
+                                            {stats.next_action.label}
+                                        </p>
+                                        {stats.readiness_index > 0 && (
+                                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                                                Readiness score: {Math.round(stats.readiness_index)}%
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <ArrowRight className="h-6 w-6 shrink-0 text-[#FF541F] transition-transform group-hover:translate-x-1" />
+                            </Link>
+                        )}
+
+                        {/* Readiness gaps */}
+                        {stats?.readiness_gaps?.length > 0 && (
+                            <div className="rounded-[16px] border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+                                <p className="mb-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                    What&apos;s pulling your score down
+                                </p>
+                                <ul className="space-y-1">
+                                    {stats.readiness_gaps.slice(0, 3).map((gap: { area: string; message: string }) => (
+                                        <li key={gap.area} className="text-sm text-amber-800 dark:text-amber-100">
+                                            • {gap.message}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {/* Stats Cards – full width, 4 equal columns */}
                         <div className="grid w-full grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
                             <StatCard
                                 icon={Target}
                                 label="Assessment Completed"
                                 value={stats?.assessments_completed ?? 0}
-                                secondaryText="+3 this week"
+                                secondaryText={formatAssessmentsDelta(stats?.stats_deltas)}
                                 backgroundColor="#DDEEFF"
                                 darkBackgroundColor="#3D97EF"
                                 iconBgColor="bg-blue-500"
@@ -276,7 +333,7 @@ export default function StudentDashboard() {
                                 icon={TrendingUp}
                                 label="Average Score"
                                 value={`${stats?.average_score ?? 0}%`}
-                                secondaryText="+3% from last month"
+                                secondaryText={formatScoreDelta(stats?.stats_deltas)}
                                 backgroundColor="#F8EFFF"
                                 darkBackgroundColor="#3B0069"
                                 iconBgColor="bg-purple-500"
@@ -285,7 +342,7 @@ export default function StudentDashboard() {
                                 icon={Award}
                                 label="ATS Score"
                                 value={`${stats?.ats_score ?? 0}%`}
-                                secondaryText="Good match rate"
+                                secondaryText={formatAtsDelta(stats?.stats_deltas ?? {}, stats?.ats_score ?? 0)}
                                 backgroundColor="#FFF0F8"
                                 darkBackgroundColor="#A30057"
                                 iconBgColor="bg-pink-500"
@@ -294,7 +351,7 @@ export default function StudentDashboard() {
                                 icon={Briefcase}
                                 label="Job Matches"
                                 value={stats?.job_recommendations ?? 0}
-                                secondaryText="5 new matches"
+                                secondaryText={formatJobMatchesDelta(stats?.stats_deltas)}
                                 backgroundColor="#FFFCE3"
                                 darkBackgroundColor="#BEA300"
                                 iconBgColor="bg-amber-500"
@@ -420,8 +477,9 @@ export default function StudentDashboard() {
                                     <div className="flex flex-col gap-2">
                                         {recentActivities.length > 0 ? (
                                             recentActivities.map((a) => (
-                                                <div
+                                                <Link
                                                     key={a.id}
+                                                    href={`/dashboard/student/assessment?id=${a.id}`}
                                                     className="flex cursor-pointer items-center gap-3 rounded-lg bg-blue-50/80 px-3 py-2 transition-all duration-200 hover:bg-blue-100 hover:shadow-sm dark:bg-[#0D1338] dark:hover:bg-[#1A2C58]"
                                                 >
                                                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
@@ -436,7 +494,7 @@ export default function StudentDashboard() {
                                                             {Number(a.score).toFixed(0)}%
                                                         </span>
                                                     )}
-                                                </div>
+                                                </Link>
                                             ))) : (
                                             <div className="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-gray-400">
                                                 No recent activity found.
@@ -503,18 +561,25 @@ export default function StudentDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Check your Self – Figma #1A2C58, radius 8px */}
+                                {/* Quick links */}
                                 <div className="rounded-lg border border-gray-200 dark:border-[#243B6B] bg-white dark:bg-[#1A2C58] p-4 shadow-[0_8.27px_33.07px_rgba(0,0,0,0.05)] dark:shadow-[0_8.27px_33.07px_rgba(0,0,0,0.05)] transition-all duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
                                     <div className="mb-3 flex items-center gap-2">
                                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500">
                                             <Brain className="h-5 w-5 text-white" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-gray-900 dark:text-white">Check your Self</h3>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400">Aptitude Test</p>
+                                            <h3 className="font-bold text-gray-900 dark:text-white">Improve Your Readiness</h3>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">Practice & guidance</p>
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">
+                                        {stats?.next_action && (
+                                            <Link href={getNextActionHref(stats.next_action)} className="block">
+                                                <div className="w-full rounded-xl border-2 border-[#FF541F]/40 bg-[#FFF5F0] px-4 py-3 text-left text-sm font-semibold text-[#FF541F] transition-all duration-200 hover:bg-[#FF541F] hover:text-white dark:bg-[#2A1A14] dark:hover:bg-[#FF541F]">
+                                                    {stats.next_action.type === 'continue' ? 'Continue Simulation' : 'Start Simulation'}
+                                                </div>
+                                            </Link>
+                                        )}
                                         <Link href="/dashboard/student/career-guidance" className="block">
                                             <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-purple-50 hover:shadow-md hover:border-purple-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-purple-900/20 dark:hover:border-purple-700">
                                                 Improve Yourself
@@ -554,6 +619,18 @@ export default function StudentDashboard() {
                                 </div>
                             </div>
                             <nav className="flex flex-col gap-1">
+                                <Link
+                                    href={stats?.next_action ? getNextActionHref(stats.next_action) : '/dashboard/student/jobs'}
+                                    className="flex items-center gap-3 rounded-lg bg-[#FF541F]/10 px-3 py-2.5 font-medium text-[#FF541F] transition-colors hover:bg-[#FF541F]/20 dark:bg-[#FF541F]/20"
+                                    onClick={() => setQuickActionOpen(false)}
+                                >
+                                    <Play className="h-5 w-5" />
+                                    <span>
+                                        {stats?.next_action?.type === 'continue'
+                                            ? 'Continue Simulation'
+                                            : 'Start Simulation'}
+                                    </span>
+                                </Link>
                                 <Link
                                     href="/dashboard/student/resume"
                                     className="flex items-center gap-3 rounded-lg bg-gray-100 px-3 py-2.5 text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"

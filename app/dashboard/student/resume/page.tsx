@@ -30,6 +30,7 @@ import { motion } from 'framer-motion'
 import { Textarea } from '@/components/ui/textarea'
 import { AxiosError } from 'axios'
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
+import { ResumeGapPanel } from '@/components/resume/ResumeGapPanel'
 
 const sidebarItems = [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -627,6 +628,20 @@ export default function ResumePage() {
                                 )}
                             </CardContent>
                         </Card>
+                    </motion.div>
+                )}
+
+                {(resumeStatus?.has_resume || uploadSuccess) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.25 }}
+                    >
+                        <ResumeGapPanel
+                            hasResume={Boolean(resumeStatus?.has_resume || uploadSuccess)}
+                            jobDescription={jobDescription}
+                            onJobDescriptionChange={setJobDescription}
+                        />
                     </motion.div>
                 )}
             </div>

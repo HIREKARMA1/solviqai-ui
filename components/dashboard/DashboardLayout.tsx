@@ -17,7 +17,7 @@ import { useTheme } from 'next-themes'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
-    requiredUserType?: 'student' | 'college' | 'admin'
+    requiredUserType?: 'student' | 'college' | 'admin' | 'enterprise'
     hideNavigation?: boolean  // Hide navbar and sidebar when true (e.g., in fullscreen mode)
 }
 

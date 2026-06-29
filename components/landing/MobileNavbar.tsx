@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { sidebarFeatures, SidebarItem, studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures } from './LandingSidebar';
+import { sidebarFeatures, SidebarItem, studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures, enterpriseSidebarFeatures } from './LandingSidebar';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +24,8 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
+      case 'enterprise':
+        return enterpriseSidebarFeatures;
       case 'admin':
         return adminSidebarFeatures;
       case 'student':
@@ -52,12 +54,21 @@ export function MobileNavbar({ activeFeature, onFeatureChange }: MobileNavbarPro
       return routeMap[featureId] || null;
     }
 
+    if (user.user_type === 'enterprise') {
+      const routeMap: Record<string, string> = {
+        'dashboard': `/dashboard/enterprise`,
+        'campaigns': `/dashboard/enterprise/campaigns`,
+      };
+      return routeMap[featureId] || null;
+    }
+
     // College routes
     if (user.user_type === 'college') {
       const routeMap: Record<string, string> = {
         'dashboard': `/dashboard/college`,
         'students': `/dashboard/college/students`,
         'analytics': `/dashboard/college/analytics`,
+        'placement-hub': `/dashboard/college/placement-hub`,
         'profile': `/dashboard/college/profile`,
       };
       return routeMap[featureId] || null;

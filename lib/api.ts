@@ -186,6 +186,53 @@ class ApiClient {
     return response.data;
   }
 
+  // Guest free readiness check (no auth)
+  async guestReadinessCatalog(): Promise<{ target_roles: string[]; branches: string[] }> {
+    const response: AxiosResponse = await this.client.get("/guest-readiness/catalog");
+    return response.data;
+  }
+
+  async guestReadinessStart(): Promise<{ session_token: string }> {
+    const response: AxiosResponse = await this.client.post("/guest-readiness/start");
+    return response.data;
+  }
+
+  async guestReadinessSetProfile(token: string, target_role: string, branch: string): Promise<any> {
+    const response: AxiosResponse = await this.client.put(`/guest-readiness/${token}/profile`, {
+      target_role,
+      branch,
+    });
+    return response.data;
+  }
+
+  async guestReadinessUploadResume(token: string, file: File): Promise<any> {
+    const form = new FormData();
+    form.append("file", file);
+    const response: AxiosResponse = await this.client.post(
+      `/guest-readiness/${token}/resume`,
+      form,
+    );
+    return response.data;
+  }
+
+  async guestReadinessGetQuiz(token: string): Promise<{ questions: any[] }> {
+    const response: AxiosResponse = await this.client.get(`/guest-readiness/${token}/quiz`);
+    return response.data;
+  }
+
+  async guestReadinessSubmitQuiz(token: string, answers: Record<string, string>): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/guest-readiness/${token}/quiz/submit`,
+      { answers },
+    );
+    return response.data;
+  }
+
+  async guestReadinessGetResults(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/guest-readiness/${token}/results`);
+    return response.data;
+  }
+
   async login(data: any): Promise<any> {
     console.log(
       "📡 API login POST:",
@@ -1327,6 +1374,294 @@ class ApiClient {
       null,
       { params: { token } }
     );
+    return response.data;
+  }
+
+  // Mock test engine (Phase 2)
+  async getMockTestLibrary(params?: Record<string, string>): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/mock-tests/library', { params });
+    return response.data;
+  }
+
+  async getMockTestCompanies(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/mock-tests/library/companies');
+    return response.data;
+  }
+
+  async startMockTest(templateId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/mock-tests/${templateId}/start`);
+    return response.data;
+  }
+
+  async getMockTestAttempt(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/mock-tests/attempts/${attemptId}`);
+    return response.data;
+  }
+
+  async submitMockTestAttempt(attemptId: string, data: { answers: Record<string, string>; time_per_question?: Record<string, number>; time_taken_seconds?: number }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/mock-tests/attempts/${attemptId}/submit`, data);
+    return response.data;
+  }
+
+  // Resume gap engine (Phase 3)
+  async getResumeGapVersions(): Promise<{ versions: any[] }> {
+    const response: AxiosResponse = await this.client.get('/students/resume-gaps/versions');
+    return response.data;
+  }
+
+  async getResumeGapAnalyses(limit = 20): Promise<{ analyses: any[] }> {
+    const response: AxiosResponse = await this.client.get('/students/resume-gaps/analyses', { params: { limit } });
+    return response.data;
+  }
+
+  async getResumeGapAnalysis(analysisId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/students/resume-gaps/analyses/${analysisId}`);
+    return response.data;
+  }
+
+  async analyzeResumeGaps(data: {
+    job_description: string;
+    job_title?: string;
+    target_role?: string;
+    resume_version_id?: string;
+    match_method?: 'keyword' | 'embedding';
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/students/resume-gaps/analyze', data);
+    return response.data;
+  }
+
+  async adminListQuestionBank(params?: Record<string, string | number>): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/question-bank', { params });
+    return response.data;
+  }
+
+  async adminCreateQuestion(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/question-bank', data);
+    return response.data;
+  }
+
+  async adminGenerateAiQuestions(params: Record<string, string | number>): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/question-bank/generate-ai', null, { params });
+    return response.data;
+  }
+
+  async adminListMockTests(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/mock-tests');
+    return response.data;
+  }
+
+  async adminCreateMockTest(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/mock-tests', data);
+    return response.data;
+  }
+
+  async adminUpdateMockTest(templateId: string, data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.patch(`/admin/cms/mock-tests/${templateId}`, data);
+    return response.data;
+  }
+
+  // Phase 4 — Placement drives & mock interviews
+  async adminListPlacementDrives(): Promise<any[]> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/placement-drives');
+    return response.data;
+  }
+
+  async adminCreatePlacementDrive(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/placement-drives', data);
+    return response.data;
+  }
+
+  async adminUpdatePlacementDrive(id: string, data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.patch(`/admin/cms/placement-drives/${id}`, data);
+    return response.data;
+  }
+
+  async getPlacementDriveLibrary(): Promise<{ drives: any[] }> {
+    const response: AxiosResponse = await this.client.get('/placement-drives/library');
+    return response.data;
+  }
+
+  async startPlacementDrive(templateId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/placement-drives/${templateId}/start`);
+    return response.data;
+  }
+
+  async getPlacementDriveAttempt(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/placement-drives/attempts/${attemptId}`);
+    return response.data;
+  }
+
+  async completePlacementDriveStage(attemptId: string, data: {
+    stage_index: number;
+    score: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/complete-stage`,
+      data,
+    );
+    return response.data;
+  }
+
+  async getAssignedPlacementDrives(): Promise<{ assignments: any[] }> {
+    const response: AxiosResponse = await this.client.get('/placement-drives/assigned');
+    return response.data;
+  }
+
+  async getTpoCohortHeatmap(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/college/tpo/cohort-heatmap');
+    return response.data;
+  }
+
+  async getTpoAtRiskStudents(threshold = 55): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/college/tpo/at-risk', {
+      params: { threshold },
+    });
+    return response.data;
+  }
+
+  async getTpoDriveAssignments(): Promise<{ assignments: any[] }> {
+    const response: AxiosResponse = await this.client.get('/college/tpo/drive-assignments');
+    return response.data;
+  }
+
+  async getTpoPublishedDrives(): Promise<{ drives: any[] }> {
+    const response: AxiosResponse = await this.client.get('/college/tpo/published-drives');
+    return response.data;
+  }
+
+  async bulkScheduleTpoDrives(data: {
+    template_id: string;
+    student_ids: string[];
+    due_at?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/college/tpo/bulk-schedule-drives', data);
+    return response.data;
+  }
+
+  async downloadTpoCohortCsv(): Promise<Blob> {
+    const response: AxiosResponse<Blob> = await this.client.get('/college/tpo/export/csv', {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async getTpoCommitteeReportHtml(): Promise<string> {
+    const response: AxiosResponse<string> = await this.client.get('/college/tpo/export/report', {
+      responseType: 'text',
+    });
+    return response.data;
+  }
+
+  async startMockInterview(data: {
+    persona: 'technical' | 'hr';
+    target_role: string;
+    company?: string;
+    job_description?: string;
+    max_turns?: number;
+    audio_consent?: boolean;
+    drive_attempt_id?: string;
+    drive_stage_index?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/mock-interviews/start', data);
+    return response.data;
+  }
+
+  async submitMockInterviewTurn(sessionId: string, answer: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/mock-interviews/${sessionId}/turn`, { answer });
+    return response.data;
+  }
+
+  async completeMockInterview(sessionId: string, force = false): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/mock-interviews/${sessionId}/complete`, { force });
+    return response.data;
+  }
+
+  async getMockInterviewSession(sessionId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/mock-interviews/${sessionId}`);
+    return response.data;
+  }
+
+  async adminListEnterpriseOrgs(): Promise<{ organizations: any[] }> {
+    const response: AxiosResponse = await this.client.get('/admin/enterprise/organizations');
+    return response.data;
+  }
+
+  async adminCreateEnterpriseOrg(data: {
+    organization_name: string;
+    industry?: string;
+    website?: string;
+    admin_name: string;
+    admin_email: string;
+    admin_phone?: string;
+    job_title?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/enterprise/organizations', data);
+    return response.data;
+  }
+
+  async getEnterpriseDashboard(): Promise<any> {
+    const response: AxiosResponse = await this.client.get('/enterprise/dashboard');
+    return response.data;
+  }
+
+  async getEnterpriseCampaigns(): Promise<{ campaigns: any[] }> {
+    const response: AxiosResponse = await this.client.get('/enterprise/campaigns');
+    return response.data;
+  }
+
+  async createEnterpriseCampaign(data: {
+    title: string;
+    job_role: string;
+    company?: string;
+    mock_test_template_id: string;
+    is_active?: boolean;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/enterprise/campaigns', data);
+    return response.data;
+  }
+
+  async getEnterpriseCampaignResults(campaignId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/enterprise/campaigns/${campaignId}/results`);
+    return response.data;
+  }
+
+  async createEnterpriseInvites(campaignId: string, data: {
+    emails?: string[];
+    names?: string[];
+    expires_in_days?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/enterprise/campaigns/${campaignId}/invites`, data);
+    return response.data;
+  }
+
+  async getEnterpriseMockTests(): Promise<{ mock_tests: any[] }> {
+    const response: AxiosResponse = await this.client.get('/enterprise/mock-tests');
+    return response.data;
+  }
+
+  async getEnterprisePublicInvite(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/enterprise/public/invites/${token}`);
+    return response.data;
+  }
+
+  async acceptEnterpriseInvite(token: string, data: { candidate_name: string; candidate_email: string }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/enterprise/public/invites/${token}/accept`, data);
+    return response.data;
+  }
+
+  async startEnterpriseAssessment(token: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/enterprise/public/invites/${token}/start`);
+    return response.data;
+  }
+
+  async submitEnterpriseAssessment(token: string, data: {
+    answers: Record<string, string>;
+    time_per_question?: Record<string, number>;
+    time_taken_seconds?: number;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/enterprise/public/invites/${token}/submit`, data);
     return response.data;
   }
 }
