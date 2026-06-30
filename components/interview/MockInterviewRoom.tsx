@@ -10,13 +10,15 @@ import { apiClient } from '@/lib/api';
 import { Mic, MicOff, Volume2, Send } from 'lucide-react';
 
 type Props = {
-  persona: 'technical' | 'hr';
+  persona: 'technical' | 'hr' | 'culture_fit';
   targetRole: string;
   company?: string;
   jobDescription?: string;
   driveAttemptId?: string;
   driveStageIndex?: number;
-  onComplete: (result: { overall_score: number; report?: any }) => void;
+  simulationRunId?: string;
+  simulationStageIndex?: number;
+  onComplete: (result: { overall_score: number; report?: any; session_id?: string }) => void;
 };
 
 export function MockInterviewRoom({
@@ -26,6 +28,8 @@ export function MockInterviewRoom({
   jobDescription,
   driveAttemptId,
   driveStageIndex,
+  simulationRunId,
+  simulationStageIndex,
   onComplete,
 }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -72,6 +76,8 @@ export function MockInterviewRoom({
           audio_consent: consent,
           drive_attempt_id: driveAttemptId,
           drive_stage_index: driveStageIndex,
+          simulation_run_id: simulationRunId,
+          simulation_stage_index: simulationStageIndex,
         });
         setSessionId(data.session_id);
         setMessages(data.messages || []);
@@ -106,6 +112,7 @@ export function MockInterviewRoom({
         onComplete({
           overall_score: data.overall_score || data.report?.overall_score || 0,
           report: data.report,
+          session_id: sessionId || undefined,
           ai_mode: data.ai_mode || data.report?.ai_mode,
           fallback_reason: data.fallback_reason || data.report?.fallback_reason,
         });
@@ -127,6 +134,7 @@ export function MockInterviewRoom({
       onComplete({
         overall_score: data.overall_score || data.report?.overall_score || 0,
         report: data.report,
+        session_id: sessionId || undefined,
         ai_mode: data.ai_mode || data.report?.ai_mode,
         fallback_reason: data.fallback_reason || data.report?.fallback_reason,
       });

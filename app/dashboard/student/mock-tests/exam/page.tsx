@@ -65,13 +65,16 @@ export default function MockTestExamPage() {
         });
         router.push(`/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`);
       } else if (simulationRunId && simulationStageIndex != null) {
-        await apiClient.completeSimulationStage(simulationRunId, {
-          stage_index: parseInt(simulationStageIndex, 10),
-          score: result.score ?? 0,
-          metadata: {
-            stage_type: result.template?.round_type || 'aptitude',
-          },
-        });
+        if (!result.simulation_advanced) {
+          await apiClient.completeSimulationStage(simulationRunId, {
+            stage_index: parseInt(simulationStageIndex, 10),
+            score: result.score ?? 0,
+            metadata: {
+              stage_type: result.template?.round_type || 'aptitude',
+            },
+            engine_session_id: attemptId,
+          });
+        }
         router.push(`/dashboard/student/simulations/run?run_id=${simulationRunId}`);
       }
     } catch (e: any) {

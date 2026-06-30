@@ -54,7 +54,6 @@ export default function LoginPage() {
       } catch (err2: any) {
         const errorMsg2 = getErrorMessage(err2, '');
         if (errorMsg2) errors.push(errorMsg2);
-
         try {
           await login(email, password, 'admin');
           router.push('/dashboard/admin');

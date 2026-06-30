@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Roboto } from 'next/font/google'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -84,6 +84,48 @@ function timeAgo(dateStr: string): string {
     return d.toLocaleDateString()
 }
 
+/** Map ISO timestamps to local YYYY-MM-DD keys for the activity calendar. */
+function localDateKeyFromIso(iso: string): string | null {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) {
+        const slice = iso.slice(0, 10)
+        return /^\d{4}-\d{2}-\d{2}$/.test(slice) ? slice : null
+    }
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
+function buildActivityDateKeys(data: {
+    activity_events?: string[]
+    activity_dates?: string[]
+}, fallbackAssessments: Array<{ completed_at?: string; started_at?: string }>): string[] {
+    if (data.activity_events?.length) {
+        return Array.from(
+            new Set(
+                data.activity_events
+                    .map((iso) => localDateKeyFromIso(iso))
+                    .filter((k): k is string => Boolean(k))
+            )
+        )
+    }
+    if (data.activity_dates?.length) {
+        return data.activity_dates.map((d) => d.slice(0, 10))
+    }
+    if (fallbackAssessments.length > 0) {
+        return Array.from(
+            new Set(
+                fallbackAssessments
+                    .flatMap((x) => [x.completed_at, x.started_at])
+                    .map((iso) => (iso ? localDateKeyFromIso(String(iso)) : null))
+                    .filter((k): k is string => Boolean(k))
+            )
+        )
+    }
+    return []
+}
+
 // Stat card – Figma: vertical flow, radius 16px, padding 10px; dark mode uses Figma hex colors
 function StatCard({
     icon: Icon,
@@ -143,6 +185,7 @@ export default function StudentDashboard() {
     const [recentReports, setRecentReports] = useState<Array<{ id: string, date: string, score?: number, readiness?: number }>>([])
     const [recentActivities, setRecentActivities] = useState<Array<{ id: string, date: string, score?: number, title: string }>>([])
     const [activityDates, setActivityDates] = useState<string[]>([])
+    const activityDateSet = useMemo(() => new Set(activityDates), [activityDates])
     const [calendarMonth, setCalendarMonth] = useState(() => new Date())
     const [loading, setLoading] = useState(true)
     const [quickActionOpen, setQuickActionOpen] = useState(false)
@@ -165,19 +208,7 @@ export default function StudentDashboard() {
             const allAssessments = assmts?.assessments || []
             const completed = allAssessments.filter((x: any) => String(x.status).toLowerCase() === 'completed')
 
-            if (data.activity_dates?.length) {
-                setActivityDates(data.activity_dates)
-            } else if (allAssessments.length > 0) {
-                setActivityDates(
-                    Array.from(
-                        new Set(
-                            allAssessments
-                                .map((x: any) => (x.completed_at || x.started_at)?.toString().slice(0, 10))
-                                .filter(Boolean)
-                        )
-                    ) as string[]
-                )
-            }
+            setActivityDates(buildActivityDateKeys(data, allAssessments))
 
             if (completed.length > 0) {
                 const sortedCompleted = [...completed].sort(
@@ -408,22 +439,30 @@ export default function StudentDashboard() {
                                             const totalCells = 42
                                             const cells: React.ReactNode[] = []
                                             const cellBase = 'flex min-h-0 min-w-3 items-center justify-center text-sm rounded-full transition-colors duration-200'
+                                            const today = new Date()
+                                            const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
                                             for (let i = 0; i < totalCells; i++) {
                                                 if (i < start || i >= start + daysInMonth) {
                                                     cells.push(<div key={`pad-${i}`} className={`${cellBase} opacity-0 pointer-events-none`} />)
                                                 } else {
                                                     const d = i - start + 1
                                                     const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                                                    const active = activityDates.includes(dateKey)
+                                                    const active = activityDateSet.has(dateKey)
+                                                    const isToday = dateKey === todayKey
                                                     cells.push(
                                                         <div
                                                             key={d}
                                                             role="button"
                                                             tabIndex={0}
-                                                            className={`group ${cellBase} cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-gray-800`}
+                                                            title={active ? 'Active on this day' : 'No activity recorded'}
+                                                            className={`group ${cellBase} cursor-default focus:outline-none`}
                                                         >
                                                             <span
-                                                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm transition-colors duration-200 ${active ? 'text-[#FF541F] font-semibold' : 'text-gray-700 dark:text-gray-300 group-hover:bg-purple-400 group-hover:text-white'}`}
+                                                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium transition-colors duration-200 ${
+                                                                    active
+                                                                        ? 'bg-[#FF541F] text-white shadow-sm'
+                                                                        : 'bg-white text-gray-700 border border-gray-200 dark:bg-[#E8ECF4] dark:text-[#0C1B41] dark:border-transparent'
+                                                                } ${isToday && !active ? 'ring-2 ring-[#FF541F]/60 ring-offset-1 ring-offset-white dark:ring-offset-[#404C64]' : ''}`}
                                                             >
                                                                 {d}
                                                             </span>
@@ -449,10 +488,10 @@ export default function StudentDashboard() {
                                         </span>
                                         <span className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-200">
                                             <span
-                                                className="h-6 w-6 flex-shrink-0 rounded-full bg-gray-900 dark:bg-gray-300"
+                                                className="h-6 w-6 flex-shrink-0 rounded-full bg-white border border-gray-200 dark:bg-[#E8ECF4] dark:border-transparent"
                                                 aria-hidden
                                             />
-                                            In active
+                                            Inactive
                                         </span>
                                     </div>
                                 </div>

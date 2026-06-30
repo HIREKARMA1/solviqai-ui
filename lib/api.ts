@@ -1481,6 +1481,16 @@ class ApiClient {
     return response.data;
   }
 
+  async adminGetSimulationPipeline(id: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/admin/cms/simulation-pipelines/${id}`);
+    return response.data;
+  }
+
+  async adminCreateSimulationPipeline(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/simulation-pipelines', data);
+    return response.data;
+  }
+
   async adminSeedSimulationPipelines(): Promise<any> {
     const response: AxiosResponse = await this.client.post('/admin/cms/simulation-pipelines/seed');
     return response.data;
@@ -1488,6 +1498,69 @@ class ApiClient {
 
   async adminUpdateSimulationPipeline(id: string, data: any): Promise<any> {
     const response: AxiosResponse = await this.client.patch(`/admin/cms/simulation-pipelines/${id}`, data);
+    return response.data;
+  }
+
+  async adminDuplicateSimulationPipeline(id: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/admin/cms/simulation-pipelines/${id}/duplicate`);
+    return response.data;
+  }
+
+  async adminArchiveSimulationPipeline(id: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/admin/cms/simulation-pipelines/${id}/archive`);
+    return response.data;
+  }
+
+  async adminRecommendSimulationRounds(data: {
+    job_role_slug?: string;
+    job_role_name?: string;
+    department?: string;
+    experience_level?: string;
+    company?: string;
+    difficulty?: string;
+    use_ai?: boolean;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/simulation-pipelines/ai-recommend', data);
+    return response.data;
+  }
+
+  async adminListSimulationStageTypes(): Promise<{ stage_types: string[]; mandatory_for_publish: string[] }> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/simulation-pipelines/stage-types');
+    return response.data;
+  }
+
+  async adminAssignSimulationPipeline(
+    pipelineId: string,
+    data: {
+      student_ids?: string[];
+      college_ids?: string[];
+      due_at?: string;
+      notes?: string;
+    }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/admin/cms/simulation-pipelines/${pipelineId}/assign`,
+      data
+    );
+    return response.data;
+  }
+
+  async adminListSimulationAssignments(pipelineId: string): Promise<{ assignments: any[] }> {
+    const response: AxiosResponse = await this.client.get(
+      `/admin/cms/simulation-pipelines/${pipelineId}/assignments`
+    );
+    return response.data;
+  }
+
+  async getSimulationAssignments(): Promise<{ assignments: any[] }> {
+    const response: AxiosResponse = await this.client.get('/simulations/assignments');
+    return response.data;
+  }
+
+  async startSimulationFromAssignment(assignmentId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/assignments/${assignmentId}/start`
+    );
     return response.data;
   }
 
@@ -1528,10 +1601,11 @@ class ApiClient {
   }
 
   async startSimulationRun(data: {
-    job_role_slug: string;
+    job_role_slug?: string;
     resume_version_id?: string;
     company_role_prep_id?: string;
     company?: string;
+    assignment_id?: string;
   }): Promise<any> {
     const response: AxiosResponse = await this.client.post('/simulations/runs/start', data);
     return response.data;
@@ -1542,14 +1616,133 @@ class ApiClient {
     return response.data;
   }
 
+  async getSimulationReport(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/simulations/runs/${runId}/report`);
+    return response.data;
+  }
+
   async startSimulationMcqStage(runId: string): Promise<any> {
     const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/stages/mcq/start`);
     return response.data;
   }
 
+  async startSimulationCodingStage(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/stages/coding/start`);
+    return response.data;
+  }
+
+  async completeSimulationCodingStage(
+    runId: string,
+    data: { branch: string; difficulty: string; items: any[] }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/coding/complete`,
+      data,
+      { timeout: 120000 }
+    );
+    return response.data;
+  }
+
+  async joinSimulationGD(runId: string, topicHint?: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/stages/gd/join`, {
+      topic_hint: topicHint,
+    });
+    return response.data;
+  }
+
+  async simulationGDResponse(
+    runId: string,
+    data: { text: string; room_id?: string }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/gd/response`,
+      data
+    );
+    return response.data;
+  }
+
+  async evaluateSimulationGD(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/gd/evaluate`,
+      {},
+      { timeout: 120000 }
+    );
+    return response.data;
+  }
+
+  async startSimulationSales(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/sales/start`
+    );
+    return response.data;
+  }
+
+  async simulationSalesResponse(
+    runId: string,
+    data: { text: string }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/sales/response`,
+      data
+    );
+    return response.data;
+  }
+
+  async evaluateSimulationSales(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/sales/evaluate`,
+      {},
+      { timeout: 120000 }
+    );
+    return response.data;
+  }
+
+  async startSimulationTextStage(runId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/text/start`,
+      {},
+      { timeout: 120000 }
+    );
+    return response.data;
+  }
+
+  async autosaveSimulationTextStage(
+    runId: string,
+    data: { answers: Record<string, string>; session_id?: string }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/text/autosave`,
+      data
+    );
+    return response.data;
+  }
+
+  async submitSimulationTextStage(
+    runId: string,
+    data: {
+      answers: Record<string, string>;
+      session_id?: string;
+      duration_seconds?: number;
+    }
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/stages/text/submit`,
+      data,
+      { timeout: 180000 }
+    );
+    return response.data;
+  }
+
   async completeSimulationStage(
     runId: string,
-    data: { stage_index: number; score: number; metadata?: Record<string, unknown> }
+    data: {
+      stage_index: number;
+      score: number;
+      metadata?: Record<string, unknown>;
+      feedback?: Record<string, unknown>;
+      duration_seconds?: number;
+      engine_session_id?: string;
+    }
   ): Promise<any> {
     const response: AxiosResponse = await this.client.post(`/simulations/runs/${runId}/complete-stage`, data);
     return response.data;
@@ -1639,7 +1832,7 @@ class ApiClient {
   }
 
   async startMockInterview(data: {
-    persona: 'technical' | 'hr';
+    persona: 'technical' | 'hr' | 'culture_fit';
     target_role: string;
     company?: string;
     job_description?: string;
@@ -1647,6 +1840,8 @@ class ApiClient {
     audio_consent?: boolean;
     drive_attempt_id?: string;
     drive_stage_index?: number;
+    simulation_run_id?: string;
+    simulation_stage_index?: number;
   }): Promise<any> {
     const response: AxiosResponse = await this.client.post('/mock-interviews/start', data);
     return response.data;

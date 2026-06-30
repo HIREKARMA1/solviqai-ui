@@ -9,14 +9,18 @@ import { Loader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Layers,
-  ExternalLink,
-} from 'lucide-react';
+import { SimulationCodingRound } from '@/components/simulation/SimulationCodingRound';
+import { SimulationGroupDiscussion } from '@/components/simulation/SimulationGroupDiscussion';
+import { SimulationSalesRoleplay } from '@/components/simulation/SimulationSalesRoleplay';
+import { SimulationWrittenStage } from '@/components/simulation/SimulationWrittenStage';
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileBarChart, Layers } from 'lucide-react';
+
+function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'culture_fit' {
+  const p = runner.persona;
+  if (p === 'hr') return 'hr';
+  if (p === 'culture_fit') return 'culture_fit';
+  return 'technical';
+}
 
 export default function SimulationRunPage() {
   const searchParams = useSearchParams();
@@ -60,15 +64,30 @@ export default function SimulationRunPage() {
     }
   };
 
-  const onInterviewComplete = async (result: { overall_score: number }) => {
+  const onStageComplete = (updated: any) => setRun(updated);
+
+  const onInterviewComplete = async (result: {
+    overall_score: number;
+    report?: any;
+    session_id?: string;
+  }) => {
     if (!runId || !run) return;
     const idx = run.current_stage_index;
     const updated = await apiClient.completeSimulationStage(runId, {
       stage_index: idx,
       score: result.overall_score,
+      engine_session_id: result.session_id,
+      feedback: result.report
+        ? {
+            strengths: result.report.strengths,
+            weaknesses: result.report.weaknesses || result.report.red_flags,
+            ai_feedback: result.report.summary,
+          }
+        : undefined,
       metadata: {
         stage_type: run.stage_runner?.stage_type || 'mock_interview',
         persona: run.stage_runner?.persona,
+        transcript: result.report?.transcript,
       },
     });
     setRun(updated);
@@ -94,27 +113,27 @@ export default function SimulationRunPage() {
           <div className="text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-4" />
             <h1 className="text-2xl font-bold">Simulation Complete</h1>
-            {report.summary && <p className="text-gray-600 mt-2">{report.summary}</p>}
+            {(report.ai_summary || report.summary) && (
+              <p className="text-gray-600 mt-2">{report.ai_summary || report.summary}</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-lg border p-4 text-center">
               <p className="text-xs uppercase text-gray-500">Verdict</p>
-              <p className="text-xl font-bold">{run.verdict}</p>
+              <p className="text-xl font-bold">{run.verdict?.replace(/_/g, ' ')}</p>
             </div>
             <div className="rounded-lg border p-4 text-center">
               <p className="text-xs uppercase text-gray-500">Readiness</p>
               <p className="text-xl font-bold">{run.job_readiness_score ?? 0}%</p>
             </div>
           </div>
-          {(report.stage_breakdown || []).map((s: any) => (
-            <div key={s.stage_index} className="flex justify-between rounded border p-3 text-sm">
-              <span>{s.title || `Stage ${s.stage_index + 1}`}</span>
-              <span>
-                {s.score}% {s.passed ? '✓' : '✗'}
-              </span>
-            </div>
-          ))}
-          <Button className="w-full" asChild>
+          <Button className="w-full gap-2" asChild>
+            <Link href={`/dashboard/student/simulations/report?run_id=${runId}`}>
+              <FileBarChart className="h-4 w-4" />
+              View full report — skill radar & round feedback
+            </Link>
+          </Button>
+          <Button className="w-full" variant="outline" asChild>
             <Link href="/dashboard/student/simulations">Back to library</Link>
           </Button>
         </div>
@@ -129,7 +148,7 @@ export default function SimulationRunPage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         <Button variant="ghost" size="sm" className="gap-2 -ml-2" asChild>
           <Link href="/dashboard/student/simulations">
             <ArrowLeft className="h-4 w-4" /> Library
@@ -149,6 +168,11 @@ export default function SimulationRunPage() {
               <Badge variant="outline">Difficulty: {run.adaptive_state.difficulty_bucket}</Badge>
             )}
           </div>
+          {run.adaptive_hint?.message && (
+            <p className="mt-2 text-sm text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded-lg px-3 py-2">
+              {run.adaptive_hint.message}
+            </p>
+          )}
           {stage && (
             <p className="text-gray-600 mt-2">
               {stage.title} — {stage.stage_type?.replace(/_/g, ' ')}
@@ -172,7 +196,7 @@ export default function SimulationRunPage() {
 
         {runner.type === 'mcq' && (
           <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <p>Timed MCQ round — questions are generated for your role and difficulty level.</p>
+            <p>Timed MCQ round — questions match your role, difficulty, and question mode.</p>
             <Button onClick={startMcqStage} disabled={startingMcq} className="gap-2 w-full sm:w-auto">
               {startingMcq ? 'Loading questions…' : 'Start MCQ round'}
               <ArrowRight className="h-4 w-4" />
@@ -180,34 +204,54 @@ export default function SimulationRunPage() {
           </div>
         )}
 
-        {runner.type === 'mock_interview' && (
+        {runner.type === 'coding' && runId && (
+          <div className="rounded-xl border p-6 dark:border-gray-700">
+            <SimulationCodingRound runId={runId} onComplete={onStageComplete} />
+          </div>
+        )}
+
+        {runner.type === 'mock_interview' && runId && (
           <div className="rounded-xl border p-6 dark:border-gray-700">
             <MockInterviewRoom
-              persona={runner.persona === 'hr' ? 'hr' : 'technical'}
+              persona={interviewPersona(runner)}
               targetRole={targetRole}
               company={run.company}
+              simulationRunId={runId}
+              simulationStageIndex={run.current_stage_index}
               onComplete={onInterviewComplete}
             />
           </div>
         )}
 
-        {runner.type === 'playground' && (
-          <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <p className="text-sm text-gray-600">{runner.message}</p>
-            <Button variant="outline" asChild className="gap-2">
-              <Link href={runner.practice_path || '/dashboard/student/practice'}>
-                Open Practice <ExternalLink className="h-4 w-4" />
-              </Link>
-            </Button>
-            <p className="text-xs text-gray-500">
-              Full in-simulation GD / sales / case study playgrounds are coming next. Use Practice for now, then continue other pipeline stages.
-            </p>
-          </div>
+        {runner.type === 'playground' && runId && runner.playground_type === 'sales' && (
+          <SimulationSalesRoleplay runId={runId} onComplete={onStageComplete} />
         )}
+
+        {runner.type === 'playground' && runId && runner.playground_type !== 'sales' && (
+          <SimulationGroupDiscussion
+            runId={runId}
+            stageNum={stageNum}
+            totalStages={run.total_stages}
+            onComplete={onStageComplete}
+          />
+        )}
+
+        {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(
+          runner.type
+        ) &&
+          runId && (
+            <div className="rounded-xl border p-6 dark:border-gray-700">
+              <SimulationWrittenStage
+                runId={runId}
+                stageType={runner.type}
+                onComplete={onStageComplete}
+              />
+            </div>
+          )}
 
         {runner.type === 'unsupported' && (
           <div className="rounded-xl border p-6 text-sm text-gray-600 dark:border-gray-700">
-            This stage type ({runner.stage_type}) is not wired yet. Contact your admin or skip to a role pipeline with MCQ + interview rounds.
+            This stage type ({runner.stage_type}) is not wired yet.
           </div>
         )}
 

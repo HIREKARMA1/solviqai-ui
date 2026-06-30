@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Briefcase,
@@ -19,13 +19,13 @@ import {
   Send,
   CreditCard,
   Workflow,
-} from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/useTranslation';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { cn } from '@/lib/utils';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
+} from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { cn } from "@/lib/utils";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { getDashboardFeatureRoute } from "@/lib/dashboardNavigation";
 
 export interface SidebarItem {
   id: string;
@@ -44,51 +44,51 @@ interface LandingSidebarProps {
 // Student sidebar features
 export const studentSidebarFeatures: SidebarItem[] = [
   {
-    id: 'dashboard',
+    id: "dashboard",
     icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
+    label: "Dashboard",
     onClick: undefined, // Will be set by component
   },
   {
-    id: 'career-guidance',
+    id: "career-guidance",
     icon: <Sparkles className="w-5 h-5" />,
-    label: 'AI Career Guidance',
+    label: "AI Career Guidance",
     onClick: undefined,
   },
   {
-    id: 'resume',
+    id: "resume",
     icon: <FileText className="w-5 h-5" />,
-    label: 'Resume Analysis',
+    label: "Resume Analysis",
     onClick: undefined, // Will be set by component
   },
   {
-    id: 'assessment',
+    id: "assessment",
     icon: <ClipboardList className="w-5 h-5" />,
-    label: 'Mock Assessment',
+    label: "Job Recommendations",
     onClick: undefined,
   },
   {
-    id: 'mock-tests',
+    id: "mock-tests",
     icon: <Target className="w-5 h-5" />,
-    label: 'Mock Tests',
+    label: "Mock Tests",
     onClick: undefined,
   },
   {
-    id: 'placement-drives',
+    id: "placement-drives",
     icon: <Layers className="w-5 h-5" />,
-    label: 'Placement Drives',
+    label: "Placement Drives",
     onClick: undefined,
   },
   {
-    id: 'simulations',
+    id: "simulations",
     icon: <Workflow className="w-5 h-5" />,
-    label: 'Job Prep Simulation',
+    label: "Job Prep Simulation",
     onClick: undefined,
   },
   {
-    id: 'mock-interview',
+    id: "mock-interview",
     icon: <Mic className="w-5 h-5" />,
-    label: 'AI Interview',
+    label: "AI Interview",
     onClick: undefined,
   },
   // {
@@ -104,21 +104,21 @@ export const studentSidebarFeatures: SidebarItem[] = [
   //   onClick: undefined,
   // },
   {
-    id: 'practice',
+    id: "practice",
     icon: <BookOpen className="w-5 h-5" />,
-    label: 'Practice',
+    label: "Practice",
     onClick: undefined,
   },
   {
-    id: 'plans',
+    id: "plans",
     icon: <CreditCard className="w-5 h-5" />,
-    label: 'Plans',
+    label: "Plans",
     onClick: undefined,
   },
   {
-    id: 'analytics',
+    id: "analytics",
     icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
+    label: "Analytics",
     onClick: undefined,
   },
 ];
@@ -126,48 +126,48 @@ export const studentSidebarFeatures: SidebarItem[] = [
 // College sidebar features
 export const collegeSidebarFeatures: SidebarItem[] = [
   {
-    id: 'dashboard',
+    id: "dashboard",
     icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
+    label: "Dashboard",
     onClick: undefined,
   },
   {
-    id: 'students',
+    id: "students",
     icon: <Users className="w-5 h-5" />,
-    label: 'Students',
+    label: "Students",
     onClick: undefined,
   },
   {
-    id: 'analytics',
+    id: "analytics",
     icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
+    label: "Analytics",
     onClick: undefined,
   },
   {
-    id: 'placement-hub',
+    id: "placement-hub",
     icon: <Target className="w-5 h-5" />,
-    label: 'Placement Hub',
+    label: "Placement Hub",
     onClick: undefined,
   },
   {
-    id: 'profile',
+    id: "profile",
     icon: <User className="w-5 h-5" />,
-    label: 'Profile',
+    label: "Profile",
     onClick: undefined,
   },
 ];
 
 export const enterpriseSidebarFeatures: SidebarItem[] = [
   {
-    id: 'dashboard',
+    id: "dashboard",
     icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Hiring Hub',
+    label: "Hiring Hub",
     onClick: undefined,
   },
   {
-    id: 'campaigns',
+    id: "campaigns",
     icon: <Send className="w-5 h-5" />,
-    label: 'Campaigns',
+    label: "Campaigns",
     onClick: undefined,
   },
 ];
@@ -175,75 +175,75 @@ export const enterpriseSidebarFeatures: SidebarItem[] = [
 // Admin sidebar features
 export const adminSidebarFeatures: SidebarItem[] = [
   {
-    id: 'dashboard',
+    id: "dashboard",
     icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
+    label: "Dashboard",
     onClick: undefined,
   },
   {
-    id: 'colleges',
+    id: "colleges",
     icon: <Building2 className="w-5 h-5" />,
-    label: 'Colleges',
+    label: "Colleges",
     onClick: undefined,
   },
   {
-    id: 'enterprises',
+    id: "enterprises",
     icon: <Briefcase className="w-5 h-5" />,
-    label: 'Enterprise',
+    label: "Enterprise",
     onClick: undefined,
   },
   {
-    id: 'coupons',
+    id: "coupons",
     icon: <CreditCard className="w-5 h-5" />,
-    label: 'Coupons',
+    label: "Coupons",
     onClick: undefined,
   },
   {
-    id: 'students',
+    id: "students",
     icon: <Users className="w-5 h-5" />,
-    label: 'Students',
+    label: "Students",
     onClick: undefined,
   },
   {
-    id: 'analytics',
+    id: "analytics",
     icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
+    label: "Analytics",
     onClick: undefined,
   },
   {
-    id: 'disha',
+    id: "disha",
     icon: <FileText className="w-5 h-5" />,
-    label: 'Disha Assessments',
+    label: "Disha Assessments",
     onClick: undefined,
   },
   {
-    id: 'question-bank',
+    id: "question-bank",
     icon: <BookOpen className="w-5 h-5" />,
-    label: 'Question Bank',
+    label: "Question Bank",
     onClick: undefined,
   },
   {
-    id: 'mock-tests-admin',
+    id: "mock-tests-admin",
     icon: <Target className="w-5 h-5" />,
-    label: 'Mock Tests',
+    label: "Mock Tests",
     onClick: undefined,
   },
   {
-    id: 'placement-drives-admin',
+    id: "placement-drives-admin",
     icon: <Layers className="w-5 h-5" />,
-    label: 'Placement Drives',
+    label: "Placement Drives",
     onClick: undefined,
   },
   {
-    id: 'simulation-pipelines-admin',
+    id: "simulation-pipelines-admin",
     icon: <Workflow className="w-5 h-5" />,
-    label: 'Simulations',
+    label: "Simulations",
     onClick: undefined,
   },
   {
-    id: 'profile',
+    id: "profile",
     icon: <User className="w-5 h-5" />,
-    label: 'Profile',
+    label: "Profile",
     onClick: undefined,
   },
 ];
@@ -251,7 +251,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
 // Export default features for backward compatibility (student features)
 export const sidebarFeatures = studentSidebarFeatures;
 
-export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatureChange }: LandingSidebarProps) {
+export function LandingSidebar({
+  className,
+  isCollapsed,
+  activeFeature,
+  onFeatureChange,
+}: LandingSidebarProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -262,13 +267,13 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
     if (!user) return studentSidebarFeatures; // Default to student features when not logged in
 
     switch (user.user_type) {
-      case 'college':
+      case "college":
         return collegeSidebarFeatures;
-      case 'enterprise':
+      case "enterprise":
         return enterpriseSidebarFeatures;
-      case 'admin':
+      case "admin":
         return adminSidebarFeatures;
-      case 'student':
+      case "student":
       default:
         return studentSidebarFeatures;
     }
@@ -280,10 +285,10 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   };
 
   // Check if we're in dashboard context
-  const isDashboardContext = pathname?.startsWith('/dashboard');
+  const isDashboardContext = pathname?.startsWith("/dashboard");
 
   const sidebarFeatures = getSidebarFeatures();
-  const features = sidebarFeatures.map(item => ({
+  const features = sidebarFeatures.map((item) => ({
     ...item,
     onClick: () => {
       // If user is logged in, always navigate to dashboard route (regardless of current page)
@@ -301,8 +306,8 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       }
 
       // For dashboard link when logged out, redirect to login
-      if (item.id === 'dashboard') {
-        router.push('/auth/login');
+      if (item.id === "dashboard") {
+        router.push("/auth/login");
         return;
       }
 
@@ -314,22 +319,26 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
   return (
     <motion.aside
       animate={{
-        width: isCollapsed ? 80 : 280
+        width: isCollapsed ? 80 : 280,
       }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
-        'fixed left-0 top-20 z-30 overflow-hidden', // top-20 = 80px (navbar height)
-        'h-[calc(100vh-5rem)]', // Full height minus navbar
-        'bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg',
-        'border-r border-gray-200/50 dark:border-gray-800/50',
-        'shadow-lg',
-        'hidden lg:block', // Hide on mobile, show on desktop
-        className
+        "fixed left-0 top-20 z-30 overflow-hidden", // top-20 = 80px (navbar height)
+        "h-[calc(100vh-5rem)]", // Full height minus navbar
+        "bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg",
+        "border-r border-gray-200/50 dark:border-gray-800/50",
+        "shadow-lg",
+        "hidden lg:block", // Hide on mobile, show on desktop
+        className,
       )}
     >
       {/* Animated Background */}
       <div className="absolute inset-0 -z-10">
-        <AnimatedBackground variant="subtle" showGrid={true} showLines={false} />
+        <AnimatedBackground
+          variant="subtle"
+          showGrid={true}
+          showLines={false}
+        />
       </div>
 
       <div className="flex flex-col h-full relative z-10">
@@ -358,10 +367,14 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
                   const route = getFeatureRoute(item.id);
                   if (route) {
                     // For exact matches or nested routes
-                    isActive = pathname === route || (pathname?.startsWith(route + '/') ?? false);
+                    isActive =
+                      pathname === route ||
+                      (pathname?.startsWith(route + "/") ?? false);
                     // Special case: dashboard route should match exactly or be the base dashboard
-                    if (item.id === 'dashboard') {
-                      isActive = pathname === route || pathname === `/dashboard/${user?.user_type}`;
+                    if (item.id === "dashboard") {
+                      isActive =
+                        pathname === route ||
+                        pathname === `/dashboard/${user?.user_type}`;
                     }
                   }
                 } else {
@@ -396,13 +409,14 @@ function SidebarButton({ item, isCollapsed, isActive }: SidebarButtonProps) {
   const content = (
     <div
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-        'text-gray-700 dark:text-gray-300',
-        'hover:bg-primary-50 dark:hover:bg-primary-900/20',
-        'hover:text-primary-600 dark:hover:text-primary-400',
-        'cursor-pointer group',
-        isCollapsed && 'justify-center',
-        isActive && 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
+        "text-gray-700 dark:text-gray-300",
+        "hover:bg-primary-50 dark:hover:bg-primary-900/20",
+        "hover:text-primary-600 dark:hover:text-primary-400",
+        "cursor-pointer group",
+        isCollapsed && "justify-center",
+        isActive &&
+          "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400",
       )}
     >
       <div className="flex-shrink-0 transition-transform group-hover:scale-110">
@@ -412,7 +426,7 @@ function SidebarButton({ item, isCollapsed, isActive }: SidebarButtonProps) {
         {!isCollapsed && (
           <motion.span
             initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
+            animate={{ opacity: 1, width: "auto" }}
             exit={{ opacity: 0, width: 0 }}
             className="truncate font-medium"
           >
@@ -424,12 +438,8 @@ function SidebarButton({ item, isCollapsed, isActive }: SidebarButtonProps) {
   );
 
   return (
-    <button
-      onClick={item.onClick}
-      className="w-full"
-    >
+    <button onClick={item.onClick} className="w-full">
       {content}
     </button>
   );
 }
-
