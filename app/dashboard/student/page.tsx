@@ -56,10 +56,13 @@ function formatJobMatchesDelta(deltas: { new_job_matches?: number } | undefined)
 function getNextActionHref(action: {
     type: string
     assessment_id?: string | null
+    drive_attempt_id?: string | null
 }): string {
     switch (action.type) {
         case 'continue':
             return `/dashboard/student/assessment?id=${action.assessment_id}`
+        case 'continue_drive':
+            return `/dashboard/student/placement-drives/run?attempt_id=${action.drive_attempt_id}`
         case 'resume':
             return '/dashboard/student/resume'
         case 'start':
@@ -307,7 +310,7 @@ export default function StudentDashboard() {
                             >
                                 <div className="flex min-w-0 items-center gap-4">
                                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FF541F] text-white">
-                                        {stats.next_action.type === 'continue' ? (
+                                        {stats.next_action.type === 'continue' || stats.next_action.type === 'continue_drive' ? (
                                             <Play className="h-6 w-6" />
                                         ) : (
                                             <Target className="h-6 w-6" />
@@ -317,7 +320,9 @@ export default function StudentDashboard() {
                                         <p className="text-xs font-semibold uppercase tracking-wide text-[#FF541F]">
                                             {stats.next_action.type === 'continue'
                                                 ? 'Continue Where You Left Off'
-                                                : 'Start Your Next Simulation'}
+                                                : stats.next_action.type === 'continue_drive'
+                                                  ? 'Continue Your Placement Drive'
+                                                  : 'Start Your Next Simulation'}
                                         </p>
                                         <p className="truncate text-lg font-bold text-gray-900 dark:text-white">
                                             {stats.next_action.label}
@@ -615,7 +620,11 @@ export default function StudentDashboard() {
                                         {stats?.next_action && (
                                             <Link href={getNextActionHref(stats.next_action)} className="block">
                                                 <div className="w-full rounded-xl border-2 border-[#FF541F]/40 bg-[#FFF5F0] px-4 py-3 text-left text-sm font-semibold text-[#FF541F] transition-all duration-200 hover:bg-[#FF541F] hover:text-white dark:bg-[#2A1A14] dark:hover:bg-[#FF541F]">
-                                                    {stats.next_action.type === 'continue' ? 'Continue Simulation' : 'Start Simulation'}
+                                                    {stats.next_action.type === 'continue'
+                                                        ? 'Continue Simulation'
+                                                        : stats.next_action.type === 'continue_drive'
+                                                          ? 'Continue Drive'
+                                                          : 'Start Simulation'}
                                                 </div>
                                             </Link>
                                         )}
@@ -680,7 +689,9 @@ export default function StudentDashboard() {
                                     <span>
                                         {stats?.next_action?.type === 'continue'
                                             ? 'Continue Simulation'
-                                            : 'Start Simulation'}
+                                            : stats?.next_action?.type === 'continue_drive'
+                                              ? 'Continue Drive'
+                                              : 'Start Simulation'}
                                     </span>
                                 </Link>
                                 <Link

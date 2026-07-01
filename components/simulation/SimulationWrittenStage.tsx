@@ -20,7 +20,8 @@ type Task = {
 };
 
 type Props = {
-  runId: string;
+  runId?: string;
+  driveAttemptId?: string;
   stageType: string;
   onComplete: (run: any) => void;
 };
@@ -33,7 +34,8 @@ const STAGE_LABELS: Record<string, string> = {
   finance: 'Finance Assessment',
 };
 
-export function SimulationWrittenStage({ runId, stageType, onComplete }: Props) {
+export function SimulationWrittenStage({ runId, driveAttemptId, stageType, onComplete }: Props) {
+  const contextId = driveAttemptId || runId;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState<any>(null);
@@ -44,8 +46,11 @@ export function SimulationWrittenStage({ runId, stageType, onComplete }: Props) 
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    apiClient
-      .startSimulationTextStage(runId)
+    if (!contextId) return;
+    const start = driveAttemptId
+      ? apiClient.startPlacementDriveTextStage(driveAttemptId)
+      : apiClient.startSimulationTextStage(runId!);
+    start
       .then((data) => {
         setSession(data);
         const initial = (data.answers || {}) as Record<string, string>;
@@ -65,7 +70,7 @@ export function SimulationWrittenStage({ runId, stageType, onComplete }: Props) 
       })
       .catch((e) => alert(e?.response?.data?.error || e?.response?.data?.detail || 'Could not start round'))
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [contextId, driveAttemptId, runId]);
 
   const buildPayload = useCallback(
     (ans: Record<string, string>, sections: Record<string, Record<string, string>>) => {
@@ -84,17 +89,23 @@ export function SimulationWrittenStage({ runId, stageType, onComplete }: Props) 
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       autosaveTimer.current = setTimeout(async () => {
         try {
-          const res = await apiClient.autosaveSimulationTextStage(runId, {
-            answers: payload,
-            session_id: session.session_id,
-          });
+          const autosave = driveAttemptId
+            ? apiClient.autosavePlacementDriveTextStage(driveAttemptId, {
+                answers: payload,
+                session_id: session.session_id,
+              })
+            : apiClient.autosaveSimulationTextStage(runId!, {
+                answers: payload,
+                session_id: session.session_id,
+              });
+          const res = await autosave;
           setLastSaved(res.last_saved_at || new Date().toISOString());
         } catch {
           /* silent */
         }
       }, 2500);
     },
-    [runId, session?.session_id]
+    [contextId, driveAttemptId, runId, session?.session_id]
   );
 
   const updateAnswer = (taskId: string, value: string) => {
@@ -120,11 +131,18 @@ export function SimulationWrittenStage({ runId, stageType, onComplete }: Props) 
     try {
       const payload = buildPayload(answers, sectionAnswers);
       const duration = Math.floor((Date.now() - startedAt.current) / 1000);
-      const updated = await apiClient.submitSimulationTextStage(runId, {
-        answers: payload,
-        session_id: session.session_id,
-        duration_seconds: duration,
-      });
+      const submit = driveAttemptId
+        ? apiClient.submitPlacementDriveTextStage(driveAttemptId, {
+            answers: payload,
+            session_id: session.session_id,
+            duration_seconds: duration,
+          })
+        : apiClient.submitSimulationTextStage(runId!, {
+            answers: payload,
+            session_id: session.session_id,
+            duration_seconds: duration,
+          });
+      const updated = await submit;
       onComplete(updated);
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.response?.data?.detail || 'Submit failed';

@@ -1466,6 +1466,24 @@ class ApiClient {
     return response.data;
   }
 
+  async adminGetPlacementDrive(id: string): Promise<any> {
+    const response: AxiosResponse = await this.client.get(`/admin/cms/placement-drives/${id}`);
+    return response.data;
+  }
+
+  async adminDuplicatePlacementDrive(id: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(`/admin/cms/placement-drives/${id}/duplicate`);
+    return response.data;
+  }
+
+  async adminListPlacementDriveStageTypes(): Promise<{
+    stage_types: string[];
+    legacy_stage_types: string[];
+  }> {
+    const response: AxiosResponse = await this.client.get('/admin/cms/placement-drives/stage-types');
+    return response.data;
+  }
+
   async adminCreatePlacementDrive(data: any): Promise<any> {
     const response: AxiosResponse = await this.client.post('/admin/cms/placement-drives', data);
     return response.data;
@@ -1753,7 +1771,7 @@ class ApiClient {
     return response.data;
   }
 
-  async getPlacementDriveLibrary(): Promise<{ drives: any[] }> {
+  async getPlacementDriveLibrary(): Promise<{ drives: any[]; in_progress?: any[] }> {
     const response: AxiosResponse = await this.client.get('/placement-drives/library');
     return response.data;
   }
@@ -1776,6 +1794,116 @@ class ApiClient {
     const response: AxiosResponse = await this.client.post(
       `/placement-drives/attempts/${attemptId}/complete-stage`,
       data,
+    );
+    return response.data;
+  }
+
+  async startPlacementDriveMcqStage(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/mcq/start`,
+    );
+    return response.data;
+  }
+
+  async startPlacementDriveCodingStage(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/coding/start`,
+    );
+    return response.data;
+  }
+
+  async completePlacementDriveCodingStage(
+    attemptId: string,
+    data: { branch: string; difficulty: string; items: any[] },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/coding/complete`,
+      data,
+      { timeout: 120000 },
+    );
+    return response.data;
+  }
+
+  async joinPlacementDriveGD(attemptId: string, topicHint?: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/gd/join`,
+      { topic_hint: topicHint },
+    );
+    return response.data;
+  }
+
+  async placementDriveGDResponse(
+    attemptId: string,
+    data: { text: string; room_id?: string },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/gd/response`,
+      data,
+    );
+    return response.data;
+  }
+
+  async evaluatePlacementDriveGD(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/gd/evaluate`,
+      {},
+      { timeout: 120000 },
+    );
+    return response.data;
+  }
+
+  async startPlacementDriveSales(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/sales/start`,
+    );
+    return response.data;
+  }
+
+  async placementDriveSalesResponse(attemptId: string, data: { text: string }): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/sales/response`,
+      data,
+    );
+    return response.data;
+  }
+
+  async evaluatePlacementDriveSales(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/sales/evaluate`,
+      {},
+      { timeout: 120000 },
+    );
+    return response.data;
+  }
+
+  async startPlacementDriveTextStage(attemptId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/text/start`,
+      {},
+      { timeout: 120000 },
+    );
+    return response.data;
+  }
+
+  async autosavePlacementDriveTextStage(
+    attemptId: string,
+    data: { answers: Record<string, string>; session_id?: string },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/text/autosave`,
+      data,
+    );
+    return response.data;
+  }
+
+  async submitPlacementDriveTextStage(
+    attemptId: string,
+    data: { answers: Record<string, string>; session_id?: string; duration_seconds?: number },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/stages/text/submit`,
+      data,
+      { timeout: 120000 },
     );
     return response.data;
   }

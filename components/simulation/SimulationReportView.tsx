@@ -63,19 +63,51 @@ type ReportData = {
 };
 
 function verdictStyle(verdict?: string) {
-  if (verdict === 'READY') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
-  if (verdict === 'NEEDS_PRACTICE') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200';
+  if (verdict === 'READY' || verdict === 'CLEAR') {
+    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
+  }
+  if (verdict === 'NEEDS_PRACTICE' || verdict === 'NEEDS_IMPROVEMENT') {
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200';
+  }
   return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
 }
 
 function verdictLabel(verdict?: string) {
-  if (verdict === 'READY') return 'Job Ready';
-  if (verdict === 'NEEDS_PRACTICE') return 'Needs Practice';
-  if (verdict === 'NOT_READY') return 'Not Ready';
+  if (verdict === 'READY' || verdict === 'CLEAR') return verdict === 'CLEAR' ? 'Cleared' : 'Job Ready';
+  if (verdict === 'NEEDS_PRACTICE' || verdict === 'NEEDS_IMPROVEMENT') {
+    return verdict === 'NEEDS_IMPROVEMENT' ? 'Needs Improvement' : 'Needs Practice';
+  }
+  if (verdict === 'NOT_READY' || verdict === 'NOT_CLEAR') {
+    return verdict === 'NOT_CLEAR' ? 'Not Cleared' : 'Not Ready';
+  }
   return verdict || '—';
 }
 
-export function SimulationReportView({ data }: { data: ReportData }) {
+type ReportViewOptions = {
+  backHref?: string;
+  backLabel?: string;
+  title?: string;
+  scoreLabel?: string;
+  showRetry?: boolean;
+  retryHref?: string;
+  retryLabel?: string;
+};
+
+export function SimulationReportView({
+  data,
+  options,
+}: {
+  data: ReportData;
+  options?: ReportViewOptions;
+}) {
+  const backHref = options?.backHref ?? '/dashboard/student/simulations';
+  const backLabel = options?.backLabel ?? 'Simulations';
+  const title = options?.title ?? 'Simulation Report';
+  const scoreLabel = options?.scoreLabel ?? 'Job readiness';
+  const showRetry = options?.showRetry ?? true;
+  const retryHref =
+    options?.retryHref ?? `/dashboard/student/simulations/start?role=${data.job_role_slug || ''}`;
+  const retryLabel = options?.retryLabel ?? 'Retry simulation';
   const report = data.report || {};
   const radarData = (report.skill_radar || []).map((r) => ({
     subject: r.dimension,
@@ -94,13 +126,13 @@ export function SimulationReportView({ data }: { data: ReportData }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" className="gap-2 -ml-2 mb-3" asChild>
-            <Link href="/dashboard/student/simulations">
-              <ArrowLeft className="h-4 w-4" /> Simulations
+            <Link href={backHref}>
+              <ArrowLeft className="h-4 w-4" /> {backLabel}
             </Link>
           </Button>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-            <h1 className="text-2xl font-bold">Simulation Report</h1>
+            <h1 className="text-2xl font-bold">{title}</h1>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
             {data.pipeline_name || 'Job Prep Simulation'}
@@ -122,7 +154,7 @@ export function SimulationReportView({ data }: { data: ReportData }) {
             {verdictLabel(data.verdict)}
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-500">Job readiness</p>
+            <p className="text-xs uppercase text-gray-500">{scoreLabel}</p>
             <p className="text-4xl font-bold text-primary">{Math.round(data.job_readiness_score ?? 0)}%</p>
           </div>
           {report.stages_total != null && (
@@ -306,13 +338,13 @@ export function SimulationReportView({ data }: { data: ReportData }) {
 
       <div className="flex flex-wrap gap-3 pt-4">
         <Button asChild>
-          <Link href="/dashboard/student/simulations">Back to library</Link>
+          <Link href={backHref}>Back to library</Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href={`/dashboard/student/simulations/start?role=${data.job_role_slug || ''}`}>
-            Retry simulation
-          </Link>
-        </Button>
+        {showRetry && (
+          <Button variant="outline" asChild>
+            <Link href={retryHref}>{retryLabel}</Link>
+          </Button>
+        )}
       </div>
     </div>
   );

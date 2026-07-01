@@ -11,11 +11,13 @@ import { Handshake, User } from 'lucide-react';
 type Turn = { role: string; text: string };
 
 type Props = {
-  runId: string;
+  runId?: string;
+  driveAttemptId?: string;
   onComplete: (run: any) => void;
 };
 
-export function SimulationSalesRoleplay({ runId, onComplete }: Props) {
+export function SimulationSalesRoleplay({ runId, driveAttemptId, onComplete }: Props) {
+  const contextId = driveAttemptId || runId;
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [pitch, setPitch] = useState('');
@@ -24,8 +26,11 @@ export function SimulationSalesRoleplay({ runId, onComplete }: Props) {
   const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
-    apiClient
-      .startSimulationSales(runId)
+    if (!contextId) return;
+    const start = driveAttemptId
+      ? apiClient.startPlacementDriveSales(driveAttemptId)
+      : apiClient.startSimulationSales(runId!);
+    start
       .then((res) => {
         setSession(res);
         const opening = res.scenario?.opening;
@@ -35,13 +40,16 @@ export function SimulationSalesRoleplay({ runId, onComplete }: Props) {
       })
       .catch((e) => alert(e?.response?.data?.detail || 'Could not start sales roleplay'))
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [contextId, driveAttemptId, runId]);
 
   const submitPitch = useCallback(async () => {
-    if (!pitch.trim() || submitting) return;
+    if (!pitch.trim() || submitting || !contextId) return;
     setSubmitting(true);
     try {
-      const res = await apiClient.simulationSalesResponse(runId, { text: pitch.trim() });
+      const respond = driveAttemptId
+        ? apiClient.placementDriveSalesResponse(driveAttemptId, { text: pitch.trim() })
+        : apiClient.simulationSalesResponse(runId!, { text: pitch.trim() });
+      const res = await respond;
       setTurns((prev) => [
         ...prev,
         { role: 'candidate', text: pitch.trim() },
@@ -53,7 +61,7 @@ export function SimulationSalesRoleplay({ runId, onComplete }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [pitch, runId, submitting]);
+  }, [pitch, contextId, driveAttemptId, runId, submitting]);
 
   const finish = useCallback(async () => {
     const pitches = turns.filter((t) => t.role === 'candidate');
@@ -61,16 +69,20 @@ export function SimulationSalesRoleplay({ runId, onComplete }: Props) {
       alert('Complete at least one sales pitch turn before finishing.');
       return;
     }
+    if (!contextId) return;
     setFinishing(true);
     try {
-      const updated = await apiClient.evaluateSimulationSales(runId);
+      const evaluate = driveAttemptId
+        ? apiClient.evaluatePlacementDriveSales(driveAttemptId)
+        : apiClient.evaluateSimulationSales(runId!);
+      const updated = await evaluate;
       onComplete(updated);
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'Could not evaluate roleplay');
     } finally {
       setFinishing(false);
     }
-  }, [runId, turns, onComplete]);
+  }, [contextId, driveAttemptId, runId, turns, onComplete]);
 
   if (loading) {
     return (

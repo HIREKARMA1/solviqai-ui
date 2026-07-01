@@ -55,14 +55,16 @@ export default function MockTestExamPage() {
       });
       setAttempt(result);
       if (driveAttemptId && driveStageIndex != null) {
-        await apiClient.completePlacementDriveStage(driveAttemptId, {
-          stage_index: parseInt(driveStageIndex, 10),
-          score: result.score ?? 0,
-          metadata: {
-            stage_type: 'mock_test',
-            round_type: result.template?.round_type || 'aptitude',
-          },
-        });
+        if (!result.drive_advanced) {
+          await apiClient.completePlacementDriveStage(driveAttemptId, {
+            stage_index: parseInt(driveStageIndex, 10),
+            score: result.score ?? 0,
+            metadata: {
+              stage_type: result.template?.tags?.stage_type || result.template?.round_type || 'aptitude',
+              round_type: result.template?.round_type || 'aptitude',
+            },
+          });
+        }
         router.push(`/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`);
       } else if (simulationRunId && simulationStageIndex != null) {
         if (!result.simulation_advanced) {

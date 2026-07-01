@@ -8,7 +8,8 @@ import { useTranscription } from '@/hooks/useTranscription';
 import { Mic, Square } from 'lucide-react';
 
 type Props = {
-  runId: string;
+  runId?: string;
+  driveAttemptId?: string;
   stageNum: number;
   totalStages: number;
   onComplete: (run: any) => void;
@@ -28,7 +29,14 @@ function styleLabel(style?: string): string {
   return style.replace(/_/g, ' ');
 }
 
-export function SimulationGroupDiscussion({ runId, stageNum, totalStages, onComplete }: Props) {
+export function SimulationGroupDiscussion({
+  runId,
+  driveAttemptId,
+  stageNum,
+  totalStages,
+  onComplete,
+}: Props) {
+  const contextId = driveAttemptId || runId;
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [answer, setAnswer] = useState('');
@@ -79,12 +87,15 @@ export function SimulationGroupDiscussion({ runId, stageNum, totalStages, onComp
   );
 
   useEffect(() => {
-    apiClient
-      .joinSimulationGD(runId)
+    if (!contextId) return;
+    const join = driveAttemptId
+      ? apiClient.joinPlacementDriveGD(driveAttemptId)
+      : apiClient.joinSimulationGD(runId!);
+    join
       .then((data) => hydrateSession(data, !data.resumed))
       .catch((e) => alert(e?.response?.data?.error || e?.response?.data?.detail || 'Could not start GD room'))
       .finally(() => setLoading(false));
-  }, [runId, hydrateSession]);
+  }, [contextId, driveAttemptId, runId, hydrateSession]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
@@ -124,10 +135,16 @@ export function SimulationGroupDiscussion({ runId, stageNum, totalStages, onComp
     setAnswer('');
     reset();
     try {
-      const res = await apiClient.simulationGDResponse(runId, {
-        text,
-        room_id: session?.room_id,
-      });
+      const respond = driveAttemptId
+        ? apiClient.placementDriveGDResponse(driveAttemptId, {
+            text,
+            room_id: session?.room_id,
+          })
+        : apiClient.simulationGDResponse(runId!, {
+            text,
+            room_id: session?.room_id,
+          });
+      const res = await respond;
       const agents: AgentMsg[] = res.agents || [];
       setTurns((prev) => [...prev, { user: text, agents }]);
       setUserTurnCount(res.turn_count || userTurnCount + 1);
@@ -140,7 +157,7 @@ export function SimulationGroupDiscussion({ runId, stageNum, totalStages, onComp
       setSubmitting(false);
       setActiveSpeaker(null);
     }
-  }, [answer, runId, session?.room_id, submitting, reset, playAgentMessages, userTurnCount]);
+  }, [answer, driveAttemptId, runId, session?.room_id, submitting, reset, playAgentMessages, userTurnCount]);
 
   const finish = useCallback(async () => {
     if (userTurnCount < 1) {
@@ -149,14 +166,17 @@ export function SimulationGroupDiscussion({ runId, stageNum, totalStages, onComp
     }
     setFinishing(true);
     try {
-      const updated = await apiClient.evaluateSimulationGD(runId);
+      const evaluate = driveAttemptId
+        ? apiClient.evaluatePlacementDriveGD(driveAttemptId)
+        : apiClient.evaluateSimulationGD(runId!);
+      const updated = await evaluate;
       onComplete(updated);
     } catch (e: any) {
       alert(e?.response?.data?.error || e?.response?.data?.detail || 'Could not evaluate GD');
     } finally {
       setFinishing(false);
     }
-  }, [runId, userTurnCount, onComplete]);
+  }, [driveAttemptId, runId, userTurnCount, onComplete]);
 
   if (loading) {
     return (

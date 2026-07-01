@@ -7,11 +7,13 @@ import { CodingRound } from '@/components/assessment/CodingRound';
 import { apiClient } from '@/lib/api';
 
 type Props = {
-  runId: string;
+  runId?: string;
+  driveAttemptId?: string;
   onComplete: (run: any) => void;
 };
 
-export function SimulationCodingRound({ runId, onComplete }: Props) {
+export function SimulationCodingRound({ runId, driveAttemptId, onComplete }: Props) {
+  const contextId = driveAttemptId || runId;
   const [loading, setLoading] = useState(true);
   const [payload, setPayload] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -19,12 +21,15 @@ export function SimulationCodingRound({ runId, onComplete }: Props) {
   const resultsRef = useRef<Record<string, any>>({});
 
   useEffect(() => {
-    apiClient
-      .startSimulationCodingStage(runId)
+    if (!contextId) return;
+    const start = driveAttemptId
+      ? apiClient.startPlacementDriveCodingStage(driveAttemptId)
+      : apiClient.startSimulationCodingStage(runId!);
+    start
       .then(setPayload)
       .catch((e) => alert(e?.response?.data?.detail || 'Could not start coding round'))
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [contextId, driveAttemptId, runId]);
 
   const roundData = useMemo(() => {
     if (!payload?.questions?.length) return null;
@@ -48,18 +53,25 @@ export function SimulationCodingRound({ runId, onComplete }: Props) {
           test_results: resultsRef.current[q.id],
         };
       });
-      const updated = await apiClient.completeSimulationCodingStage(runId, {
-        branch: payload.branch,
-        difficulty: payload.difficulty,
-        items,
-      });
+      const complete = driveAttemptId
+        ? apiClient.completePlacementDriveCodingStage(driveAttemptId, {
+            branch: payload.branch,
+            difficulty: payload.difficulty,
+            items,
+          })
+        : apiClient.completeSimulationCodingStage(runId!, {
+            branch: payload.branch,
+            difficulty: payload.difficulty,
+            items,
+          });
+      const updated = await complete;
       onComplete(updated);
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'Could not submit coding round');
     } finally {
       setSubmitting(false);
     }
-  }, [payload, runId, submitting, onComplete]);
+  }, [payload, runId, driveAttemptId, submitting, onComplete]);
 
   if (loading) {
     return (

@@ -18,6 +18,7 @@ type Props = {
   driveStageIndex?: number;
   simulationRunId?: string;
   simulationStageIndex?: number;
+  maxTurns?: number;
   onComplete: (result: { overall_score: number; report?: any; session_id?: string }) => void;
 };
 
@@ -30,6 +31,7 @@ export function MockInterviewRoom({
   driveStageIndex,
   simulationRunId,
   simulationStageIndex,
+  maxTurns: maxTurnsProp,
   onComplete,
 }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -74,6 +76,7 @@ export function MockInterviewRoom({
           company,
           job_description: jobDescription,
           audio_consent: consent,
+          max_turns: maxTurnsProp,
           drive_attempt_id: driveAttemptId,
           drive_stage_index: driveStageIndex,
           simulation_run_id: simulationRunId,
