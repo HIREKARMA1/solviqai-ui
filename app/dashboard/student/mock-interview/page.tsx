@@ -21,7 +21,7 @@ export default function StandaloneMockInterviewPage() {
           <h1 className="text-2xl font-bold">Interview Report</h1>
           {(report.ai_mode === 'fallback' || report.report?.ai_mode === 'fallback') && (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              Demo mode — not full AI evaluation. {report.fallback_reason || report.report?.fallback_reason || 'Add Anthropic credits for real scoring.'}
+              Demo mode — not full AI evaluation. {report.fallback_reason || report.report?.fallback_reason || 'Configure Cohere API for real scoring.'}
             </p>
           )}
           <p className="text-3xl font-bold text-indigo-600">{report.overall_score ?? report.report?.overall_score}/100</p>
@@ -57,7 +57,7 @@ export default function StandaloneMockInterviewPage() {
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
         <div>
           <h1 className="text-2xl font-bold">AI Mock Interview</h1>
-          <p className="text-gray-600">Adaptive Claude interviewer with voice input (STT) and spoken questions (TTS).</p>
+          <p className="text-gray-600">Adaptive AI interviewer with voice input (STT) and spoken questions (TTS).</p>
         </div>
 
         <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">

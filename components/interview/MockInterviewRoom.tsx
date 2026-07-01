@@ -43,7 +43,7 @@ export function MockInterviewRoom({
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
   const [maxTurns, setMaxTurns] = useState(6);
-  const [aiMode, setAiMode] = useState<'claude' | 'fallback'>('claude');
+  const [aiMode, setAiMode] = useState<'cohere' | 'fallback'>('cohere');
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   const speak = useCallback((text: string) => {
@@ -88,7 +88,7 @@ export function MockInterviewRoom({
         setMaxTurns(data.max_turns || 6);
         if (data.ai_mode === 'fallback') {
           setAiMode('fallback');
-          setFallbackReason(data.fallback_reason || 'Claude API unavailable — using demo interview mode.');
+          setFallbackReason(data.fallback_reason || 'AI interviewer API unavailable — using demo interview mode.');
         }
         if (data.interviewer_message) speak(data.interviewer_message);
       } catch (e: any) {
@@ -171,7 +171,7 @@ export function MockInterviewRoom({
 
       {aiMode === 'fallback' && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-          <strong>Demo mode</strong> — Claude AI is not active (check API key &amp; Anthropic credits).
+          <strong>Demo mode</strong> — AI interviewer is not active (check Cohere API key).
           Questions are scripted, not adaptive. {fallbackReason}
         </div>
       )}
