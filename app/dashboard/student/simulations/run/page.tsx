@@ -13,6 +13,8 @@ import { SimulationCodingRound } from '@/components/simulation/SimulationCodingR
 import { SimulationGroupDiscussion } from '@/components/simulation/SimulationGroupDiscussion';
 import { SimulationSalesRoleplay } from '@/components/simulation/SimulationSalesRoleplay';
 import { SimulationWrittenStage } from '@/components/simulation/SimulationWrittenStage';
+import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
+import { isEmbeddedExamStage } from '@/lib/examStageTypes';
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileBarChart, Layers } from 'lucide-react';
 
 function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'culture_fit' {
@@ -146,6 +148,71 @@ export default function SimulationRunPage() {
   const stageNum = run.current_stage_index + 1;
   const targetRole = run.job_role_slug?.replace(/_/g, ' ') || 'Candidate';
 
+  const stageBody = (
+    <>
+      {runner.type === 'mcq' && (
+        <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
+          <p>Timed MCQ round — questions match your role, difficulty, and question mode.</p>
+          <Button onClick={startMcqStage} disabled={startingMcq} className="gap-2 w-full sm:w-auto">
+            {startingMcq ? 'Loading questions…' : 'Start MCQ round'}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {runner.type === 'coding' && runId && (
+        <SimulationCodingRound runId={runId} onComplete={onStageComplete} />
+      )}
+
+      {runner.type === 'mock_interview' && runId && (
+        <MockInterviewRoom
+          persona={interviewPersona(runner)}
+          targetRole={targetRole}
+          company={run.company}
+          simulationRunId={runId}
+          simulationStageIndex={run.current_stage_index}
+          onComplete={onInterviewComplete}
+        />
+      )}
+
+      {runner.type === 'playground' && runId && runner.playground_type === 'sales' && (
+        <SimulationSalesRoleplay runId={runId} onComplete={onStageComplete} />
+      )}
+
+      {runner.type === 'playground' && runId && runner.playground_type !== 'sales' && (
+        <SimulationGroupDiscussion
+          runId={runId}
+          stageNum={stageNum}
+          totalStages={run.total_stages}
+          onComplete={onStageComplete}
+        />
+      )}
+
+      {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(runner.type) &&
+        runId && (
+          <SimulationWrittenStage runId={runId} stageType={runner.type} onComplete={onStageComplete} />
+        )}
+
+      {runner.type === 'unsupported' && (
+        <div className="rounded-xl border p-6 text-sm text-gray-600 dark:border-gray-700">
+          This stage type ({runner.stage_type}) is not wired yet.
+        </div>
+      )}
+    </>
+  );
+
+  if (isEmbeddedExamStage(runner.type)) {
+    return (
+      <ExamFocusShell
+        title={run.pipeline?.name || 'Job Prep Simulation'}
+        subtitle={stage?.title ? `${stage.title} — ${stage.stage_type?.replace(/_/g, ' ')}` : undefined}
+        stageLabel={`Stage ${stageNum} of ${run.total_stages}`}
+      >
+        <div className="h-full overflow-y-auto p-4 md:p-6">{stageBody}</div>
+      </ExamFocusShell>
+    );
+  }
+
   return (
     <DashboardLayout requiredUserType="student">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -194,66 +261,7 @@ export default function SimulationRunPage() {
           Complete this round to unlock the next stage.
         </p>
 
-        {runner.type === 'mcq' && (
-          <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <p>Timed MCQ round — questions match your role, difficulty, and question mode.</p>
-            <Button onClick={startMcqStage} disabled={startingMcq} className="gap-2 w-full sm:w-auto">
-              {startingMcq ? 'Loading questions…' : 'Start MCQ round'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {runner.type === 'coding' && runId && (
-          <div className="rounded-xl border p-6 dark:border-gray-700">
-            <SimulationCodingRound runId={runId} onComplete={onStageComplete} />
-          </div>
-        )}
-
-        {runner.type === 'mock_interview' && runId && (
-          <div className="rounded-xl border p-6 dark:border-gray-700">
-            <MockInterviewRoom
-              persona={interviewPersona(runner)}
-              targetRole={targetRole}
-              company={run.company}
-              simulationRunId={runId}
-              simulationStageIndex={run.current_stage_index}
-              onComplete={onInterviewComplete}
-            />
-          </div>
-        )}
-
-        {runner.type === 'playground' && runId && runner.playground_type === 'sales' && (
-          <SimulationSalesRoleplay runId={runId} onComplete={onStageComplete} />
-        )}
-
-        {runner.type === 'playground' && runId && runner.playground_type !== 'sales' && (
-          <SimulationGroupDiscussion
-            runId={runId}
-            stageNum={stageNum}
-            totalStages={run.total_stages}
-            onComplete={onStageComplete}
-          />
-        )}
-
-        {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(
-          runner.type
-        ) &&
-          runId && (
-            <div className="rounded-xl border p-6 dark:border-gray-700">
-              <SimulationWrittenStage
-                runId={runId}
-                stageType={runner.type}
-                onComplete={onStageComplete}
-              />
-            </div>
-          )}
-
-        {runner.type === 'unsupported' && (
-          <div className="rounded-xl border p-6 text-sm text-gray-600 dark:border-gray-700">
-            This stage type ({runner.stage_type}) is not wired yet.
-          </div>
-        )}
+        {stageBody}
 
         {(run.stage_results || []).length > 0 && (
           <div className="space-y-2">

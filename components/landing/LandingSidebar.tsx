@@ -64,7 +64,7 @@ export const studentSidebarFeatures: SidebarItem[] = [
   {
     id: "assessment",
     icon: <ClipboardList className="w-5 h-5" />,
-    label: "Job Recommendations",
+    label: "Job Based Assessment",
     onClick: undefined,
   },
   {

@@ -13,6 +13,8 @@ import { SimulationCodingRound } from '@/components/simulation/SimulationCodingR
 import { SimulationGroupDiscussion } from '@/components/simulation/SimulationGroupDiscussion';
 import { SimulationSalesRoleplay } from '@/components/simulation/SimulationSalesRoleplay';
 import { SimulationWrittenStage } from '@/components/simulation/SimulationWrittenStage';
+import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
+import { isEmbeddedExamStage } from '@/lib/examStageTypes';
 import { CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Layers, FileBarChart } from 'lucide-react';
 
 function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'culture_fit' {
@@ -160,6 +162,86 @@ export default function PlacementDriveRunPage() {
   const stageNum = attempt.current_stage_index + 1;
   const targetRole = attempt.template?.target_role || 'Software Engineer';
 
+  const stageBody = (
+    <>
+      {runner.type === 'legacy_mcq' && (
+        <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
+          <p>Take the timed MCQ round linked to this drive stage.</p>
+          {stage?.mock_test?.title && <p className="font-medium">Test: {stage.mock_test.title}</p>}
+          <Button onClick={startLegacyMockTest} className="gap-2">
+            Start MCQ round <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {runner.type === 'mcq' && (
+        <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
+          <p>Timed MCQ round — questions are generated for this placement drive stage.</p>
+          <Button onClick={startMcqStage} disabled={startingMcq} className="gap-2">
+            {startingMcq ? 'Loading questions…' : 'Start MCQ round'}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {runner.type === 'coding' && attemptId && (
+        <SimulationCodingRound driveAttemptId={attemptId} onComplete={onStageComplete} />
+      )}
+
+      {runner.type === 'mock_interview' && attemptId && (
+        <MockInterviewRoom
+          persona={interviewPersona(runner)}
+          targetRole={targetRole}
+          company={attempt.template?.company}
+          driveAttemptId={attemptId}
+          driveStageIndex={attempt.current_stage_index}
+          maxTurns={stage?.config?.max_turns}
+          onComplete={onInterviewComplete}
+        />
+      )}
+
+      {runner.type === 'playground' && attemptId && runner.playground_type === 'sales' && (
+        <SimulationSalesRoleplay driveAttemptId={attemptId} onComplete={onStageComplete} />
+      )}
+
+      {runner.type === 'playground' && attemptId && runner.playground_type !== 'sales' && (
+        <SimulationGroupDiscussion
+          driveAttemptId={attemptId}
+          stageNum={stageNum}
+          totalStages={attempt.total_stages}
+          onComplete={onStageComplete}
+        />
+      )}
+
+      {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(runner.type) &&
+        attemptId && (
+          <SimulationWrittenStage
+            driveAttemptId={attemptId}
+            stageType={runner.type}
+            onComplete={onStageComplete}
+          />
+        )}
+
+      {runner.type === 'unsupported' && (
+        <div className="rounded-xl border p-6 text-sm text-gray-600 dark:border-gray-700">
+          This stage type ({runner.stage_type}) is not supported yet.
+        </div>
+      )}
+    </>
+  );
+
+  if (isEmbeddedExamStage(runner.type)) {
+    return (
+      <ExamFocusShell
+        title={attempt.template?.title || 'Placement Drive'}
+        subtitle={stage?.title ? `${stage.title} — ${stage.stage_type?.replace(/_/g, ' ')}` : undefined}
+        stageLabel={`Stage ${stageNum} of ${attempt.total_stages}`}
+      >
+        <div className="h-full overflow-y-auto p-4 md:p-6">{stageBody}</div>
+      </ExamFocusShell>
+    );
+  }
+
   return (
     <DashboardLayout requiredUserType="student">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -196,77 +278,7 @@ export default function PlacementDriveRunPage() {
           Stages are sequential — complete this round to proceed.
         </p>
 
-        {runner.type === 'legacy_mcq' && (
-          <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <p>Take the timed MCQ round linked to this drive stage.</p>
-            {stage?.mock_test?.title && <p className="font-medium">Test: {stage.mock_test.title}</p>}
-            <Button onClick={startLegacyMockTest} className="gap-2">
-              Start MCQ round <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {runner.type === 'mcq' && (
-          <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <p>Timed MCQ round — questions are generated for this placement drive stage.</p>
-            <Button onClick={startMcqStage} disabled={startingMcq} className="gap-2">
-              {startingMcq ? 'Loading questions…' : 'Start MCQ round'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {runner.type === 'coding' && attemptId && (
-          <div className="rounded-xl border p-6 dark:border-gray-700">
-            <SimulationCodingRound driveAttemptId={attemptId} onComplete={onStageComplete} />
-          </div>
-        )}
-
-        {runner.type === 'mock_interview' && attemptId && (
-          <div className="rounded-xl border p-6 dark:border-gray-700">
-            <MockInterviewRoom
-              persona={interviewPersona(runner)}
-              targetRole={targetRole}
-              company={attempt.template?.company}
-              driveAttemptId={attemptId}
-              driveStageIndex={attempt.current_stage_index}
-              maxTurns={stage?.config?.max_turns}
-              onComplete={onInterviewComplete}
-            />
-          </div>
-        )}
-
-        {runner.type === 'playground' && attemptId && runner.playground_type === 'sales' && (
-          <SimulationSalesRoleplay driveAttemptId={attemptId} onComplete={onStageComplete} />
-        )}
-
-        {runner.type === 'playground' && attemptId && runner.playground_type !== 'sales' && (
-          <SimulationGroupDiscussion
-            driveAttemptId={attemptId}
-            stageNum={stageNum}
-            totalStages={attempt.total_stages}
-            onComplete={onStageComplete}
-          />
-        )}
-
-        {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(
-          runner.type,
-        ) &&
-          attemptId && (
-            <div className="rounded-xl border p-6 dark:border-gray-700">
-              <SimulationWrittenStage
-                driveAttemptId={attemptId}
-                stageType={runner.type}
-                onComplete={onStageComplete}
-              />
-            </div>
-          )}
-
-        {runner.type === 'unsupported' && (
-          <div className="rounded-xl border p-6 text-sm text-gray-600 dark:border-gray-700">
-            This stage type ({runner.stage_type}) is not supported yet.
-          </div>
-        )}
+        {stageBody}
 
         {(attempt.stage_results || []).length > 0 && (
           <div className="space-y-2">

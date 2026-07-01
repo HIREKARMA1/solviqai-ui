@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
+import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
 import { Badge } from '@/components/ui/badge';
 
 export default function StandaloneMockInterviewPage() {
@@ -33,6 +34,24 @@ export default function StandaloneMockInterviewPage() {
     );
   }
 
+  if (started) {
+    return (
+      <ExamFocusShell
+        title="AI Mock Interview"
+        subtitle={`${persona === 'hr' ? 'HR' : 'Technical'} · ${targetRole}${company ? ` · ${company}` : ''}`}
+      >
+        <div className="h-full overflow-y-auto p-4 md:p-6">
+          <MockInterviewRoom
+            persona={persona}
+            targetRole={targetRole}
+            company={company || undefined}
+            onComplete={(r) => setReport(r)}
+          />
+        </div>
+      </ExamFocusShell>
+    );
+  }
+
   return (
     <DashboardLayout requiredUserType="student">
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
@@ -41,40 +60,31 @@ export default function StandaloneMockInterviewPage() {
           <p className="text-gray-600">Adaptive Claude interviewer with voice input (STT) and spoken questions (TTS).</p>
         </div>
 
-        {!started ? (
-          <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-            <Input placeholder="Target role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
-            <Input placeholder="Company (optional)" value={company} onChange={(e) => setCompany(e.target.value)} />
-            <div className="flex gap-2">
-              <Badge
-                className={`cursor-pointer ${persona === 'technical' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
-                onClick={() => setPersona('technical')}
-              >
-                Technical
-              </Badge>
-              <Badge
-                className={`cursor-pointer ${persona === 'hr' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
-                onClick={() => setPersona('hr')}
-              >
-                HR
-              </Badge>
-            </div>
-            <button
-              type="button"
-              className="w-full rounded-lg bg-indigo-600 py-3 text-white font-medium"
-              onClick={() => setStarted(true)}
+        <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
+          <Input placeholder="Target role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+          <Input placeholder="Company (optional)" value={company} onChange={(e) => setCompany(e.target.value)} />
+          <div className="flex gap-2">
+            <Badge
+              className={`cursor-pointer ${persona === 'technical' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
+              onClick={() => setPersona('technical')}
             >
-              Begin interview
-            </button>
+              Technical
+            </Badge>
+            <Badge
+              className={`cursor-pointer ${persona === 'hr' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
+              onClick={() => setPersona('hr')}
+            >
+              HR
+            </Badge>
           </div>
-        ) : (
-          <MockInterviewRoom
-            persona={persona}
-            targetRole={targetRole}
-            company={company || undefined}
-            onComplete={(r) => setReport(r)}
-          />
-        )}
+          <button
+            type="button"
+            className="w-full rounded-lg bg-indigo-600 py-3 text-white font-medium"
+            onClick={() => setStarted(true)}
+          >
+            Begin interview
+          </button>
+        </div>
       </div>
     </DashboardLayout>
   );
