@@ -103,11 +103,11 @@ export function Navbar({
 
         switch (variant) {
             case 'transparent':
-                return `${baseClasses} bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 dark:border-gray-700/50`
+                return `${baseClasses} bg-brand-blue/[0.04] dark:bg-brand-blue/[0.12] backdrop-blur-md`
             case 'solid':
-                return `${baseClasses} bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700`
+                return `${baseClasses} bg-brand-nav dark:bg-brand-nav-dark shadow-sm`
             default:
-                return `${baseClasses} bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 dark:border-gray-700/50`
+                return `${baseClasses} bg-brand-nav dark:bg-brand-nav-dark backdrop-blur-md`
         }
     }
 
@@ -118,8 +118,8 @@ export function Navbar({
 
     return (
         <nav className={`main-navbar ${getNavbarClasses()} ${className}`}>
-            <div className="container mx-auto px-4 py-4 max-w-7xl">
-                <div className="flex items-center justify-between">
+            <div className="container mx-auto px-4 max-w-7xl h-20 flex flex-col justify-center">
+                <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
                         {/* Logo */}
                         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
@@ -167,9 +167,9 @@ export function Navbar({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onToggleSidebar}
-                                className="hidden lg:flex w-[35px] h-[35px] rounded-md border border-gray-200 dark:border-gray-700 ml-2"
+                                className="hidden lg:flex w-[35px] h-[35px] rounded-md border border-brand-blue/15 dark:border-brand-blue/25 hover:bg-brand-blue/5 dark:hover:bg-brand-blue/10 ml-2"
                             >
-                                <PanelLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                                <PanelLeft className="h-5 w-5 text-brand-blue dark:text-brand-cyan" />
                             </Button>
                         )}
 
@@ -189,12 +189,12 @@ export function Navbar({
                     {/* Desktop Navigation */}
                     <div className="hidden xl:flex items-center space-x-4">
                         <ThemeToggle />
-                        
+
                         {/* Auth Buttons */}
                         {isAuthenticated && user ? (
                             <div className="flex items-center space-x-3">
-                                <button 
-                                    className="w-[34px] h-[34px] bg-[#0053AB] rounded-lg flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity focus:outline-none"
+                                <button
+                                    className="w-[34px] h-[34px] bg-brand-blue rounded-lg flex items-center justify-center cursor-pointer hover:bg-brand-blue-dark transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan/50"
                                     onClick={handleLogout}
                                     title="Logout"
                                 >
@@ -204,10 +204,10 @@ export function Navbar({
                         ) : (
                             <div className="flex items-center space-x-3">
                                 <Link href={getAuthLink('/auth/register')}>
-                                    <Button variant="outline" className="border-[#00BAE8] text-[#00BAE8] hover:bg-[#00BAE8] hover:text-white">Sign Up</Button>
+                                    <Button variant="outline" className="border-brand-cyan text-brand-cyan hover:bg-brand-cyan hover:text-white">Sign Up</Button>
                                 </Link>
                                 <Link href={getAuthLink('/auth/login')}>
-                                    <Button className="bg-[#00BAE8] hover:bg-[#009bc2] text-white">Sign In</Button>
+                                    <Button className="bg-brand-cyan hover:bg-brand-cyan-dark text-white">Sign In</Button>
                                 </Link>
                             </div>
                         )}
@@ -231,7 +231,7 @@ export function Navbar({
                             </Button>
                         </div>
                     )}
-                    
+
                     {/* If authenticated, we show ThemeToggle but menu is handled by sidebar toggles on left */}
                     {isAuthenticated && (
                         <div className="xl:hidden flex items-center space-x-2">
@@ -242,16 +242,16 @@ export function Navbar({
 
                 {/* Mobile Menu (Public) */}
                 {isMobileMenuOpen && !isAuthenticated && (
-                    <div className="xl:hidden absolute left-0 right-0 top-full bg-white dark:bg-gray-900 shadow-lg border-t border-gray-200 dark:border-gray-700">
+                    <div className="xl:hidden absolute left-0 right-0 top-full bg-brand-nav dark:bg-brand-nav-dark backdrop-blur-md shadow-lg border-t border-brand-blue/10 dark:border-brand-blue/20">
                         <div className="flex flex-col space-y-3 p-4">
                             <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-6">
                                 <Link href={getAuthLink('/auth/register')} onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Button variant="outline" className="w-full justify-start mb-4 border-[#00BAE8] text-[#00BAE8] hover:bg-[#00BAE8] hover:text-white">
+                                    <Button variant="outline" className="w-full justify-start mb-4 border-brand-cyan text-brand-cyan hover:bg-brand-cyan hover:text-white">
                                         Sign Up
                                     </Button>
                                 </Link>
                                 <Link href={getAuthLink('/auth/login')} onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Button className="w-full justify-start bg-[#00BAE8] hover:bg-[#009bc2] text-white">
+                                    <Button className="w-full justify-start bg-brand-cyan hover:bg-brand-cyan-dark text-white">
                                         Sign In
                                     </Button>
                                 </Link>

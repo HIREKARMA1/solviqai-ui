@@ -34,6 +34,19 @@
     --input: 214 32% 91%;
     --ring: 212 77% 37%;
     --radius: 0.75rem;
+
+    /* SolviQ brand palette (hex) — mirrors tailwind.config.js brand.* */
+    --brand-blue: #1b52a4;
+    --brand-blue-dark: #0f3b79;
+    --brand-blue-light: #3d97ef;
+    --brand-cyan: #00a2e5;
+    --brand-cyan-dark: #0091cc;
+    --brand-green: #098855;
+    --brand-green-dark: #076e44;
+    --brand-green-light: #40c598;
+    --brand-yellow: #fec40d;
+    --brand-orange: #f58020;
+    --brand-red: #d64246;
   }
 
   .dark {

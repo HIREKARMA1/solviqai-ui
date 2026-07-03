@@ -273,8 +273,8 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
             className={cn(
               'fixed top-0 right-0 z-50',
               'w-80 max-w-[85vw] h-full',
-              'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl',
-              'border-l border-gray-200/50 dark:border-gray-800/50',
+              'bg-brand-nav dark:bg-brand-nav-dark backdrop-blur-xl',
+              'border-l border-brand-blue/10 dark:border-brand-blue/20',
               'shadow-2xl',
               'lg:hidden', // Only show on mobile
               className
@@ -287,15 +287,15 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
 
             <div className="flex flex-col h-full relative z-10">
               {/* Header with close button */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="flex items-center justify-between p-4 border-b border-brand-blue/10 dark:border-brand-blue/20">
+                <h2 className="text-lg font-semibold text-brand-blue dark:text-brand-cyan">
                   Menu
                 </h2>
                 <button
                   onClick={onClose}
                   className={cn(
                     'p-2 rounded-lg transition-colors',
-                    'hover:bg-gray-100 dark:hover:bg-gray-800',
+                    'hover:bg-brand-blue/5 dark:hover:bg-brand-blue/10',
                     'text-gray-700 dark:text-gray-300'
                   )}
                   aria-label="Close sidebar"
@@ -334,9 +334,9 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
                           'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
                           'text-left',
                           'text-gray-700 dark:text-gray-300',
-                          'hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                          'hover:text-primary-600 dark:hover:text-primary-400',
-                          isActive && 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                          'hover:bg-brand-green/5 dark:hover:bg-brand-green/10',
+                          'hover:text-brand-green dark:hover:text-brand-green-light',
+                          isActive && 'bg-brand-green/10 dark:bg-brand-green/15 text-brand-green dark:text-brand-green-light border-l-2 border-brand-green'
                         )}
                       >
                         <div className="flex-shrink-0 transition-transform hover:scale-110">
