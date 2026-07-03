@@ -15,7 +15,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { AnimatedBackground } from '@/components/ui/animated-background';
+// import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -264,17 +264,17 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
       className={cn(
         'fixed left-0 top-20 z-30 overflow-hidden', // top-20 = 80px (navbar height)
         'h-[calc(100vh-5rem)]', // Full height minus navbar
-        'bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg',
-        'border-r border-gray-200/50 dark:border-gray-800/50',
+        'bg-brand-nav dark:bg-brand-nav-dark backdrop-blur-lg',
+        'border-r border-brand-blue/10 dark:border-brand-blue/20',
         'shadow-lg',
         'hidden lg:block', // Hide on mobile, show on desktop
         className
       )}
     >
       {/* Animated Background */}
-      <div className="absolute inset-0 -z-10">
+      {/* <div className="absolute inset-0 -z-10">
         <AnimatedBackground variant="subtle" showGrid={true} showLines={false} />
-      </div>
+      </div> */}
 
       <div className="flex flex-col h-full relative z-10">
         {/* Scrollable Content */}
@@ -287,7 +287,7 @@ export function LandingSidebar({ className, isCollapsed, activeFeature, onFeatur
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-3 mb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="px-3 mb-3 text-xs font-semibold text-brand-blue/60 dark:text-brand-cyan/70 uppercase tracking-wider"
                 >
                   Features
                 </motion.h3>
@@ -342,11 +342,11 @@ function SidebarButton({ item, isCollapsed, isActive }: SidebarButtonProps) {
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
         'text-gray-700 dark:text-gray-300',
-        'hover:bg-primary-50 dark:hover:bg-primary-900/20',
-        'hover:text-primary-600 dark:hover:text-primary-400',
+        'hover:bg-brand-green/5 dark:hover:bg-brand-green/10',
+        'hover:text-brand-green dark:hover:text-brand-green-light',
         'cursor-pointer group',
         isCollapsed && 'justify-center',
-        isActive && 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+        isActive && 'bg-brand-green/10 dark:bg-brand-green/15 text-brand-green dark:text-brand-green-light border-l-2 border-brand-green'
       )}
     >
       <div className="flex-shrink-0 transition-transform group-hover:scale-110">

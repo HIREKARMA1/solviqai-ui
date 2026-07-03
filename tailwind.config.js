@@ -131,14 +131,31 @@ module.exports = {
         error: "#d64246", // Red
         info: "#00a2e5", // Bright Blue
         
-        // Brand colors
+        // SolviQ brand palette — use as bg-brand-blue, text-brand-green, etc.
         brand: {
-          blue: "#1b52a4",
-          brightBlue: "#00a2e5",
-          yellow: "#fec40d",
-          orange: "#f58020",
-          red: "#d64246",
-          green: "#098855",
+          blue: {
+            DEFAULT: "#1b52a4",
+            dark: "#0f3b79",
+            light: "#3d97ef",
+          },
+          cyan: {
+            DEFAULT: "#00a2e5",
+            dark: "#0091cc",
+          },
+          green: {
+            DEFAULT: "#098855",
+            dark: "#076e44",
+            light: "#40c598",
+          },
+          yellow: {
+            DEFAULT: "#fec40d",
+          },
+          orange: {
+            DEFAULT: "#f58020",
+          },
+          red: {
+            DEFAULT: "#d64246",
+          },
         },
       },
       borderRadius: {
@@ -209,6 +226,16 @@ module.exports = {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
         "shimmer-gradient": "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
+        "brand-hero": "linear-gradient(to bottom right, rgb(9 136 85 / 0.3), rgb(0 162 229 / 0.15), rgb(27 82 164 / 0.32))",
+        "brand-hero-dark": "linear-gradient(to bottom right, #080e23, rgb(26 44 88 / 0.35), #080e23)",
+        "brand-card": "linear-gradient(to bottom right, #1b52a4, #098855)",
+        "brand-card-dark": "linear-gradient(to bottom right, #0f3b79, #076e44)",
+        // Glassy brand surface for navbar & sidebar — uniform (non-directional) so it
+        // looks identical on both the wide navbar and the narrow/tall sidebar.
+        // Stacked translucent solids blend green+cyan+blue over a white/navy base.
+        "brand-nav2": "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(247,251,255,0.94) 55%, rgba(238,246,255,0.95) 100%)",
+        "brand-nav": "linear-gradient(135deg, rgba(236, 255, 248, 0.96) 0%, rgba(225, 247, 255, 0.95) 45%, rgba(214, 238, 255, 0.94) 100%)",
+        "brand-nav-dark": "linear-gradient(rgb(9 136 85 / 0.08), rgb(9 136 85 / 0.08)), linear-gradient(rgb(0 162 229 / 0.08), rgb(0 162 229 / 0.08)), linear-gradient(rgb(27 82 164 / 0.10), rgb(27 82 164 / 0.10)), linear-gradient(rgb(10 21 51 / 0.92), rgb(10 21 51 / 0.92))",
       },
     },
   },
