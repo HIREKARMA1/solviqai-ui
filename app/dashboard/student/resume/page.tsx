@@ -705,13 +705,12 @@ export default function ResumePage() {
                     onClick={() =>
                       !isUploading && fileInputRef.current?.click()
                     }
-                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-300 relative group overflow-hidden max-w-xl mx-auto w-full ${
-                      dragActive
-                        ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10"
-                        : file
-                          ? "border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10"
-                          : "border-gray-200 dark:border-gray-800 hover:border-indigo-400 dark:hover:border-gray-700 bg-gray-50/30 dark:bg-gray-950/10"
-                    }`}
+                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-300 relative group overflow-hidden max-w-xl mx-auto w-full ${dragActive
+                      ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10"
+                      : file
+                        ? "border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10"
+                        : "border-gray-200 dark:border-gray-800 hover:border-indigo-400 dark:hover:border-gray-700 bg-gray-50/30 dark:bg-gray-950/10"
+                      }`}
                   >
                     <input
                       ref={fileInputRef}
@@ -893,8 +892,8 @@ export default function ResumePage() {
                       Uploaded{" "}
                       {resumeStatus.uploaded_at
                         ? new Date(
-                            resumeStatus.uploaded_at,
-                          ).toLocaleDateString()
+                          resumeStatus.uploaded_at,
+                        ).toLocaleDateString()
                         : "recently"}
                     </p>
                   </div>
@@ -964,13 +963,12 @@ export default function ResumePage() {
                       return (
                         <div key={s.step} className="flex gap-4 items-start">
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                              isCompleted
-                                ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30"
-                                : isActive
-                                  ? "bg-blue-600 text-white ring-4 ring-blue-50 dark:ring-blue-950/20"
-                                  : "bg-gray-50 text-gray-300 dark:bg-gray-800/40 dark:text-gray-700"
-                            }`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${isCompleted
+                              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30"
+                              : isActive
+                                ? "bg-blue-600 text-white ring-4 ring-blue-50 dark:ring-blue-950/20"
+                                : "bg-gray-50 text-gray-300 dark:bg-gray-800/40 dark:text-gray-700"
+                              }`}
                           >
                             {isCompleted ? (
                               <CheckCircle className="w-5 h-5" />
@@ -1291,11 +1289,10 @@ export default function ResumePage() {
                           setActiveAuditTab(t.id as any);
                           setExpandedAuditIdx(null);
                         }}
-                        className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-all flex-shrink-0 ${
-                          activeAuditTab === t.id
-                            ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 bg-blue-50/10"
-                            : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                        }`}
+                        className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-all flex-shrink-0 ${activeAuditTab === t.id
+                          ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 bg-blue-50/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          }`}
                       >
                         {t.label}
                       </button>
@@ -1502,7 +1499,7 @@ export default function ResumePage() {
                           </p>
                           {report.professional_summary?.suggestions &&
                             report.professional_summary.suggestions.length >
-                              0 && (
+                            0 && (
                               <ul className="list-disc pl-4 space-y-1 text-gray-500">
                                 {report.professional_summary.suggestions.map(
                                   (s, idx) => (
@@ -1626,7 +1623,7 @@ export default function ResumePage() {
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
                   {report.recommendations &&
-                  report.recommendations.length > 0 ? (
+                    report.recommendations.length > 0 ? (
                     report.recommendations.map((rec, idx) => (
                       <div
                         key={idx}
@@ -1690,13 +1687,12 @@ export default function ResumePage() {
                       >
                         <td className="p-4 font-semibold">
                           <Badge
-                            className={`${
-                              rec.priority === "HIGH"
-                                ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                : rec.priority === "MEDIUM"
-                                  ? "bg-amber-50 text-amber-600 border border-amber-100"
-                                  : "bg-gray-50 text-gray-600 border border-gray-100"
-                            } text-[10px] uppercase font-bold`}
+                            className={`${rec.priority === "HIGH"
+                              ? "bg-rose-50 text-rose-600 border border-rose-100"
+                              : rec.priority === "MEDIUM"
+                                ? "bg-amber-50 text-amber-600 border border-amber-100"
+                                : "bg-gray-50 text-gray-600 border border-gray-100"
+                              } text-[10px] uppercase font-bold`}
                           >
                             {rec.priority}
                           </Badge>
