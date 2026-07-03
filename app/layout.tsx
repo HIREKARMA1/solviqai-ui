@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Poppins } from 'next/font/google'
+import { Inter, Poppins, Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 
 const poppins = Poppins({ weight: ['600', '700'], subsets: ['latin'], variable: '--font-poppins' })
+const jakarta = Plus_Jakarta_Sans({ weight: ['500', '600', '700', '800'], subsets: ['latin'], variable: '--font-jakarta' })
 import '@excalidraw/excalidraw/index.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { I18nProvider } from '@/components/providers/I18nProvider'
@@ -36,7 +37,7 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="en" suppressHydrationWarning className={poppins.variable}>
+        <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${jakarta.variable}`}>
             <body className={inter.className}>
                 <ThemeProvider
                     attribute="class"
