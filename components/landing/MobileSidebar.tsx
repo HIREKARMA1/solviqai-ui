@@ -12,6 +12,7 @@ import {
   adminSidebarFeatures,
   collegeSidebarFeatures,
   enterpriseSidebarFeatures,
+  SidebarItem,
   studentSidebarFeatures,
 } from './LandingSidebar';
 import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
