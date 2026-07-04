@@ -23,7 +23,7 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        
+
         // Primary brand colors - Dark Blue (#1b52a4)
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -39,7 +39,7 @@ module.exports = {
           800: "#093a65",
           900: "#033250",
         },
-        
+
         // Secondary colors - Bright Blue (#00a2e5)
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -55,7 +55,7 @@ module.exports = {
           800: "#006f99",
           900: "#005e80",
         },
-        
+
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -124,13 +124,13 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        
+
         // Semantic colors
         success: "#098855", // Dark Green
         warning: "#fec40d", // Yellow
         error: "#d64246", // Red
         info: "#00a2e5", // Bright Blue
-        
+
         // SolviQ brand palette — use as bg-brand-blue, text-brand-green, etc.
         brand: {
           blue: {
@@ -196,7 +196,7 @@ module.exports = {
           from: { opacity: 0, transform: "scale(0.95)" },
           to: { opacity: 1, transform: "scale(1)" },
         },
-        "shimmer": {
+        shimmer: {
           "0%": { backgroundPosition: "-1000px 0" },
           "100%": { backgroundPosition: "1000px 0" },
         },
@@ -218,24 +218,33 @@ module.exports = {
         "slide-in-right": "slide-in-right 0.5s ease-out",
         "slide-in-left": "slide-in-left 0.5s ease-out",
         "scale-in": "scale-in 0.5s ease-out",
-        "shimmer": "shimmer 2s infinite linear",
+        shimmer: "shimmer 2s infinite linear",
         "pulse-slow": "pulse-slow 3s ease-in-out infinite",
         "bounce-slow": "bounce-slow 2s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-        "shimmer-gradient": "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
-        "brand-hero": "linear-gradient(to bottom right, rgb(9 136 85 / 0.3), rgb(0 162 229 / 0.15), rgb(27 82 164 / 0.32))",
-        "brand-hero-dark": "linear-gradient(to bottom right, #080e23, rgb(26 44 88 / 0.35), #080e23)",
+        "gradient-conic":
+          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        "shimmer-gradient":
+          "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
+        "brand-hero":
+          "linear-gradient(to bottom right, rgb(9 136 85 / 0.3), rgb(0 162 229 / 0.15), rgb(27 82 164 / 0.32))",
+        "brand-hero-dark":
+          "linear-gradient(to bottom right, #080e23, rgb(26 44 88 / 0.35), #080e23)",
         "brand-card": "linear-gradient(to bottom right, #1b52a4, #098855)",
         "brand-card-dark": "linear-gradient(to bottom right, #0f3b79, #076e44)",
         // Glassy brand surface for navbar & sidebar — uniform (non-directional) so it
         // looks identical on both the wide navbar and the narrow/tall sidebar.
         // Stacked translucent solids blend green+cyan+blue over a white/navy base.
-        "brand-nav2": "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(247,251,255,0.94) 55%, rgba(238,246,255,0.95) 100%)",
-        "brand-nav": "linear-gradient(135deg, rgba(236, 255, 248, 0.96) 0%, rgba(225, 247, 255, 0.95) 45%, rgba(214, 238, 255, 0.94) 100%)",
-        "brand-nav-dark": "linear-gradient(rgb(9 136 85 / 0.08), rgb(9 136 85 / 0.08)), linear-gradient(rgb(0 162 229 / 0.08), rgb(0 162 229 / 0.08)), linear-gradient(rgb(27 82 164 / 0.10), rgb(27 82 164 / 0.10)), linear-gradient(rgb(10 21 51 / 0.92), rgb(10 21 51 / 0.92))",
+        "mock-page-bg":
+          "linear-gradient(135deg, rgba(9,136,85,.12) 0%, rgba(0,162,229,.08) 35%, rgba(255,255,255,.96) 65%, rgba(27,82,164,.10) 100%)",
+        "brand-nav2":
+          "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(247,251,255,0.94) 55%, rgba(238,246,255,0.95) 100%)",
+        "brand-nav":
+          "linear-gradient(135deg, rgba(236, 255, 248, 0.96) 0%, rgba(225, 247, 255, 0.95) 45%, rgba(214, 238, 255, 0.94) 100%)",
+        "brand-nav-dark":
+          "linear-gradient(rgb(9 136 85 / 0.08), rgb(9 136 85 / 0.08)), linear-gradient(rgb(0 162 229 / 0.08), rgb(0 162 229 / 0.08)), linear-gradient(rgb(27 82 164 / 0.10), rgb(27 82 164 / 0.10)), linear-gradient(rgb(10 21 51 / 0.92), rgb(10 21 51 / 0.92))",
       },
     },
   },
