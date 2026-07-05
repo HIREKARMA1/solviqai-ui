@@ -407,11 +407,11 @@ function SidebarButton({ item, isCollapsed, isActive }: SidebarButtonProps) {
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
         'text-gray-700 dark:text-gray-300',
-        'hover:bg-brand-green/5 dark:hover:bg-brand-green/10',
-        'hover:text-brand-green dark:hover:text-brand-green-light',
+        'hover:bg-orange-500/5 dark:hover:bg-orange-500/10',
+        'hover:text-orange-500 dark:hover:text-orange-400',
         'cursor-pointer group',
         isCollapsed && 'justify-center',
-        isActive && 'bg-brand-green/10 dark:bg-brand-green/15 text-brand-green dark:text-brand-green-light border-l-2 border-brand-green'
+        isActive && 'bg-orange-500/10 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 border-l-2 border-orange-500'
       )}
     >
       <div className="flex-shrink-0 transition-transform group-hover:scale-110">

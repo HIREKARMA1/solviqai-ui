@@ -139,12 +139,12 @@ export function LandingNavbar({
                     className={cn(
                       'text-sm font-medium tracking-wide transition-colors px-5 py-2',
                       'text-gray-700 dark:text-gray-300',
-                      'hover:text-primary-600 dark:hover:text-primary-400',
+                      'hover:text-orange-500 dark:hover:text-orange-400',
                       'relative group'
                     )}
                   >
                     {item.label}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 dark:bg-primary-400 transition-all group-hover:w-full" />
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 dark:bg-orange-400 transition-all group-hover:w-full" />
                   </Link>
 
                 </React.Fragment>
@@ -399,8 +399,8 @@ export function LandingNavbar({
                       <button
                         className={cn(
                           'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium',
-                          'text-primary-600 dark:text-primary-400',
-                          'hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                          'text-orange-600 dark:text-orange-400',
+                          'hover:bg-orange-50 dark:hover:bg-orange-950/20'
                         )}
                       >
                         Job Prep Simulation

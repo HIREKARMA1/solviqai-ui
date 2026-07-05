@@ -1450,6 +1450,18 @@ class ApiClient {
     return response.data;
   }
 
+  async adminPreviewAiQuestions(data: {
+    count: number;
+    topic: string;
+    target_role: string;
+    difficulty?: string;
+    company?: string;
+    round_type?: string;
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/mock-tests/preview-ai', data);
+    return response.data;
+  }
+
   async adminCreateMockTest(data: any): Promise<any> {
     const response: AxiosResponse = await this.client.post('/admin/cms/mock-tests', data);
     return response.data;

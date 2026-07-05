@@ -825,7 +825,7 @@ export default function ResumePage() {
             {/* Left side content & controls */}
             <div className="lg:col-span-6 flex flex-col z-10 space-y-9">
               <div>
-                <span className="font-[family-name:var(--font-jakarta)] text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-brand-blue dark:text-brand-cyan mb-5 inline-block">
+                <span className="font-[family-name:var(--font-jakarta)] text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-orange-500 dark:text-brand-cyan mb-5 inline-block">
                   Resume Checker
                 </span>
                 <h1 className="font-[family-name:var(--font-jakarta)] text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-gray-700 dark:text-gray-50 tracking-[-0.02em] leading-[1.15] mb-6">
@@ -2118,7 +2118,7 @@ export default function ResumePage() {
                 </div>
 
                 {/* Recruiter Recommendation Summary */}
-                <Card id="section-summary" className="scroll-mt-24 border border-brand-blue/40 dark:border-brand-blue/60 bg-brand-card dark:bg-brand-card-dark text-white rounded-xl shadow-md overflow-hidden">
+                <Card id="section-summary" className="scroll-mt-24 border border-brand-blue dark:border-brand-blue/60 bg-brand-card dark:bg-brand-card-dark text-white rounded-xl shadow-md overflow-hidden">
                   <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2 max-w-2xl">
                       <div className="flex items-center gap-2">

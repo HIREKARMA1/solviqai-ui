@@ -204,6 +204,66 @@
     @apply bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
   }
 
+  .btn-mock-primary {
+    --btn-bg: #ffffff;
+    --btn-text: #1b52a4;
+
+    border: 1px solid transparent !important;
+    border-radius: 0.75rem !important;
+    background: linear-gradient(var(--btn-bg), var(--btn-bg)) padding-box,
+                linear-gradient(to right, #3d97ef, #00a2e5, #40c598) border-box !important;
+    color: var(--btn-text) !important;
+    font-weight: 600;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition: all 0.25s ease-in-out;
+  }
+
+  .btn-mock-primary:hover:not(:disabled) {
+    background: linear-gradient(to right, #3d97ef, #00a2e5, #40c598) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 16px -4px rgba(61, 151, 239, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-mock-primary:focus-visible {
+    outline: 2px solid rgb(27 82 164 / 0.45);
+    outline-offset: 2px;
+  }
+
+  .dark .btn-mock-primary {
+    --btn-bg: #111827;
+    --btn-text: #00a2e5;
+  }
+
+  .dark .btn-mock-primary:hover:not(:disabled) {
+    box-shadow: 0 8px 16px -4px rgba(0, 162, 229, 0.5);
+  }
+
+  .btn-mock-filter {
+    border: 1px solid rgb(27 82 164 / 0.28) !important;
+    background-color: rgb(255 255 255 / 0.92) !important;
+    color: #1b52a4 !important;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .btn-mock-filter:hover:not(:disabled) {
+    background-color: #1b52a4 !important;
+    border-color: #1b52a4 !important;
+    color: #ffffff !important;
+  }
+
+  .dark .btn-mock-filter {
+    background-color: rgb(17 24 39 / 0.75) !important;
+    color: #00a2e5 !important;
+    border-color: rgb(27 82 164 / 0.35) !important;
+  }
+
+  .dark .btn-mock-filter:hover:not(:disabled) {
+    background-color: #1b52a4 !important;
+    color: #ffffff !important;
+  }
+
   /* Badge styles */
   .badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
@@ -452,4 +512,47 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Mock Test buttons — unlayered fallback (wins over @tailwindcss/forms base reset) */
+button[data-mock-test-btn='primary'] {
+  --btn-bg: #ffffff;
+  --btn-text: #1b52a4;
+
+  border: 1px solid transparent !important;
+  border-radius: 0.75rem !important;
+  background: linear-gradient(var(--btn-bg), var(--btn-bg)) padding-box,
+              linear-gradient(to right, #3d97ef, #00a2e5, #40c598) border-box !important;
+  color: var(--btn-text) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: all 0.25s ease-in-out;
+}
+
+button[data-mock-test-btn='primary']:hover:not(:disabled) {
+  background: linear-gradient(to right, #3d97ef, #00a2e5, #40c598) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 16px -4px rgba(61, 151, 239, 0.45);
+  transform: translateY(-1px);
+}
+
+.dark button[data-mock-test-btn='primary'] {
+  --btn-bg: #111827;
+  --btn-text: #00a2e5;
+}
+
+.dark button[data-mock-test-btn='primary']:hover:not(:disabled) {
+  box-shadow: 0 8px 16px -4px rgba(0, 162, 229, 0.5);
+}
+
+button[data-mock-test-btn='filter'] {
+  border: 1px solid rgb(27 82 164 / 0.28) !important;
+  background-color: rgb(255 255 255 / 0.92) !important;
+  color: #1b52a4 !important;
+}
+
+button[data-mock-test-btn='filter']:hover:not(:disabled) {
+  background-color: #1b52a4 !important;
+  border-color: #1b52a4 !important;
+  color: #ffffff !important;
 }

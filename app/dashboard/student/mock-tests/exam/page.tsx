@@ -9,6 +9,7 @@ import { McqExamView } from '@/components/exam/McqExamView';
 import { useExamFullscreen } from '@/hooks/useExamFullscreen';
 import { apiClient } from '@/lib/api';
 import { CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function MockTestExamPage() {
   const searchParams = useSearchParams();
@@ -132,29 +133,82 @@ export default function MockTestExamPage() {
         ? `/dashboard/student/simulations/run?run_id=${simulationRunId}`
         : '/dashboard/student/mock-tests';
 
+    const breakdown = attempt.breakdown || [];
+
     return (
       <DashboardLayout requiredUserType="student">
-        <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 text-center">
-          <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
-          <h1 className="text-3xl font-bold">{Math.round(attempt.score ?? 0)}%</h1>
-          <p className="text-gray-600">
-            {attempt.correct_count}/{attempt.total_count} correct · {attempt.time_taken_seconds}s
-          </p>
-          <div className="rounded-xl border p-4 text-left dark:border-gray-700">
-            <h3 className="mb-2 font-semibold">Breakdown</h3>
-            {(attempt.breakdown || []).map((b: any) => (
-              <div
-                key={b.question_id}
-                className={`mb-2 text-sm ${b.correct ? 'text-green-700' : 'text-red-700'}`}
-              >
-                {b.correct ? '✓' : '✗'} Q{b.question_id.slice(0, 8)}… — yours: {b.your_answer ?? '—'}{' '}
-                {!b.correct && `(correct: ${b.correct_answer})`}
-              </div>
-            ))}
+        <div className="relative min-h-screen bg-mock-page-bg dark:bg-brand-hero-dark -mx-6 -mb-6 -mt-20 lg:-mt-24 p-4 sm:p-6 pt-20 lg:pt-24 pb-10">
+          <div className="mx-auto max-w-3xl space-y-6">
+            <div className="rounded-2xl border border-white/70 bg-white/90 p-8 text-center shadow-sm backdrop-blur-md dark:border-gray-800/60 dark:bg-gray-900/80">
+              <CheckCircle2 className="mx-auto h-14 w-14 text-brand-green" />
+              <h1 className="mt-4 text-4xl font-extrabold text-brand-blue dark:text-brand-cyan">
+                {Math.round(attempt.score ?? 0)}%
+              </h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {attempt.correct_count}/{attempt.total_count} correct ·{' '}
+                {attempt.time_taken_seconds ?? 0}s
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Answer review</h2>
+              {breakdown.map((b: any, idx: number) => (
+                <article
+                  key={b.question_id}
+                  className={cn(
+                    'rounded-xl border p-4 text-left shadow-sm',
+                    b.correct
+                      ? 'border-brand-green/30 bg-brand-green/5 dark:border-brand-green/25 dark:bg-brand-green/10'
+                      : 'border-red-200/80 bg-red-50/50 dark:border-red-900/40 dark:bg-red-950/20',
+                  )}
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Q{idx + 1}. {b.question_text || 'Question'}
+                    </p>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                        b.correct ? 'bg-brand-green/15 text-brand-green-dark' : 'bg-red-100 text-red-700',
+                      )}
+                    >
+                      {b.correct ? 'Correct' : 'Wrong'}
+                    </span>
+                  </div>
+                  {!b.correct && (
+                    <div className="mt-2 space-y-1 text-sm">
+                      <p className="text-red-700 dark:text-red-300">
+                        Your answer:{' '}
+                        <span className="font-medium">
+                          {b.your_answer_display || b.your_answer || '—'}
+                        </span>
+                      </p>
+                      <p className="text-brand-green-dark dark:text-brand-green-light">
+                        Correct answer:{' '}
+                        <span className="font-medium">
+                          {b.correct_answer_display || b.correct_answer || '—'}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {b.correct && b.your_answer_display && (
+                    <p className="mt-1 text-sm text-brand-green-dark dark:text-brand-green-light">
+                      Your answer: {b.your_answer_display}
+                    </p>
+                  )}
+                  {b.explanation && (
+                    <p className="mt-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      {b.explanation}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+
+            <Button variant="mockPrimary" className="h-11 w-full rounded-xl" onClick={() => router.push(backHref)}>
+              {driveAttemptId || simulationRunId ? 'Continue' : 'Back to library'}
+            </Button>
           </div>
-          <Button onClick={() => router.push(backHref)}>
-            {driveAttemptId || simulationRunId ? 'Continue' : 'Back to library'}
-          </Button>
         </div>
       </DashboardLayout>
     );

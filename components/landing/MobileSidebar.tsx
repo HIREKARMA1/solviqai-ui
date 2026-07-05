@@ -191,9 +191,9 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
                           'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
                           'text-left',
                           'text-gray-700 dark:text-gray-300',
-                          'hover:bg-brand-green/5 dark:hover:bg-brand-green/10',
-                          'hover:text-brand-green dark:hover:text-brand-green-light',
-                          isActive && 'bg-brand-green/10 dark:bg-brand-green/15 text-brand-green dark:text-brand-green-light border-l-2 border-brand-green'
+                          'hover:bg-orange-500/5 dark:hover:bg-orange-500/10',
+                          'hover:text-orange-500 dark:hover:text-orange-400',
+                          isActive && 'bg-orange-500/10 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 border-l-2 border-orange-500'
                         )}
                       >
                         <div className="flex-shrink-0 transition-transform hover:scale-110">
