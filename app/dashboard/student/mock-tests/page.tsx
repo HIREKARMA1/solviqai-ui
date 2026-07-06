@@ -10,26 +10,23 @@ import { apiClient } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Search,
   Clock,
   Star,
   FileText,
   BarChart3,
-  ArrowRight,
+  ClipboardList,
 } from 'lucide-react';
 import {
   POPULAR_CATEGORIES,
-  MOCK_TEST_CATEGORY_IDS,
 } from '@/lib/mockTestCategories';
-import { MockTestCard } from '@/components/mock-tests/MockTestCard';
-
-const glassInputClass =
-  'h-11 rounded-xl border-gray-200/80 bg-white/90 shadow-sm backdrop-blur-sm placeholder:text-gray-400 focus-visible:border-brand-blue/40 focus-visible:ring-brand-blue/15 dark:border-gray-700/60 dark:bg-gray-900/70';
+import { MockTestCard, MOCK_TEST_FILTER_ICONS } from '@/components/mock-tests/MockTestCard';
 
 const glassSelectClass =
-  'h-11 w-full rounded-xl border border-gray-200/80 bg-white/90 px-3 text-sm text-gray-700 shadow-sm backdrop-blur-sm focus:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/15 dark:border-gray-700/60 dark:bg-gray-900/70 dark:text-gray-200';
+  'h-11 rounded-xl border border-gray-200/80 bg-white/90 px-3 text-sm text-gray-700 shadow-sm backdrop-blur-sm focus:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/15 dark:border-gray-700/60 dark:bg-gray-900/70 dark:text-gray-200';
 
 const EMPTY_FILTERS = { company: '', target_role: '', round_type: '', search: '' };
+
+type SortOption = 'newest' | 'title_asc' | 'title_desc';
 
 const BANNER_FEATURES = [
   {
@@ -60,6 +57,7 @@ export default function MockTestLibraryPage() {
   const [starting, setStarting] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [categoryChip, setCategoryChip] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   const load = async (override?: typeof EMPTY_FILTERS) => {
     const active = override ?? filters;
@@ -119,7 +117,12 @@ export default function MockTestLibraryPage() {
     document.getElementById('all-practice-tests')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const displayedTests = tests;
+  const displayedTests = useMemo(() => {
+    const list = [...tests];
+    if (sortBy === 'title_asc') list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    if (sortBy === 'title_desc') list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    return list;
+  }, [tests, sortBy]);
 
   const handleCategoryChip = (id: string) => {
     setCategoryChip(id);
@@ -152,42 +155,42 @@ export default function MockTestLibraryPage() {
               ))}
             </div>
 
-            <div className="relative flex flex-col p-6 sm:p-8 lg:min-h-[260px] lg:flex-row lg:items-center lg:pr-[min(36%,300px)] xl:pr-[min(34%,340px)]">
+            <div className="relative flex flex-col p-5 sm:p-8 lg:min-h-[260px] lg:flex-row lg:items-center lg:pr-[min(36%,300px)] xl:pr-[min(34%,340px)]">
               <div className="flex flex-1 flex-col">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-orange-200">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-white">
-                    <Star className="h-3 w-3 fill-current" />
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 text-[10px] sm:px-3 sm:py-1.5 sm:text-[11px] font-bold uppercase tracking-wide text-orange-200">
+                  <span className="inline-flex h-4.5 w-4.5 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-orange-500 text-white">
+                    <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-current" />
                   </span>
                   Welcome, {welcomeName}!
                 </span>
 
-                <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-[2rem] dark:text-white">
+                <h2 className="mt-3 text-xl font-bold tracking-tight text-white sm:mt-4 sm:text-3xl lg:text-[2rem] dark:text-white">
                   Your Mock Test Series
                 </h2>
-                <p className="mt-2 text-base font-semibold text-orange-200 sm:text-lg dark:text-orange-300">
+                <p className="mt-1 text-sm font-semibold text-orange-200 sm:mt-2 sm:text-lg dark:text-orange-300">
                   Practice. Analyze. Improve. Succeed!
                 </p>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-blue-50/90 dark:text-gray-300">
+                <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-blue-50/90 sm:mt-2 sm:text-sm dark:text-gray-300">
                   Attempt tests crafted to match the real exam pattern and enhance your preparation.
                 </p>
 
-                <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-center">
-                  <div className="flex flex-wrap gap-x-8 gap-y-5 sm:gap-x-10">
+                <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-center">
+                  <div className="flex flex-wrap gap-x-6 gap-y-4 sm:gap-x-10">
                     {BANNER_FEATURES.map(({ icon: Icon, iconClass, title, subtitle }) => (
-                      <div key={subtitle} className="flex items-start gap-3">
+                      <div key={subtitle} className="flex items-start gap-2.5 sm:gap-3">
                         <div
                           className={cn(
-                            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11',
                             iconClass,
                           )}
                         >
-                          <Icon className="h-5 w-5" strokeWidth={2} />
+                          <Icon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
                         </div>
-                        <div className="min-w-[120px]">
-                          <p className="text-sm font-bold text-white dark:text-white">
+                        <div className="min-w-[100px] sm:min-w-[120px]">
+                          <p className="text-xs font-bold text-white sm:text-sm dark:text-white">
                             {title(tests.length)}
                           </p>
-                          <p className="text-xs text-orange-200/90 dark:text-orange-300/80">{subtitle}</p>
+                          <p className="text-[10px] text-orange-200/90 sm:text-xs dark:text-orange-300/80">{subtitle}</p>
                         </div>
                       </div>
                     ))}
@@ -216,16 +219,6 @@ export default function MockTestLibraryPage() {
                 priority
               />
             </div>
-
-            <div className="relative flex justify-center px-4 pb-4 pt-2 lg:hidden">
-              <Image
-                src="/images/clockbanner.png"
-                alt="Mock test checklist and timer illustration"
-                width={240}
-                height={200}
-                className="h-auto w-full max-w-[240px] object-contain mix-blend-multiply"
-              />
-            </div>
           </section>
 
           {/* Popular AI Driven Test Categories */}
@@ -237,14 +230,16 @@ export default function MockTestLibraryPage() {
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
                 {POPULAR_CATEGORIES.map((cat) => {
                   const active = categoryChip === cat.id;
+                  const Icon = MOCK_TEST_FILTER_ICONS[cat.id];
                   return (
                     <Button
                       key={cat.id}
                       type="button"
                       variant={active ? 'mockCategoryActive' : 'mockCategoryInactive'}
                       onClick={() => handleCategoryChip(cat.id)}
-                      className="shrink-0 rounded-full px-4 py-2 text-sm"
+                      className="shrink-0 gap-2 rounded-full px-4 py-2 text-sm"
                     >
+                      {Icon && <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />}
                       {cat.label}
                     </Button>
                   );
@@ -319,15 +314,27 @@ export default function MockTestLibraryPage() {
 
           {/* Test grid */}
           <section id="all-practice-tests" className="scroll-mt-24 space-y-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-50 sm:text-lg">
                 All Practice Tests
               </h2>
-              {!loading && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {displayedTests.length} Test{displayedTests.length !== 1 ? 's' : ''} Available
-                </p>
-              )}
+              <div className="flex flex-wrap items-center gap-3">
+                {!loading && (
+                  <p className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <ClipboardList className="h-4 w-4 text-brand-blue" />
+                    {displayedTests.length} Test{displayedTests.length !== 1 ? 's' : ''} Available
+                  </p>
+                )}
+                <select
+                  className={cn(glassSelectClass, 'h-9 w-auto min-w-[140px] text-xs sm:text-sm')}
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                >
+                  <option value="newest">Sort by: Newest</option>
+                  <option value="title_asc">Sort by: A–Z</option>
+                  <option value="title_desc">Sort by: Z–A</option>
+                </select>
+              </div>
             </div>
 
             {loading ? (
@@ -339,7 +346,7 @@ export default function MockTestLibraryPage() {
                 No published mock tests yet. Check back soon.
               </p>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="grid auto-rows-fr gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {displayedTests.map((t) => (
                   <MockTestCard
                     key={t.id}

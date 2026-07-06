@@ -91,16 +91,33 @@ export default function PlacementDriveRunPage() {
   }) => {
     if (!attemptId || !attempt) return;
     const idx = attempt.current_stage_index;
-    const updated = await apiClient.completePlacementDriveStage(attemptId, {
-      stage_index: idx,
-      score: result.overall_score,
-      metadata: {
-        stage_type: attempt.stage_runner?.stage_type || attempt.current_stage?.stage_type,
-        persona: attempt.stage_runner?.persona,
-        transcript: result.report?.transcript,
-      },
-    });
-    setAttempt(updated);
+    const alreadyDone = (attempt.stage_results || []).some(
+      (s: { stage_index?: number }) => s.stage_index === idx,
+    );
+    if (alreadyDone) {
+      await refresh();
+      return;
+    }
+    try {
+      const updated = await apiClient.completePlacementDriveStage(attemptId, {
+        stage_index: idx,
+        score: Math.min(100, Math.max(0, result.overall_score ?? 0)),
+        metadata: {
+          stage_type: attempt.stage_runner?.stage_type || attempt.current_stage?.stage_type,
+          persona: attempt.stage_runner?.persona,
+          transcript: result.report?.transcript,
+        },
+      });
+      setAttempt(updated);
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      try {
+        await refresh();
+      } catch {
+        /* ignore refresh failure */
+      }
+      alert(typeof detail === 'string' ? detail : 'Could not advance to the next stage');
+    }
   };
 
   if (loading) {
@@ -255,7 +272,7 @@ export default function PlacementDriveRunPage() {
           <Badge className="mb-2">Stage {stageNum} of {attempt.total_stages}</Badge>
           <h1 className="text-2xl font-bold">{attempt.template?.title}</h1>
           {attempt.template?.company && (
-            <Badge variant="secondary" className="mt-1">{attempt.template.company}</Badge>
+            <Badge variant="secondary" className="mt-1 text-orange-500">{attempt.template.company}</Badge>
           )}
           {stage && (
             <p className="text-gray-600 mt-2">

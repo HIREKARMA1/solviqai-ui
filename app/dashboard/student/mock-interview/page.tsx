@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Input } from '@/components/ui/input';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
+import { MockInterviewLanding } from '@/components/interview/MockInterviewLanding';
 import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, BarChart3, RotateCcw, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function StandaloneMockInterviewPage() {
   const [targetRole, setTargetRole] = useState('Software Engineer');
@@ -14,21 +17,61 @@ export default function StandaloneMockInterviewPage() {
   const [started, setStarted] = useState(false);
   const [report, setReport] = useState<any>(null);
 
+  const resetFlow = () => {
+    setStarted(false);
+    setReport(null);
+  };
+
   if (report) {
+    const score = report.overall_score ?? report.report?.overall_score ?? 0;
+    const summary = report.report?.summary || report.summary || 'Interview completed.';
+    const isFallback = report.ai_mode === 'fallback' || report.report?.ai_mode === 'fallback';
+
     return (
       <DashboardLayout requiredUserType="student">
-        <div className="mx-auto max-w-2xl px-4 py-8 space-y-4">
-          <h1 className="text-2xl font-bold">Interview Report</h1>
-          {(report.ai_mode === 'fallback' || report.report?.ai_mode === 'fallback') && (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              Demo mode — not full AI evaluation. {report.fallback_reason || report.report?.fallback_reason || 'Configure Cohere API for real scoring.'}
-            </p>
-          )}
-          <p className="text-3xl font-bold text-indigo-600">{report.overall_score ?? report.report?.overall_score}/100</p>
-          <p>{report.report?.summary || report.summary}</p>
-          <button type="button" className="text-indigo-600 underline" onClick={() => { setStarted(false); setReport(null); }}>
-            Start another interview
-          </button>
+        <div className="relative -mx-6 -mt-20 min-h-screen bg-brand-hero p-4 pb-10 pt-20 dark:bg-brand-hero-dark sm:p-6 lg:-mt-24 lg:pt-24">
+          <div className="mx-auto max-w-2xl space-y-6">
+            <Button variant="ghost" size="sm" className="gap-2 -ml-2" onClick={resetFlow}>
+              <ArrowLeft className="h-4 w-4" /> Back to setup
+            </Button>
+
+            <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 dark:bg-orange-950/40">
+                  <BarChart3 className="h-7 w-7 text-orange-500" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Interview Report</h1>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{summary}</p>
+              </div>
+
+              {isFallback && (
+                <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  Demo mode — not full AI evaluation.{' '}
+                  {report.fallback_reason ||
+                    report.report?.fallback_reason ||
+                    'Configure Cohere API for real scoring.'}
+                </p>
+              )}
+
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-brand-blue dark:bg-brand-blue/15">
+                  <Star className="h-3 w-3 fill-current" />
+                  Overall Score
+                </span>
+              </div>
+              <p className="mt-2 text-center text-5xl font-bold text-brand-blue">{Math.round(score)}%</p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button variant="mockPrimary" className="flex-1 gap-2 rounded-xl" onClick={resetFlow}>
+                  <RotateCcw className="h-4 w-4" />
+                  Start another interview
+                </Button>
+                <Button variant="outline" className="flex-1 rounded-xl" asChild>
+                  <Link href="/dashboard/student">View dashboard</Link>
+                </Button>
+              </div>
+            </section>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -54,36 +97,23 @@ export default function StandaloneMockInterviewPage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
-        <div>
-          <h1 className="text-2xl font-bold">AI Mock Interview</h1>
-          <p className="text-gray-600">Adaptive AI interviewer with voice input (STT) and spoken questions (TTS).</p>
-        </div>
-
-        <div className="rounded-xl border p-6 space-y-4 dark:border-gray-700">
-          <Input placeholder="Target role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
-          <Input placeholder="Company (optional)" value={company} onChange={(e) => setCompany(e.target.value)} />
-          <div className="flex gap-2">
-            <Badge
-              className={`cursor-pointer ${persona === 'technical' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
-              onClick={() => setPersona('technical')}
-            >
-              Technical
-            </Badge>
-            <Badge
-              className={`cursor-pointer ${persona === 'hr' ? 'bg-indigo-600' : 'bg-gray-200 text-gray-800'}`}
-              onClick={() => setPersona('hr')}
-            >
-              HR
-            </Badge>
-          </div>
-          <button
-            type="button"
-            className="w-full rounded-lg bg-indigo-600 py-3 text-white font-medium"
-            onClick={() => setStarted(true)}
-          >
-            Begin interview
-          </button>
+      <div
+        className={cn(
+          'relative -mx-6 -mt-10 w-auto p-4 pb-10 pt-12 sm:p-6 min-h-screen sm:pt-16',
+          'lg:-mt-24 lg:pt-38 lg:pb-12',
+          'bg-brand-hero dark:bg-brand-hero-dark',
+        )}
+      >
+        <div className="mx-auto max-w-[1180px]">
+          <MockInterviewLanding
+            targetRole={targetRole}
+            company={company}
+            persona={persona}
+            onTargetRoleChange={setTargetRole}
+            onCompanyChange={setCompany}
+            onPersonaChange={setPersona}
+            onBegin={() => setStarted(true)}
+          />
         </div>
       </div>
     </DashboardLayout>

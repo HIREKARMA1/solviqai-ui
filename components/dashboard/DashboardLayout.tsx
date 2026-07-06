@@ -10,6 +10,7 @@ import { MobileSidebar } from '@/components/landing/MobileSidebar'
 import { Loader } from '@/components/ui/loader'
 import { DropdownMenuProvider } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { DashboardShellContext } from '@/components/dashboard/DashboardShellContext'
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -182,7 +183,14 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                             : isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
                     )}
                 >
-                    {children}
+                    <DashboardShellContext.Provider
+                        value={{
+                            isNavSidebarCollapsed: isSidebarCollapsed,
+                            isMobileNavOpen: isMobileSidebarOpen,
+                        }}
+                    >
+                        {children}
+                    </DashboardShellContext.Provider>
                 </main>
             </div>
 

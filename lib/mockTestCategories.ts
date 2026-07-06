@@ -37,8 +37,10 @@ export type CategoryCardTheme = {
   iconBox: string;
   iconColor: string;
   statColor: string;
+  avatar: string;
   card: string;
   cardHover: string;
+  faintIcon: string;
 };
 
 export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
@@ -47,6 +49,8 @@ export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
     iconBox: 'bg-blue-50 dark:bg-blue-950/30',
     iconColor: 'text-brand-blue dark:text-brand-blue-light',
     statColor: 'text-brand-blue dark:text-brand-blue-light',
+    avatar: 'bg-brand-blue text-white',
+    faintIcon: 'text-brand-blue/15 dark:text-brand-blue/20',
     card: 'border-blue-100/80 bg-white dark:border-blue-950/40 dark:bg-gray-900',
     cardHover:
       'hover:border-blue-200 hover:shadow-[0_8px_24px_rgba(27,82,164,0.1)] dark:hover:border-blue-500/30',
@@ -56,6 +60,8 @@ export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
     iconBox: 'bg-orange-50 dark:bg-orange-950/30',
     iconColor: 'text-orange-500 dark:text-orange-400',
     statColor: 'text-orange-500 dark:text-orange-400',
+    avatar: 'bg-orange-500 text-white',
+    faintIcon: 'text-orange-500/15 dark:text-orange-400/20',
     card: 'border-orange-100/80 bg-white dark:border-orange-950/40 dark:bg-gray-900',
     cardHover:
       'hover:border-orange-200 hover:shadow-[0_8px_24px_rgba(245,128,32,0.1)] dark:hover:border-orange-500/30',
@@ -65,6 +71,8 @@ export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
     iconBox: 'bg-emerald-50 dark:bg-emerald-950/30',
     iconColor: 'text-brand-green dark:text-brand-green-light',
     statColor: 'text-brand-green dark:text-brand-green-light',
+    avatar: 'bg-brand-green text-white',
+    faintIcon: 'text-brand-green/15 dark:text-brand-green/20',
     card: 'border-emerald-100/80 bg-white dark:border-emerald-950/40 dark:bg-gray-900',
     cardHover:
       'hover:border-emerald-200 hover:shadow-[0_8px_24px_rgba(9,136,85,0.1)] dark:hover:border-emerald-500/30',
@@ -74,6 +82,8 @@ export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
     iconBox: 'bg-purple-50 dark:bg-purple-950/30',
     iconColor: 'text-purple-600 dark:text-purple-400',
     statColor: 'text-purple-600 dark:text-purple-400',
+    avatar: 'bg-purple-600 text-white',
+    faintIcon: 'text-purple-600/15 dark:text-purple-400/20',
     card: 'border-purple-100/80 bg-white dark:border-purple-950/40 dark:bg-gray-900',
     cardHover:
       'hover:border-purple-200 hover:shadow-[0_8px_24px_rgba(124,58,237,0.1)] dark:hover:border-purple-500/30',
@@ -83,6 +93,8 @@ export const CATEGORY_CARD_THEMES: Record<string, CategoryCardTheme> = {
     iconBox: 'bg-sky-50 dark:bg-sky-950/30',
     iconColor: 'text-sky-600 dark:text-sky-400',
     statColor: 'text-sky-600 dark:text-sky-400',
+    avatar: 'bg-sky-600 text-white',
+    faintIcon: 'text-sky-600/15 dark:text-sky-400/20',
     card: 'border-sky-100/80 bg-white dark:border-sky-950/40 dark:bg-gray-900',
     cardHover:
       'hover:border-sky-200 hover:shadow-[0_8px_24px_rgba(14,165,233,0.1)] dark:hover:border-sky-500/30',
@@ -94,9 +106,17 @@ export const DEFAULT_CARD_THEME: CategoryCardTheme = {
   iconBox: 'bg-gray-50 dark:bg-gray-800',
   iconColor: 'text-gray-500 dark:text-gray-400',
   statColor: 'text-gray-500 dark:text-gray-400',
+  avatar: 'bg-gray-500 text-white',
+  faintIcon: 'text-gray-400/20',
   card: 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900',
   cardHover: 'hover:border-gray-200 hover:shadow-md',
 };
+
+export function getCompanyInitial(company?: string | null): string {
+  const trimmed = company?.trim();
+  if (!trimmed) return '?';
+  return trimmed.charAt(0).toUpperCase();
+}
 
 export function getCategoryCardTheme(roundType: string): CategoryCardTheme {
   return CATEGORY_CARD_THEMES[roundType] ?? DEFAULT_CARD_THEME;

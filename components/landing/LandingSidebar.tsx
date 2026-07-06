@@ -348,7 +348,7 @@ export function LandingSidebar({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-3 mb-3 text-xs font-semibold text-brand-blue/60 dark:text-brand-cyan/70 uppercase tracking-wider"
+                  className="px-3 mb-3 text-xs font-semibold text-orange-500 dark:text-brand-cyan/70 uppercase tracking-wider"
                 >
                   Features
                 </motion.h3>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,16 @@ export function MockInterviewRoom({
   const [maxTurns, setMaxTurns] = useState(6);
   const [aiMode, setAiMode] = useState<'cohere' | 'fallback'>('cohere');
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const completedRef = useRef(false);
+
+  const emitComplete = useCallback(
+    (payload: { overall_score: number; report?: any; session_id?: string }) => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      onComplete(payload);
+    },
+    [onComplete],
+  );
 
   const speak = useCallback((text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -112,7 +122,7 @@ export function MockInterviewRoom({
       setTurnCount(data.turn_count || 0);
       if (data.ai_mode === 'fallback') setAiMode('fallback');
       if (data.status === 'COMPLETED') {
-        onComplete({
+        emitComplete({
           overall_score: data.overall_score || data.report?.overall_score || 0,
           report: data.report,
           session_id: sessionId || undefined,
@@ -134,7 +144,7 @@ export function MockInterviewRoom({
     setSubmitting(true);
     try {
       const data = await apiClient.completeMockInterview(sessionId, true);
-      onComplete({
+      emitComplete({
         overall_score: data.overall_score || data.report?.overall_score || 0,
         report: data.report,
         session_id: sessionId || undefined,

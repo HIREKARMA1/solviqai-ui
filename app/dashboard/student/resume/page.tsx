@@ -814,9 +814,9 @@ export default function ResumePage() {
     <DashboardLayout requiredUserType="student">
       <div className="relative flex flex-col overflow-clip min-h-screen bg-brand-hero dark:bg-brand-hero-dark -mx-6 -mb-6 -mt-20 lg:-mt-24 p-6 pt-20 lg:pt-24 pb-8 w-auto">
         {/* Decorative background glow accents using brand palette */}
-        <div className="absolute top-0 left-0 -translate-x-1/4 -translate-y-1/4 w-[480px] h-[480px] bg-brand-green/25 rounded-full blur-[130px] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-[560px] h-[560px] bg-brand-cyan/30 rounded-full blur-[150px] pointer-events-none" />
-        <div className="absolute top-1/2 right-1/3 -translate-y-1/2 w-[380px] h-[380px] bg-brand-blue/18 rounded-full blur-[130px] pointer-events-none" />
+        <div className="absolute top-0 left-0 -translate-x-1/4 -translate-y-1/4 w-[480px] h-[480px] bg-brand-green/25 rounded-full blur-[130px] pointer-events-none z-0" />
+        <div className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-[560px] h-[560px] bg-brand-cyan/30 rounded-full blur-[150px] pointer-events-none z-0" />
+        <div className="absolute top-1/2 right-1/3 -translate-y-1/2 w-[380px] h-[380px] bg-brand-blue/18 rounded-full blur-[130px] pointer-events-none z-0" />
 
         {/* Premium Hero Section matching reference design */}
         {currentStep === 1 && (
@@ -1081,7 +1081,7 @@ export default function ResumePage() {
         )}
         {/* State 2: Parsing & Scanning animation */}
         {currentStep === 2 && (
-          <div className="space-y-6">
+          <div className="relative z-10 space-y-6">
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 Parsing & Assessment
@@ -1241,7 +1241,7 @@ export default function ResumePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="space-y-6"
+            className="relative z-10 space-y-6"
           >
             {/* Header widgets */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2118,11 +2118,11 @@ export default function ResumePage() {
                 </div>
 
                 {/* Recruiter Recommendation Summary */}
-                <Card id="section-summary" className="scroll-mt-24 border border-brand-blue dark:border-brand-blue/60 bg-brand-card dark:bg-brand-card-dark text-white rounded-xl shadow-md overflow-hidden">
+                {/* <Card id="section-summary" className="scroll-mt-24 border border-brand-blue dark:border-brand-blue/60 bg-brand-card dark:bg-brand-card-dark text-white rounded-xl shadow-md overflow-hidden">
                   <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2 max-w-2xl">
                       <div className="flex items-center gap-2">
-                        {/* <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" /> */}
+                     
                         <h3 className="text-lg sm:text-xl font-bold tracking-tight">
                           Recruiter Recommendation Summary
                         </h3>
@@ -2144,12 +2144,10 @@ export default function ResumePage() {
                           </span>
                         </p>
                       </div>
-                      {/* <div className="w-10 h-10 rounded-full bg-[#fec40d] flex items-center justify-center text-[#1b52a4] shadow-sm">
-                    <TrendingUp className="w-5 h-5" />
-                  </div> */}
+                    
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
               </div>
             </div>
           </motion.div>

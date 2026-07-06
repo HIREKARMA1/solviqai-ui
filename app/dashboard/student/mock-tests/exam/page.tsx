@@ -59,7 +59,9 @@ export default function MockTestExamPage() {
       });
       setAttempt(result);
       if (driveAttemptId && driveStageIndex != null) {
-        if (!result.drive_advanced) {
+        const driveAlreadyAdvanced =
+          result.drive_advanced || Boolean(result.drive_attempt);
+        if (!driveAlreadyAdvanced) {
           await apiClient.completePlacementDriveStage(driveAttemptId, {
             stage_index: parseInt(driveStageIndex, 10),
             score: result.score ?? 0,
