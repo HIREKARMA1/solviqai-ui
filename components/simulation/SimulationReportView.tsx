@@ -193,7 +193,7 @@ export function SimulationReportView({
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                   <Radar name="You" dataKey="score" stroke="#5388D8" fill="#5388D8" fillOpacity={0.35} />
                   <Radar name="Benchmark" dataKey="benchmark" stroke="#F4BE37" fill="#F4BE37" fillOpacity={0.15} />
-                  <Tooltip formatter={(v: number) => `${v}%`} />
+                  <Tooltip formatter={(v: any) => `${v}%`} />
                   <Legend />
                 </RadarChart>
               </ResponsiveContainer>
@@ -214,7 +214,7 @@ export function SimulationReportView({
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => `${v}%`} />
+                  <Tooltip formatter={(v: any) => `${v}%`} />
                   <Bar dataKey="score" fill="#5388D8" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

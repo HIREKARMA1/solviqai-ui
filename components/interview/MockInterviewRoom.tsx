@@ -19,7 +19,13 @@ type Props = {
   simulationRunId?: string;
   simulationStageIndex?: number;
   maxTurns?: number;
-  onComplete: (result: { overall_score: number; report?: any; session_id?: string }) => void;
+  onComplete: (result: {
+    overall_score: number;
+    report?: any;
+    session_id?: string;
+    ai_mode?: string;
+    fallback_reason?: string;
+  }) => void;
 };
 
 export function MockInterviewRoom({
@@ -48,7 +54,13 @@ export function MockInterviewRoom({
   const completedRef = useRef(false);
 
   const emitComplete = useCallback(
-    (payload: { overall_score: number; report?: any; session_id?: string }) => {
+    (payload: {
+      overall_score: number;
+      report?: any;
+      session_id?: string;
+      ai_mode?: string;
+      fallback_reason?: string;
+    }) => {
       if (completedRef.current) return;
       completedRef.current = true;
       onComplete(payload);

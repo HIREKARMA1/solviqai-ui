@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures, enterpriseSidebarFeatures } from './LandingSidebar';
+import { SidebarItem, studentSidebarFeatures, collegeSidebarFeatures, adminSidebarFeatures, enterpriseSidebarFeatures } from './LandingSidebar';
 import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';

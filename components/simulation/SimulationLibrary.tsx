@@ -112,11 +112,11 @@ export function SimulationLibrary({
   };
 
   const companies = useMemo(
-    () => [...new Set(preps.map((p) => p.company).filter(Boolean))].sort(),
+    () => Array.from(new Set(preps.map((p) => p.company).filter(Boolean))).sort(),
     [preps],
   );
   const categories = useMemo(
-    () => [...new Set(roles.map((r) => r.category).filter(Boolean))].sort(),
+    () => Array.from(new Set(roles.map((r) => r.category).filter(Boolean))).sort(),
     [roles],
   );
 

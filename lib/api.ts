@@ -1430,7 +1430,7 @@ class ApiClient {
     return response.data;
   }
 
-  async adminListQuestionBank(params?: Record<string, string | number>): Promise<any> {
+  async adminListQuestionBank(params?: Record<string, string | number | undefined>): Promise<any> {
     const response: AxiosResponse = await this.client.get('/admin/cms/question-bank', { params });
     return response.data;
   }
@@ -1440,7 +1440,7 @@ class ApiClient {
     return response.data;
   }
 
-  async adminGenerateAiQuestions(params: Record<string, string | number>): Promise<any> {
+  async adminGenerateAiQuestions(params: Record<string, string | number | undefined>): Promise<any> {
     const response: AxiosResponse = await this.client.post('/admin/cms/question-bank/generate-ai', null, { params });
     return response.data;
   }
