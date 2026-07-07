@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,14 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,23 +17,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  SimulationFeaturedBanner,
   SimulationPrepCard,
   SimulationRoleCard,
 } from "@/components/simulation/SimulationPrepCard";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import {
+  BarChart3,
   Briefcase,
   Building2,
+  CalendarClock,
+  ClipboardList,
   FileBarChart,
-  History,
   LayoutGrid,
   Play,
+  RefreshCw,
   Search,
+  Trophy,
+  UserSquare2,
 } from "lucide-react";
 
-type BrowseSection = "all" | "company" | "roles" | "history";
+type MainTab = "browse" | "assigned";
 
 type RunSummary = {
   run_id: string;
@@ -54,13 +53,38 @@ type RunSummary = {
   pipeline?: { name?: string };
 };
 
+type SortOption = "relevant" | "company_asc" | "role_asc";
+
 type Props = {
   startBasePath: string;
   loginRedirectBase?: string;
   inProgress?: RunSummary[];
   completed?: RunSummary[];
   loadingRuns?: boolean;
+  mainTab?: MainTab;
+  onMainTabChange?: (tab: MainTab) => void;
+  assignedCount?: number;
+  assignedContent?: ReactNode;
 };
+
+type FilterState = {
+  search: string;
+  company: string;
+  role: string;
+  category: string;
+  difficulty: string;
+};
+
+const EMPTY_FILTERS: FilterState = {
+  search: "",
+  company: "",
+  role: "",
+  category: "",
+  difficulty: "",
+};
+
+const panelClass =
+  "rounded-[24px] border border-[#e7eef8] bg-white shadow-[0_8px_28px_rgba(17,44,150,0.06)] dark:border-gray-800 dark:bg-gray-900";
 
 export function SimulationLibrary({
   startBasePath,
@@ -68,16 +92,19 @@ export function SimulationLibrary({
   inProgress = [],
   completed = [],
   loadingRuns = false,
+  mainTab = "browse",
+  onMainTabChange,
+  assignedCount = 0,
+  assignedContent,
 }: Props) {
   const { user } = useAuth();
   const router = useRouter();
   const [roles, setRoles] = useState<any[]>([]);
   const [preps, setPreps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [browseSection, setBrowseSection] = useState<BrowseSection>("all");
-  const [search, setSearch] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("relevant");
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<FilterState>(EMPTY_FILTERS);
 
   useEffect(() => {
     Promise.all([
@@ -115,51 +142,179 @@ export function SimulationLibrary({
     () => Array.from(new Set(preps.map((p) => p.company).filter(Boolean))).sort(),
     [preps],
   );
+  const roleOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          roles
+            .map((r) => r.display_name || r.slug?.replace(/_/g, " "))
+            .filter(Boolean),
+        ),
+      ).sort(),
+    [roles],
+  );
   const categories = useMemo(
     () => Array.from(new Set(roles.map((r) => r.category).filter(Boolean))).sort(),
     [roles],
   );
+  const difficulties = useMemo(
+    () =>
+      Array.from(
+        new Set(preps.map((p) => p.difficulty_bias).filter(Boolean)),
+      ).sort(),
+    [preps],
+  );
 
-  const matchesSearch = (hay: string) =>
-    !search || hay.toLowerCase().includes(search.toLowerCase());
+  const roleCategoryBySlug = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const role of roles) {
+      if (role.slug && role.category) map.set(role.slug, role.category);
+    }
+    return map;
+  }, [roles]);
 
-  const filteredPreps = preps.filter((p) => {
-    const hay = `${p.card_title} ${p.company} ${p.job_role_slug}`;
-    const matchSearch = matchesSearch(hay);
-    const matchCompany =
-      !companyFilter ||
-      p.company?.toLowerCase().includes(companyFilter.toLowerCase());
-    return matchSearch && matchCompany;
-  });
+  const filteredPreps = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    const list = preps.filter((prep) => {
+      const displayRole = prep.job_role_slug?.replace(/_/g, " ") || "";
+      const hay = [
+        prep.card_title,
+        prep.company,
+        prep.job_role_slug,
+        prep.card_description,
+        displayRole,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-  const filteredRoles = roles.filter((r) => {
-    const hay = `${r.display_name} ${r.slug} ${r.category}`;
-    const matchSearch = matchesSearch(hay);
-    const matchCategory = !categoryFilter || r.category === categoryFilter;
-    return matchSearch && matchCategory;
-  });
+      if (q && !hay.includes(q)) return false;
+      if (filters.company && prep.company !== filters.company) return false;
+      if (
+        filters.role &&
+        displayRole.toLowerCase() !== filters.role.toLowerCase() &&
+        prep.job_role_slug?.replace(/_/g, " ").toLowerCase() !==
+          filters.role.toLowerCase()
+      ) {
+        return false;
+      }
+      if (
+        filters.category &&
+        roleCategoryBySlug.get(prep.job_role_slug) !== filters.category
+      ) {
+        return false;
+      }
+      if (
+        filters.difficulty &&
+        (prep.difficulty_bias || "standard") !== filters.difficulty
+      ) {
+        return false;
+      }
+      return true;
+    });
 
-  const filteredInProgress = inProgress.filter((r) => {
-    const hay = `${r.job_role_slug} ${r.company} ${r.pipeline?.name} ${r.current_stage?.title}`;
-    return matchesSearch(hay);
-  });
+    list.sort((a, b) => {
+      if (sortBy === "company_asc") {
+        return (a.company || "").localeCompare(b.company || "");
+      }
+      if (sortBy === "role_asc") {
+        return (a.card_title || "").localeCompare(b.card_title || "");
+      }
+      const aStages = a.stage_count ?? a.pipeline?.stage_count ?? 0;
+      const bStages = b.stage_count ?? b.pipeline?.stage_count ?? 0;
+      return bStages - aStages;
+    });
 
-  const filteredCompleted = completed.filter((r) => {
-    const hay = `${r.job_role_slug} ${r.company} ${r.pipeline?.name} ${r.verdict}`;
-    const matchSearch = matchesSearch(hay);
-    const matchCompany =
-      !companyFilter ||
-      r.company?.toLowerCase().includes(companyFilter.toLowerCase());
-    return matchSearch && matchCompany;
-  });
+    return list;
+  }, [filters, preps, roleCategoryBySlug, sortBy]);
 
+  const filteredInProgress = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return inProgress.filter((run) => {
+      const hay = [
+        run.job_role_slug,
+        run.company,
+        run.pipeline?.name,
+        run.current_stage?.title,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (q && !hay.includes(q)) return false;
+      if (filters.company && run.company !== filters.company) return false;
+      return true;
+    });
+  }, [filters, inProgress]);
+
+  const filteredCompleted = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return completed.filter((run) => {
+      const hay = [
+        run.job_role_slug,
+        run.company,
+        run.pipeline?.name,
+        run.verdict,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (q && !hay.includes(q)) return false;
+      if (filters.company && run.company !== filters.company) return false;
+      return true;
+    });
+  }, [completed, filters]);
+
+  const stats = useMemo(() => {
+    const totalRounds = preps.reduce((sum, prep) => {
+      return sum + Number(prep.stage_count ?? prep.pipeline?.stage_count ?? 0);
+    }, 0);
+
+    return [
+      {
+        icon: Briefcase,
+        label: "Total Simulations",
+        value: String(preps.length),
+        hint: "Across all categories",
+        tone:
+          "bg-blue-50 text-brand-blue dark:bg-brand-blue/15 dark:text-brand-blue-light",
+      },
+      {
+        icon: Building2,
+        label: "Companies",
+        value: String(companies.length),
+        hint: "Top hiring companies",
+        tone:
+          "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400",
+      },
+      {
+        icon: UserSquare2,
+        label: "Roles Covered",
+        value: String(roles.length),
+        hint: "High demand roles",
+        tone:
+          "bg-blue-50 text-brand-blue dark:bg-brand-blue/15 dark:text-brand-blue-light",
+      },
+      {
+        icon: BarChart3,
+        label: "Rounds Included",
+        value: `${totalRounds}+`,
+        hint: "Mock rounds",
+        tone:
+          "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400",
+      },
+    ];
+  }, [companies.length, preps, roles.length]);
+
+  const hasHistoryContent =
+    loadingRuns || filteredInProgress.length > 0 || filteredCompleted.length > 0;
+
+  const hasActiveFilters = Object.values(filters).some(Boolean);
+
+  const applyFilters = () => setFilters(draftFilters);
   const clearFilters = () => {
-    setSearch("");
-    setCompanyFilter("");
-    setCategoryFilter("");
+    setDraftFilters(EMPTY_FILTERS);
+    setFilters(EMPTY_FILTERS);
   };
-
-  const hasActiveFilters = Boolean(search || companyFilter || categoryFilter);
 
   if (loading) {
     return (
@@ -171,347 +326,478 @@ export function SimulationLibrary({
 
   return (
     <div className="space-y-6">
-      <SimulationFeaturedBanner />
+      <section className={cn("overflow-hidden p-6 sm:p-8", panelClass)}>
+        <div className="grid items-center gap-8 lg:grid-cols-[1.2fr_0.9fr]">
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight text-[#111827] dark:text-white sm:text-[2.1rem]">
+              Job Prep <span className="text-brand-blue">Simulation</span>
+            </h1>
+            <p className="max-w-2xl text-sm leading-relaxed text-gray-600 dark:text-gray-400 sm:text-base">
+              Full multi-round placement prep tailored to your role — free,
+              resume-aware, adaptive difficulty.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => onMainTabChange?.("browse")}
+                className={cn(
+                  "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
+                  mainTab === "browse"
+                    ? "bg-blue-50 text-brand-blue shadow-sm dark:bg-brand-blue/15 dark:text-brand-blue-light"
+                    : "border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
+                )}
+              >
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                Browse
+              </button>
+              {onMainTabChange && (
+                <button
+                  type="button"
+                  onClick={() => onMainTabChange("assigned")}
+                  className={cn(
+                    "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
+                    mainTab === "assigned"
+                      ? "bg-blue-50 text-brand-blue shadow-sm dark:bg-brand-blue/15 dark:text-brand-blue-light"
+                      : "border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
+                  )}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Assigned
+                  {assignedCount > 0 && (
+                    <span className="ml-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-bold text-brand-blue dark:bg-gray-800 dark:text-brand-blue-light">
+                      {assignedCount}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
 
-      <Tabs
-        value={browseSection}
-        onValueChange={(v) => setBrowseSection(v as BrowseSection)}
-        className="space-y-4"
-      >
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 lg:grid-cols-4 lg:w-full">
-          <TabsTrigger value="all" className="gap-2 px-4 py-2.5">
-            <LayoutGrid className="h-4 w-4 shrink-0" />
-            All
-          </TabsTrigger>
-          <TabsTrigger value="company" className="gap-2 px-4 py-2.5">
-            <Building2 className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Company prep</span>
-            <span className="sm:hidden">Company</span>
-            <Badge
-              variant="secondary"
-              className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
-            >
-              {filteredPreps.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-2 px-4 py-2.5">
-            <Briefcase className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Browse by role</span>
-            <span className="sm:hidden">Roles</span>
-            <Badge
-              variant="secondary"
-              className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
-            >
-              {filteredRoles.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2 px-4 py-2.5">
-            <History className="h-4 w-4 shrink-0" />
-            History
-            <Badge
-              variant="secondary"
-              className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
-            >
-              {filteredInProgress.length + filteredCompleted.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
+          <div className="hidden items-center justify-end self-end lg:flex">
+            <div className="relative flex h-[150px] w-full max-w-[300px] items-end justify-end xl:h-[165px] xl:max-w-[330px]">
+              <Image
+                src="/images/20943965.png"
+                alt="Job preparation simulation illustration"
+                width={360}
+                height={240}
+                className="h-full w-auto object-contain"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Filter simulations</CardTitle>
-            <CardDescription>
-              Search and narrow results across all browse sections.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-4">
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {mainTab === "assigned" ? (
+        assignedContent ?? (
+          <EmptyBrowse message="No assigned simulations available." />
+        )
+      ) : (
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
+        <aside className="shrink-0 lg:sticky lg:top-0 lg:block lg:w-[260px] xl:w-[280px]">
+          <div className={cn("p-5 sm:p-6", panelClass)}>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[#111827] dark:text-white">
+                Filter Simulations
+              </h2>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Narrow down simulations to find the perfect prep for you.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Reset All
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  className="pl-9"
-                  placeholder="Search roles, companies, or simulations…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-10 rounded-xl border-gray-200 pl-9 text-sm dark:border-gray-700"
+                  placeholder="Search roles, companies, or simulations..."
+                  value={draftFilters.search}
+                  onChange={(e) =>
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      search: e.target.value,
+                    }))
+                  }
                 />
               </div>
-              <Input
-                placeholder="Filter by company"
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-                list="sim-companies"
-              />
-              <Select
-                value={categoryFilter || "__all__"}
-                onValueChange={(v) =>
-                  setCategoryFilter(v === "__all__" ? "" : v)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All categories</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <datalist id="sim-companies">
-                {companies.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
+            </div> */}
+
+            <FilterSelect
+              label="Filter by Company"
+              value={draftFilters.company || "__all__"}
+              onChange={(value) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  company: value === "__all__" ? "" : value,
+                }))
+              }
+              options={companies}
+              allLabel="All Companies"
+            />
+
+            <FilterSelect
+              label="Browse by Role"
+              value={draftFilters.role || "__all__"}
+              onChange={(value) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  role: value === "__all__" ? "" : value,
+                }))
+              }
+              options={roleOptions}
+              allLabel="All Roles"
+            />
+
+            <FilterSelect
+              label="Category"
+              value={draftFilters.category || "__all__"}
+              onChange={(value) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  category: value === "__all__" ? "" : value,
+                }))
+              }
+              options={categories}
+              allLabel="All Categories"
+            />
+
+            <FilterSelect
+              label="Difficulty"
+              value={draftFilters.difficulty || "__all__"}
+              onChange={(value) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  difficulty: value === "__all__" ? "" : value,
+                }))
+              }
+              options={difficulties}
+              allLabel="All Difficulties"
+            />
+
+            <Button
+              variant="mockPrimary"
+              className="mt-2 h-11 w-full rounded-xl text-sm font-semibold"
+              onClick={applyFilters}
+            >
+              {/* <Play className="mr-2 h-4 w-4" /> */}
+              Apply Filters
+            </Button>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50/70 p-4 dark:border-orange-950/30 dark:bg-orange-950/10">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-orange-500 shadow-sm dark:bg-gray-900">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#111827] dark:text-white">
+                  Not sure where to start?
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                  Take a quick assessment and get personalized recommendations.
+                </p>
+                <Button
+                  variant="link"
+                  className="mt-1 h-auto p-0 text-sm font-semibold text-brand-blue"
+                  asChild
+                >
+                  <Link href="/dashboard/student/mock-tests">Take Assessment</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1 space-y-5 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto scrollbar-hide">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map(({ icon: Icon, label, value, hint, tone }) => (
+              <div key={label} className={cn("p-4", panelClass)}>
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "flex h-11 w-11 items-center justify-center rounded-xl",
+                      tone,
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {label}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-[#111827] dark:text-white">
+                      {value}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {hint}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {hasHistoryContent && (
+            <HistoryPanel
+              inProgress={filteredInProgress}
+              completed={filteredCompleted}
+              loadingRuns={loadingRuns}
+            />
+          )}
+
+          <section className={cn("p-5 sm:p-6", panelClass)}>
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-[#111827] dark:text-white">
+                  All Simulations
+                </h2>
+                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-brand-blue dark:bg-brand-blue/15 dark:text-brand-blue-light">
+                  {filteredPreps.length} Results
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Sort by:
+                </span>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => setSortBy(value as SortOption)}
+                >
+                  <SelectTrigger className="h-9 w-[170px] rounded-xl border-gray-200 text-sm dark:border-gray-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevant">Most Relevant</SelectItem>
+                    <SelectItem value="company_asc">Company A-Z</SelectItem>
+                    <SelectItem value="role_asc">Role A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* {companies.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Popular companies:</span>
-                {companies.slice(0, 8).map((c) => (
-                  <Button
-                    key={c}
-                    size="sm"
-                    variant={companyFilter === c ? 'default' : 'outline'}
-                    className="rounded-full h-8"
-                    onClick={() => setCompanyFilter(companyFilter === c ? '' : c)}
-                  >
-                    {c}
-                  </Button>
+            {filteredPreps.length === 0 ? (
+              <EmptyBrowse
+                message={
+                  hasActiveFilters
+                    ? "No simulations match your current filters."
+                    : "No simulation cards are available yet."
+                }
+              />
+            ) : (
+              <>
+                <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredPreps.map((prep) => (
+                    <SimulationPrepCard
+                      key={prep.id}
+                      prep={prep}
+                      onStart={() =>
+                        goToStart({
+                          role: prep.job_role_slug,
+                          prep_id: prep.id,
+                          company: prep.company,
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-3 border-t border-gray-100 pt-4 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                  <span>
+                    Showing 1 to {filteredPreps.length} of {filteredPreps.length}
+                  </span>
+                  <span>{roles.length} roles covered</span>
+                </div>
+              </>
+            )}
+          </section>
+
+          {roles.length > 0 && (
+            <section className={cn("p-5 sm:p-6", panelClass)}>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-[#111827] dark:text-white">
+                    Browse by Role
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Start a simulation pipeline from your target role.
+                  </p>
+                </div>
+                <Badge variant="secondary">{roles.length} roles</Badge>
+              </div>
+              <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {roles.slice(0, 6).map((role) => (
+                  <SimulationRoleCard
+                    key={role.slug}
+                    role={role}
+                    disabled={!role.default_pipeline}
+                    onStart={() => goToStart({ role: role.slug })}
+                  />
                 ))}
               </div>
-            )} */}
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="h-8 px-2 text-muted-foreground"
-              >
-                Clear filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <TabsContent
-          value="all"
-          className="mt-0 space-y-8 focus-visible:outline-none"
-        >
-          {renderBrowseSections()}
-        </TabsContent>
-        <TabsContent
-          value="company"
-          className="mt-0 focus-visible:outline-none"
-        >
-          {renderCompanySection()}
-        </TabsContent>
-        <TabsContent value="roles" className="mt-0 focus-visible:outline-none">
-          {renderRolesSection()}
-        </TabsContent>
-        <TabsContent
-          value="history"
-          className="mt-0 focus-visible:outline-none"
-        >
-          {renderHistorySection()}
-        </TabsContent>
-      </Tabs>
+            </section>
+          )}
+        </div>
+      </div>
+      )}
     </div>
   );
+}
 
-  function renderBrowseSections() {
-    const hasHistoryContent =
-      loadingRuns ||
-      filteredInProgress.length > 0 ||
-      filteredCompleted.length > 0;
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  allLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  allLabel: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-10 rounded-xl border-gray-200 text-sm dark:border-gray-700">
+          <SelectValue placeholder={allLabel} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__all__">{allLabel}</SelectItem>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
+function HistoryPanel({
+  inProgress,
+  completed,
+  loadingRuns,
+}: {
+  inProgress: RunSummary[];
+  completed: RunSummary[];
+  loadingRuns: boolean;
+}) {
+  if (loadingRuns) {
     return (
-      <div className="space-y-8">
-        {hasHistoryContent && renderHistorySection(false)}
-        {renderCompanySection()}
-        {renderRolesSection()}
+      <div className={cn("flex justify-center py-10", panelClass)}>
+        <Loader />
       </div>
     );
   }
 
-  function renderHistorySection(showEmptyWhenNone = true) {
-    if (loadingRuns) {
-      return (
-        <div className="flex justify-center py-10">
-          <Loader />
-        </div>
-      );
-    }
+  if (inProgress.length === 0 && completed.length === 0) return null;
 
-    const hasHistory =
-      filteredInProgress.length > 0 || filteredCompleted.length > 0;
-
-    return (
-      <div className="space-y-6">
-        {filteredInProgress.length > 0 && (
-          <section className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 dark:border-blue-900 dark:bg-blue-950/20">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Continue in progress</h2>
-              <Badge variant="secondary">{filteredInProgress.length}</Badge>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredInProgress.map((r) => (
-                <div
-                  key={r.run_id}
-                  className="rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <Badge>{r.job_role_slug?.replace(/_/g, " ")}</Badge>
-                    {r.company && (
-                      <Badge variant="secondary">{r.company}</Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Stage {(r.current_stage_index ?? 0) + 1} of {r.total_stages}
-                    {r.current_stage?.title
-                      ? ` — ${r.current_stage.title}`
-                      : ""}
-                  </p>
-                  <Button className="mt-3 w-full gap-2" size="sm" asChild>
-                    <Link
-                      href={`/dashboard/student/simulations/run?run_id=${r.run_id}`}
-                    >
-                      <Play className="h-4 w-4" /> Continue
-                    </Link>
-                  </Button>
+  return (
+    <section className={cn("space-y-5 p-5 sm:p-6", panelClass)}>
+      {inProgress.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base font-bold text-[#111827] dark:text-white">
+              Continue in Progress
+            </h3>
+            <Badge variant="secondary">{inProgress.length}</Badge>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {inProgress.map((run) => (
+              <div
+                key={run.run_id}
+                className="min-w-[300px] max-w-[320px] shrink-0 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/40 dark:bg-blue-950/10"
+              >
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <Badge>{run.job_role_slug?.replace(/_/g, " ")}</Badge>
+                  {run.company && <Badge variant="secondary">{run.company}</Badge>}
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+                <p className="text-sm font-semibold text-[#111827] dark:text-white">
+                  {run.pipeline?.name || "Simulation"}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Stage {(run.current_stage_index ?? 0) + 1} of {run.total_stages}
+                  {run.current_stage?.title ? ` — ${run.current_stage.title}` : ""}
+                </p>
+                <Button className="mt-4 w-full gap-2" size="sm" asChild>
+                  <Link href={`/dashboard/student/simulations/run?run_id=${run.run_id}`}>
+                    <Play className="h-4 w-4" />
+                    Continue
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-        {filteredCompleted.length > 0 && (
-          <section className="rounded-xl border p-5 dark:border-gray-700">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Past simulations</h2>
-              <Badge variant="secondary">{filteredCompleted.length}</Badge>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {filteredCompleted.map((r) => (
-                <div
-                  key={r.run_id}
-                  className="rounded-lg border p-4 dark:border-gray-700"
-                >
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <Badge>{r.job_role_slug?.replace(/_/g, " ")}</Badge>
-                    {r.verdict && (
-                      <Badge variant="outline">
-                        {r.verdict.replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {r.pipeline?.name} ·{" "}
-                    {Math.round(r.job_readiness_score ?? 0)}% readiness
-                  </p>
-                  <Button
-                    className="mt-3 w-full gap-2"
-                    size="sm"
-                    variant="outline"
-                    asChild
-                  >
-                    <Link
-                      href={`/dashboard/student/simulations/report?run_id=${r.run_id}`}
-                    >
-                      <FileBarChart className="h-4 w-4" /> View report
-                    </Link>
-                  </Button>
+      {completed.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base font-bold text-[#111827] dark:text-white">
+              Past Simulations
+            </h3>
+            <Badge variant="secondary">{completed.length}</Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {completed.map((run) => (
+              <div
+                key={run.run_id}
+                className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700"
+              >
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <Badge>{run.job_role_slug?.replace(/_/g, " ")}</Badge>
+                  {run.verdict && (
+                    <Badge variant="outline">
+                      {run.verdict.replace(/_/g, " ")}
+                    </Badge>
+                  )}
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {!hasHistory && showEmptyWhenNone && (
-          <EmptyBrowse message="No simulation history yet. Start a prep card or browse by role." />
-        )}
-      </div>
-    );
-  }
-
-  function renderCompanySection() {
-    if (filteredPreps.length === 0) {
-      return (
-        <EmptyBrowse
-          message={
-            preps.length === 0
-              ? "No company prep cards published yet."
-              : "No company prep cards match your filters."
-          }
-        />
-      );
-    }
-
-    return (
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Company + role prep</h2>
-          <Badge variant="secondary">{filteredPreps.length} cards</Badge>
+                <p className="text-sm font-semibold text-[#111827] dark:text-white">
+                  {run.pipeline?.name || "Completed Simulation"}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {Math.round(run.job_readiness_score ?? 0)}% readiness
+                </p>
+                <Button className="mt-4 w-full gap-2" size="sm" variant="outline" asChild>
+                  <Link href={`/dashboard/student/simulations/report?run_id=${run.run_id}`}>
+                    <FileBarChart className="h-4 w-4" />
+                    View report
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPreps.map((p) => (
-            <SimulationPrepCard
-              key={p.id}
-              prep={p}
-              onStart={() =>
-                goToStart({
-                  role: p.job_role_slug,
-                  prep_id: p.id,
-                  company: p.company,
-                })
-              }
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  function renderRolesSection() {
-    if (filteredRoles.length === 0) {
-      return (
-        <EmptyBrowse
-          message={
-            roles.length === 0
-              ? "No published simulations yet. Ask your admin to seed pipelines."
-              : "No roles match your filters."
-          }
-        />
-      );
-    }
-
-    return (
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Browse by role</h2>
-          <Badge variant="secondary">{filteredRoles.length} roles</Badge>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredRoles.map((r) => (
-            <SimulationRoleCard
-              key={r.slug}
-              role={r}
-              disabled={!r.default_pipeline}
-              onStart={() => goToStart({ role: r.slug })}
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
+      )}
+    </section>
+  );
 }
 
 function EmptyBrowse({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed p-10 text-center dark:border-gray-700">
-      <p className="text-sm text-muted-foreground">{message}</p>
+    <div className="rounded-2xl border border-dashed border-gray-300 p-10 text-center dark:border-gray-700">
+      <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
     </div>
   );
 }

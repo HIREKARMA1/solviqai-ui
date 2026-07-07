@@ -1609,6 +1609,11 @@ class ApiClient {
     return response.data;
   }
 
+  async adminDeleteCompanyRolePrep(prepId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(`/admin/cms/company-role-preps/${prepId}`);
+    return response.data;
+  }
+
   async getSimulationJobRoles(): Promise<any[]> {
     const response: AxiosResponse = await this.client.get('/simulations/catalog/job-roles');
     return response.data;

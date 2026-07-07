@@ -147,6 +147,17 @@ export default function AdminSimulationPipelinesPage() {
     }
   };
 
+  const deletePrepCard = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This will remove the prep card from the student library.`)) return;
+    try {
+      await apiClient.adminDeleteCompanyRolePrep(id);
+      toast.success('Prep card deleted');
+      load();
+    } catch {
+      toast.error('Failed to delete prep card');
+    }
+  };
+
   const filteredPipelines = pipelines.filter((p) => {
     if (statusFilter === 'archived') return p.status === 'archived';
     if (statusFilter === 'active') return p.status !== 'archived';
@@ -487,12 +498,23 @@ export default function AdminSimulationPipelinesPage() {
                                 <p className="text-xs text-gray-500 truncate">{c.company}</p>
                               )}
                             </div>
-                            <Badge
-                              variant={c.is_published ? 'default' : 'secondary'}
-                              className="shrink-0"
-                            >
-                              {c.is_published ? 'Live' : 'Draft'}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={c.is_published ? 'default' : 'secondary'}
+                                className="shrink-0"
+                              >
+                                {c.is_published ? 'Live' : 'Draft'}
+                              </Badge>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 shrink-0 text-gray-500 hover:text-red-600"
+                                onClick={() => deletePrepCard(c.id, c.card_title)}
+                                aria-label={`Delete ${c.card_title}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </li>
                         ))}
                       </ul>
