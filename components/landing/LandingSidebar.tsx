@@ -103,12 +103,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
   //   label: 'Auto Job Apply',
   //   onClick: undefined,
   // },
-  {
-    id: "practice",
-    icon: <BookOpen className="w-5 h-5" />,
-    label: "Practice",
-    onClick: undefined,
-  },
+  // {
+  //   id: "practice",
+  //   icon: <BookOpen className="w-5 h-5" />,
+  //   label: "Practice",
+  //   onClick: undefined,
+  // },
   {
     id: "plans",
     icon: <CreditCard className="w-5 h-5" />,

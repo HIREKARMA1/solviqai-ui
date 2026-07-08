@@ -146,9 +146,9 @@ export function MockTestCard({ test, starting, onStart }: MockTestCardProps) {
           </div>
         </div>
 
-        <div className="pointer-events-none absolute right-0 top-0 flex h-14 w-14 items-center justify-center">
+        {/* <div className="pointer-events-none absolute right-0 top-0 flex h-14 w-14 items-center justify-center">
           <Icon className={cn('h-12 w-12', theme.faintIcon)} strokeWidth={1.5} />
-        </div>
+        </div> */}
       </div>
 
       {/* Description — always two lines of space */}

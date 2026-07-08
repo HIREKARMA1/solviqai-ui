@@ -250,6 +250,8 @@ module.exports = {
 
         "brand-card-dark":
           "linear-gradient(135deg, #066F45 0%, #007DB2 50%, #123C7A 100%)",
+        "simulation-card":
+          "linear-gradient(135deg, #066F45 0%, #0A8A5B 22%, #0089C8 55%, #1A5BA8 78%, #123C7A 100%)",
       },
       // backgroundImage: {
       //   "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

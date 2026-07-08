@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader } from '@/components/ui/loader';
 import {
   Dialog,
@@ -166,38 +168,57 @@ export function PlacementDriveWizard({ open, onOpenChange, driveId, onSaved }: P
           </div>
         ) : (
           <div className="space-y-4">
-            <Input
-              placeholder="Drive title (e.g. TCS Campus Drive — SDE)"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="drive-title">Drive Title</Label>
               <Input
-                placeholder="Company"
-                value={form.company}
-                onChange={(e) => setForm({ ...form, company: e.target.value })}
-              />
-              <Input
-                placeholder="Target role"
-                value={form.target_role}
-                onChange={(e) => setForm({ ...form, target_role: e.target.value })}
+                id="drive-title"
+                placeholder="e.g. TCS Campus Drive — SDE"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             </div>
-            <textarea
-              className="w-full rounded-md border px-3 py-2 dark:bg-gray-800"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={2}
-            />
-            <Input
-              type="number"
-              placeholder="Min combined score (%)"
-              value={form.min_combined_score}
-              onChange={(e) =>
-                setForm({ ...form, min_combined_score: Number(e.target.value) || 60 })
-              }
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  placeholder="e.g. TCS"
+                  value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="target-role">Target Role</Label>
+                <Input
+                  id="target-role"
+                  placeholder="e.g. Software Engineer"
+                  value={form.target_role}
+                  onChange={(e) => setForm({ ...form, target_role: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Provide a brief description of the placement drive..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="min-combined-score">Minimum Combined Score (%)</Label>
+              <Input
+                id="min-combined-score"
+                type="number"
+                placeholder="e.g. 60"
+                value={form.min_combined_score}
+                onChange={(e) =>
+                  setForm({ ...form, min_combined_score: Number(e.target.value) || 60 })
+                }
+              />
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-muted-foreground">Quick presets:</span>

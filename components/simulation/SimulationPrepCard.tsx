@@ -56,7 +56,9 @@ export function SimulationPrepCard({ prep, onStart }: PrepCardProps) {
       : "Medium";
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-[22px] border border-[#e7eef8] bg-white shadow-[0_6px_24px_rgba(17,44,150,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_34px_rgba(17,44,150,0.12)] dark:border-gray-800 dark:bg-gray-900">
+    <div
+      className="group relative flex h-full flex-col overflow-hidden rounded-[22px] border border-[#e7eef8] bg-white shadow-[0_6px_24px_rgba(17,44,150,0.06)] transition hover:-translate-y-0.5 hover:border-blue-500/60 hover:shadow-[0_12px_34px_rgba(17,44,150,0.12)] dark:border-gray-800 dark:bg-gray-900 dark:hover:border-blue-500/40"
+    >
       <div className={`h-1.5 bg-gradient-to-r ${accent}`} />
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-4 flex min-h-[82px] items-start gap-3">
@@ -123,10 +125,10 @@ export function SimulationPrepCard({ prep, onStart }: PrepCardProps) {
 
         <div className="mt-auto">
           <Button
-            className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold shadow-[0_10px_24px_rgba(30,74,138,0.18)]"
+            className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold text-white transition-all duration-200 hover:opacity-90 shadow-sm border-none bg-orange-500 hover:bg-orange-600"
             onClick={onStart}
           >
-            <Play className="h-4 w-4" />
+            {/* <Play className="h-4 w-4" /> */}
             Start Preparation
           </Button>
         </div>
@@ -151,31 +153,20 @@ type RoleCardProps = {
 
 export function SimulationRoleCard({ role, onStart, disabled }: RoleCardProps) {
   const pipeline = role.default_pipeline;
-  const tone = (role.category || role.display_name || "").toLowerCase().includes("data")
-    ? "orange"
-    : "blue";
 
   return (
-    <div className="group flex h-full flex-col rounded-[22px] border border-[#e7eef8] bg-white p-5 shadow-[0_6px_24px_rgba(17,44,150,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(17,44,150,0.10)] dark:border-gray-800 dark:bg-gray-900">
+    <div
+      className="group flex h-full flex-col rounded-[22px] border border-[#e7eef8] bg-white p-5 shadow-[0_6px_24px_rgba(17,44,150,0.06)] transition hover:-translate-y-0.5 hover:border-blue-500/60 hover:shadow-[0_10px_30px_rgba(17,44,150,0.12)] dark:border-gray-800 dark:bg-gray-900 dark:hover:border-blue-500/40"
+    >
       <div
-        className={cn(
-          "mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm",
-          tone === "orange"
-            ? "bg-gradient-to-br from-orange-500 to-amber-500"
-            : "bg-gradient-to-br from-blue-500 to-cyan-600",
-        )}
+        className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm bg-gradient-to-br from-blue-500 to-cyan-600"
       >
         {initials(role.display_name)}
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
         <Badge
           variant="outline"
-          className={cn(
-            "rounded-full",
-            tone === "orange"
-              ? "border-orange-200 text-orange-600 dark:border-orange-900/40 dark:text-orange-400"
-              : "border-blue-200 text-brand-blue dark:border-blue-900/40 dark:text-brand-blue-light",
-          )}
+          className="rounded-full border-blue-200 text-brand-blue dark:border-blue-900/40 dark:text-brand-blue-light"
         >
           {role.category || "General"}
         </Badge>
@@ -202,17 +193,11 @@ export function SimulationRoleCard({ role, onStart, disabled }: RoleCardProps) {
         </p>
       )}
       <Button
-        className={cn(
-          "mt-auto w-full gap-2 rounded-xl",
-          tone === "orange"
-            ? "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-900/40 dark:text-orange-400 dark:hover:bg-orange-950/20"
-            : "border-blue-200 text-brand-blue hover:bg-blue-50 dark:border-blue-900/40 dark:text-brand-blue-light dark:hover:bg-blue-950/20",
-        )}
-        variant="outline"
+        className="mt-auto w-full gap-2 rounded-xl text-[15px] font-semibold text-white transition-all duration-200 hover:opacity-90 shadow-sm border-none bg-orange-500 hover:bg-orange-600"
         onClick={onStart}
         disabled={disabled}
       >
-        {/* <Sparkles className="/h-4 w-4" /> */}
+        {/* <Play className="h-4 w-4" /> */}
         {disabled ? "Pipeline pending" : "Start Preparation"}
       </Button>
     </div>

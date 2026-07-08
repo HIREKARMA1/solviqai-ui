@@ -319,13 +319,13 @@ export default function MockTestLibraryPage() {
                 All Practice Tests
               </h2>
               <div className="flex flex-wrap items-center gap-3">
-                {!loading && (
+                {/* {!loading && (
                   <p className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                     <ClipboardList className="h-4 w-4 text-brand-blue" />
                     {displayedTests.length} Test{displayedTests.length !== 1 ? 's' : ''} Available
                   </p>
-                )}
-                <select
+                )} */}
+                {/* <select
                   className={cn(glassSelectClass, 'h-9 w-auto min-w-[140px] text-xs sm:text-sm')}
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -333,7 +333,7 @@ export default function MockTestLibraryPage() {
                   <option value="newest">Sort by: Newest</option>
                   <option value="title_asc">Sort by: A–Z</option>
                   <option value="title_desc">Sort by: Z–A</option>
-                </select>
+                </select> */}
               </div>
             </div>
 

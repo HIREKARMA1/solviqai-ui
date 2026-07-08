@@ -100,7 +100,7 @@ function InProgressDriveCard({
         className="mt-3 h-9 w-full gap-1.5 rounded-lg text-xs font-semibold"
         onClick={() => onContinue(attempt.attempt_id)}
       >
-        <Play className="h-3.5 w-3.5 fill-current" />
+        {/* <Play className="h-3.5 w-3.5 fill-current" /> */}
         Continue Drive
       </Button>
 
