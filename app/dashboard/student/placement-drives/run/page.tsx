@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
+import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import { apiClient } from '@/lib/api';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
 import { SimulationCodingRound } from '@/components/simulation/SimulationCodingRound';
@@ -14,8 +15,11 @@ import { SimulationGroupDiscussion } from '@/components/simulation/SimulationGro
 import { SimulationSalesRoleplay } from '@/components/simulation/SimulationSalesRoleplay';
 import { SimulationWrittenStage } from '@/components/simulation/SimulationWrittenStage';
 import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
+import { useExamCamera } from '@/hooks/useExamCamera';
+import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { isEmbeddedExamStage } from '@/lib/examStageTypes';
-import { CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Layers, FileBarChart } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Layers, FileBarChart, Camera, Shield } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'culture_fit' {
   const p = runner.persona;
@@ -24,6 +28,8 @@ function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'c
   return 'technical';
 }
 
+type DrivePhase = 'camera_setup' | 'active';
+
 export default function PlacementDriveRunPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -31,6 +37,67 @@ export default function PlacementDriveRunPage() {
   const [attempt, setAttempt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [startingMcq, setStartingMcq] = useState(false);
+  const [phase, setPhase] = useState<DrivePhase>('camera_setup');
+  const examCamera = useExamCamera();
+
+  const serverCapturedIndexes = useMemo(() => {
+    const snaps = attempt?.proctoring_snapshots;
+    if (!Array.isArray(snaps)) return [];
+    return snaps
+      .map((s: { index?: number }) => s?.index)
+      .filter((n: unknown): n is number => typeof n === 'number');
+  }, [attempt?.proctoring_snapshots]);
+
+  const onUploadSnapshot = useCallback(
+    async (snapshotIndex: number, blob: Blob) => {
+      if (!attemptId) return;
+      await apiClient.uploadPlacementDriveProctoringSnapshot(
+        attemptId,
+        snapshotIndex,
+        blob,
+        attempt?.current_stage_index,
+      );
+    },
+    [attemptId, attempt?.current_stage_index],
+  );
+
+  const { runCaptureCheck, captureNow } = useProctorSnapshots({
+    enabled: phase === 'active' && !!attemptId && attempt?.status === 'IN_PROGRESS',
+    attemptId,
+    getVideoElement: examCamera.getVideoElement,
+    isCameraActive: examCamera.isCameraActive,
+    startedAtIso: attempt?.started_at ?? null,
+    overallTimeRemainingSeconds: null,
+    onUpload: onUploadSnapshot,
+    serverCapturedIndexes,
+  });
+
+  const runCaptureCheckRef = useRef(runCaptureCheck);
+  const captureNowRef = useRef(captureNow);
+  runCaptureCheckRef.current = runCaptureCheck;
+  captureNowRef.current = captureNow;
+
+  useEffect(() => {
+    if (phase !== 'active' || !attemptId || !examCamera.isCameraActive) return;
+    const delays = [4_000, 12_000, 22_000, 35_000];
+    const timers = delays.map((ms) =>
+      setTimeout(() => void runCaptureCheckRef.current(), ms),
+    );
+    const early = [
+      setTimeout(() => captureNowRef.current(1), 3_000),
+      setTimeout(() => captureNowRef.current(2), 15_000),
+    ];
+    return () => {
+      timers.forEach(clearTimeout);
+      early.forEach(clearTimeout);
+    };
+  }, [phase, attemptId, examCamera.isCameraActive]);
+
+  useEffect(() => {
+    if (attempt?.status === 'COMPLETED') {
+      examCamera.stopCamera();
+    }
+  }, [attempt?.status, examCamera.stopCamera]);
 
   const refresh = useCallback(async () => {
     if (!attemptId) return;
@@ -47,6 +114,14 @@ export default function PlacementDriveRunPage() {
       .catch(() => router.replace('/dashboard/student/placement-drives'))
       .finally(() => setLoading(false));
   }, [attemptId, refresh, router]);
+
+  const handleBeginDrive = async () => {
+    if (!examCamera.isCameraActive) {
+      const ok = await examCamera.startCamera();
+      if (!ok) return;
+    }
+    setPhase('active');
+  };
 
   const startLegacyMockTest = async () => {
     const stage = attempt?.current_stage;
@@ -84,41 +159,73 @@ export default function PlacementDriveRunPage() {
 
   const onStageComplete = (updated: any) => setAttempt(updated);
 
-  const onInterviewComplete = async (result: {
+  const onInterviewComplete = useCallback(async (result: {
     overall_score: number;
     report?: any;
     session_id?: string;
   }) => {
-    if (!attemptId || !attempt) return;
-    const idx = attempt.current_stage_index;
-    const alreadyDone = (attempt.stage_results || []).some(
+    if (!attemptId) return;
+
+    // Always re-fetch latest attempt so we don't use a stale stage index / status.
+    let latest = attempt;
+    try {
+      latest = await apiClient.getPlacementDriveAttempt(attemptId);
+      setAttempt(latest);
+    } catch {
+      /* keep in-memory attempt */
+    }
+    if (!latest) return;
+
+    if (latest.status === 'COMPLETED') {
+      setAttempt(latest);
+      return;
+    }
+
+    const idx =
+      typeof latest.current_stage_index === 'number'
+        ? latest.current_stage_index
+        : attempt?.current_stage_index;
+    if (typeof idx !== 'number') return;
+
+    const alreadyDone = (latest.stage_results || []).some(
       (s: { stage_index?: number }) => s.stage_index === idx,
     );
     if (alreadyDone) {
-      await refresh();
+      const refreshed = await apiClient.getPlacementDriveAttempt(attemptId);
+      setAttempt(refreshed);
       return;
     }
+
     try {
       const updated = await apiClient.completePlacementDriveStage(attemptId, {
         stage_index: idx,
         score: Math.min(100, Math.max(0, result.overall_score ?? 0)),
         metadata: {
-          stage_type: attempt.stage_runner?.stage_type || attempt.current_stage?.stage_type,
-          persona: attempt.stage_runner?.persona,
+          stage_type:
+            latest.stage_runner?.stage_type ||
+            latest.current_stage?.stage_type ||
+            attempt?.stage_runner?.stage_type ||
+            'mock_interview',
+          persona: latest.stage_runner?.persona || attempt?.stage_runner?.persona,
           transcript: result.report?.transcript,
+          engine_session_id: result.session_id,
         },
       });
       setAttempt(updated);
     } catch (e: unknown) {
       const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       try {
-        await refresh();
+        const refreshed = await apiClient.getPlacementDriveAttempt(attemptId);
+        setAttempt(refreshed);
+        if (refreshed?.status === 'COMPLETED') return;
       } catch {
         /* ignore refresh failure */
       }
-      alert(typeof detail === 'string' ? detail : 'Could not advance to the next stage');
+      throw e instanceof Error
+        ? e
+        : new Error(typeof detail === 'string' ? detail : 'Could not advance to the next stage');
     }
-  };
+  }, [attemptId, attempt]);
 
   if (loading) {
     return (
@@ -174,10 +281,72 @@ export default function PlacementDriveRunPage() {
     );
   }
 
+  if (phase === 'camera_setup') {
+    return (
+      <DashboardLayout requiredUserType="student" hideNavigation>
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4">
+          <div className="w-full max-w-lg space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand-blue dark:bg-brand-blue/15">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Camera required
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This placement drive is proctored. Enable your webcam before continuing.
+                  Snapshots are captured silently during active stages.
+                </p>
+              </div>
+            </div>
+
+            <ExamCameraPanel
+              variant="setup"
+              videoRef={examCamera.videoRef}
+              status={examCamera.status}
+              onEnableCamera={examCamera.startCamera}
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => router.push('/dashboard/student/placement-drives')}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="gap-2 rounded-xl"
+                disabled={!examCamera.isCameraActive || examCamera.isCameraPending}
+                onClick={() => void handleBeginDrive()}
+              >
+                <Camera className="h-4 w-4" />
+                {examCamera.isCameraActive ? 'Continue to Drive' : 'Enable camera to continue'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const stage = attempt.current_stage;
   const runner = attempt.stage_runner || {};
   const stageNum = attempt.current_stage_index + 1;
   const targetRole = attempt.template?.target_role || 'Software Engineer';
+
+  const floatingCamera = (
+    <ExamCameraPanel
+      variant="floating"
+      videoRef={examCamera.videoRef}
+      status={examCamera.status}
+      onEnableCamera={async () => {
+        const ok = await examCamera.startCamera();
+        if (!ok) toast.error('Camera is required for this placement drive.');
+      }}
+    />
+  );
 
   const stageBody = (
     <>
@@ -254,6 +423,7 @@ export default function PlacementDriveRunPage() {
         subtitle={stage?.title ? `${stage.title} — ${stage.stage_type?.replace(/_/g, ' ')}` : undefined}
         stageLabel={`Stage ${stageNum} of ${attempt.total_stages}`}
       >
+        {floatingCamera}
         <div className="h-full overflow-y-auto p-4 md:p-6">{stageBody}</div>
       </ExamFocusShell>
     );
@@ -261,6 +431,7 @@ export default function PlacementDriveRunPage() {
 
   return (
     <DashboardLayout requiredUserType="student">
+      {floatingCamera}
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         <Button variant="ghost" size="sm" className="gap-2 -ml-2" asChild>
           <Link href="/dashboard/student/placement-drives">

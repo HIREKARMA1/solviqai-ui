@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -55,6 +55,20 @@ export default function PlacementDriveLibraryPage() {
   /** Hide filter column when app nav sidebar is expanded or mobile drawer is open */
   const showFilterColumn = isNavSidebarCollapsed && !isMobileNavOpen;
 
+  const getScrollParent = useCallback(() => {
+    const node = pageScrollRef.current;
+    if (!node) return null;
+    let el: HTMLElement | null = node.parentElement;
+    while (el) {
+      const style = window.getComputedStyle(el);
+      if (/(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return (document.scrollingElement as HTMLElement) || document.documentElement;
+  }, []);
+
   const loadLibrary = () => {
     setLoading(true);
     setLoadError(null);
@@ -81,8 +95,14 @@ export default function PlacementDriveLibraryPage() {
     loadLibrary();
   }, []);
 
+  const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setScrollParent(getScrollParent());
+  }, [getScrollParent]);
+
   const { scrollY } = useScroll({
-    container: pageScrollRef,
+    container: scrollParent ? { current: scrollParent } : undefined,
     layoutEffect: false,
   });
 
@@ -91,7 +111,7 @@ export default function PlacementDriveLibraryPage() {
 
   /** Scroll up on dock (filter or cards) chains to page when cards are at top — reveals hero. */
   useEffect(() => {
-    const pageScroll = pageScrollRef.current;
+    const pageScroll = getScrollParent();
     const cardsEl = cardsScrollRef.current;
     if (!pageScroll || !cardsEl) return;
 
@@ -110,7 +130,7 @@ export default function PlacementDriveLibraryPage() {
 
     pageScroll.addEventListener('wheel', onWheel, { passive: false });
     return () => pageScroll.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [getScrollParent]);
 
   const inProgressByTemplate = useMemo(() => {
     const map: Record<string, any> = {};
@@ -198,15 +218,11 @@ export default function PlacementDriveLibraryPage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      {/* Reserves main height while the desktop panel is position:fixed */}
-      <div className="hidden lg:block lg:min-h-[calc(100dvh-5rem)]" aria-hidden />
       <div
         ref={pageScrollRef}
         className={cn(
-          'relative -mx-6 -mt-20 w-auto bg-brand-hero p-4 pb-8 pt-24 dark:bg-brand-hero-dark sm:p-6 sm:pt-28',
-          'lg:fixed lg:z-10 lg:mt-0 lg:overflow-y-auto',
-          'lg:top-20 lg:right-0 lg:bottom-0 lg:px-6 lg:pb-6 lg:pt-6',
-          isNavSidebarCollapsed ? 'lg:left-[80px]' : 'lg:left-[280px]',
+          'relative -mx-6 -mt-20 min-h-[calc(100dvh-6.5rem)] w-auto bg-brand-hero p-4 pb-8 pt-24 dark:bg-brand-hero-dark sm:p-6 sm:pt-28',
+          'lg:-mt-24 lg:pt-24',
         )}
       >
         <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">

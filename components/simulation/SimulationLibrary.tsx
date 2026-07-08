@@ -645,10 +645,9 @@ export function SimulationLibrary({
               ))}
             </div>
 
-            {hasHistoryContent && (
-              <HistoryPanel
+            {filteredInProgress.length > 0 && (
+              <InProgressPanel
                 inProgress={filteredInProgress}
-                completed={filteredCompleted}
                 loadingRuns={loadingRuns}
               />
             )}
@@ -752,6 +751,13 @@ export function SimulationLibrary({
                 )}
               </section>
             )}
+
+            {filteredCompleted.length > 0 && (
+              <PastSimulationsPanel
+                completed={filteredCompleted}
+                loadingRuns={loadingRuns}
+              />
+            )}
           </div>
         </div>
       )}
@@ -794,12 +800,75 @@ function FilterSelect({
   );
 }
 
-function HistoryPanel({
+function InProgressPanel({
   inProgress,
-  completed,
   loadingRuns,
 }: {
   inProgress: RunSummary[];
+  loadingRuns: boolean;
+}) {
+  if (loadingRuns) {
+    return (
+      <div className={cn("flex justify-center py-10", panelClass)}>
+        <Loader />
+      </div>
+    );
+  }
+
+  if (inProgress.length === 0) return null;
+
+  return (
+    <section className={cn("space-y-5 p-5 sm:p-6", panelClass)}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-[#111827] dark:text-white">
+            Continue in Progress
+          </h3>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          {inProgress.map((run) => (
+            <div
+              key={run.run_id}
+              className="min-w-[300px] max-w-[320px] shrink-0 rounded-2xl border border-orange-100 bg-orange-50/30 p-4 transition-all duration-200 hover:border-orange-200 hover:shadow-sm dark:border-orange-950/40 dark:bg-orange-950/10 dark:hover:border-orange-900/50"
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                <Badge variant="success">
+                  {run.job_role_slug?.replace(/_/g, " ")}
+                </Badge>
+                {run.company && (
+                  <Badge className="border-none bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:hover:bg-orange-900/60">
+                    {run.company}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-[#111827] dark:text-white">
+                {run.pipeline?.name || "Simulation"}
+              </p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Stage {(run.current_stage_index ?? 0) + 1} of {run.total_stages}
+                {run.current_stage?.title ? ` — ${run.current_stage.title}` : ""}
+              </p>
+              <Button
+                className="mt-4 w-full gap-2 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-600 dark:hover:bg-orange-700 border-none"
+                size="sm"
+                asChild
+              >
+                <Link href={`/dashboard/student/simulations/run?run_id=${run.run_id}`}>
+                  Continue
+                </Link>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PastSimulationsPanel({
+  completed,
+  loadingRuns,
+}: {
   completed: RunSummary[];
   loadingRuns: boolean;
 }) {
@@ -811,96 +880,47 @@ function HistoryPanel({
     );
   }
 
-  if (inProgress.length === 0 && completed.length === 0) return null;
+  if (completed.length === 0) return null;
 
   return (
     <section className={cn("space-y-5 p-5 sm:p-6", panelClass)}>
-      {inProgress.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-base font-bold text-[#111827] dark:text-white">
-              Continue in Progress
-            </h3>
-            {/* <Badge variant="secondary">{inProgress.length}</Badge> */}
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {inProgress.map((run) => (
-              <div
-                key={run.run_id}
-                className="min-w-[300px] max-w-[320px] shrink-0 rounded-2xl border border-orange-100 bg-orange-50/30 p-4 transition-all duration-200 hover:border-orange-200 hover:shadow-sm dark:border-orange-950/40 dark:bg-orange-950/10 dark:hover:border-orange-900/50"
-              >
-                <div className="mb-2 flex flex-wrap gap-2">
-                  <Badge variant="success">
-                    {run.job_role_slug?.replace(/_/g, " ")}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-[#111827] dark:text-white">
+            Past Simulations
+          </h3>
+          <Badge variant="secondary">{completed.length}</Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {completed.map((run) => (
+            <div
+              key={run.run_id}
+              className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700"
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                <Badge>{run.job_role_slug?.replace(/_/g, " ")}</Badge>
+                {run.verdict && (
+                  <Badge variant="outline">
+                    {run.verdict.replace(/_/g, " ")}
                   </Badge>
-                  {run.company && (
-                    <Badge className="border-none bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:hover:bg-orange-900/60">
-                      {run.company}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm font-semibold text-[#111827] dark:text-white">
-                  {run.pipeline?.name || "Simulation"}
-                </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Stage {(run.current_stage_index ?? 0) + 1} of {run.total_stages}
-                  {run.current_stage?.title ? ` — ${run.current_stage.title}` : ""}
-                </p>
-                <Button
-                  className="mt-4 w-full gap-2 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-600 dark:hover:bg-orange-700 border-none"
-                  size="sm"
-                  asChild
-                >
-                  <Link href={`/dashboard/student/simulations/run?run_id=${run.run_id}`}>
-                    {/* <Play className="h-4 w-4" /> */}
-                    Continue
-                  </Link>
-                </Button>
+                )}
               </div>
-            ))}
-          </div>
+              <p className="text-sm font-semibold text-[#111827] dark:text-white">
+                {run.pipeline?.name || "Completed Simulation"}
+              </p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {Math.round(run.job_readiness_score ?? 0)}% readiness
+              </p>
+              <Button className="mt-4 w-full gap-2" size="sm" variant="outline" asChild>
+                <Link href={`/dashboard/student/simulations/report?run_id=${run.run_id}`}>
+                  <FileBarChart className="h-4 w-4" />
+                  View report
+                </Link>
+              </Button>
+            </div>
+          ))}
         </div>
-      )}
-
-      {completed.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-base font-bold text-[#111827] dark:text-white">
-              Past Simulations
-            </h3>
-            <Badge variant="secondary">{completed.length}</Badge>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {completed.map((run) => (
-              <div
-                key={run.run_id}
-                className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700"
-              >
-                <div className="mb-2 flex flex-wrap gap-2">
-                  <Badge>{run.job_role_slug?.replace(/_/g, " ")}</Badge>
-                  {run.verdict && (
-                    <Badge variant="outline">
-                      {run.verdict.replace(/_/g, " ")}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm font-semibold text-[#111827] dark:text-white">
-                  {run.pipeline?.name || "Completed Simulation"}
-                </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {Math.round(run.job_readiness_score ?? 0)}% readiness
-                </p>
-                <Button className="mt-4 w-full gap-2" size="sm" variant="outline" asChild>
-                  <Link href={`/dashboard/student/simulations/report?run_id=${run.run_id}`}>
-                    <FileBarChart className="h-4 w-4" />
-                    View report
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

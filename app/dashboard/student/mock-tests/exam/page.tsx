@@ -1,15 +1,21 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { McqExamView } from '@/components/exam/McqExamView';
+import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import { useExamFullscreen } from '@/hooks/useExamFullscreen';
+import { useExamCamera } from '@/hooks/useExamCamera';
+import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { apiClient } from '@/lib/api';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Camera, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+type ExamPhase = 'camera_setup' | 'exam' | 'completed';
 
 export default function MockTestExamPage() {
   const searchParams = useSearchParams();
@@ -24,16 +30,77 @@ export default function MockTestExamPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState<ExamPhase>('camera_setup');
   const startTime = useRef(Date.now());
   const questionTimes = useRef<Record<string, number>>({});
   const currentQ = useRef<string | null>(null);
-  const { isFullscreen, toggleFullscreen } = useExamFullscreen({ autoEnter: true });
+  const { isFullscreen, toggleFullscreen } = useExamFullscreen({
+    autoEnter: phase === 'exam',
+  });
+  const examCamera = useExamCamera();
+
+  const serverCapturedIndexes = useMemo(() => {
+    const snaps = attempt?.proctoring_snapshots;
+    if (!Array.isArray(snaps)) return [];
+    return snaps
+      .map((s: { index?: number }) => s?.index)
+      .filter((n: unknown): n is number => typeof n === 'number');
+  }, [attempt?.proctoring_snapshots]);
+
+  const onUploadSnapshot = useCallback(
+    async (snapshotIndex: number, blob: Blob) => {
+      if (!attemptId) return;
+      await apiClient.uploadMockTestProctoringSnapshot(attemptId, snapshotIndex, blob);
+    },
+    [attemptId],
+  );
+
+  const { runCaptureCheck, captureNow } = useProctorSnapshots({
+    enabled: phase === 'exam' && !!attemptId,
+    attemptId,
+    getVideoElement: examCamera.getVideoElement,
+    isCameraActive: examCamera.isCameraActive,
+    startedAtIso: attempt?.started_at ?? null,
+    overallTimeRemainingSeconds: timeLeft,
+    onUpload: onUploadSnapshot,
+    serverCapturedIndexes,
+  });
+
+  const runCaptureCheckRef = useRef(runCaptureCheck);
+  const captureNowRef = useRef(captureNow);
+  runCaptureCheckRef.current = runCaptureCheck;
+  captureNowRef.current = captureNow;
+
+  useEffect(() => {
+    if (phase !== 'exam' || !attemptId || !examCamera.isCameraActive) return;
+    const delays = [4_000, 12_000, 22_000, 35_000];
+    const timers = delays.map((ms) =>
+      setTimeout(() => void runCaptureCheckRef.current(), ms),
+    );
+    const early = [
+      setTimeout(() => captureNowRef.current(1), 3_000),
+      setTimeout(() => captureNowRef.current(2), 15_000),
+    ];
+    return () => {
+      timers.forEach(clearTimeout);
+      early.forEach(clearTimeout);
+    };
+  }, [phase, attemptId, examCamera.isCameraActive]);
+
+  useEffect(() => {
+    if (phase === 'completed' || attempt?.status === 'COMPLETED') {
+      examCamera.stopCamera();
+    }
+  }, [phase, attempt?.status, examCamera.stopCamera]);
 
   const load = useCallback(async () => {
     if (!attemptId) return;
     const data = await apiClient.getMockTestAttempt(attemptId);
     setAttempt(data);
-    if (data.status === 'COMPLETED') return;
+    if (data.status === 'COMPLETED') {
+      setPhase('completed');
+      return;
+    }
     if (data.expires_at) {
       const ms = new Date(data.expires_at).getTime() - Date.now();
       setTimeLeft(Math.max(0, Math.floor(ms / 1000)));
@@ -48,6 +115,15 @@ export default function MockTestExamPage() {
     load().finally(() => setLoading(false));
   }, [attemptId, load, router]);
 
+  const handleBeginExam = async () => {
+    if (!examCamera.isCameraActive) {
+      const ok = await examCamera.startCamera();
+      if (!ok) return;
+    }
+    startTime.current = Date.now();
+    setPhase('exam');
+  };
+
   const submit = useCallback(async () => {
     if (!attemptId || submitting) return;
     setSubmitting(true);
@@ -58,6 +134,8 @@ export default function MockTestExamPage() {
         time_taken_seconds: Math.floor((Date.now() - startTime.current) / 1000),
       });
       setAttempt(result);
+      setPhase('completed');
+      examCamera.stopCamera();
       if (driveAttemptId && driveStageIndex != null) {
         const driveAlreadyAdvanced =
           result.drive_advanced || Boolean(result.drive_attempt);
@@ -90,17 +168,27 @@ export default function MockTestExamPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [attemptId, answers, submitting, driveAttemptId, driveStageIndex, simulationRunId, simulationStageIndex, router]);
+  }, [
+    attemptId,
+    answers,
+    submitting,
+    driveAttemptId,
+    driveStageIndex,
+    simulationRunId,
+    simulationStageIndex,
+    router,
+    examCamera,
+  ]);
 
   useEffect(() => {
-    if (timeLeft === null || attempt?.status === 'COMPLETED') return;
+    if (timeLeft === null || attempt?.status === 'COMPLETED' || phase !== 'exam') return;
     if (timeLeft <= 0) {
       submit();
       return;
     }
     const t = setTimeout(() => setTimeLeft((s) => (s !== null ? s - 1 : null)), 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, attempt?.status, submit]);
+  }, [timeLeft, attempt?.status, submit, phase]);
 
   const selectAnswer = (qid: string, opt: string) => {
     if (currentQ.current && currentQ.current !== qid) {
@@ -128,7 +216,7 @@ export default function MockTestExamPage() {
     );
   }
 
-  if (attempt?.status === 'COMPLETED') {
+  if (phase === 'completed' || attempt?.status === 'COMPLETED') {
     const backHref = driveAttemptId
       ? `/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`
       : simulationRunId
@@ -216,6 +304,57 @@ export default function MockTestExamPage() {
     );
   }
 
+  if (phase === 'camera_setup') {
+    return (
+      <DashboardLayout requiredUserType="student" hideNavigation>
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4">
+          <div className="w-full max-w-lg space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand-blue dark:bg-brand-blue/15">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Camera required
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This mock test is proctored. Enable your webcam before starting.
+                  Snapshots are captured silently during the exam.
+                </p>
+              </div>
+            </div>
+
+            <ExamCameraPanel
+              variant="setup"
+              videoRef={examCamera.videoRef}
+              status={examCamera.status}
+              onEnableCamera={examCamera.startCamera}
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => router.push('/dashboard/student/mock-tests')}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="mockPrimary"
+                className="gap-2 rounded-xl"
+                disabled={!examCamera.isCameraActive || examCamera.isCameraPending}
+                onClick={() => void handleBeginExam()}
+              >
+                <Camera className="h-4 w-4" />
+                {examCamera.isCameraActive ? 'Start Test' : 'Enable camera to continue'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const questions = (attempt?.questions || []).map((q: any) => ({
     id: q.id,
     question_text: q.question_text,
@@ -231,7 +370,17 @@ export default function MockTestExamPage() {
 
   return (
     <DashboardLayout requiredUserType="student" hideNavigation>
-      <div className="h-[calc(100vh-5rem)] min-h-0">
+      <div className="relative h-[calc(100vh-5rem)] min-h-0">
+        <ExamCameraPanel
+          variant="floating"
+          videoRef={examCamera.videoRef}
+          status={examCamera.status}
+          onEnableCamera={async () => {
+            const ok = await examCamera.startCamera();
+            if (!ok) toast.error('Camera is required for this mock test.');
+          }}
+          className="!bottom-auto !left-auto top-20 right-4"
+        />
         <McqExamView
           title={attempt?.template?.title || 'Mock Test'}
           subtitle={subtitleParts.join(' · ') || undefined}

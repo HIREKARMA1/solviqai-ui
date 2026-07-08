@@ -171,10 +171,9 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                     />
                 </div>
 
-                {/* Main Content */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 overflow-y-auto min-h-0",
+                        "flex-1 transition-all duration-300 overflow-y-auto overflow-x-hidden min-h-0",
                         hideNavigation
                             ? "p-0" // No padding in fullscreen
                             : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile top navbar

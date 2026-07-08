@@ -1403,6 +1403,21 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadMockTestProctoringSnapshot(
+    attemptId: string,
+    snapshotIndex: number,
+    imageBlob: Blob
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('snapshot_index', String(snapshotIndex));
+    formData.append('file', imageBlob, `snapshot_${snapshotIndex}.jpg`);
+    const response: AxiosResponse = await this.client.post(
+      `/mock-tests/attempts/${attemptId}/proctoring/snapshots`,
+      formData
+    );
+    return response.data;
+  }
+
   // Resume gap engine (Phase 3)
   async getResumeGapVersions(): Promise<{ versions: any[] }> {
     const response: AxiosResponse = await this.client.get('/students/resume-gaps/versions');
@@ -1803,6 +1818,25 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadPlacementDriveProctoringSnapshot(
+    attemptId: string,
+    snapshotIndex: number,
+    imageBlob: Blob,
+    stageIndex?: number
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('snapshot_index', String(snapshotIndex));
+    formData.append('file', imageBlob, `snapshot_${snapshotIndex}.jpg`);
+    if (stageIndex != null) {
+      formData.append('stage_index', String(stageIndex));
+    }
+    const response: AxiosResponse = await this.client.post(
+      `/placement-drives/attempts/${attemptId}/proctoring/snapshots`,
+      formData
+    );
+    return response.data;
+  }
+
   async completePlacementDriveStage(attemptId: string, data: {
     stage_index: number;
     score: number;
@@ -1999,6 +2033,40 @@ class ApiClient {
 
   async completeMockInterview(sessionId: string, force = false): Promise<any> {
     const response: AxiosResponse = await this.client.post(`/mock-interviews/${sessionId}/complete`, { force });
+    return response.data;
+  }
+
+  async uploadMockInterviewProctoringSnapshot(
+    sessionId: string,
+    snapshotIndex: number,
+    imageBlob: Blob
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('snapshot_index', String(snapshotIndex));
+    formData.append('file', imageBlob, `snapshot_${snapshotIndex}.jpg`);
+    const response: AxiosResponse = await this.client.post(
+      `/mock-interviews/${sessionId}/proctoring/snapshots`,
+      formData
+    );
+    return response.data;
+  }
+
+  async uploadSimulationProctoringSnapshot(
+    runId: string,
+    snapshotIndex: number,
+    imageBlob: Blob,
+    stageIndex?: number
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('snapshot_index', String(snapshotIndex));
+    formData.append('file', imageBlob, `snapshot_${snapshotIndex}.jpg`);
+    if (stageIndex != null) {
+      formData.append('stage_index', String(stageIndex));
+    }
+    const response: AxiosResponse = await this.client.post(
+      `/simulations/runs/${runId}/proctoring/snapshots`,
+      formData
+    );
     return response.data;
   }
 

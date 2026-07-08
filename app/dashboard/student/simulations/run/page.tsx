@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
+import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import { apiClient } from '@/lib/api';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
 import { SimulationCodingRound } from '@/components/simulation/SimulationCodingRound';
@@ -14,8 +15,20 @@ import { SimulationGroupDiscussion } from '@/components/simulation/SimulationGro
 import { SimulationSalesRoleplay } from '@/components/simulation/SimulationSalesRoleplay';
 import { SimulationWrittenStage } from '@/components/simulation/SimulationWrittenStage';
 import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
+import { useExamCamera } from '@/hooks/useExamCamera';
+import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { isEmbeddedExamStage } from '@/lib/examStageTypes';
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileBarChart, Layers } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  CheckCircle2,
+  FileBarChart,
+  Layers,
+  Shield,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 
 function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'culture_fit' {
   const p = runner.persona;
@@ -24,6 +37,8 @@ function interviewPersona(runner: { persona?: string }): 'technical' | 'hr' | 'c
   return 'technical';
 }
 
+type SimPhase = 'camera_setup' | 'active';
+
 export default function SimulationRunPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -31,6 +46,67 @@ export default function SimulationRunPage() {
   const [run, setRun] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [startingMcq, setStartingMcq] = useState(false);
+  const [phase, setPhase] = useState<SimPhase>('camera_setup');
+  const examCamera = useExamCamera();
+
+  const serverCapturedIndexes = useMemo(() => {
+    const snaps = run?.proctoring_snapshots;
+    if (!Array.isArray(snaps)) return [];
+    return snaps
+      .map((s: { index?: number }) => s?.index)
+      .filter((n: unknown): n is number => typeof n === 'number');
+  }, [run?.proctoring_snapshots]);
+
+  const onUploadSnapshot = useCallback(
+    async (snapshotIndex: number, blob: Blob) => {
+      if (!runId) return;
+      await apiClient.uploadSimulationProctoringSnapshot(
+        runId,
+        snapshotIndex,
+        blob,
+        run?.current_stage_index,
+      );
+    },
+    [runId, run?.current_stage_index],
+  );
+
+  const { runCaptureCheck, captureNow } = useProctorSnapshots({
+    enabled: phase === 'active' && !!runId && run?.status === 'IN_PROGRESS',
+    attemptId: runId,
+    getVideoElement: examCamera.getVideoElement,
+    isCameraActive: examCamera.isCameraActive,
+    startedAtIso: run?.started_at ?? null,
+    overallTimeRemainingSeconds: null,
+    onUpload: onUploadSnapshot,
+    serverCapturedIndexes,
+  });
+
+  const runCaptureCheckRef = useRef(runCaptureCheck);
+  const captureNowRef = useRef(captureNow);
+  runCaptureCheckRef.current = runCaptureCheck;
+  captureNowRef.current = captureNow;
+
+  useEffect(() => {
+    if (phase !== 'active' || !runId || !examCamera.isCameraActive) return;
+    const delays = [4_000, 12_000, 22_000, 35_000];
+    const timers = delays.map((ms) =>
+      setTimeout(() => void runCaptureCheckRef.current(), ms),
+    );
+    const early = [
+      setTimeout(() => captureNowRef.current(1), 3_000),
+      setTimeout(() => captureNowRef.current(2), 15_000),
+    ];
+    return () => {
+      timers.forEach(clearTimeout);
+      early.forEach(clearTimeout);
+    };
+  }, [phase, runId, examCamera.isCameraActive]);
+
+  useEffect(() => {
+    if (run?.status === 'COMPLETED') {
+      examCamera.stopCamera();
+    }
+  }, [run?.status, examCamera.stopCamera]);
 
   const refresh = useCallback(async () => {
     if (!runId) return;
@@ -47,6 +123,14 @@ export default function SimulationRunPage() {
       .catch(() => router.replace('/dashboard/student/simulations'))
       .finally(() => setLoading(false));
   }, [runId, refresh, router]);
+
+  const handleBeginSimulation = async () => {
+    if (!examCamera.isCameraActive) {
+      const ok = await examCamera.startCamera();
+      if (!ok) return;
+    }
+    setPhase('active');
+  };
 
   const startMcqStage = async () => {
     if (!runId) return;
@@ -143,6 +227,55 @@ export default function SimulationRunPage() {
     );
   }
 
+  if (phase === 'camera_setup') {
+    return (
+      <DashboardLayout requiredUserType="student" hideNavigation>
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4">
+          <div className="w-full max-w-lg space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand-blue dark:bg-brand-blue/15">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Camera required</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This job-prep simulation is proctored. Enable your webcam before continuing.
+                  Snapshots are captured silently during stages such as Group Discussion and
+                  interviews.
+                </p>
+              </div>
+            </div>
+
+            <ExamCameraPanel
+              variant="setup"
+              videoRef={examCamera.videoRef}
+              status={examCamera.status}
+              onEnableCamera={examCamera.startCamera}
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => router.push('/dashboard/student/simulations')}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="gap-2 rounded-xl"
+                disabled={!examCamera.isCameraActive || examCamera.isCameraPending}
+                onClick={() => void handleBeginSimulation()}
+              >
+                <Camera className="h-4 w-4" />
+                {examCamera.isCameraActive ? 'Continue to Simulation' : 'Enable camera to continue'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const stage = run.current_stage;
   const runner = run.stage_runner || {};
   const stageNum = run.current_stage_index + 1;
@@ -201,6 +334,18 @@ export default function SimulationRunPage() {
     </>
   );
 
+  const floatingCamera = (
+    <ExamCameraPanel
+      variant="floating"
+      videoRef={examCamera.videoRef}
+      status={examCamera.status}
+      onEnableCamera={async () => {
+        const ok = await examCamera.startCamera();
+        if (!ok) toast.error('Camera is required for this simulation.');
+      }}
+    />
+  );
+
   if (isEmbeddedExamStage(runner.type)) {
     return (
       <ExamFocusShell
@@ -208,6 +353,7 @@ export default function SimulationRunPage() {
         subtitle={stage?.title ? `${stage.title} — ${stage.stage_type?.replace(/_/g, ' ')}` : undefined}
         stageLabel={`Stage ${stageNum} of ${run.total_stages}`}
       >
+        {floatingCamera}
         <div className="h-full overflow-y-auto p-4 md:p-6">{stageBody}</div>
       </ExamFocusShell>
     );
@@ -215,6 +361,7 @@ export default function SimulationRunPage() {
 
   return (
     <DashboardLayout requiredUserType="student">
+      {floatingCamera}
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         <Button variant="ghost" size="sm" className="gap-2 -ml-2" asChild>
           <Link href="/dashboard/student/simulations">

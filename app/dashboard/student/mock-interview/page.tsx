@@ -1,28 +1,111 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { MockInterviewRoom } from '@/components/interview/MockInterviewRoom';
 import { MockInterviewLanding } from '@/components/interview/MockInterviewLanding';
 import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
+import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BarChart3, RotateCcw, Star } from 'lucide-react';
+import { useExamCamera } from '@/hooks/useExamCamera';
+import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
+import { apiClient } from '@/lib/api';
+import { ArrowLeft, BarChart3, Camera, RotateCcw, Shield, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+type Phase = 'setup' | 'camera' | 'interview' | 'report';
 
 export default function StandaloneMockInterviewPage() {
   const [targetRole, setTargetRole] = useState('Software Engineer');
   const [company, setCompany] = useState('');
   const [persona, setPersona] = useState<'technical' | 'hr'>('technical');
-  const [started, setStarted] = useState(false);
+  const [phase, setPhase] = useState<Phase>('setup');
   const [report, setReport] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [serverCapturedIndexes, setServerCapturedIndexes] = useState<number[]>([]);
+  const [startedAtIso, setStartedAtIso] = useState<string | null>(null);
+  const examCamera = useExamCamera();
+
+  const onUploadSnapshot = useCallback(
+    async (snapshotIndex: number, blob: Blob) => {
+      if (!sessionId) return;
+      await apiClient.uploadMockInterviewProctoringSnapshot(sessionId, snapshotIndex, blob);
+    },
+    [sessionId],
+  );
+
+  const { runCaptureCheck, captureNow } = useProctorSnapshots({
+    enabled: phase === 'interview' && !!sessionId,
+    attemptId: sessionId,
+    getVideoElement: examCamera.getVideoElement,
+    isCameraActive: examCamera.isCameraActive,
+    startedAtIso,
+    overallTimeRemainingSeconds: null,
+    onUpload: onUploadSnapshot,
+    serverCapturedIndexes,
+  });
+
+  const runCaptureCheckRef = useRef(runCaptureCheck);
+  const captureNowRef = useRef(captureNow);
+  runCaptureCheckRef.current = runCaptureCheck;
+  captureNowRef.current = captureNow;
+
+  useEffect(() => {
+    if (phase !== 'interview' || !sessionId || !examCamera.isCameraActive) return;
+    const delays = [4_000, 12_000, 22_000, 35_000];
+    const timers = delays.map((ms) =>
+      setTimeout(() => void runCaptureCheckRef.current(), ms),
+    );
+    const early = [
+      setTimeout(() => captureNowRef.current(1), 3_000),
+      setTimeout(() => captureNowRef.current(2), 15_000),
+    ];
+    return () => {
+      timers.forEach(clearTimeout);
+      early.forEach(clearTimeout);
+    };
+  }, [phase, sessionId, examCamera.isCameraActive]);
+
+  useEffect(() => {
+    if (phase === 'report' || phase === 'setup') {
+      examCamera.stopCamera();
+    }
+  }, [phase, examCamera.stopCamera]);
 
   const resetFlow = () => {
-    setStarted(false);
+    examCamera.stopCamera();
+    setPhase('setup');
     setReport(null);
+    setSessionId(null);
+    setServerCapturedIndexes([]);
+    setStartedAtIso(null);
   };
 
-  if (report) {
+  const handleBeginFromLanding = () => setPhase('camera');
+
+  const handleBeginInterview = async () => {
+    if (!examCamera.isCameraActive) {
+      const ok = await examCamera.startCamera();
+      if (!ok) return;
+    }
+    setStartedAtIso(new Date().toISOString());
+    setPhase('interview');
+  };
+
+  const handleSessionReady = useCallback((id: string) => {
+    setSessionId(id);
+    setStartedAtIso((prev) => prev || new Date().toISOString());
+  }, []);
+
+  const handleInterviewComplete = useCallback(async (r: any) => {
+    setReport(r);
+    setPhase('report');
+    examCamera.stopCamera();
+  }, [examCamera]);
+
+  if (phase === 'report' && report) {
     const score = report.overall_score ?? report.report?.overall_score ?? 0;
     const summary = report.report?.summary || report.summary || 'Interview completed.';
     const isFallback = report.ai_mode === 'fallback' || report.report?.ai_mode === 'fallback';
@@ -77,18 +160,72 @@ export default function StandaloneMockInterviewPage() {
     );
   }
 
-  if (started) {
+  if (phase === 'camera') {
+    return (
+      <DashboardLayout requiredUserType="student" hideNavigation>
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4">
+          <div className="w-full max-w-lg space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand-blue dark:bg-brand-blue/15">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Camera required</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This AI interview is proctored. Enable your webcam before beginning. Snapshots are
+                  captured silently during the session.
+                </p>
+              </div>
+            </div>
+
+            <ExamCameraPanel
+              variant="setup"
+              videoRef={examCamera.videoRef}
+              status={examCamera.status}
+              onEnableCamera={examCamera.startCamera}
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" className="rounded-xl" onClick={resetFlow}>
+                Cancel
+              </Button>
+              <Button
+                className="gap-2 rounded-xl"
+                disabled={!examCamera.isCameraActive || examCamera.isCameraPending}
+                onClick={() => void handleBeginInterview()}
+              >
+                <Camera className="h-4 w-4" />
+                {examCamera.isCameraActive ? 'Begin Interview' : 'Enable camera to continue'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (phase === 'interview') {
     return (
       <ExamFocusShell
         title="AI Mock Interview"
         subtitle={`${persona === 'hr' ? 'HR' : 'Technical'} · ${targetRole}${company ? ` · ${company}` : ''}`}
       >
+        <ExamCameraPanel
+          variant="floating"
+          videoRef={examCamera.videoRef}
+          status={examCamera.status}
+          onEnableCamera={async () => {
+            const ok = await examCamera.startCamera();
+            if (!ok) toast.error('Camera is required for this interview.');
+          }}
+        />
         <div className="h-full overflow-y-auto p-4 md:p-6">
           <MockInterviewRoom
             persona={persona}
             targetRole={targetRole}
             company={company || undefined}
-            onComplete={(r) => setReport(r)}
+            onSessionReady={handleSessionReady}
+            onComplete={handleInterviewComplete}
           />
         </div>
       </ExamFocusShell>
@@ -112,7 +249,7 @@ export default function StandaloneMockInterviewPage() {
             onTargetRoleChange={setTargetRole}
             onCompanyChange={setCompany}
             onPersonaChange={setPersona}
-            onBegin={() => setStarted(true)}
+            onBegin={handleBeginFromLanding}
           />
         </div>
       </div>
