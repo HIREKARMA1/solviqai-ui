@@ -930,9 +930,15 @@ class ApiClient {
 
   // Career Guidance API
   careerGuidance = {
+    getProgress: async (): Promise<any> => {
+      const response = await this.client.get("/career-guidance/progress");
+      return response.data;
+    },
+
     startSession: async (data: {
       resume_included: boolean;
       preferred_language: string;
+      force_new?: boolean;
     }): Promise<any> => {
       const response = await this.client.post("/career-guidance/start", data);
       return response.data;
@@ -970,6 +976,26 @@ class ApiClient {
     const response = await this.client.get(
       `/career-guidance/session/${sessionId}/playlist`,
     );
+    return response.data;
+  }
+
+  async getGPSRecommendations(): Promise<any> {
+    const response = await this.client.get("/career-guidance/gps/recommend");
+    return response.data;
+  }
+
+  async refreshGPSRecommendations(): Promise<any> {
+    const response = await this.client.post("/career-guidance/gps/recommend/refresh");
+    return response.data;
+  }
+
+  async getAICareerTwin(): Promise<any> {
+    const response = await this.client.get("/career-guidance/twin");
+    return response.data;
+  }
+
+  async chatWithCareerTwin(data: { message: string; play_voice: boolean }): Promise<any> {
+    const response = await this.client.post("/career-guidance/twin/chat", data);
     return response.data;
   }
 

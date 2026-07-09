@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Lock, ArrowLeft } from "lucide-react"
+import { Lock, ArrowLeft, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -38,15 +38,26 @@ export default function SubscriptionRequiredModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-20 flex items-center justify-center p-4 bg-white/60 dark:bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/60 dark:bg-black/60 backdrop-blur-md"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="flex flex-col items-center justify-center text-center max-w-lg mx-auto"
+            className="relative flex flex-col items-center justify-center text-center max-w-lg mx-auto bg-white dark:bg-[#1C2938] border border-gray-200 dark:border-gray-700 p-8 rounded-2xl shadow-2xl"
           >
+            {/* Close Button Icon */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+
             {/* Lock Icon */}
             <motion.div
               initial={{ scale: 0, rotate: -20 }}
@@ -63,23 +74,33 @@ export default function SubscriptionRequiredModal({
             {/* Text Content */}
             <div className="space-y-2 mb-8">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                Subscription Required
+                {title}
               </h3>
               <p className="text-base font-medium text-gray-600 dark:text-gray-300 max-w-xs mx-auto">
                 Upgrade your plan to access <span className="text-blue-600 dark:text-blue-400">{feature}</span>.
               </p>
             </div>
 
-            {/* Minimal Actions */}
+            {/* Actions */}
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => router.back()}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Go Back
-              </Button>
+              {onClose ? (
+                <Button 
+                  variant="ghost" 
+                  onClick={onClose}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 rounded-full px-6"
+                >
+                  Maybe Later
+                </Button>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => router.back()}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 rounded-full"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Go Back
+                </Button>
+              )}
               <Button 
                 onClick={() => {
                   window.location.href = "/dashboard/student/plans"

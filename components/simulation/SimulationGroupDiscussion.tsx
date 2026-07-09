@@ -171,18 +171,26 @@ export function SimulationGroupDiscussion({
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
   }, [turns, openingAgents, answer]);
 
-  const { isListening, start, stop, reset, partial } = useTranscription({
-    onFinal: (text) => setAnswer((prev) => (prev ? `${prev} ${text}` : text)),
+  const initialTextRef = useRef('');
+
+  const { isListening, start, stop, reset, partial, finalized } = useTranscription({
+    onFinal: () => {},
   });
 
   useEffect(() => {
-    if (partial && isListening) {
-      setAnswer((prev) => {
-        const base = prev.split('…')[0] || prev;
-        return `${base} ${partial}`.trim();
+    if (isListening) {
+      initialTextRef.current = answer;
+    }
+  }, [isListening]);
+
+  useEffect(() => {
+    if (isListening) {
+      const addedText = (finalized + ' ' + partial).trim();
+      setAnswer(() => {
+        return initialTextRef.current ? `${initialTextRef.current} ${addedText}`.trim() : addedText;
       });
     }
-  }, [partial, isListening]);
+  }, [finalized, partial, isListening]);
 
   const handleMicDown = () => {
     holdMicRef.current = true;
