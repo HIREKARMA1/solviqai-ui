@@ -729,7 +729,7 @@ export function SimulationLibrary({
                       Start a simulation pipeline from your target role.
                     </p>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="info">
                     {hasActiveFilters
                       ? `${rolesToShow.length} of ${roles.length} roles`
                       : `${roles.length} roles`}
@@ -889,7 +889,7 @@ function PastSimulationsPanel({
           <h3 className="text-base font-bold text-[#111827] dark:text-white">
             Past Simulations
           </h3>
-          <Badge variant="secondary">{completed.length}</Badge>
+          <Badge variant="info">{completed.length}</Badge>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {completed.map((run) => (

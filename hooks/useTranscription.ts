@@ -16,13 +16,31 @@ export function useTranscription(options: UseTranscriptionOptions = {}) {
   const [partial, setPartial] = useState('');
   const [finalized, setFinalized] = useState('');
   const [confidence, setConfidence] = useState(100);
+  
   const recognitionRef = useRef<any>(null);
   const lastEmitRef = useRef<number>(0);
+  const isListeningRef = useRef(false);
+  
+  const onPartialRef = useRef(onPartial);
+  const onFinalRef = useRef(onFinal);
+
+  useEffect(() => {
+    onPartialRef.current = onPartial;
+  }, [onPartial]);
+
+  useEffect(() => {
+    onFinalRef.current = onFinal;
+  }, [onFinal]);
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
+
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -41,9 +59,9 @@ export function useTranscription(options: UseTranscriptionOptions = {}) {
       if (interim) {
         setPartial(interim);
         const now = Date.now();
-        if (onPartial && now - lastEmitRef.current >= emitEveryMs) {
+        if (onPartialRef.current && now - lastEmitRef.current >= emitEveryMs) {
           lastEmitRef.current = now;
-          onPartial(interim);
+          onPartialRef.current(interim);
         }
       } else {
         setPartial('');
@@ -51,15 +69,18 @@ export function useTranscription(options: UseTranscriptionOptions = {}) {
       if (finalText) {
         setFinalized((prev) => prev + finalText);
         setConfidence(Math.round((conf || 1.0) * 100));
-        onFinal && onFinal(finalText.trim());
+        if (onFinalRef.current) {
+          onFinalRef.current(finalText.trim());
+        }
       }
     };
 
     recognition.onerror = () => {
       setIsListening(false);
     };
+
     recognition.onend = () => {
-      if (isListening && enabled) {
+      if (isListeningRef.current && enabled) {
         try {
           recognition.start();
         } catch {}
@@ -67,13 +88,14 @@ export function useTranscription(options: UseTranscriptionOptions = {}) {
     };
 
     recognitionRef.current = recognition;
+
     return () => {
       try {
         recognition.stop();
       } catch {}
       recognitionRef.current = null;
     };
-  }, [language, emitEveryMs, onPartial, onFinal, isListening, enabled]);
+  }, [language, emitEveryMs, enabled]);
 
   useEffect(() => {
     if (!recognitionRef.current) return;

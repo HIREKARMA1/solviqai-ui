@@ -59,12 +59,60 @@ export function MockInterviewRoom({
   } | null>(null);
   const completingRef = useRef(false);
 
-  const speak = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.95;
-    window.speechSynthesis.speak(u);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastAudioRef = useRef<string | null>(null);
+
+  const speak = useCallback((text: string, base64Audio?: string) => {
+    if (typeof window === 'undefined') return;
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    if (base64Audio) {
+      lastAudioRef.current = base64Audio;
+      try {
+        const audioSrc = `data:audio/wav;base64,${base64Audio}`;
+        const audio = new Audio(audioSrc);
+        audioRef.current = audio;
+        audio.play().catch((err) => {
+          console.warn("Failed to play Sarvam base64 audio, falling back to synthesis:", err);
+          if (window.speechSynthesis) {
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 0.95;
+            window.speechSynthesis.speak(u);
+          }
+        });
+      } catch (err) {
+        console.warn("Error playing base64 audio, fallback to speech synthesis:", err);
+        if (window.speechSynthesis) {
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = 0.95;
+          window.speechSynthesis.speak(u);
+        }
+      }
+    } else {
+      if (!window.speechSynthesis) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, []);
 
   const { isListening, start, stop, reset, partial } = useTranscription({
@@ -106,7 +154,7 @@ export function MockInterviewRoom({
             data.fallback_reason || 'AI interviewer API unavailable — using demo interview mode.',
           );
         }
-        if (data.interviewer_message) speak(data.interviewer_message);
+        if (data.interviewer_message) speak(data.interviewer_message, data.interviewer_audio);
       } catch (e: any) {
         setError(e?.response?.data?.detail || 'Could not start interview');
       } finally {
@@ -160,7 +208,7 @@ export function MockInterviewRoom({
         });
         return;
       }
-      if (data.interviewer_message) speak(data.interviewer_message);
+      if (data.interviewer_message) speak(data.interviewer_message, data.interviewer_audio);
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Failed to send answer');
     } finally {
@@ -298,7 +346,7 @@ export function MockInterviewRoom({
           variant="outline"
           onClick={() => {
             const last = [...messages].reverse().find((m) => m.role === 'assistant');
-            if (last) speak(last.content);
+            if (last) speak(last.content, lastAudioRef.current || undefined);
           }}
         >
           <Volume2 className="h-4 w-4 mr-2" /> Replay question

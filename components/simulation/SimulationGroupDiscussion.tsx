@@ -16,7 +16,7 @@ type Props = {
 };
 
 type Persona = { name: string; style?: string; snippet?: string };
-type AgentMsg = { name: string; text: string; style?: string };
+type AgentMsg = { name: string; text: string; style?: string; voice?: string; audio?: string };
 type Turn = { user: string; agents: AgentMsg[]; type?: string };
 
 function parsePersonaName(full: string): string {
@@ -49,15 +49,74 @@ export function SimulationGroupDiscussion({
   const transcriptRef = useRef<HTMLDivElement>(null);
   const holdMicRef = useRef(false);
 
-  const speak = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    return new Promise<void>((resolve) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const speak = useCallback((text: string, base64Audio?: string) => {
+    if (typeof window === 'undefined') return Promise.resolve();
+
+    if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.95;
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
-      window.speechSynthesis.speak(u);
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    return new Promise<void>((resolve) => {
+      if (base64Audio) {
+        try {
+          const audioSrc = `data:audio/wav;base64,${base64Audio}`;
+          const audio = new Audio(audioSrc);
+          audioRef.current = audio;
+          audio.onended = () => resolve();
+          audio.onerror = () => {
+            console.warn("Failed decoding/playing audio file, falling back to speech synthesis");
+            if (window.speechSynthesis) {
+              const u = new SpeechSynthesisUtterance(text);
+              u.rate = 0.95;
+              u.onend = () => resolve();
+              u.onerror = () => resolve();
+              window.speechSynthesis.speak(u);
+            } else {
+              resolve();
+            }
+          };
+          audio.play().catch((err) => {
+            console.warn("Failed to play Sarvam base64 audio, falling back to synthesis:", err);
+            if (window.speechSynthesis) {
+              const u = new SpeechSynthesisUtterance(text);
+              u.rate = 0.95;
+              u.onend = () => resolve();
+              u.onerror = () => resolve();
+              window.speechSynthesis.speak(u);
+            } else {
+              resolve();
+            }
+          });
+        } catch (err) {
+          console.warn("Error setting up audio, fallback to speech synthesis:", err);
+          if (window.speechSynthesis) {
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 0.95;
+            u.onend = () => resolve();
+            u.onerror = () => resolve();
+            window.speechSynthesis.speak(u);
+          } else {
+            resolve();
+          }
+        }
+      } else {
+        if (!window.speechSynthesis) {
+          resolve();
+          return;
+        }
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.95;
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        window.speechSynthesis.speak(u);
+      }
     });
   }, []);
 
@@ -66,12 +125,23 @@ export function SimulationGroupDiscussion({
       for (const agent of agents) {
         const label = parsePersonaName(agent.name);
         setActiveSpeaker(label);
-        if (agent.text) await speak(agent.text);
+        if (agent.text) await speak(agent.text, agent.audio);
       }
       setActiveSpeaker(null);
     },
     [speak]
   );
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const hydrateSession = useCallback(
     async (data: any, playOpening: boolean) => {
