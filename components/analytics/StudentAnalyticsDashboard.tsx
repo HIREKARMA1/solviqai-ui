@@ -350,7 +350,7 @@ export function StudentAnalyticsDashboard({
                       fillOpacity={isDark ? 0.35 : 0.25}
                       strokeWidth={2}
                     />
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v}%`, 'Score']} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(value: any) => [`${value}%`, 'Score']} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -453,7 +453,7 @@ export function StudentAnalyticsDashboard({
                   <CartesianGrid stroke={isDark ? '#374151' : '#e5e7eb'} vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: isDark ? '#D1D5DB' : '#374151', fontSize: 12 }} />
                   <YAxis allowDecimals={false} tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }} />
-                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [v, 'Count']} />
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={(value: any) => [value, 'Count']} />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={64}>
                     {funnelBarData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -525,7 +525,7 @@ export function StudentAnalyticsDashboard({
                     <CartesianGrid stroke={isDark ? '#374151' : '#e5e7eb'} vertical={false} />
                     <XAxis dataKey="category" tick={{ fill: isDark ? '#D1D5DB' : '#374151', fontSize: 11 }} />
                     <YAxis domain={[0, 100]} tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 10 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v}%`, 'Score']} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(value: any) => [`${value}%`, 'Score']} />
                     <Bar dataKey="score" fill={isDark ? '#7F56D9' : '#0068FC'} radius={[6, 6, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>

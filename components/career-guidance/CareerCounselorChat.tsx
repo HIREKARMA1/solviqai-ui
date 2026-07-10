@@ -44,7 +44,7 @@ interface CareerCounselorChatProps {
   onStartSession: () => void
   onStartFresh: () => void
   onUpgrade: () => void
-  messagesEndRef: React.RefObject<HTMLDivElement | null>
+  messagesEndRef: React.RefObject<HTMLDivElement>
   isDark: boolean
 }
 
