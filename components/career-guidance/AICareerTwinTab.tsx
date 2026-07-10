@@ -53,6 +53,25 @@ export default function AICareerTwinTab() {
 
   const initialTextRef = useRef('')
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const playVoiceRef = useRef(true)
+  const playingAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    playVoiceRef.current = playVoice
+  }, [playVoice])
+
+  useEffect(() => {
+    playingAudioRef.current = playingAudio
+  }, [playingAudio])
+
+  useEffect(() => {
+    return () => {
+      playingAudioRef.current?.pause()
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   const { isListening, start, stop, reset, partial, finalized } = useTranscription({
     onFinal: () => {}
@@ -91,6 +110,9 @@ export default function AICareerTwinTab() {
       const { apiClient } = await import('@/lib/api')
       const data = await apiClient.getAICareerTwin()
       setTwin(data)
+      const voiceOn = data.sound_enabled !== false
+      setPlayVoice(voiceOn)
+      playVoiceRef.current = voiceOn
       setChatHistory([
         {
           sender: 'twin',
@@ -120,7 +142,7 @@ export default function AICareerTwinTab() {
       const { apiClient } = await import('@/lib/api')
       const res = await apiClient.chatWithCareerTwin({
         message: currentInput,
-        play_voice: playVoice
+        play_voice: playVoiceRef.current
       })
 
       setChatHistory(prev => [
@@ -132,8 +154,7 @@ export default function AICareerTwinTab() {
         }
       ])
 
-      // If voice play is enabled and audio exists, play it
-      if (playVoice && res.audio) {
+      if (playVoiceRef.current && res.audio) {
         playBase64Audio(res.audio)
       }
     } catch (err) {
@@ -143,15 +164,47 @@ export default function AICareerTwinTab() {
     }
   }
 
-  const playBase64Audio = (base64Data: string) => {
+  const stopPlayingAudio = () => {
+    const current = playingAudioRef.current
+    if (current) {
+      current.pause()
+      current.currentTime = 0
+    }
+    setPlayingAudio(null)
+    playingAudioRef.current = null
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+  }
+
+  const togglePlayVoice = async () => {
+    const next = !playVoiceRef.current
+    playVoiceRef.current = next
+    setPlayVoice(next)
+    if (!next) {
+      stopPlayingAudio()
+    }
     try {
-      if (playingAudio) {
-        playingAudio.pause()
-      }
+      const { apiClient } = await import('@/lib/api')
+      await apiClient.updateCareerTwinSound(next)
+    } catch {
+      // Preference still applies locally even if save fails
+    }
+  }
+
+  const playBase64Audio = (base64Data: string) => {
+    if (!playVoiceRef.current) return
+    try {
+      stopPlayingAudio()
       const audioUrl = `data:audio/wav;base64,${base64Data}`
       const audio = new Audio(audioUrl)
+      audio.onended = () => {
+        setPlayingAudio(null)
+        playingAudioRef.current = null
+      }
       audio.play().catch(e => console.error('Audio play blocked or failed:', e))
       setPlayingAudio(audio)
+      playingAudioRef.current = audio
     } catch (err) {
       console.error('Failed to play audio:', err)
     }
@@ -322,10 +375,11 @@ export default function AICareerTwinTab() {
 
           {/* Voice toggle */}
           <Button
-            onClick={() => setPlayVoice(!playVoice)}
+            onClick={togglePlayVoice}
             variant="ghost"
             size="sm"
             className="flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs"
+            aria-pressed={playVoice}
           >
             {playVoice ? (
               <>
@@ -361,7 +415,7 @@ export default function AICareerTwinTab() {
                     }`}
                   >
                     <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                    {isTwin && msg.audio && (
+                    {isTwin && msg.audio && playVoice && (
                       <button
                         onClick={() => playBase64Audio(msg.audio!)}
                         className="mt-2 text-[#f58020] hover:text-[#d66d12] flex items-center gap-1 font-bold text-[10px]"

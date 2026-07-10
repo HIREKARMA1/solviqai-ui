@@ -136,7 +136,7 @@ export default function CareerGPSTab() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 text-[#1b52a4] dark:text-blue-400">
-            <TrendingUp className="h-6 w-6 text-[#f58020]" />
+            {/* <TrendingUp className="h-6 w-6 text-[#f58020]" /> */}
             Career GPS
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -175,18 +175,16 @@ export default function CareerGPSTab() {
                 >
                   <Card
                     onClick={() => setSelectedRouteId(route.id)}
-                    className={`cursor-pointer h-full transition-all duration-300 border-2 rounded-2xl overflow-hidden ${
-                      isSelected
+                    className={`cursor-pointer h-full transition-all duration-300 border-2 rounded-2xl overflow-hidden ${isSelected
                         ? 'border-[#1b52a4] bg-blue-50/20 dark:bg-blue-900/10 shadow-lg'
                         : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1E293B] hover:shadow-md'
-                    }`}
+                      }`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start gap-2">
                         <Badge
-                          className={`text-xs font-semibold px-2.5 py-1 ${
-                            isSelected ? 'bg-[#1b52a4] text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                          }`}
+                          className={`text-xs font-semibold px-2.5 py-1 ${isSelected ? 'bg-[#1b52a4] text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                            }`}
                         >
                           {route.match_percentage}% Match
                         </Badge>
@@ -235,31 +233,29 @@ export default function CareerGPSTab() {
                 {selectedRoute.route_phases.map((step, index) => {
                   const isCompleted = step.status === 'completed'
                   const isInProgress = step.status === 'in_progress'
-                  
+
                   return (
                     <React.Fragment key={step.step_index}>
                       {/* Step Card */}
                       <div className="flex-1 w-full max-w-[280px]">
                         <div
-                          className={`relative h-full rounded-2xl p-5 border-2 flex flex-col justify-between transition-all duration-300 shadow-sm ${
-                            isCompleted
+                          className={`relative h-full rounded-2xl p-5 border-2 flex flex-col justify-between transition-all duration-300 shadow-sm ${isCompleted
                               ? 'border-green-200 bg-green-50/30 dark:bg-green-950/15'
                               : isInProgress
-                              ? 'border-[#f58020] bg-orange-50/10 dark:bg-orange-950/10 shadow-md ring-2 ring-[#f58020]/20'
-                              : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1E293B]'
-                          }`}
+                                ? 'border-[#f58020] bg-orange-50/10 dark:bg-orange-950/10 shadow-md ring-2 ring-[#f58020]/20'
+                                : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1E293B]'
+                            }`}
                         >
                           <div>
                             {/* Step Badge & Duration */}
                             <div className="flex justify-between items-center mb-3">
                               <span
-                                className={`text-xs font-black w-6 h-6 rounded-full flex items-center justify-center ${
-                                  isCompleted
+                                className={`text-xs font-black w-6 h-6 rounded-full flex items-center justify-center ${isCompleted
                                     ? 'bg-green-500 text-white'
                                     : isInProgress
-                                    ? 'bg-[#f58020] text-white animate-pulse'
-                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
-                                }`}
+                                      ? 'bg-[#f58020] text-white animate-pulse'
+                                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                                  }`}
                               >
                                 {step.step_index}
                               </span>
@@ -283,13 +279,12 @@ export default function CareerGPSTab() {
                           {/* Phase Status Badge */}
                           <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/50 flex justify-between items-center">
                             <span
-                              className={`text-[10px] uppercase font-bold tracking-wider ${
-                                isCompleted
+                              className={`text-[10px] uppercase font-bold tracking-wider ${isCompleted
                                   ? 'text-green-600'
                                   : isInProgress
-                                  ? 'text-[#f58020]'
-                                  : 'text-gray-400'
-                              }`}
+                                    ? 'text-[#f58020]'
+                                    : 'text-gray-400'
+                                }`}
                             >
                               {step.status.replace('_', ' ')}
                             </span>

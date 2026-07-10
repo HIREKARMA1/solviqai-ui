@@ -999,6 +999,11 @@ class ApiClient {
     return response.data;
   }
 
+  async updateCareerTwinSound(enabled: boolean): Promise<{ sound_enabled: boolean }> {
+    const response = await this.client.patch("/career-guidance/twin/sound", { enabled });
+    return response.data;
+  }
+
   // Admin Analytics API
   async getAdminAnalytics(
     startDate?: string,

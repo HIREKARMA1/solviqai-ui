@@ -29,6 +29,7 @@ import CareerGPSTab from '@/components/career-guidance/CareerGPSTab';
 import AICareerTwinTab from '@/components/career-guidance/AICareerTwinTab';
 import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModal';
 import CareerModuleLocked from '@/components/career-guidance/CareerModuleLocked';
+import CareerCounselorChat from '@/components/career-guidance/CareerCounselorChat';
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
 import { AxiosError } from 'axios';
 import { useTheme } from 'next-themes';
@@ -116,10 +117,17 @@ export default function CareerGuidancePage() {
 
   const [showHistory, setShowHistory] = useState(false);
 
-  const loadSession = async (id: string, options?: { silent?: boolean }) => {
+  const loadSession = async (
+    id: string,
+    options?: { silent?: boolean; readOnly?: boolean },
+  ) => {
     try {
-      setIsInitializing(true);
-      setError(null);
+      if (!options?.silent) {
+        setIsInitializing(true);
+      }
+      if (!options?.readOnly) {
+        setError(null);
+      }
       setIsLimitReached(false);
       const data = await api.careerGuidance.getSession(id);
       setSessionId(data.session_id);
@@ -129,21 +137,30 @@ export default function CareerGuidancePage() {
       setCompletionPercentage(data.completion_percentage || 0);
       setCurrentStage(data.current_stage || 'introduction');
 
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      const sessionComplete = data.is_completed === 'completed';
+      if (!sessionComplete && !options?.readOnly) {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        connectSSE(data.session_id);
       }
-      connectSSE(data.session_id);
-      if (!options?.silent) {
+      if (!options?.silent && !sessionComplete) {
         toast.success('Session loaded successfully!');
       }
     } catch (e: any) {
       console.error('Failed to load session', e);
+      if (options?.readOnly) {
+        setSessionId(id);
+        return;
+      }
       const errorMessage = e.response?.data?.detail || 'Failed to load session';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setIsInitializing(false);
+      if (!options?.silent) {
+        setIsInitializing(false);
+      }
     }
   };
 
@@ -153,6 +170,7 @@ export default function CareerGuidancePage() {
       setError(null);
       const progress = await api.careerGuidance.getProgress();
       setCareerProgress(progress);
+      const counselingComplete = progress.counselor_status === 'completed';
 
       if (progress.active_session_id) {
         setNeedsCounselorStart(false);
@@ -162,13 +180,20 @@ export default function CareerGuidancePage() {
 
       if (progress.counselor_session_id) {
         setNeedsCounselorStart(false);
-        await loadSession(progress.counselor_session_id, { silent: true });
+        setSessionId(progress.counselor_session_id);
+        await loadSession(progress.counselor_session_id, {
+          silent: true,
+          readOnly: counselingComplete,
+        });
+        if (counselingComplete) {
+          setIsLimitReached(!progress.can_restart_counselor);
+        }
         return;
       }
 
       if (!progress.can_start_new_counselor) {
-        setIsLimitReached(!progress.can_restart_counselor && progress.counselor_status === 'completed');
-        if (progress.counselor_blocked_reason && progress.counselor_status !== 'completed') {
+        setIsLimitReached(!progress.can_restart_counselor && counselingComplete);
+        if (progress.counselor_blocked_reason && !counselingComplete) {
           setError(progress.counselor_blocked_reason);
         }
       }
@@ -528,14 +553,6 @@ export default function CareerGuidancePage() {
     }
   };
 
-  const handleRetry = () => {
-    if (sessionId) {
-      connectSSE(sessionId);
-    } else {
-      startSession();
-    }
-  };
-
   // Scroll when typing indicator appears
   useEffect(() => {
     if (isTyping) {
@@ -572,6 +589,19 @@ export default function CareerGuidancePage() {
   const stageInfo = getStageInfo(currentStage);
   const moduleAccess = careerProgress?.module_access ?? { counselor: true };
   const counselorComplete = careerProgress?.counselor_status === 'completed';
+  const counselorSessionId = careerProgress?.counselor_session_id ?? sessionId;
+
+  const handleRetry = () => {
+    if (counselorComplete) {
+      void hydrateFromProgress();
+      return;
+    }
+    if (sessionId) {
+      connectSSE(sessionId);
+    } else {
+      void startSession();
+    }
+  };
 
   const isTabLocked = (tab: string) => tab !== 'counselor' && !moduleAccess[tab];
 
@@ -635,43 +665,114 @@ export default function CareerGuidancePage() {
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="space-y-3 sm:space-y-6 px-3 sm:px-4 md:px-6 pt-24 sm:pt-28 lg:pt-0 pb-6 sm:pb-8">
-        {/* Header - responsive: min-height on small, fixed on lg; padding scales */}
-        <motion.div
-          className="relative overflow-hidden w-full rounded-xl sm:rounded-[16px] text-gray-900 dark:text-white flex flex-col items-start justify-center text-left py-3 px-3 sm:py-[14px] sm:px-[10px] gap-2 sm:gap-4 min-h-[100px] sm:min-h-[120px] lg:h-[140px] lg:min-h-[140px]"
-          style={{
-            backgroundColor: isDark ? '#1C2938' : '#F6FBFF',
-            boxShadow: 'inset 0 1px 1.5px 0 rgba(0,0,0,0.25)',
-          }}
-        >
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-[#0068FC] flex-shrink-0" />
-            <h1
-              className="text-xl sm:text-3xl md:text-[40px] font-bold leading-tight sm:leading-[40px] tracking-normal bg-clip-text text-transparent"
-              style={{
-                fontFamily: 'var(--font-poppins), sans-serif',
-                fontWeight: 700,
-                background: 'linear-gradient(90deg, #0068FC 0%, #8D5AFF 100%)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-              }}
-            >
-              AI Career Guidance
-            </h1>
-          </div>
-          <p className="text-xs sm:text-base text-gray-600 dark:text-gray-400 line-clamp-2 sm:line-clamp-none">
-            Discover your perfect career path with personalized AI-powered guidance
-          </p>
-        </motion.div>
+      <div className="relative min-h-screen bg-brand-hero dark:bg-brand-hero-dark -mx-6 -mb-6 -mt-20 lg:-mt-24 p-4 sm:p-6 pt-20 lg:pt-24 pb-10 w-auto">
+        <div className="mx-auto max-w-7xl space-y-3 sm:space-y-6">
+          {/* Header - Custom Orange & Blue Premium Gradient Banner with Features Highlight & AI Twin Status */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="relative overflow-hidden w-full rounded-2xl border border-[#e2e7f4] bg-brand-hero-2 shadow-[0_4px_28px_rgba(61,79,138,0.08)] dark:border-gray-800/60 dark:bg-brand-hero-dark-2 py-4 px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300"
+            style={{
+              boxShadow: isDark
+                ? '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px 0 rgba(104, 152, 255, 0.04), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.9)',
+            }}
+          >
+            {/* Decorative glowing blobs */}
+            <div className="absolute top-[-30px] left-[-30px] w-36 h-36 rounded-full bg-[#f58020]/20 blur-[50px] pointer-events-none" />
+            <div className="absolute bottom-[-30px] right-[-30px] w-40 h-40 rounded-full bg-[#0068FC]/20 blur-[60px] pointer-events-none" />
 
-        {/* Stats Cards - Figma: Vertical flow, Fill width, Hug height (122px), 10px gap, white cards with shadow */}
-        <motion.div
+            {/* Grid Pattern Overlay */}
+            <div
+              className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+              style={{
+                backgroundImage: 'radial-gradient(#000 1px, transparent 1px), radial-gradient(#000 1px, transparent 1px)',
+                backgroundSize: '20px 20px',
+                backgroundPosition: '0 0, 10px 10px',
+              }}
+            />
+
+            <div className="flex flex-col gap-1.5 max-w-4xl relative z-10 w-full">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* <div className="flex items-center justify-center p-1.5 rounded-lg bg-orange-500 text-white shadow-sm">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                </div> */}
+                <Badge variant="outline" className="border-orange-500/20 text-orange-200 bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                  AI Counseling & Mentorship
+                </Badge>
+                {counselorComplete && (
+                  <Badge variant="outline" className="border-emerald-500/20 text-emerald-300 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                    AI Twin Active
+                  </Badge>
+                )}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold leading-tight tracking-tight text-white dark:text-white mt-1">
+                AI Career Guidance
+              </h1>
+
+              <p className="text-xs sm:text-sm text-blue-50/90 dark:text-gray-200 leading-relaxed max-w-3xl">
+                Discover your perfect career path with custom industry roadmap routes, career graphs, playlist recommendations, a daily learning calendar with tracking, and your personalized AI Twin.
+              </p>
+
+              {/* Feature Pills */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white shadow-sm">
+                  <Target className="w-3 h-3 text-orange-300 shrink-0" />
+                  <span>GPS Routes</span>
+                </span>
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white shadow-sm">
+                  <Workflow className="w-3 h-3 text-orange-300 shrink-0" />
+                  <span>Career Tree</span>
+                </span>
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white shadow-sm">
+                  <PlayCircle className="w-3 h-3 text-orange-300 shrink-0" />
+                  <span>Playlists</span>
+                </span>
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white shadow-sm">
+                  <Calendar className="w-3 h-3 text-orange-300 shrink-0" />
+                  <span>Daily Calendar</span>
+                </span>
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-white/10 border border-white/10 text-white shadow-sm">
+                  <Users className="w-3 h-3 text-orange-300 shrink-0" />
+                  <span>AI Twin</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Right side - Super Compact Counseling Status */}
+            {/* <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center relative z-10 shrink-0 w-full md:w-auto p-3 rounded-xl bg-white/10 dark:bg-black/20 border border-white/10 shadow-sm backdrop-blur-md gap-3 md:gap-1.5">
+              <div className="flex items-center gap-2">
+                <div className="relative w-7 h-7 rounded-full bg-gradient-to-tr from-[#f58020] to-[#0068FC] flex items-center justify-center text-white font-bold text-xs shrink-0">
+                  {careerProgress?.profile?.desired_role ? careerProgress.profile.desired_role.substring(0, 2).toUpperCase() : 'AI'}
+                </div>
+                <div className="text-left md:text-right">
+                  <p className="text-[11px] font-bold text-white max-w-[140px] truncate">
+                    {careerProgress?.profile?.desired_role || 'No Target Yet'}
+                  </p>
+                  <p className="text-[9px] font-medium text-orange-200">
+                    {counselorComplete ? 'AI Twin Active' : `Counseling: ${completionPercentage}%`}
+                  </p>
+                </div>
+              </div>
+              <div className="w-24 md:w-32 bg-white/20 h-1 rounded-full overflow-hidden shrink-0">
+                <div
+                  className="bg-orange-400 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+            </div> */}
+          </motion.div>
+
+          {/* Stats Cards - Figma: Vertical flow, Fill width, Hug height (122px), 10px gap, white cards with shadow */}
+          {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
-          {/* Current Stage Card - Figma: light #FFF / dark #1C2938, border #CACACA / #666565 */}
+
           <Card
             className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
@@ -690,7 +791,7 @@ export default function CareerGuidancePage() {
             </CardContent>
           </Card>
 
-          {/* In Progress Card - Figma: light #FFF / dark #1C2938 */}
+        
           <Card
             className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
@@ -709,7 +810,7 @@ export default function CareerGuidancePage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions Card - Figma: light #FFF / dark #1C2938 */}
+          
           <Card
             className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow w-full overflow-hidden border-[#CACACA] dark:border-[#666565] dark:bg-[#1C2938]"
           >
@@ -728,455 +829,182 @@ export default function CareerGuidancePage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </motion.div> */}
 
-        {/* Error Alert */}
-        {error && (
-          <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-              <span className="text-sm sm:text-base text-red-800 dark:text-red-200 flex-1">{error}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                className="w-full sm:w-auto border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/40"
-              >
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Main Content - Full width layout for unified tabs */}
-        <div className="w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="w-full flex flex-col gap-2 sm:gap-4 min-h-[320px] sm:min-h-[420px] lg:min-h-[640px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-180px)] overflow-hidden"
-          >
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Tab Navigation - icon-only on small screens to avoid truncation; full labels on sm+ */}
-              <div className="flex-shrink-0 mb-2 sm:mb-4">
-                <TabsList
-                  className="grid grid-cols-6 w-full h-[40px] sm:h-[57px] rounded-lg p-1.5 sm:p-[10px] gap-1 sm:gap-4 lg:gap-6 border bg-[#FDFDFD] dark:bg-[#1C2938] border-[#C0C0C0] dark:border-[#4F5764]"
+          {/* Error Alert — hide after counseling is complete (modules work without live session) */}
+          {error && !counselorComplete && (
+            <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                <span className="text-sm sm:text-base text-red-800 dark:text-red-200 flex-1">{error}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="w-full sm:w-auto border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/40"
                 >
-                  {renderTabTrigger('counselor', <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Counselor')}
-                  {renderTabTrigger('gps', <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'GPS')}
-                  {renderTabTrigger('flowchart', <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Tree')}
-                  {renderTabTrigger('playlist', <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Playlist')}
-                  {renderTabTrigger('calendar', <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Calendar')}
-                  {renderTabTrigger('twin', <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Twin')}
-                </TabsList>
-              </div>
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
-              {/* Tab Content */}
-              <TabsContent value="counselor" className="flex-1 m-0 min-h-0 flex flex-col data-[state=inactive]:hidden overflow-hidden">
-                <Card className="flex-1 min-h-0 flex flex-col border border-gray-200 dark:border-[#4F5764] dark:bg-[#1C2938]">
-                  <CardContent className="flex-1 min-h-0 flex flex-col p-0">
-                    <div
-                      className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg"
-                      style={{
-                        backgroundColor: isDark ? 'rgba(28, 41, 56, 0.6)' : 'rgba(0, 105, 255, 0.05)',
-                      }}
-                    >
-                      {/* Chat Header - light #D6E1FF / dark #1C2938 or #1F2748 */}
-                      <div
-                        className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 border-b border-gray-200/50 dark:border-[#4F5764] px-2 py-2.5 sm:px-4 sm:py-4 min-h-[60px] sm:min-h-[86px]"
-                        style={{ backgroundColor: isDark ? '#1C2938' : '#D6E1FF' }}
-                      >
-                        <div className="p-1 sm:p-2 rounded-md sm:rounded-lg flex-shrink-0 bg-[#0068FC]/20 dark:bg-[#0068FC]/30">
-                          <MessageCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#0068FC] dark:text-[#8EBDFF]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-xs sm:text-lg font-bold text-gray-900 dark:text-white truncate">AI Career Counselor</h2>
-                          <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400 truncate">
-                            {counselorComplete
-                              ? 'Counseling complete — GPS, Tree, Playlist, Calendar & Twin are unlocked'
-                              : careerProgress?.counselor_progress
-                                ? `Guided question ${careerProgress.counselor_progress.questions_answered} of ${careerProgress.counselor_progress.questions_total} — answer each to unlock all modules`
-                                : 'Guided intake — 14 questions to unlock GPS, Tree, Playlist, Calendar & Twin'}
+          {/* Main Content - Full width layout for unified tabs */}
+          <div className="w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className={`w-full flex flex-col gap-2 sm:gap-4 ${activeTab === 'counselor'
+                ? "min-h-[min(720px,calc(100vh-200px))] max-h-[calc(100vh-200px)]"
+                : "h-auto"
+                }`}
+            >
+              <Tabs value={activeTab} onValueChange={handleTabChange} className={`flex-1 flex flex-col ${activeTab === 'counselor' ? "min-h-0" : "h-auto"}`}>
+                {/* Tab Navigation - icon-only on small screens to avoid truncation; full labels on sm+ */}
+                <div className="flex-shrink-0 mb-2 sm:mb-4">
+                  <TabsList
+                    className="grid grid-cols-6 w-full h-[40px] sm:h-[57px] rounded-lg p-1.5 sm:p-[10px] gap-1 sm:gap-4 lg:gap-6 border bg-[#FDFDFD] dark:bg-[#1C2938] border-[#C0C0C0] dark:border-[#4F5764]"
+                  >
+                    {renderTabTrigger('counselor', <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Counselor')}
+                    {renderTabTrigger('gps', <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'GPS')}
+                    {renderTabTrigger('flowchart', <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Tree')}
+                    {renderTabTrigger('playlist', <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Playlist')}
+                    {renderTabTrigger('calendar', <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Calendar')}
+                    {renderTabTrigger('twin', <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 max-sm:w-3.5 max-sm:h-3.5 shrink-0" />, 'Twin')}
+                  </TabsList>
+                </div>
+
+                {/* Tab Content */}
+                <TabsContent value="counselor" className="flex-1 m-0 min-h-0 flex flex-col data-[state=inactive]:hidden overflow-hidden">
+                  <CareerCounselorChat
+                    messages={messages}
+                    isTyping={isTyping}
+                    inputMessage={inputMessage}
+                    onInputChange={setInputMessage}
+                    onSend={sendMessage}
+                    onKeyDown={handleKeyPress}
+                    counselorComplete={counselorComplete}
+                    needsCounselorStart={needsCounselorStart}
+                    isLimitReached={isLimitReached}
+                    isLoading={isLoading}
+                    connectionStatus={connectionStatus}
+                    sessionId={sessionId}
+                    careerProgress={careerProgress}
+                    counselorBlockedReason={careerProgress?.counselor_blocked_reason}
+                    onStartSession={() => void startSession()}
+                    onStartFresh={() => void startFreshCounseling()}
+                    onUpgrade={openUpgrade}
+                    messagesEndRef={messagesEndRef}
+                    isDark={isDark}
+                  />
+                </TabsContent>
+
+                <TabsContent value="playlist" className="flex-1 m-0 data-[state=inactive]:hidden h-auto overflow-visible">
+                  <Card className="h-auto border border-gray-200 dark:border-[#4F5764] dark:bg-[#1C2938]">
+                    <CardContent className="p-0 h-auto">
+                      {isTabLocked('playlist') ? (
+                        <CareerModuleLocked title="Learn & Playlist Locked" onGoToCounselor={goToCounselor} />
+                      ) : counselorSessionId ? (
+                        <CareerPlaylistTab sessionId={counselorSessionId} />
+                      ) : (
+                        <div className="flex items-center justify-center min-h-[320px] bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-blue-900/20 px-4 py-12">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            Complete counseling to generate your learning playlist.
                           </p>
                         </div>
-                        {counselorComplete && (
-                          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 shrink-0">
-                            {careerProgress?.can_restart_counselor ? (
-                              <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => void startFreshCounseling()}>
-                                <RotateCcw className="h-3 w-3" />
-                                Start Fresh
-                              </Button>
-                            ) : (
-                              <Button size="sm" className="text-xs gap-1 bg-[#f58020] hover:bg-[#d66d12]" onClick={openUpgrade}>
-                                Start Fresh — Upgrade
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                      {/* Messages - scrollable area */}
-                      <div
-                        className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6"
-                        style={{ WebkitOverflowScrolling: 'touch' }}
-                      >
-                        {messages.length === 0 ? (
-                          <div className="flex items-center justify-center h-full">
-                            <div className="text-center space-y-3 sm:space-y-4 px-4">
-                              <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 dark:text-gray-600 mx-auto" />
-                              <div>
-                                {careerProgress?.profile ? (
-                                  <>
-                                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
-                                      Counseling completed
-                                    </p>
-                                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">
-                                      Target role: {careerProgress.profile.desired_role || 'Your career path'}
-                                    </p>
-                                    <div className="mt-3 text-left text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 max-w-sm mx-auto rounded-lg border border-gray-200 dark:border-gray-600 p-3 bg-white/60 dark:bg-gray-800/40">
-                                      {careerProgress.profile.current_skills?.length > 0 && (
-                                        <p><span className="font-medium">Skills:</span> {careerProgress.profile.current_skills.slice(0, 5).join(', ')}</p>
-                                      )}
-                                      {careerProgress.profile.skills_to_learn?.length > 0 && (
-                                        <p><span className="font-medium">To learn:</span> {careerProgress.profile.skills_to_learn.slice(0, 5).join(', ')}</p>
-                                      )}
-                                      {careerProgress.profile.study_hours_per_week && (
-                                        <p><span className="font-medium">Study plan:</span> {careerProgress.profile.study_hours_per_week} hrs/week · {careerProgress.profile.estimated_duration_months || 6} months</p>
-                                      )}
-                                    </div>
-                                  </>
-                                ) : needsCounselorStart ? (
-                                  <>
-                                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
-                                      Ready to begin counseling
-                                    </p>
-                                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">
-                                      Start a guided session to build your career profile
-                                    </p>
-                                    <Button
-                                      className="mt-3 gap-2"
-                                      onClick={() => void startSession()}
-                                      disabled={isLoading || isLimitReached}
-                                    >
-                                      <Rocket className="h-4 w-4" />
-                                      Start Counseling Session
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">No messages yet</p>
-                                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">Start the conversation below</p>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <AnimatePresence mode="popLayout">
-                            {messages.map((message, index) => (
-                              <motion.div
-                                key={`${message.timestamp}-${index}`}
-                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.3 }}
-                                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                              >
-                                <div
-                                  className={`
-                                    max-w-[92%] sm:max-w-[85%] lg:max-w-[80%] px-3 py-2.5 sm:px-5 sm:py-4 shadow-sm min-h-0 sm:min-h-[88px]
-                                    ${message.role === 'user' ? 'text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white'}
-                                  `}
-                                  style={
-                                    message.role === 'user'
-                                      ? isDark
-                                        ? { backgroundColor: '#384370', border: '1px solid #4F5764', borderRadius: 12 }
-                                        : {
-                                          backgroundColor: '#D6E1FF',
-                                          border: '1px solid rgba(134, 146, 166, 0.2)',
-                                          borderRadius: 12,
-                                        }
-                                      : isDark
-                                        ? { backgroundColor: '#2A2C38', border: '1px solid #4F5764', borderRadius: 16 }
-                                        : {
-                                          backgroundColor: '#FFFFFF',
-                                          border: '1px solid #8692A6',
-                                          borderRadius: 16,
-                                        }
-                                  }
-                                >
-                                  {message.role === 'ai' ? (
-                                    <>
-                                      <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#0068FC] flex-shrink-0" />
-                                      </div>
-                                      <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                                      <div className="flex items-center gap-0.5 sm:gap-3 mt-1 sm:mt-2 pt-1 sm:pt-2 border-t border-gray-200 max-sm:gap-1">
-                                        <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 text-gray-600 max-sm:p-0.5" aria-label="Like">
-                                          <ThumbsUp className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
-                                        </button>
-                                        <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Dislike">
-                                          <ThumbsDown className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
-                                        </button>
-                                        <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Copy">
-                                          <Copy className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
-                                        </button>
-                                        <button type="button" className="p-0.5 sm:p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 max-sm:p-0.5" aria-label="Regenerate">
-                                          <RefreshCw className="w-2.5 h-2.5 sm:w-4 sm:h-4 max-sm:w-2.5 max-sm:h-2.5" />
-                                        </button>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                        )}
-
-                        {/* Typing Indicator */}
-                        {isTyping && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            className="flex justify-start"
-                            onAnimationComplete={() => scrollToBottom(true)}
-                          >
-                            <div
-                              className="rounded-2xl px-4 py-3 shadow-sm border"
-                              style={
-                                isDark
-                                  ? { backgroundColor: '#2A2C38', borderColor: '#4F5764', borderRadius: 16 }
-                                  : { backgroundColor: '#FFFFFF', borderColor: '#8692A6', borderRadius: 16 }
-                              }
-                            >
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#0068FC] flex-shrink-0" />
-                                <div className="flex gap-1">
-                                  <motion.span
-                                    className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
-                                    animate={{ y: [0, -4, 0] }}
-                                    transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                                  />
-                                  <motion.span
-                                    className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
-                                    animate={{ y: [0, -4, 0] }}
-                                    transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                                  />
-                                  <motion.span
-                                    className="inline-block w-1.5 h-1.5 bg-[#0068FC] rounded-full"
-                                    animate={{ y: [0, -4, 0] }}
-                                    transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-
-                        <div ref={messagesEndRef} />
-                      </div>
-
-                      {/* Input - compact on mobile; dark mode #1C2938 / #4F5764 */}
-                      <div className="flex-shrink-0 border-t border-gray-200 dark:border-[#4F5764] p-1 sm:p-4 bg-white dark:bg-[#1C2938]/80">
-                        <div
-                          className="flex gap-1 sm:gap-3 items-center border border-gray-200 dark:border-[#4F5764] px-1.5 sm:px-4 py-1.5 sm:py-4 max-sm:px-2 max-sm:py-2 bg-white dark:bg-[#2A2C38] rounded-md sm:rounded-lg min-h-[48px] sm:min-h-[96px] max-sm:min-h-[44px]"
-                        >
-                          <textarea
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyDown={handleKeyPress}
-                            placeholder={
-                              counselorComplete
-                                ? 'Counseling complete. Start fresh (Pro) or explore unlocked modules.'
-                                : isLimitReached
-                                  ? 'Upgrade to start fresh counseling.'
-                                  : 'Answer the counselor question or ask for clarification...'
-                            }
-                            className="flex-1 min-w-0 resize-none text-xs sm:text-sm bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 min-h-[36px] sm:min-h-[56px] max-sm:min-h-[32px] max-sm:text-[11px] max-sm:placeholder:text-[11px] focus:outline-none border-0 rounded-none disabled:opacity-50"
-                            rows={2}
-                            disabled={isLoading || connectionStatus !== 'connected' || isLimitReached || (!sessionId && needsCounselorStart) || counselorComplete}
-                            style={{ maxHeight: '120px' }}
-                            aria-label="Message input"
-                          />
-                          <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0 max-sm:gap-1">
-                            <Button
-                              onClick={sendMessage}
-                              disabled={!inputMessage.trim() || isLoading || connectionStatus !== 'connected' || isLimitReached || counselorComplete}
-                              className="h-7 w-7 sm:h-10 sm:w-10 max-sm:h-7 max-sm:w-7 p-0 rounded-md sm:rounded-lg text-white disabled:opacity-50 flex-shrink-0 border-0 hover:opacity-90"
-                              style={{ backgroundColor: '#8EBDFF' }}
-                              size="sm"
-                              aria-label="Send message"
-                            >
-                              <Send className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
-                            </Button>
-                            <button
-                              type="button"
-                              disabled={isLimitReached}
-                              className="p-1 sm:p-2 max-sm:p-1 rounded-md sm:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-30"
-                              aria-label="Attach file"
-                            >
-                              <Paperclip className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isLimitReached}
-                              className="p-1 sm:p-2 max-sm:p-1 rounded-md sm:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-30"
-                              aria-label="Voice input"
-                            >
-                              <Mic className="w-3 h-3 sm:w-5 sm:h-5 max-sm:w-3 max-sm:h-3" />
-                            </button>
-                          </div>
+                <TabsContent value="calendar" className="flex-1 m-0 data-[state=inactive]:hidden h-auto overflow-visible">
+                  <Card className="h-auto border border-gray-200 dark:border-gray-700">
+                    <CardContent className="p-0 h-auto">
+                      {isTabLocked('calendar') ? (
+                        <CareerModuleLocked title="Calendar Plan Locked" onGoToCounselor={goToCounselor} />
+                      ) : counselorSessionId ? (
+                        <CareerCalendarTab sessionId={counselorSessionId} />
+                      ) : (
+                        <div className="flex items-center justify-center min-h-[320px] bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-blue-900/20 px-4 py-12">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            Complete counseling to unlock your learning calendar.
+                          </p>
                         </div>
-                        {isLimitReached ? (
-                          <div className="mt-2 p-2 sm:p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-                              <span className="text-xs text-red-800 dark:text-red-200 font-medium truncate sm:whitespace-normal">
-                                {careerProgress?.counselor_blocked_reason || 'Free plan allows one counseling completion. Upgrade for unlimited sessions.'}
-                              </span>
-                            </div>
-                            <Button
-                              size="sm"
-                              className="bg-[#f58020] hover:bg-[#d66d12] text-white text-xs px-3 py-1.5 h-auto rounded-md shrink-0 animate-pulse"
-                              onClick={() => {
-                                setSubscriptionFeature('AI Career Guidance');
-                                setShowSubscriptionModal(true);
-                              }}
-                            >
-                              Upgrade Plan
-                            </Button>
-                          </div>
-                        ) : (
-                          <p className="mt-1 sm:mt-2 text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Press Enter to send, Shift+Enter for new line</p>
-                        )}
-                        {/* <div className="flex items-center justify-between mt-0.5 flex-wrap gap-1">
-                          {connectionStatus !== 'connected' && (
-                            <p className="text-[10px] sm:text-xs text-red-500 dark:text-red-400">Connection lost. Please wait...</p>
-                          )}
-                        </div> */}
-                      </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="flowchart" className="flex-1 m-0 data-[state=inactive]:hidden h-auto overflow-visible">
+                  {isTabLocked('flowchart') ? (
+                    <CareerModuleLocked
+                      title="Career Tree Locked"
+                      description="Your career journey map will appear here after counseling."
+                      onGoToCounselor={goToCounselor}
+                    />
+                  ) : nodes.length > 0 || edges.length > 0 ? (
+                    <div
+                      className="min-h-[560px] h-[70vh] w-full rounded-lg border overflow-auto dark:border-[#4F5764]"
+                      style={{
+                        backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
+                        borderColor: isDark ? '#4F5764' : '#BDBDBD',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <CareerTreeVisualization nodes={nodes} edges={edges} />
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="playlist" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-[#4F5764] dark:bg-[#1C2938]">
-                  <CardContent className="p-0 h-full">
-                    {isTabLocked('playlist') ? (
-                      <CareerModuleLocked title="Learn & Playlist Locked" onGoToCounselor={goToCounselor} />
-                    ) : sessionId ? (
-                      <CareerPlaylistTab sessionId={sessionId} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-blue-900/20 px-4">
-                        <ProgressLoader
-                          message="Loading your learning playlist..."
-                          showPercentage={true}
-                          size="md"
-                          autoIncrement={true}
-                          duration={2000}
-                          className="w-full max-w-md"
-                        />
+                  ) : (
+                    <div
+                      className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px] dark:border-[#4F5764]"
+                      style={{
+                        backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
+                        borderColor: isDark ? '#4F5764' : '#BDBDBD',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <div className="flex justify-center">
+                        <div className="p-3 sm:p-4 rounded-xl bg-[#E8E0F5] dark:bg-[#2A2C38]">
+                          <Workflow className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-[#7F56D9] dark:text-[#8EBDFF]" />
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="calendar" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-gray-700">
-                  <CardContent className="p-0 h-full">
-                    {isTabLocked('calendar') ? (
-                      <CareerModuleLocked title="Calendar Plan Locked" onGoToCounselor={goToCounselor} />
-                    ) : sessionId ? (
-                      <CareerCalendarTab sessionId={sessionId} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-blue-900/20 px-4">
-                        <ProgressLoader
-                          message="Loading your learning calendar..."
-                          showPercentage={true}
-                          size="md"
-                          autoIncrement={true}
-                          duration={2000}
-                          className="w-full max-w-md"
-                        />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="flowchart" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                {isTabLocked('flowchart') ? (
-                  <CareerModuleLocked
-                    title="Career Tree Locked"
-                    description="Your career journey map will appear here after counseling."
-                    onGoToCounselor={goToCounselor}
-                  />
-                ) : nodes.length > 0 || edges.length > 0 ? (
-                  <div
-                    className="h-full w-full rounded-lg border overflow-hidden dark:border-[#4F5764]"
-                    style={{
-                      backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
-                      borderColor: isDark ? '#4F5764' : '#BDBDBD',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <CareerTreeVisualization nodes={nodes} edges={edges} />
-                  </div>
-                ) : (
-                  <div
-                    className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px] dark:border-[#4F5764]"
-                    style={{
-                      backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
-                      borderColor: isDark ? '#4F5764' : '#BDBDBD',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <div className="flex justify-center">
-                      <div className="p-3 sm:p-4 rounded-xl bg-[#E8E0F5] dark:bg-[#2A2C38]">
-                        <Workflow className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-[#7F56D9] dark:text-[#8EBDFF]" />
-                      </div>
+                      <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white text-center">Career Tree Visualization</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md text-center">Your career journey map will appear here as you progress</p>
                     </div>
-                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white text-center">Career Tree Visualization</p>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md text-center">Your career journey map will appear here as you progress</p>
-                  </div>
-                )}
-              </TabsContent>
+                  )}
+                </TabsContent>
 
-              <TabsContent value="gps" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-gray-700">
-                  <CardContent className="p-0 h-full">
-                    {isTabLocked('gps') ? (
-                      <CareerModuleLocked title="Career GPS Locked" onGoToCounselor={goToCounselor} />
-                    ) : (
-                      <CareerGPSTab />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                <TabsContent value="gps" className="flex-1 m-0 data-[state=inactive]:hidden h-auto overflow-visible">
+                  <Card className="h-auto border border-gray-200 dark:border-gray-700">
+                    <CardContent className="p-0 h-auto">
+                      {isTabLocked('gps') ? (
+                        <CareerModuleLocked title="Career GPS Locked" onGoToCounselor={goToCounselor} />
+                      ) : (
+                        <CareerGPSTab />
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-              <TabsContent value="twin" className="flex-1 m-0 data-[state=inactive]:hidden min-h-0 overflow-hidden">
-                <Card className="h-full border border-gray-200 dark:border-gray-700">
-                  <CardContent className="p-0 h-full">
-                    {isTabLocked('twin') ? (
-                      <CareerModuleLocked
-                        title="AI Career Twin Locked"
-                        description="Complete counseling to unlock your personalized AI Career Twin."
-                        onGoToCounselor={goToCounselor}
-                      />
-                    ) : (
-                      <AICareerTwinTab />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </motion.div>
+                <TabsContent value="twin" className="flex-1 m-0 data-[state=inactive]:hidden h-auto overflow-visible">
+                  <Card className="h-auto border border-gray-200 dark:border-gray-700">
+                    <CardContent className="p-0 h-auto">
+                      {isTabLocked('twin') ? (
+                        <CareerModuleLocked
+                          title="AI Career Twin Locked"
+                          description="Complete counseling to unlock your personalized AI Career Twin."
+                          onGoToCounselor={goToCounselor}
+                        />
+                      ) : (
+                        <AICareerTwinTab />
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </motion.div>
+          </div>
         </div>
       </div>
       <SessionHistoryModal open={showHistory} onClose={() => setShowHistory(false)} onLoadSession={loadSession} />

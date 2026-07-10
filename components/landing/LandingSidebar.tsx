@@ -61,12 +61,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: "Resume Analysis",
     onClick: undefined, // Will be set by component
   },
-  {
-    id: "assessment",
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: "Job Based Assessment",
-    onClick: undefined,
-  },
+  // {
+  //   id: "assessment",
+  //   icon: <ClipboardList className="w-5 h-5" />,
+  //   label: "Job Based Assessment",
+  //   onClick: undefined,
+  // },
   {
     id: "mock-tests",
     icon: <Target className="w-5 h-5" />,
