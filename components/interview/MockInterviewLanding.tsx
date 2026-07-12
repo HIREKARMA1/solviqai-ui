@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { StudentBrandPageDecorations } from '@/components/dashboard/StudentBrandPageShell';
 import {
   BarChart3,
   Brain,
@@ -105,18 +106,7 @@ export function MockInterviewLanding({
 }: MockInterviewLandingProps) {
   return (
     <div className="relative w-full pt-6 pb-6 sm:pt-8 lg:pt-4 lg:pb-10">
-      {/* Decorative background */}
-      <div className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-[#dce8f8]/40 dark:bg-blue-950/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-16 bottom-32 h-48 w-48 rounded-full bg-[#ffe8d6]/30 dark:bg-orange-950/10 blur-3xl" />
-      <svg
-        className="pointer-events-none absolute right-[18%] top-8 hidden h-24 w-40 text-[#c5d9f0]/40 dark:text-orange-500/10 lg:block"
-        viewBox="0 0 160 80"
-        fill="none"
-        aria-hidden
-      >
-        <path d="M0 40 Q40 10 80 40 T160 40" stroke="currentColor" strokeWidth="2" />
-        <path d="M0 55 Q50 25 90 55 T160 55" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-      </svg>
+      <StudentBrandPageDecorations />
 
       <div className="relative mx-auto max-w-[1100px] flex flex-col gap-8">
         {/* ── Row 1: Hero Text (Left) + Setup Card with Robot on Top (Right) ── */}

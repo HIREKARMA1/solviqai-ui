@@ -9,6 +9,7 @@ import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import { Filter } from 'lucide-react'
 import { StudentAnalyticsDashboard } from '@/components/analytics/StudentAnalyticsDashboard'
+import { StudentBrandPageShell } from '@/components/dashboard/StudentBrandPageShell'
 
 function defaultDateRange() {
   const end = new Date()
@@ -153,16 +154,18 @@ export default function StudentAnalyticsPage() {
   if (loading) {
     return (
       <DashboardLayout requiredUserType="student">
-        <div className="w-full flex items-center justify-center py-24">
-          <Loader size="lg" />
-        </div>
+        <StudentBrandPageShell>
+          <div className="w-full flex items-center justify-center py-24">
+            <Loader size="lg" />
+          </div>
+        </StudentBrandPageShell>
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout requiredUserType="student">
-      <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-4 lg:pt-0 overflow-x-hidden min-w-0 pb-6">
+      <StudentBrandPageShell contentClassName="pb-6">
         <StudentAnalyticsDashboard
           data={data}
           isDark={isDark}
@@ -171,7 +174,7 @@ export default function StudentAnalyticsPage() {
           onToggleFilters={() => setShowFilters((v) => !v)}
           filtersPanel={filtersPanel}
         />
-      </div>
+      </StudentBrandPageShell>
     </DashboardLayout>
   )
 }
