@@ -2,33 +2,30 @@
 
 import React, { useState, memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Search, MapPin } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { ArrowRight, Target, Workflow } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getSimulationsPathForUser } from '@/lib/dashboardNavigation';
 
-// Memoize stats to prevent recreation on each render
-const STATS = [
-  { label: 'Jobs', value: '120k+' },
-  { label: 'Students', value: '150k+' },
-  { label: 'Companies', value: '50+' },
-] as const;
-
-export const HeroSection = memo(function HeroSection() {
+export const HeroSection = memo(function HeroSection({
+  onStartReadiness,
+}: {
+  onStartReadiness?: () => void;
+}) {
   const router = useRouter();
   const { user } = useAuth();
-  const { t } = useTranslation();
-  const [jobTitle, setJobTitle] = useState('');
-  const [location, setLocation] = useState('');
+  const simulationsHref = getSimulationsPathForUser(user?.user_type);
 
-  const handleFindJob = useCallback(() => {
+  const handlePrimaryCta = useCallback(() => {
     if (user) {
-      router.push(`/dashboard/${user.user_type}/jobs`);
-    } else {
-      router.push('/auth/login');
+      router.push('/dashboard/student');
+      return;
     }
-  }, [user, router]);
+    onStartReadiness?.();
+    document.getElementById('guest-readiness')?.scrollIntoView({ behavior: 'smooth' });
+  }, [user, router, onStartReadiness]);
 
   return (
     <section
@@ -37,83 +34,70 @@ export const HeroSection = memo(function HeroSection() {
     >
       <div className="w-[90%] mx-auto max-w-[1600px]">
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-center w-full">
-          {/* Left Column - Content */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             className="w-full order-1"
           >
-            {/* Main Heading */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-[78px] font-bold tracking-tight leading-[1.1] mb-6">
-              <span className="text-gray-900 dark:text-white block whitespace-normal lg:whitespace-nowrap">
-                Find the Perfect Job.
-              </span>
-              <span className="text-gray-900 dark:text-white block whitespace-normal lg:whitespace-nowrap">
-                Apply Smarter with
+              <span className="text-gray-900 dark:text-white block">
+                Know Your Job Readiness
               </span>
               <span className="text-[#FF541F] block">
-                Solviq.AI
+                Before Placement Season
               </span>
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-xl md:text-3xl lg:text-3xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed mb-8 tracking-tight md:leading-[1.1]">
-              AI-powered job matching, resume optimization, and one-click applications all in one platform
+            <p className="text-xl md:text-2xl lg:text-3xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed mb-8 tracking-tight">
+              Upload your resume, take a 3-minute aptitude check, and get a free readiness score with specific gaps to fix
             </p>
 
-            {/* Hero Search Bar */}
-            <div className="w-full max-w-2xl mb-10">
-              <div className="bg-white dark:bg-gray-900 rounded-3xl md:rounded-full shadow-lg md:shadow-sm p-4 md:p-3 flex flex-col md:flex-row items-center gap-4 md:gap-0">
-
-                {/* Job Title Input */}
-                <div className="w-full md:flex-1 flex items-center px-4 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 pb-4 md:pb-0">
-                  <Search className="w-5 h-5 text-[#FF541F] mr-3 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Job title, Keyword..."
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-gray-700 dark:text-200 placeholder-gray-400"
-                  />
-                </div>
-
-                {/* Location Input */}
-                <div className="w-full md:flex-1 flex items-center px-4 pb-2 md:pb-0">
-                  <MapPin className="w-5 h-5 text-[#FF541F] mr-3 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-gray-700 dark:text-200 placeholder-gray-400"
-                  />
-                </div>
-
-                {/* Find Job Button */}
+            <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
+              <button
+                type="button"
+                onClick={handlePrimaryCta}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FF541F] px-8 py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#e04a1a]"
+              >
+                <Target className="h-5 w-5" />
+                Check Your Job Readiness Score — Free
+                <ArrowRight className="h-5 w-5" />
+              </button>
+              <Link
+                href={simulationsHref}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[#112C96] px-8 py-4 text-lg font-semibold text-[#112C96] transition hover:bg-[#112C96]/5 dark:border-primary-400 dark:text-primary-300 dark:hover:bg-primary-900/20"
+              >
+                <Workflow className="h-5 w-5" />
+                Job Prep Simulation
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              {user && (
                 <button
-                  onClick={handleFindJob}
-                  className="w-full md:w-auto bg-[#FF541F] hover:bg-[#f43e06] text-white font-semibold px-8 py-3 rounded-xl md:rounded-md transition-colors whitespace-nowrap text-lg shadow-md md:shadow-none"
+                  type="button"
+                  onClick={() => router.push('/dashboard/student')}
+                  className="rounded-2xl border border-gray-300 px-6 py-4 text-gray-700 dark:border-gray-600 dark:text-gray-200"
                 >
-                  Find Job
+                  Go to Dashboard
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Stats */}
             <div className="flex flex-wrap items-center gap-8 md:gap-12">
-              {STATS.map((stat, index) => (
-                <div key={index} className="flex flex-col">
-                  <div className="text-[#FF541F] font-semibold text-lg mb-1">{stat.label}</div>
-                  <div className="text-gray-900 dark:text-white font-bold text-3xl">
-                    {stat.value}
-                  </div>
-                </div>
-              ))}
+              <div className="flex flex-col">
+                <div className="text-[#FF541F] font-semibold text-lg mb-1">Free check</div>
+                <div className="text-gray-900 dark:text-white font-bold text-3xl">3 min</div>
+              </div>
+              <div className="flex flex-col">
+                <div className="text-[#FF541F] font-semibold text-lg mb-1">Resume + Aptitude</div>
+                <div className="text-gray-900 dark:text-white font-bold text-3xl">Instant</div>
+              </div>
+              <div className="flex flex-col">
+                <div className="text-[#FF541F] font-semibold text-lg mb-1">Gap analysis</div>
+                <div className="text-gray-900 dark:text-white font-bold text-3xl">Actionable</div>
+              </div>
             </div>
           </motion.div>
 
-          {/* Right Column - Decorative Illustration - Visible on all screens now */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -121,28 +105,18 @@ export const HeroSection = memo(function HeroSection() {
             className="relative w-full order-2 mt-8 md:mt-0"
           >
             <div className="relative w-full h-[40vh] sm:h-[52vh] md:h-[62vh] lg:h-[62vh] xl:h-[72vh]">
-              {/* Main Container */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="relative w-full h-full">
-
-
-                  {/* Hero Image - Woman with Laptop */}
                   <div className="relative w-full h-full mx-auto z-10">
                     <Image
                       src="/images/heroimg.png"
-                      alt="Woman working happily on laptop"
+                      alt="Student preparing for placement"
                       fill
                       className="object-contain drop-shadow-2xl"
                       priority
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
-                      loading="eager"
-                      quality={90}
-                      placeholder="blur"
-                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjdGNUVBIi8+PC9zdmc+"
                     />
-
                   </div>
-
                 </div>
               </div>
             </div>

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { getSimulationsPathForUser, PUBLIC_SIMULATIONS_PATH } from '@/lib/dashboardNavigation';
 
 interface LandingNavbarProps {
   className?: string;
@@ -53,11 +54,14 @@ export function LandingNavbar({
 
   const navigationItems = [
     { label: 'HOME', href: '/' },
+    { label: 'JOB PREPARE', href: PUBLIC_SIMULATIONS_PATH },
     { label: 'FEATURES', href: '#features' },
     { label: 'INTERNSHIPS', href: '#internships' },
     { label: 'ABOUT', href: '#about' },
     { label: 'CONTACT', href: '#contact' },
   ];
+
+  const simulationsHref = getSimulationsPathForUser(user?.user_type);
 
   if (!mounted) {
     return null;
@@ -135,12 +139,12 @@ export function LandingNavbar({
                     className={cn(
                       'text-sm font-medium tracking-wide transition-colors px-5 py-2',
                       'text-gray-700 dark:text-gray-300',
-                      'hover:text-primary-600 dark:hover:text-primary-400',
+                      'hover:text-orange-500 dark:hover:text-orange-400',
                       'relative group'
                     )}
                   >
                     {item.label}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 dark:bg-primary-400 transition-all group-hover:w-full" />
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 dark:bg-orange-400 transition-all group-hover:w-full" />
                   </Link>
 
                 </React.Fragment>
@@ -217,6 +221,16 @@ export function LandingNavbar({
                         className="w-48"
                         sideOffset={8}
                       >
+                        {(user.user_type === 'student' || user.user_type === 'admin') && (
+                          <DropdownMenuItem asChild>
+                            <Link
+                              href={simulationsHref}
+                              className="cursor-pointer flex items-center gap-2"
+                            >
+                              Job Prep Simulation
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem asChild>
                           <Link
                             href={`/dashboard/${user.user_type}/profile`}
@@ -380,6 +394,19 @@ export function LandingNavbar({
               {/* Logged in user - Mobile */}
               {!authLoading && user && (
                 <div className="pt-2 space-y-2 border-t border-gray-200 dark:border-gray-800">
+                  {(user.user_type === 'student' || user.user_type === 'admin') && (
+                    <Link href={simulationsHref} onClick={() => setMobileMenuOpen(false)}>
+                      <button
+                        className={cn(
+                          'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium',
+                          'text-orange-600 dark:text-orange-400',
+                          'hover:bg-orange-50 dark:hover:bg-orange-950/20'
+                        )}
+                      >
+                        Job Prep Simulation
+                      </button>
+                    </Link>
+                  )}
                   <Link
                     href={`/dashboard/${user.user_type}/profile`}
                     onClick={() => setMobileMenuOpen(false)}

@@ -10,6 +10,7 @@ import { MobileSidebar } from '@/components/landing/MobileSidebar'
 import { Loader } from '@/components/ui/loader'
 import { DropdownMenuProvider } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { DashboardShellContext } from '@/components/dashboard/DashboardShellContext'
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -17,7 +18,7 @@ import { useTheme } from 'next-themes'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
-    requiredUserType?: 'student' | 'college' | 'admin'
+    requiredUserType?: 'student' | 'college' | 'admin' | 'enterprise'
     hideNavigation?: boolean  // Hide navbar and sidebar when true (e.g., in fullscreen mode)
 }
 
@@ -170,10 +171,9 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                     />
                 </div>
 
-                {/* Main Content */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 overflow-y-auto min-h-0",
+                        "flex-1 transition-all duration-300 overflow-y-auto overflow-x-hidden min-h-0",
                         hideNavigation
                             ? "p-0" // No padding in fullscreen
                             : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile top navbar
@@ -182,7 +182,14 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                             : isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
                     )}
                 >
-                    {children}
+                    <DashboardShellContext.Provider
+                        value={{
+                            isNavSidebarCollapsed: isSidebarCollapsed,
+                            isMobileNavOpen: isMobileSidebarOpen,
+                        }}
+                    >
+                        {children}
+                    </DashboardShellContext.Provider>
                 </main>
             </div>
 

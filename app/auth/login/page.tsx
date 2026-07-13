@@ -54,7 +54,6 @@ export default function LoginPage() {
       } catch (err2: any) {
         const errorMsg2 = getErrorMessage(err2, '');
         if (errorMsg2) errors.push(errorMsg2);
-
         try {
           await login(email, password, 'admin');
           router.push('/dashboard/admin');
@@ -62,6 +61,15 @@ export default function LoginPage() {
         } catch (err3: any) {
           const errorMsg3 = getErrorMessage(err3, '');
           if (errorMsg3) errors.push(errorMsg3);
+
+          try {
+            await login(email, password, 'enterprise');
+            router.push('/dashboard/enterprise');
+            return;
+          } catch (err4: any) {
+            const errorMsg4 = getErrorMessage(err4, '');
+            if (errorMsg4) errors.push(errorMsg4);
+          }
         }
       }
     } finally {

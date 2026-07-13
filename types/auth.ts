@@ -1,7 +1,7 @@
 export interface LoginRequest {
   email: string;
   password: string;
-  user_type: 'student' | 'college' | 'admin';
+  user_type: 'student' | 'college' | 'admin' | 'enterprise';
 }
 
 export interface RegisterRequest {
@@ -24,7 +24,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  user_type: 'student' | 'college' | 'admin';
+  user_type: 'student' | 'college' | 'admin' | 'enterprise';
   phone?: string;
   status: string;
   created_at: string;
