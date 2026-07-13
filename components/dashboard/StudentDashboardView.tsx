@@ -423,7 +423,7 @@ export function StudentDashboardView({
                   <CartesianGrid stroke={isDark ? '#374151' : '#e5e7eb'} vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: isDark ? '#9CA3AF' : '#6B7280' }} />
                   <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fontSize: 10, fill: isDark ? '#9CA3AF' : '#6B7280' }} width={32} />
-                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${Number(v).toFixed(1)}%`, 'Score']} />
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v: any) => [`${Number(v).toFixed(1)}%`, 'Score']} />
                   <Area type="monotone" dataKey="score" stroke="none" fill="url(#perfTrendFill)" />
                   <Line type="monotone" dataKey="score" stroke="#0068FC" strokeWidth={2.5} dot={{ r: 4, fill: '#0068FC', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                 </LineChart>
