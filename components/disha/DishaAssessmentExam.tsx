@@ -604,6 +604,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                 videoRef={examCamera.videoRef}
                 status={examCamera.status}
                 onEnableCamera={examCamera.startCamera}
+                className="!bottom-auto !left-auto top-20 right-4"
             />,
             document.body
         );

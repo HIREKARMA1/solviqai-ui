@@ -42,12 +42,16 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 const sidebarItems = [
-  { name: 'Dashboard', href: '/dashboard/student', icon: Home },
-  { name: 'Profile', href: '/dashboard/student/profile', icon: User },
-  { name: 'Resume', href: '/dashboard/student/resume', icon: FileText },
-  { name: 'Job Recommendations', href: '/dashboard/student/jobs', icon: Briefcase },
-  { name: 'Analytics', href: '/dashboard/student/analytics', icon: BarChart3 },
-]
+  { name: "Dashboard", href: "/dashboard/student", icon: Home },
+  { name: "Profile", href: "/dashboard/student/profile", icon: User },
+  { name: "Resume", href: "/dashboard/student/resume", icon: FileText },
+  {
+    name: "Job Recommendations",
+    href: "/dashboard/student/jobs",
+    icon: Briefcase,
+  },
+  { name: "Analytics", href: "/dashboard/student/analytics", icon: BarChart3 },
+];
 
 // Round display information
 const roundDisplay: Record<
@@ -104,7 +108,8 @@ const roundDisplay: Record<
   },
   electrical_circuit: {
     name: "Electrical Circuit Design",
-    description: "Design and evaluate a circuit using the interactive workspace",
+    description:
+      "Design and evaluate a circuit using the interactive workspace",
     duration: "45 min",
     icon: Zap,
     color: "bg-amber-500",
@@ -256,7 +261,6 @@ export default function AssessmentPage() {
     return "not_started";
   };
 
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
@@ -300,7 +304,6 @@ export default function AssessmentPage() {
     hr_interview:
       "from-pink-50 to-pink-100/60 dark:from-pink-900/20 dark:to-pink-900/10",
   };
-
 
   if (loading) {
     return (
@@ -350,10 +353,15 @@ export default function AssessmentPage() {
           <Card className="bg-[#E3F2FD] dark:bg-blue-900/20 border-none shadow-md rounded-2xl">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-blue-200/50 dark:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                <Target size={24} className="text-blue-600 dark:text-blue-400" />
+                <Target
+                  size={24}
+                  className="text-blue-600 dark:text-blue-400"
+                />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Score</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Overall Score
+                </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
                   {assessment.overall_score || 0}
                 </p>
@@ -368,7 +376,9 @@ export default function AssessmentPage() {
                 <Award className="w-6 h-6 text-pink-600 dark:text-pink-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Readiness Index</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Readiness Index
+                </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
                   {assessment.readiness_index || 0}%
                 </p>
@@ -383,7 +393,9 @@ export default function AssessmentPage() {
                 <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Completed Rounds</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Completed Rounds
+                </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
                   {assessment.rounds?.filter(
                     (r: any) => r.status === "COMPLETED",
@@ -400,16 +412,14 @@ export default function AssessmentPage() {
                 <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Duration</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Total Duration
+                </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
-                  {assessment.rounds?.reduce(
-                    (total: number, round: any) => {
-                      const duration =
-                        roundDisplay[round.round_type]?.duration ||
-                        "0 min";
-                    },
-                    0,
-                  ) || 0}{" "}
+                  {assessment.rounds?.reduce((total: number, round: any) => {
+                    const duration =
+                      roundDisplay[round.round_type]?.duration || "0 min";
+                  }, 0) || 0}{" "}
                   Mins
                 </p>
               </div>
@@ -445,30 +455,38 @@ export default function AssessmentPage() {
                 | "completed"
                 | "in_progress"
                 | "not_started" = previousRound
-                  ? getRoundStatus(previousRound)
-                  : "completed";
+                ? getRoundStatus(previousRound)
+                : "completed";
               const previousRoundCompleted =
                 previousRoundStatus === "completed";
               const isRoundEnabled =
-                status === "completed" ||
-                previousRoundCompleted ||
-                index === 0;
+                status === "completed" || previousRoundCompleted || index === 0;
 
               const isCompleted = status === "completed";
               const score = round.score || 0;
 
               return (
-                <Card key={round.id} className="border border-gray-200 hover:shadow-md transition-shadow duration-200 bg-[#F2F8FF] overflow-hidden">
+                <Card
+                  key={round.id}
+                  className="border border-gray-200 hover:shadow-md transition-shadow duration-200 bg-[#F2F8FF] overflow-hidden"
+                >
                   <CardContent className="p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-start space-x-4 w-full md:w-auto">
-                      <div className={`p-3 rounded-xl flex-shrink-0 text-white bg-blue-600 shadow-sm border border-blue-500`}>
+                      <div
+                        className={`p-3 rounded-xl flex-shrink-0 text-white bg-blue-600 shadow-sm border border-blue-500`}
+                      >
                         <IconComponent className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900 text-base">{roundInfo.name}</h3>
-                        <p className="text-xs text-gray-500 mb-2">{roundInfo.description}</p>
+                        <h3 className="font-bold text-gray-900 text-base">
+                          {roundInfo.name}
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-2">
+                          {roundInfo.description}
+                        </p>
                         <div className="text-xs text-gray-500 font-medium bg-gray-100 inline-block px-2 py-1 rounded">
-                          {roundInfo.duration.replace("min", "Min")} &nbsp; Score : {score}%
+                          {roundInfo.duration.replace("min", "Min")} &nbsp;
+                          Score : {score}%
                         </div>
                       </div>
                     </div>
@@ -477,8 +495,11 @@ export default function AssessmentPage() {
                       <Button
                         onClick={() => handleStartRound(round)}
                         disabled={!isRoundEnabled && !isCompleted}
-                        className={`w-auto px-6 whitespace-nowrap min-w-[100px] ${isCompleted ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-500 hover:bg-blue-600'
-                          } text-white`}
+                        className={`w-auto px-6 whitespace-nowrap min-w-[100px] ${
+                          isCompleted
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-blue-500 hover:bg-blue-600"
+                        } text-white`}
                       >
                         {status === "completed" ? "Retake" : "Start"}
                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -490,7 +511,6 @@ export default function AssessmentPage() {
             })}
           </div>
         </div>
-
 
         {/* Actions */}
         <div className="flex justify-between">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Rocket, Lightbulb, Brain, Trophy, Target, TrendingUp, Sparkles, Maximize2, Download, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -30,6 +30,14 @@ interface Props {
   edges: any[];
 }
 
+const MAX_NODES_PER_ROW = 3;
+const NODE_WIDTH = 300;
+const NODE_HEIGHT = 118;
+const H_GAP = 56;
+const V_GAP = 64;
+const READABLE_MIN_SCALE = 0.78;
+const READABLE_MAX_SCALE = 1.12;
+
 export default function CareerTreeVisualization({ nodes, edges }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -40,7 +48,26 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const shouldReduceMotion = useReducedMotion();
+
+  const filteredNodes = useMemo(() => {
+    if (typeFilter === 'all') return nodes;
+    return nodes.filter((n) => (n.data?.type || n.type || 'unknown') === typeFilter);
+  }, [nodes, typeFilter]);
+
+  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
+
+  const filteredEdges = useMemo(
+    () => edges.filter((e) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)),
+    [edges, filteredNodeIds],
+  );
+
+  const nodeTypes = useMemo(() => {
+    const types = new Set<string>();
+    nodes.forEach((n) => types.add(n.data?.type || n.type || 'unknown'));
+    return Array.from(types).sort();
+  }, [nodes]);
 
   // Memoized particles - generate once
   const particles = useMemo(() => 
@@ -52,59 +79,56 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
     })), []
   );
 
-  // Deterministic layout with collision avoidance
+  // Layout: group by layer, wrap rows so nodes stay readable
   const treeNodes: TreeNode[] = useMemo(() => {
-    if (nodes.length === 0) return [];
+    if (filteredNodes.length === 0) return [];
 
-    // Group by explicit layers based on y-coordinate
     const layers: { [key: number]: any[] } = {};
-    
-    nodes.forEach(node => {
+    filteredNodes.forEach((node) => {
       const y = node.position?.y || 0;
-      const layer = Math.floor(y / 75); // More precise layering
+      const layer = Math.floor(y / 75);
       if (!layers[layer]) layers[layer] = [];
       layers[layer].push(node);
     });
 
     const layerKeys = Object.keys(layers).map(Number).sort((a, b) => a - b);
     const layoutedNodes: TreeNode[] = [];
-    
-    layerKeys.forEach((layerKey, layerIndex) => {
-      const nodesInLayer = layers[layerKey];
-      const layerY = layerIndex * 160 + 80;
-      
-      // Simple collision avoidance - sort by original x, then add spacing
-      nodesInLayer.sort((a, b) => (a.position?.x || 0) - (b.position?.x || 0));
-      
-      const nodeWidth = 240;
-      const minSpacing = 280;
-      let currentX = 150;
-      
-      nodesInLayer.forEach((node) => {
-        // Check for collision and adjust
-        const proposedX = currentX;
-        
-        layoutedNodes.push({
-          id: node.id,
-          type: node.data?.type || 'unknown',
-          label: node.data?.label || '',
-          description: node.data?.description || '',
-          color: node.data?.color || '#3b82f6',
-          icon: node.data?.icon || '✨',
-          x: proposedX,
-          y: layerY,
-          layer: layerIndex,
-          children: edges
-            .filter((e: any) => e.source === node.id)
-            .map((e: any) => e.target)
+    let globalRow = 0;
+
+    layerKeys.forEach((layerKey) => {
+      const nodesInLayer = layers[layerKey].sort(
+        (a, b) => (a.position?.x || 0) - (b.position?.x || 0),
+      );
+
+      for (let i = 0; i < nodesInLayer.length; i += MAX_NODES_PER_ROW) {
+        const rowNodes = nodesInLayer.slice(i, i + MAX_NODES_PER_ROW);
+        const rowWidth =
+          rowNodes.length * NODE_WIDTH + Math.max(0, rowNodes.length - 1) * H_GAP;
+        let currentX = Math.max(80, (1280 - rowWidth) / 2);
+
+        rowNodes.forEach((node) => {
+          layoutedNodes.push({
+            id: node.id,
+            type: node.data?.type || 'unknown',
+            label: node.data?.label || '',
+            description: node.data?.description || '',
+            color: node.data?.color || '#3b82f6',
+            icon: node.data?.icon || '✨',
+            x: currentX,
+            y: globalRow * (NODE_HEIGHT + V_GAP) + 80,
+            layer: layerKey,
+            children: filteredEdges
+              .filter((e: any) => e.source === node.id)
+              .map((e: any) => e.target),
+          });
+          currentX += NODE_WIDTH + H_GAP;
         });
-        
-        currentX += minSpacing;
-      });
+        globalRow += 1;
+      }
     });
 
     return layoutedNodes;
-  }, [nodes, edges]);
+  }, [filteredNodes, filteredEdges]);
 
   const getIcon = (type: string) => {
     const iconClass = "w-4 h-4";
@@ -238,17 +262,57 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
     };
   }, [isDragging, dragStart, offset]);
 
-  // Calculate viewBox with extra top padding to avoid header overlap
-  const padding = 100;
-  const topPadding = 180; // Extra padding for header
-  const allX = treeNodes.map(n => n.x);
-  const allY = treeNodes.map(n => n.y);
+  const padding = 80;
+  const topPadding = 120;
+  const allX = treeNodes.map((n) => n.x);
+  const allY = treeNodes.map((n) => n.y);
   const minX = (allX.length > 0 ? Math.min(...allX) : 0) - padding;
   const minY = (allY.length > 0 ? Math.min(...allY) : 0) - topPadding;
-  const maxX = (allX.length > 0 ? Math.max(...allX) : 1000) + padding + 280;
-  const maxY = (allY.length > 0 ? Math.max(...allY) : 800) + padding + 120;
-  const viewBoxWidth = maxX - minX;
-  const viewBoxHeight = maxY - minY;
+  const maxX =
+    (allX.length > 0 ? Math.max(...allX) : 1000) + padding + NODE_WIDTH;
+  const maxY =
+    (allY.length > 0 ? Math.max(...allY) : 800) + padding + NODE_HEIGHT;
+  const viewBoxWidth = Math.max(maxX - minX, 400);
+  const viewBoxHeight = Math.max(maxY - minY, 400);
+
+  const computeReadableScale = useCallback(
+    (containerWidth: number, nodeCount: number) => {
+      const rowWidth = MAX_NODES_PER_ROW * NODE_WIDTH + (MAX_NODES_PER_ROW - 1) * H_GAP;
+      const fromRow = (containerWidth * 0.96) / rowWidth;
+      const densityBoost =
+        nodeCount > 80 ? 1.35 : nodeCount > 40 ? 1.22 : nodeCount > 20 ? 1.12 : 1;
+      return Math.min(
+        READABLE_MAX_SCALE,
+        Math.max(READABLE_MIN_SCALE, fromRow * densityBoost),
+      );
+    },
+    [],
+  );
+
+  const fitToView = useCallback(
+    (mode: 'readable' | 'overview' = 'readable') => {
+      const container = containerRef.current;
+      if (!container || treeNodes.length === 0) return;
+      const cw = container.clientWidth || 800;
+      const ch = container.clientHeight || 600;
+
+      if (mode === 'overview') {
+        const scaleX = cw / viewBoxWidth;
+        const scaleY = ch / viewBoxHeight;
+        const fitScale = Math.min(scaleX, scaleY) * 0.92;
+        setScale(Math.max(0.1, Math.min(fitScale, 1)));
+      } else {
+        setScale(computeReadableScale(cw, treeNodes.length));
+      }
+      setOffset({ x: 0, y: 0 });
+      container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    },
+    [treeNodes.length, viewBoxWidth, viewBoxHeight, computeReadableScale],
+  );
+
+  useEffect(() => {
+    fitToView('readable');
+  }, [fitToView, typeFilter]);
 
   const handleNodeHover = (nodeId: string, event: React.MouseEvent) => {
     setHoveredNode(nodeId);
@@ -414,7 +478,7 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
-    setScale(1); // Reset zoom when toggling fullscreen
+    setTimeout(() => fitToView('readable'), 50);
   };
 
   return (
@@ -430,7 +494,12 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
         </button>
       )}
       
-      <div ref={containerRef} className={`relative ${isFullscreen ? 'w-screen h-screen' : 'w-full h-full'}`}>
+      <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'w-full h-full'}`}>
+      <div
+        ref={containerRef}
+        className="absolute inset-0 overflow-auto cursor-grab"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
       {/* Simplified background particles */}
       {!shouldReduceMotion && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -446,20 +515,31 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
         </div>
       )}
 
-      {/* Single transformed container for SVG and HTML nodes */}
-      <div 
-        className="w-full h-full relative"
-        style={{ 
-          transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`,
-          transformOrigin: 'center center',
-          transition: 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)' // Smooth easing
+      {/* Canvas — fixed pixel size so cards stay readable; pan via scroll + drag */}
+      <div
+        className="relative"
+        style={{
+          width: viewBoxWidth * scale,
+          height: viewBoxHeight * scale,
+          minWidth: '100%',
         }}
       >
+        <div
+          className="relative origin-top-left"
+          style={{
+            width: viewBoxWidth,
+            height: viewBoxHeight,
+            transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`,
+            transformOrigin: '0 0',
+            transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
         <svg
           ref={svgRef}
-          className="absolute inset-0 w-full h-full"
+          width={viewBoxWidth}
+          height={viewBoxHeight}
           viewBox={`${minX} ${minY} ${viewBoxWidth} ${viewBoxHeight}`}
-          preserveAspectRatio="xMidYMid meet"
+          className="block"
         >
           <defs>
             <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -469,16 +549,16 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
           </defs>
 
           {/* Elbow edges - vertical then horizontal */}
-          {edges.map((edge, idx) => {
+          {filteredEdges.map((edge, idx) => {
             const sourceNode = treeNodes.find(n => n.id === edge.source);
             const targetNode = treeNodes.find(n => n.id === edge.target);
             
             if (!sourceNode || !targetNode) return null;
 
-            const startX = sourceNode.x + 120;
-            const startY = sourceNode.y + 50;
-            const endX = targetNode.x + 120;
-            const endY = targetNode.y + 20;
+            const startX = sourceNode.x + NODE_WIDTH / 2;
+            const startY = sourceNode.y + NODE_HEIGHT - 8;
+            const endX = targetNode.x + NODE_WIDTH / 2;
+            const endY = targetNode.y + 8;
             
             // Elbow path
             const midY = (startY + endY) / 2;
@@ -506,8 +586,8 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
               key={node.id}
               x={node.x}
               y={node.y}
-              width="240"
-              height="100"
+              width={NODE_WIDTH}
+              height={NODE_HEIGHT}
             >
               <motion.div
                 initial={shouldReduceMotion ? { opacity: 1 } : { scale: 0, opacity: 0 }}
@@ -543,10 +623,11 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
                       {getIcon(node.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-xs leading-tight line-clamp-2">{node.label}</div>
+                      <div className="font-semibold text-sm leading-snug line-clamp-2">{node.label}</div>
                       {node.description && (
-                        <div className="text-[10px] opacity-80 line-clamp-1 mt-0.5">{node.description}</div>
+                        <div className="text-[11px] opacity-85 line-clamp-2 mt-1">{node.description}</div>
                       )}
+                      <div className="text-[10px] opacity-70 mt-1 uppercase tracking-wide">{node.type}</div>
                     </div>
                   </div>
                 </div>
@@ -554,6 +635,8 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
             </foreignObject>
           ))}
         </svg>
+        </div>
+      </div>
       </div>
 
       {/* Portal-based tooltip - no layout impact */}
@@ -592,45 +675,86 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
         document.body
       )}
 
-      {/* Cleaner header */}
-      <div className="absolute top-4 left-4 right-4 pointer-events-none z-20">
+      {/* Header + type filters */}
+      <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2 pointer-events-none">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-xl px-4 py-2.5 shadow-lg pointer-events-auto inline-flex items-center gap-2"
+          className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-xl px-4 py-2.5 shadow-lg pointer-events-auto inline-flex items-center gap-2 self-start"
         >
           <div className="p-2 bg-blue-500/10 dark:bg-white/15 rounded-lg">
             <Target className="w-4 h-4 text-blue-600 dark:text-white" />
           </div>
           <div>
             <h3 className="text-gray-900 dark:text-white font-semibold text-sm">Career Journey</h3>
-            <p className="text-gray-600 dark:text-white/70 text-xs">{treeNodes.length} nodes • {edges.length} paths</p>
+            <p className="text-gray-600 dark:text-white/70 text-xs">
+              {treeNodes.length} nodes · {filteredEdges.length} paths
+              {typeFilter !== 'all' ? ` · ${typeFilter}` : ''}
+            </p>
+            {typeFilter === 'all' && treeNodes.length > 20 && (
+              <p className="text-gray-500 dark:text-white/50 text-[11px] mt-0.5">
+                Scroll or drag to explore · use filters to focus
+              </p>
+            )}
           </div>
         </motion.div>
+        {nodeTypes.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 pointer-events-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setTypeFilter('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${typeFilter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/90 text-gray-700 border-gray-200'}`}
+            >
+              All ({nodes.length})
+            </button>
+            {nodeTypes.map((type) => {
+              const count = nodes.filter((n) => (n.data?.type || n.type) === type).length;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setTypeFilter(type)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border capitalize ${typeFilter === type ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/90 text-gray-700 border-gray-200'}`}
+                >
+                  {type} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Functional zoom controls */}
       <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 z-20">
-        <button 
-          onClick={() => setScale(prev => Math.min(prev + 0.2, 2))}
+        <button
+          onClick={() => setScale((prev) => Math.min(prev + 0.15, 3))}
           className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
           aria-label="Zoom in"
         >
           +
         </button>
-        <button 
-          onClick={() => setScale(prev => Math.max(prev - 0.2, 0.3))}
+        <button
+          onClick={() => setScale((prev) => Math.max(prev - 0.15, 0.1))}
           className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-lg font-bold shadow-lg"
           aria-label="Zoom out"
         >
           −
         </button>
-        <button 
-          onClick={() => setScale(1)}
-          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm shadow-lg"
-          aria-label="Reset zoom"
+        <button
+          onClick={() => fitToView('readable')}
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-xs font-semibold shadow-lg"
+          aria-label="Readable zoom"
+          title="Zoom for readable cards"
         >
-          ⤢
+          Cards
+        </button>
+        <button
+          onClick={() => fitToView('overview')}
+          className="p-2.5 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-xs font-semibold shadow-lg"
+          aria-label="Fit all nodes"
+          title="See full map overview"
+        >
+          All
         </button>
       </div>
 
@@ -653,7 +777,7 @@ export default function CareerTreeVisualization({ nodes, edges }: Props) {
           <Download className="w-5 h-5" />
         </button>
       </div>
-    </div>
+      </div>
     </div>
   );
 }

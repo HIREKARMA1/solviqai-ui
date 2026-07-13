@@ -18,6 +18,15 @@ const buttonVariants = cva(
                 success: "bg-success text-white hover:bg-accent-green-600 focus-visible:ring-success",
                 warning: "bg-warning text-gray-900 hover:bg-accent-yellow-600 focus-visible:ring-warning",
                 info: "bg-info text-white hover:bg-secondary-600 focus-visible:ring-info",
+                // Mock Test Library — solid brand navy (matches resume page CTAs)
+                mockPrimary:
+                    "border-0 bg-brand-blue text-white font-semibold shadow-sm transition-all duration-200 hover:bg-brand-blue-dark hover:text-white focus-visible:ring-brand-blue/40",
+                mockFilter:
+                    "border border-brand-blue/30 bg-white/90 text-brand-blue font-semibold shadow-sm transition-all duration-200 hover:bg-brand-blue hover:border-brand-blue hover:text-white dark:border-brand-blue/35 dark:bg-gray-900/75 dark:text-brand-cyan dark:hover:bg-brand-blue dark:hover:text-white",
+                mockCategoryActive:
+                    "border border-orange-500/70 bg-orange-500/10 text-orange-600 font-semibold shadow-sm backdrop-blur-sm transition-all duration-200 dark:border-orange-500/80 dark:bg-orange-500/15 dark:text-orange-400",
+                mockCategoryInactive:
+                    "border border-gray-200/80 bg-white/80 text-gray-600 font-semibold shadow-sm transition-all duration-200 hover:border-brand-blue/25 hover:bg-white dark:border-gray-700/60 dark:bg-gray-900/50 dark:text-gray-300 dark:hover:border-brand-blue/30",
             },
             size: {
                 default: "h-10 px-4 py-2",
@@ -75,7 +84,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
         return (
             <Comp
-                className={cn(buttonVariants({ variant, size, className }))}
+                className={cn(buttonVariants({ variant, size }), className)}
                 ref={ref}
                 disabled={disabled || loading}
                 {...props}

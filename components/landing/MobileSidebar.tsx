@@ -3,30 +3,19 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import {
-  FileText,
-  Briefcase,
-  ClipboardList,
-  Zap,
-  LayoutGrid,
-  Users,
-  BarChart3,
-  User,
-  Building2,
-  Sparkles,
-} from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-
-export interface SidebarItem {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-}
+import {
+  adminSidebarFeatures,
+  collegeSidebarFeatures,
+  enterpriseSidebarFeatures,
+  SidebarItem,
+  studentSidebarFeatures,
+} from './LandingSidebar';
+import { getDashboardFeatureRoute } from '@/lib/dashboardNavigation';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -35,102 +24,6 @@ interface MobileSidebarProps {
   activeFeature?: string | null;
   onFeatureChange?: (featureId: string | null) => void;
 }
-
-// Student sidebar features
-const studentSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'resume',
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Resume Analysis',
-    onClick: undefined,
-  },
-  {
-    id: 'assessment',
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: 'Mock Assessment',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-];
-
-// College sidebar features
-const collegeSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'students',
-    icon: <Users className="w-5 h-5" />,
-    label: 'Students',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-  {
-    id: 'profile',
-    icon: <User className="w-5 h-5" />,
-    label: 'Profile',
-    onClick: undefined,
-  },
-];
-
-// Admin sidebar features
-const adminSidebarFeatures: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutGrid className="w-5 h-5" />,
-    label: 'Dashboard',
-    onClick: undefined,
-  },
-  {
-    id: 'colleges',
-    icon: <Building2 className="w-5 h-5" />,
-    label: 'Colleges',
-    onClick: undefined,
-  },
-  {
-    id: 'students',
-    icon: <Users className="w-5 h-5" />,
-    label: 'Students',
-    onClick: undefined,
-  },
-  {
-    id: 'analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Analytics',
-    onClick: undefined,
-  },
-  {
-    id: 'disha',
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Disha Assessments',
-    onClick: undefined,
-  },
-  {
-    id: 'profile',
-    icon: <User className="w-5 h-5" />,
-    label: 'Profile',
-    onClick: undefined,
-  },
-];
 
 export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFeatureChange }: MobileSidebarProps) {
   const { t } = useTranslation();
@@ -157,6 +50,8 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
     switch (user.user_type) {
       case 'college':
         return collegeSidebarFeatures;
+      case 'enterprise':
+        return enterpriseSidebarFeatures;
       case 'admin':
         return adminSidebarFeatures;
       case 'student':
@@ -165,47 +60,9 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
     }
   };
 
-  // Map feature IDs to dashboard routes based on user type
   const getFeatureRoute = (featureId: string): string | null => {
     if (!user) return null;
-    const baseRoute = `/dashboard/${user.user_type}`;
-
-    // Student routes
-    if (user.user_type === 'student') {
-      const routeMap: Record<string, string> = {
-        'dashboard': baseRoute,
-        'resume': `${baseRoute}/resume`,
-        'assessment': `${baseRoute}/assessment`,
-        'analytics': `${baseRoute}/analytics`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // College routes
-    if (user.user_type === 'college') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/college`,
-        'students': `/dashboard/college/students`,
-        'analytics': `/dashboard/college/analytics`,
-        'profile': `/dashboard/college/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    // Admin routes
-    if (user.user_type === 'admin') {
-      const routeMap: Record<string, string> = {
-        'dashboard': `/dashboard/admin`,
-        'colleges': `/dashboard/admin/colleges`,
-        'students': `/dashboard/admin/students`,
-        'analytics': `/dashboard/admin/analytics`,
-        'disha': `/dashboard/admin/disha`,
-        'profile': `/dashboard/admin/profile`,
-      };
-      return routeMap[featureId] || null;
-    }
-
-    return null;
+    return getDashboardFeatureRoute(user.user_type, featureId);
   };
 
   // Check if we're in dashboard context
@@ -334,9 +191,9 @@ export function MobileSidebar({ isOpen, onClose, className, activeFeature, onFea
                           'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
                           'text-left',
                           'text-gray-700 dark:text-gray-300',
-                          'hover:bg-brand-green/5 dark:hover:bg-brand-green/10',
-                          'hover:text-brand-green dark:hover:text-brand-green-light',
-                          isActive && 'bg-brand-green/10 dark:bg-brand-green/15 text-brand-green dark:text-brand-green-light border-l-2 border-brand-green'
+                          'hover:bg-orange-500/5 dark:hover:bg-orange-500/10',
+                          'hover:text-orange-500 dark:hover:text-orange-400',
+                          isActive && 'bg-orange-500/10 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 border-l-2 border-orange-500'
                         )}
                       >
                         <div className="flex-shrink-0 transition-transform hover:scale-110">

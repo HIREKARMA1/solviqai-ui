@@ -1,639 +1,414 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
-    Calendar as CalendarIcon,
-    Clock,
-    Video,
-    CheckCircle2,
-    PlayCircle,
-    ChevronLeft,
-    ChevronRight,
-    Target,
-    TrendingUp,
-    BookOpen,
-    Sparkles,
-    ArrowRight,
-    AlertCircle
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Video,
+  CheckCircle2,
+  XCircle,
+  PlayCircle,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  TrendingUp,
+  BookOpen,
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react'
-
-interface Video {
-    title: string
-    url: string
-    thumbnail?: string
-    duration?: string
-    channel?: string
-    views?: string
-    description?: string
-}
-
-interface PlaylistStep {
-    step: number
-    topic: string
-    timeline: string
-    videos: Video[]
-}
+import {
+  buildDailyStudyPlan,
+  loadDayProgress,
+  saveDayProgress,
+  toDateKey,
+  type DailyStudyTask,
+  type DayTaskStatus,
+  type PlaylistStepInput,
+} from '@/lib/career-calendar'
 
 interface CareerCalendarTabProps {
-    sessionId: string
-}
-
-interface CalendarEvent {
-    date: Date
-    step: number
-    topic: string
-    timeline: string
-    videos: Video[]
-    isActive: boolean
-    isCompleted: boolean
+  sessionId: string
 }
 
 export default function CareerCalendarTab({ sessionId }: CareerCalendarTabProps) {
-    const [playlist, setPlaylist] = useState<PlaylistStep[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [currentMonth, setCurrentMonth] = useState(new Date())
-    const [sessionStartDate, setSessionStartDate] = useState<Date | null>(null)
-    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-    const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const [playlist, setPlaylist] = useState<PlaylistStepInput[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [planStartDate, setPlanStartDate] = useState<Date>(() => {
+    const d = new Date()
+    d.setHours(12, 0, 0, 0)
+    return d
+  })
+  const [selectedDay, setSelectedDay] = useState<DailyStudyTask | null>(null)
+  const [dayProgress, setDayProgress] = useState<Record<string, DayTaskStatus>>({})
 
-    useEffect(() => {
-        loadPlaylist()
-    }, [sessionId])
+  useEffect(() => {
+    setDayProgress(loadDayProgress(sessionId))
+  }, [sessionId])
 
-    const loadPlaylist = async () => {
-        setLoading(true)
-        setError(null)
-        try {
-            const { apiClient } = await import('@/lib/api')
-            const data = await apiClient.getCareerGuidancePlaylist(sessionId)
-            setPlaylist(data.playlist || [])
-            
-            if (data.session_created_at) {
-                const startDate = new Date(data.session_created_at)
-                setSessionStartDate(startDate)
-                setCurrentMonth(new Date(startDate.getFullYear(), startDate.getMonth(), 1))
-            } else {
-                setSessionStartDate(null)
-                setCurrentMonth(new Date())
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load playlist')
-        } finally {
-            setLoading(false)
-        }
+  useEffect(() => {
+    loadPlaylist()
+  }, [sessionId])
+
+  const loadPlaylist = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { apiClient } = await import('@/lib/api')
+      const data = await apiClient.getCareerGuidancePlaylist(sessionId)
+      setPlaylist(data.playlist || [])
+
+      const start = data.session_created_at ? new Date(data.session_created_at) : new Date()
+      start.setHours(12, 0, 0, 0)
+      setPlanStartDate(start)
+      setCurrentMonth(new Date(start.getFullYear(), start.getMonth(), 1))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load playlist')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const dailyTasks = useMemo(
+    () => buildDailyStudyPlan(playlist, planStartDate),
+    [playlist, planStartDate],
+  )
+
+  const tasksByDate = useMemo(() => {
+    const map = new Map<string, DailyStudyTask>()
+    dailyTasks.forEach((task) => map.set(task.dateKey, task))
+    return map
+  }, [dailyTasks])
+
+  const setTaskStatus = useCallback(
+    (dateKey: string, status: DayTaskStatus) => {
+      setDayProgress((prev) => {
+        const next = { ...prev, [dateKey]: status }
+        saveDayProgress(sessionId, next)
+        return next
+      })
+    },
+    [sessionId],
+  )
+
+  const completedCount = useMemo(
+    () => Object.values(dayProgress).filter((s) => s === 'done').length,
+    [dayProgress],
+  )
+
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const startingDayOfWeek = firstDay.getDay()
+    const todayKey = toDateKey(new Date())
+
+    const days: Array<{ date: Date | null; task?: DailyStudyTask; status?: DayTaskStatus }> = []
+
+    for (let i = 0; i < startingDayOfWeek; i += 1) {
+      days.push({ date: null })
     }
 
-    // Helper function to determine if a step should be active
-    const getStepStatus = (step: number, eventDate: Date) => {
-        const today = new Date()
-        const stepStartDate = new Date(eventDate)
-        
-        // Step is active if we're in its timeframe or it's the current step
-        if (step === 1 && today >= stepStartDate) {
-            return true
-        }
-        
-        // For subsequent steps, check if previous steps are completed
-        // and we're within the timeframe
-        const allPreviousCompleted = Array.from({length: step - 1}, (_, i) => i + 1)
-            .every(prevStep => completedSteps.has(prevStep))
-            
-        return allPreviousCompleted && today >= stepStartDate
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month, day, 12, 0, 0, 0)
+      const dateKey = toDateKey(date)
+      const task = tasksByDate.get(dateKey)
+      days.push({
+        date,
+        task,
+        status: dayProgress[dateKey] || (task ? 'pending' : undefined),
+      })
     }
 
-    // Parse timeline and create calendar events
-    const calendarEvents = useMemo(() => {
-        if (!playlist.length) return []
-        
-        const events: CalendarEvent[] = []
-        const today = new Date()
-        const baseDate = sessionStartDate || today
-        const baseDayOfMonth = baseDate.getDate()
-        
-        const setSafeDay = (date: Date) => {
-            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-            date.setDate(Math.min(baseDayOfMonth, lastDay))
-        }
-        
-        playlist.forEach((step) => {
-            // Parse timeline (e.g., "Months 1-2", "Months 3-4", "Month 1", "1-2 months")
-            const timelineLower = step.timeline.toLowerCase()
-            let startMonthOffset = 0
-            let durationMonths = 1 // Default to 1 month
-            
-            // Try different patterns
-            const patterns = [
-                /months?\s*(\d+)(?:\s*-\s*(\d+))?/i,  // "Months 1-2" or "Month 1"
-                /(\d+)(?:\s*-\s*(\d+))?\s*months?/i,  // "1-2 months"
-                /month\s*(\d+)/i,                      // "Month 1"
-            ]
-            
-            let matched = false
-            for (const pattern of patterns) {
-                const match = step.timeline.match(pattern)
-                if (match) {
-                    startMonthOffset = parseInt(match[1]) - 1 // Convert to 0-indexed month offset
-                    durationMonths = match[2] ? (parseInt(match[2]) - startMonthOffset) : 1
-                    matched = true
-                    break
-                }
-            }
-            
-            if (!matched) {
-                // Fallback: use step number as month offset
-                startMonthOffset = (step.step - 1) * 2 // Assume 2 months per step
-                durationMonths = 2
-            }
-            
-            // Calculate actual dates relative to today
-            const eventStartDate = new Date(baseDate)
-            eventStartDate.setMonth(baseDate.getMonth() + startMonthOffset)
-            setSafeDay(eventStartDate)
-            
-            const eventEndDate = new Date(eventStartDate)
-            eventEndDate.setMonth(eventStartDate.getMonth() + durationMonths - 1)
-            setSafeDay(eventEndDate)
+    return { days, todayKey }
+  }, [currentMonth, tasksByDate, dayProgress])
 
-            // Create event for the start month
-            events.push({
-                date: new Date(eventStartDate),
-                step: step.step,
-                topic: step.topic,
-                timeline: step.timeline,
-                videos: step.videos,
-                isActive: getStepStatus(step.step, eventStartDate),
-                isCompleted: completedSteps.has(step.step)
-            })
-            
-            // If it spans multiple months, also add an event for the end month
-            if (durationMonths > 1) {
-                events.push({
-                    date: new Date(eventEndDate),
-                    step: step.step,
-                    topic: step.topic,
-                    timeline: step.timeline,
-                    videos: step.videos,
-                    isActive: getStepStatus(step.step, eventEndDate),
-                    isCompleted: completedSteps.has(step.step)
-                })
-            }
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ]
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-            // Add milestone in the middle of the duration for better visibility
-            if (durationMonths > 2) {
-                const midMonthOffset = Math.floor(durationMonths / 2)
-                const midDate = new Date(eventStartDate)
-                midDate.setMonth(eventStartDate.getMonth() + midMonthOffset)
-                setSafeDay(midDate)
-                
-                events.push({
-                    date: new Date(midDate),
-                    step: step.step,
-                    topic: step.topic,
-                    timeline: step.timeline,
-                    videos: step.videos,
-                    isActive: getStepStatus(step.step, midDate),
-                    isCompleted: completedSteps.has(step.step)
-                })
-            }
-        })
-        
-        return events.sort((a, b) => a.date.getTime() - b.date.getTime())
-    }, [playlist, completedSteps, sessionStartDate])
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth((prev) => {
+      const next = new Date(prev)
+      next.setMonth(prev.getMonth() + (direction === 'prev' ? -1 : 1))
+      return next
+    })
+  }
 
-    // Get calendar days for current month
-    const calendarDays = useMemo(() => {
-        const year = currentMonth.getFullYear()
-        const month = currentMonth.getMonth()
-        
-        const firstDay = new Date(year, month, 1)
-        const lastDay = new Date(year, month + 1, 0)
-        const daysInMonth = lastDay.getDate()
-        const startingDayOfWeek = firstDay.getDay()
-        
-        const days: Array<{ date: Date | null; events: CalendarEvent[] }> = []
-        
-        // Add empty cells for days before month starts
-        for (let i = 0; i < startingDayOfWeek; i++) {
-            days.push({ date: null, events: [] })
-        }
-        
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day)
-            const dayEvents = calendarEvents.filter(event => {
-                const eventDate = new Date(event.date)
-                return eventDate.getDate() === day && 
-                       eventDate.getMonth() === month && 
-                       eventDate.getFullYear() === year
-            })
-            days.push({ date, events: dayEvents })
-        }
-        
-        return days
-    }, [currentMonth, calendarEvents])
+  const goToToday = () => {
+    const today = new Date()
+    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))
+  }
 
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"]
-    
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-    const navigateMonth = (direction: 'prev' | 'next') => {
-        setCurrentMonth(prev => {
-            const newDate = new Date(prev)
-            if (direction === 'prev') {
-                newDate.setMonth(prev.getMonth() - 1)
-            } else {
-                newDate.setMonth(prev.getMonth() + 1)
-            }
-            return newDate
-        })
-    }
-
-    const goToToday = () => {
-        const today = new Date()
-        setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))
-    }
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full py-20 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur-xl opacity-20 animate-pulse" />
-                    <CalendarIcon className="w-16 h-16 text-blue-600 animate-pulse relative z-10" />
-                </div>
-                <div className="text-center space-y-2">
-                    <h3 className="text-lg font-semibold text-gray-900">Loading Your Learning Calendar</h3>
-                    <p className="text-sm text-gray-600 max-w-sm">
-                        We're mapping your roadmap to a beautiful calendar view...
-                    </p>
-                </div>
-            </div>
-        )
-    }
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full p-6">
-                <Card className="border-red-200 bg-red-50/50 max-w-md w-full">
-                    <CardContent className="pt-6">
-                        <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="p-3 bg-red-100 rounded-full">
-                                <AlertCircle className="h-8 w-8 text-red-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-red-900 mb-2">Unable to Load Calendar</h3>
-                                <p className="text-sm text-red-700">{error}</p>
-                            </div>
-                            <Button 
-                                onClick={loadPlaylist}
-                                variant="outline"
-                                className="border-red-300 text-red-700 hover:bg-red-100"
-                            >
-                                Try Again
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    if (playlist.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full p-6 gap-[19px]">
-                {/* Figma: Calendar tab empty state – white card, calendar icon, Complete Your Career Journey */}
-                <Card className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <CardContent className="py-12 px-6 flex flex-col items-center justify-center text-center gap-4">
-                        <div className="flex justify-center">
-                            <div className="p-4 rounded-xl bg-[#E8F0FE] dark:bg-blue-900/30">
-                                <CalendarIcon className="h-12 w-12 text-[#0068FC]" />
-                            </div>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900">
-                            Complete Your Career Journey
-                        </h3>
-                        <p className="text-sm text-gray-600 max-w-md leading-relaxed">
-                            Finish the career guidance conversation to unlock your personalized learning roadmap with curated video resources tailored to your goals.
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                            <Sparkles className="h-4 w-4 text-[#8D5AFF]" />
-                            <span>Your roadmap will appear here once the session is complete</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    const totalVideos = playlist.reduce((sum, step) => sum + step.videos.length, 0)
-
+  if (loading) {
     return (
-        <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/20 overflow-hidden">
-            {/* Header with Stats */}
-            <div className="flex-shrink-0 p-4 lg:p-6 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                            <CalendarIcon className="h-6 w-6 text-blue-600" />
-                            Learning Calendar
-                        </h2>
-                        <p className="text-sm text-gray-600 mt-1">Visualize your learning roadmap timeline</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                            {playlist.length} Steps
-                        </Badge>
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                            {totalVideos} Videos
-                        </Badge>
-                    </div>
-                </div>
-
-                {/* Month Navigation */}
-                <div className="flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigateMonth('prev')}
-                        className="flex items-center gap-2"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
-                    </Button>
-                    
-                    <div className="flex items-center gap-4">
-                        <h3 className="text-lg font-bold text-gray-900">
-                            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                        </h3>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={goToToday}
-                            className="text-xs"
-                        >
-                            Today
-                        </Button>
-                    </div>
-                    
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigateMonth('next')}
-                        className="flex items-center gap-2"
-                    >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0">
-                <Card className="border-0 shadow-lg bg-white">
-                    <CardContent className="p-4 lg:p-6">
-                        {/* Day Headers */}
-                        <div className="grid grid-cols-7 gap-2 mb-2">
-                            {dayNames.map(day => (
-                                <div
-                                    key={day}
-                                    className="text-center text-xs font-semibold text-gray-600 py-2"
-                                >
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Calendar Days */}
-                        <div className="grid grid-cols-7 gap-2">
-                            {calendarDays.map((dayData, idx) => {
-                                if (!dayData.date) {
-                                    return <div key={idx} className="aspect-square" />
-                                }
-
-                                const isToday = dayData.date.toDateString() === new Date().toDateString()
-                                const hasEvents = dayData.events.length > 0
-                                const event = dayData.events[0] // Show first event if multiple
-
-                                return (
-                                    <motion.div
-                                        key={idx}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: idx * 0.01 }}
-                                        className={`
-                                            aspect-square rounded-lg border-2 p-2 cursor-pointer
-                                            transition-all duration-200
-                                            ${isToday 
-                                                ? 'border-blue-500 bg-blue-50 shadow-md' 
-                                                : hasEvents
-                                                    ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
-                                                    : 'border-gray-200 bg-white hover:border-gray-300'
-                                            }
-                                        `}
-                                        onClick={() => hasEvents && setSelectedEvent(event)}
-                                        whileHover={hasEvents ? { scale: 1.05 } : {}}
-                                    >
-                                        <div className="flex flex-col h-full">
-                                            <div className={`
-                                                text-sm font-semibold mb-1
-                                                ${isToday ? 'text-blue-600' : 'text-gray-700'}
-                                            `}>
-                                                {dayData.date.getDate()}
-                                            </div>
-                                            
-                                            {hasEvents && event && (
-                                                <div className="flex-1 flex flex-col gap-1">
-                                                    <div className={`
-                                                        px-1.5 py-0.5 rounded text-[10px] font-medium truncate
-                                                        ${event.isCompleted
-                                                            ? 'bg-green-500 text-white'
-                                                            : event.isActive
-                                                                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
-                                                                : 'bg-blue-200 text-blue-800'
-                                                        }
-                                                    `}>
-                                                        Step {event.step}
-                                                    </div>
-                                                    <div className="text-[9px] text-gray-600 line-clamp-2 leading-tight">
-                                                        {event.topic}
-                                                    </div>
-                                                    {event.videos.length > 0 && (
-                                                        <div className="flex items-center gap-1 text-[9px] text-gray-500">
-                                                            <Video className="h-2.5 w-2.5" />
-                                                            <span>{event.videos.length}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Timeline Legend */}
-                <div className="mt-6">
-                    <Card className="border-0 shadow-md bg-gradient-to-r from-blue-50 to-indigo-50">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-blue-600" />
-                                Learning Timeline
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                {playlist.map((step) => {
-                                    const isCompleted = completedSteps.has(step.step)
-                                    const isActive = step.step === 1
-                                    
-                                    return (
-                                        <motion.div
-                                            key={step.step}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: step.step * 0.1 }}
-                                            className={`
-                                                flex items-center gap-4 p-3 rounded-lg border-2 transition-all
-                                                ${isCompleted
-                                                    ? 'bg-green-50 border-green-200'
-                                                    : isActive
-                                                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md'
-                                                        : 'bg-white border-gray-200'
-                                                }
-                                            `}
-                                        >
-                                            <div className={`
-                                                flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
-                                                ${isCompleted
-                                                    ? 'bg-green-500 text-white'
-                                                    : isActive
-                                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
-                                                        : 'bg-gray-200 text-gray-600'
-                                                }
-                                            `}>
-                                                {isCompleted ? (
-                                                    <CheckCircle2 className="h-5 w-5" />
-                                                ) : (
-                                                    step.step
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h4 className="font-semibold text-sm text-gray-900 truncate">
-                                                        {step.topic}
-                                                    </h4>
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        {step.videos.length} videos
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-gray-600">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>{step.timeline}</span>
-                                                </div>
-                                            </div>
-                                            <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                        </motion.div>
-                                    )
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Event Detail Modal */}
-            <AnimatePresence>
-                {selectedEvent && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                        onClick={() => setSelectedEvent(null)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
-                        >
-                            <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-white flex items-center gap-2">
-                                            <Target className="h-5 w-5" />
-                                            Step {selectedEvent.step}
-                                        </CardTitle>
-                                        <p className="text-blue-100 text-sm mt-1">{selectedEvent.topic}</p>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setSelectedEvent(null)}
-                                        className="text-white hover:bg-white/20"
-                                    >
-                                        ×
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-6 overflow-y-auto max-h-[60vh]">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <Clock className="h-4 w-4" />
-                                        <span className="font-medium">{selectedEvent.timeline}</span>
-                                    </div>
-                                    
-                                    {selectedEvent.videos.length > 0 ? (
-                                        <div>
-                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                                <Video className="h-4 w-4" />
-                                                Recommended Videos ({selectedEvent.videos.length})
-                                            </h4>
-                                            <div className="space-y-2">
-                                                {selectedEvent.videos.map((video, idx) => (
-                                                    <motion.div
-                                                        key={idx}
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: idx * 0.05 }}
-                                                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
-                                                        onClick={() => window.open(video.url, '_blank')}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <PlayCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                                                            <div className="flex-1 min-w-0">
-                                                                <h5 className="font-medium text-sm text-gray-900 line-clamp-2 mb-1">
-                                                                    {video.title}
-                                                                </h5>
-                                                                {video.channel && (
-                                                                    <p className="text-xs text-gray-600">{video.channel}</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                            <p>No videos available for this step yet.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+      <div className="flex flex-col items-center justify-center h-full py-20 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+        <CalendarIcon className="w-16 h-16 text-blue-600 animate-pulse" />
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-gray-900">Building Your Daily Study Plan</h3>
+          <p className="text-sm text-gray-600 max-w-sm">Spreading videos across each day of your roadmap...</p>
         </div>
+      </div>
     )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6">
+        <Card className="border-red-200 bg-red-50/50 max-w-md w-full">
+          <CardContent className="pt-6 text-center space-y-4">
+            <AlertCircle className="h-8 w-8 text-red-600 mx-auto" />
+            <p className="text-sm text-red-700">{error}</p>
+            <Button onClick={loadPlaylist} variant="outline">Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (playlist.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6">
+        <Card className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <CardContent className="py-12 px-6 text-center space-y-4">
+            <CalendarIcon className="h-12 w-12 text-[#0068FC] mx-auto" />
+            <h3 className="text-xl font-bold text-gray-900">Complete Your Career Journey</h3>
+            <p className="text-sm text-gray-600">Finish counseling to unlock your daily learning calendar.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const planEndDate = dailyTasks.length > 0 ? dailyTasks[dailyTasks.length - 1].date : planStartDate
+  const totalPlannedDays = dailyTasks.length
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/20 overflow-hidden">
+      <div className="flex-shrink-0 p-4 lg:p-6 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <CalendarIcon className="h-6 w-6 text-blue-600" />
+              Daily Learning Calendar
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {totalPlannedDays} study days from {planStartDate.toLocaleDateString()} to {planEndDate.toLocaleDateString()}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge className="bg-blue-100 text-blue-700">{playlist.length} phases</Badge>
+            <Badge className="bg-green-100 text-green-700">{completedCount} completed</Badge>
+            <Badge className="bg-purple-100 text-purple-700">{totalPlannedDays - completedCount} remaining</Badge>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+          </Button>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-gray-900">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h3>
+            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+            Next <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300" /> Planned</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> Done</span>
+          <span className="flex items-center gap-1"><XCircle className="w-3.5 h-3.5 text-red-500" /> Skipped</span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0">
+        <Card className="border-0 shadow-lg bg-white">
+          <CardContent className="p-4 lg:p-6">
+            <div className="grid grid-cols-7 gap-2 mb-2">
+              {dayNames.map((day) => (
+                <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">{day}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+              {calendarDays.days.map((dayData, idx) => {
+                if (!dayData.date) {
+                  return <div key={`empty-${idx}`} className="min-h-[110px]" />
+                }
+
+                const dateKey = toDateKey(dayData.date)
+                const isToday = dateKey === calendarDays.todayKey
+                const task = dayData.task
+                const status = dayData.status
+                const isPlanned = Boolean(task)
+                const isPast = dayData.date < new Date(new Date().setHours(0, 0, 0, 0))
+
+                return (
+                  <motion.div
+                    key={dateKey}
+                    className={`
+                      min-h-[110px] rounded-lg border-2 p-1.5 flex flex-col
+                      ${isToday ? 'border-blue-500 bg-blue-50 shadow-md' : ''}
+                      ${!isToday && isPlanned ? 'border-indigo-200 bg-gradient-to-br from-blue-50/80 to-indigo-50/50' : ''}
+                      ${!isToday && !isPlanned ? 'border-gray-100 bg-gray-50/50' : ''}
+                      ${isPast && status === 'pending' ? 'opacity-80' : ''}
+                    `}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-bold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                        {dayData.date.getDate()}
+                      </span>
+                      {status === 'done' && <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />}
+                      {status === 'skipped' && <XCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                    </div>
+
+                    {task ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDay(task)}
+                          className="text-left flex-1 min-h-0"
+                        >
+                          <p className="text-[9px] font-semibold text-indigo-700 truncate">Step {task.step}</p>
+                          <p className="text-[9px] text-gray-700 line-clamp-2 leading-tight mt-0.5">{task.taskLabel}</p>
+                          <p className="text-[8px] text-gray-500 mt-0.5">Day {task.dayIndex}/{task.totalDaysInStep}</p>
+                        </button>
+                        <div className="flex gap-0.5 mt-1">
+                          <button
+                            type="button"
+                            title="Mark done"
+                            onClick={(e) => { e.stopPropagation(); setTaskStatus(dateKey, 'done') }}
+                            className={`flex-1 py-0.5 rounded text-[10px] flex items-center justify-center ${status === 'done' ? 'bg-green-500 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Mark skipped"
+                            onClick={(e) => { e.stopPropagation(); setTaskStatus(dateKey, 'skipped') }}
+                            className={`flex-1 py-0.5 rounded text-[10px] flex items-center justify-center ${status === 'skipped' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+                          >
+                            <XCircle className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[9px] text-gray-400 mt-2">No plan</p>
+                    )}
+                  </motion.div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-6">
+          <Card className="border-0 shadow-md bg-gradient-to-r from-blue-50 to-indigo-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Phase Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {playlist.map((step) => {
+                const stepTasks = dailyTasks.filter((t) => t.step === step.step)
+                const stepDone = stepTasks.filter((t) => dayProgress[t.dateKey] === 'done').length
+                return (
+                  <div key={step.step} className="flex items-center gap-3 p-3 rounded-lg border bg-white">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
+                      {step.step}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{step.topic}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {step.timeline} · {stepDone}/{stepTasks.length} days done
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {selectedDay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSelectedDay(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+            >
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  {selectedDay.date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                </CardTitle>
+                <p className="text-blue-100 text-sm">Step {selectedDay.step}: {selectedDay.topic}</p>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <p className="text-sm text-gray-600">
+                  Day {selectedDay.dayIndex} of {selectedDay.totalDaysInStep} in this phase ({selectedDay.timeline})
+                </p>
+                <div className="p-4 rounded-xl border bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <Video className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-gray-900">{selectedDay.taskLabel}</p>
+                      {selectedDay.video.channel && (
+                        <p className="text-xs text-gray-500 mt-1">{selectedDay.video.channel}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {selectedDay.video.url && (
+                    <Button className="flex-1" onClick={() => window.open(selectedDay.video.url, '_blank')}>
+                      <PlayCircle className="w-4 h-4 mr-2" /> Watch Video
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="text-green-700 border-green-300"
+                    onClick={() => { setTaskStatus(selectedDay.dateKey, 'done'); setSelectedDay(null) }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" /> Done
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="text-red-700 border-red-300"
+                    onClick={() => { setTaskStatus(selectedDay.dateKey, 'skipped'); setSelectedDay(null) }}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" /> Skip
+                  </Button>
+                </div>
+              </CardContent>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }
