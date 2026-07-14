@@ -449,6 +449,11 @@ export function SimulationPipelineWizard({ open, onOpenChange, roles, pipelineId
   };
 
   const save = async () => {
+    if (!meta.job_role_slug) {
+      toast.error('Select a job role first — seed or add roles in Job role catalog if the list is empty');
+      setStep(1);
+      return;
+    }
     if (!hasMandatory && publishMode === 'publish') {
       toast.error('Published pipelines must include Prompt Engineering');
       return;
@@ -555,21 +560,28 @@ export function SimulationPipelineWizard({ open, onOpenChange, roles, pipelineId
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <FieldLabel label="Job role" hint="Primary role this simulation prepares for." />
-                    <Select
-                      value={meta.job_role_slug}
-                      onValueChange={(v) => setMeta({ ...meta, job_role_slug: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a job role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.slug} value={r.slug}>
-                            {r.display_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {roles.length === 0 ? (
+                      <div className="rounded-lg border border-dashed p-3 text-sm text-amber-700 dark:border-amber-800 dark:text-amber-300">
+                        Job role catalog is empty. Close this wizard and open{' '}
+                        <strong>Job role catalog</strong> → Seed from JSON (or Add role), then retry.
+                      </div>
+                    ) : (
+                      <Select
+                        value={meta.job_role_slug || undefined}
+                        onValueChange={(v) => setMeta({ ...meta, job_role_slug: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a job role" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[10050]">
+                          {roles.map((r) => (
+                            <SelectItem key={r.slug} value={r.slug}>
+                              {r.display_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div>
                     <FieldLabel
@@ -786,11 +798,17 @@ export function SimulationPipelineWizard({ open, onOpenChange, roles, pipelineId
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="platform">All students (browse library)</SelectItem>
+                      <SelectItem value="platform">All students (public library)</SelectItem>
                       <SelectItem value="colleges">Assign to specific colleges</SelectItem>
                       <SelectItem value="students">Assign to specific students</SelectItem>
                     </SelectContent>
                   </Select>
+                  {assignmentScope.type === 'platform' && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Published simulations with this scope appear in every student&apos;s simulation
+                      library (no per-student Assign required).
+                    </p>
+                  )}
                   {assignmentScope.type === 'colleges' && (
                     <div className="mt-2 max-h-32 space-y-1 overflow-y-auto rounded-lg border p-2 dark:border-gray-700">
                       {colleges.map((c) => (

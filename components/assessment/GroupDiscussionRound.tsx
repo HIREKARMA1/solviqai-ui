@@ -154,6 +154,7 @@ export function GroupDiscussionRound({
     const [currentRoundTurn, setCurrentRoundTurn] = useState<'bots' | 'user'>('bots');  // 'bots' means bots should speak first
     const [waitingForBots, setWaitingForBots] = useState(false);
     const [hasInitialBotSpoken, setHasInitialBotSpoken] = useState(false);  // Track if question was spoken by bot
+    const [discussionUiReady, setDiscussionUiReady] = useState(false);
 
     // Refs
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -211,9 +212,31 @@ export function GroupDiscussionRound({
         };
     }, [currentStep, topic]);
 
+    // Ensure discussion UI is painted before any bot audio starts
+    useEffect(() => {
+        if (currentStep !== 'discussion' || !topic) {
+            setDiscussionUiReady(false);
+            return;
+        }
+
+        let cancelled = false;
+        const frame = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (!cancelled) {
+                    setDiscussionUiReady(true);
+                }
+            });
+        });
+
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(frame);
+        };
+    }, [currentStep, topic]);
+
     // Handle initial bot speech when topic loads and voices are ready (for Disha)
     useEffect(() => {
-        if (isDisha && topic && voicesLoaded && !hasInitialBotSpoken && currentStep === 'discussion') {
+        if (isDisha && topic && voicesLoaded && discussionUiReady && !hasInitialBotSpoken && currentStep === 'discussion') {
             // Wait a bit for topic to fully render, then have bot speak question
             const timer = setTimeout(() => {
                 const questionText = `${topic.title}. ${topic.content}`;
@@ -243,7 +266,7 @@ export function GroupDiscussionRound({
 
             return () => clearTimeout(timer);
         }
-    }, [topic, voicesLoaded, hasInitialBotSpoken, isDisha, currentStep]);
+    }, [topic, voicesLoaded, hasInitialBotSpoken, isDisha, currentStep, discussionUiReady]);
 
     const fetchTopic = async () => {
         if (loading || inFlightRef.current || fetchAttempt > maxRetries) {
