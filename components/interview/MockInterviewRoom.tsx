@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader } from '@/components/ui/loader';
 import { useTranscription } from '@/hooks/useTranscription';
+import { exitExamFullscreen } from '@/hooks/useExamFullscreen';
 import { apiClient } from '@/lib/api';
 import { Mic, MicOff, Volume2, Send } from 'lucide-react';
 
@@ -58,6 +59,12 @@ export function MockInterviewRoom({
     report?: any;
   } | null>(null);
   const completingRef = useRef(false);
+
+  useEffect(() => {
+    if (finishedResult) {
+      void exitExamFullscreen();
+    }
+  }, [finishedResult]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAudioRef = useRef<string | null>(null);

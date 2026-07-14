@@ -12,10 +12,31 @@ function readFullscreenState(): boolean {
   );
 }
 
-export function useExamFullscreen(options?: { autoEnter?: boolean }) {
+/** Exit browser fullscreen if active — safe to call from any exam/results screen. */
+export async function exitExamFullscreen(): Promise<void> {
+  if (typeof document === 'undefined' || !readFullscreenState()) return;
+
+  try {
+    const doc = document as Document & {
+      webkitExitFullscreen?: () => Promise<void>;
+      mozCancelFullScreen?: () => Promise<void>;
+      msExitFullscreen?: () => Promise<void>;
+    };
+    if (doc.exitFullscreen) await doc.exitFullscreen();
+    else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
+    else if (doc.mozCancelFullScreen) await doc.mozCancelFullScreen();
+    else if (doc.msExitFullscreen) await doc.msExitFullscreen();
+  } catch {
+    // ignore — user may have already exited manually
+  }
+}
+
+export function useExamFullscreen(options?: { autoEnter?: boolean; active?: boolean }) {
   const autoEnter = options?.autoEnter !== false;
+  const active = options?.active ?? autoEnter;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const autoAttemptedRef = useRef(false);
+  const wasActiveRef = useRef(false);
 
   useEffect(() => {
     const sync = () => setIsFullscreen(readFullscreenState());
@@ -45,20 +66,8 @@ export function useExamFullscreen(options?: { autoEnter?: boolean }) {
   }, []);
 
   const exitFullscreen = useCallback(async () => {
-    try {
-      const doc = document as Document & {
-        webkitExitFullscreen?: () => Promise<void>;
-        mozCancelFullScreen?: () => Promise<void>;
-        msExitFullscreen?: () => Promise<void>;
-      };
-      if (doc.exitFullscreen) await doc.exitFullscreen();
-      else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
-      else if (doc.mozCancelFullScreen) await doc.mozCancelFullScreen();
-      else if (doc.msExitFullscreen) await doc.msExitFullscreen();
-      setTimeout(() => setIsFullscreen(readFullscreenState()), 100);
-    } catch {
-      // ignore
-    }
+    await exitExamFullscreen();
+    setTimeout(() => setIsFullscreen(readFullscreenState()), 100);
   }, []);
 
   const toggleFullscreen = useCallback(async () => {
@@ -67,7 +76,7 @@ export function useExamFullscreen(options?: { autoEnter?: boolean }) {
   }, [enterFullscreen, exitFullscreen]);
 
   useEffect(() => {
-    if (!autoEnter || autoAttemptedRef.current) return;
+    if (!autoEnter || !active || autoAttemptedRef.current) return;
     autoAttemptedRef.current = true;
 
     const t = setTimeout(() => {
@@ -83,7 +92,26 @@ export function useExamFullscreen(options?: { autoEnter?: boolean }) {
     document.addEventListener('keydown', once, { once: true });
 
     return () => clearTimeout(t);
-  }, [autoEnter, enterFullscreen]);
+  }, [autoEnter, active, enterFullscreen]);
+
+  // Leave fullscreen when exam phase ends (results, lobby, navigation).
+  useEffect(() => {
+    if (active) {
+      wasActiveRef.current = true;
+      return;
+    }
+    if (wasActiveRef.current) {
+      void exitFullscreen();
+      wasActiveRef.current = false;
+    }
+    autoAttemptedRef.current = false;
+  }, [active, exitFullscreen]);
+
+  useEffect(() => {
+    return () => {
+      void exitExamFullscreen();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;

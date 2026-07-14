@@ -18,6 +18,7 @@ import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
 import { useExamCamera } from '@/hooks/useExamCamera';
 import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { isEmbeddedExamStage } from '@/lib/examStageTypes';
+import { exitExamFullscreen } from '@/hooks/useExamFullscreen';
 import { CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Layers, FileBarChart, Camera, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -227,6 +228,12 @@ export default function PlacementDriveRunPage() {
     }
   }, [attemptId, attempt]);
 
+  useEffect(() => {
+    if (attempt?.status === 'COMPLETED') {
+      void exitExamFullscreen();
+    }
+  }, [attempt?.status]);
+
   if (loading) {
     return (
       <DashboardLayout requiredUserType="student">
@@ -371,11 +378,16 @@ export default function PlacementDriveRunPage() {
       )}
 
       {runner.type === 'coding' && attemptId && (
-        <SimulationCodingRound driveAttemptId={attemptId} onComplete={onStageComplete} />
+        <SimulationCodingRound
+          key={`coding-${attempt.current_stage_index}`}
+          driveAttemptId={attemptId}
+          onComplete={onStageComplete}
+        />
       )}
 
       {runner.type === 'mock_interview' && attemptId && (
         <MockInterviewRoom
+          key={`interview-${attempt.current_stage_index}`}
           persona={interviewPersona(runner)}
           targetRole={targetRole}
           company={attempt.template?.company}
@@ -387,11 +399,16 @@ export default function PlacementDriveRunPage() {
       )}
 
       {runner.type === 'playground' && attemptId && runner.playground_type === 'sales' && (
-        <SimulationSalesRoleplay driveAttemptId={attemptId} onComplete={onStageComplete} />
+        <SimulationSalesRoleplay
+          key={`sales-${attempt.current_stage_index}`}
+          driveAttemptId={attemptId}
+          onComplete={onStageComplete}
+        />
       )}
 
       {runner.type === 'playground' && attemptId && runner.playground_type !== 'sales' && (
         <SimulationGroupDiscussion
+          key={`gd-${attempt.current_stage_index}`}
           driveAttemptId={attemptId}
           stageNum={stageNum}
           totalStages={attempt.total_stages}
@@ -402,6 +419,7 @@ export default function PlacementDriveRunPage() {
       {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(runner.type) &&
         attemptId && (
           <SimulationWrittenStage
+            key={`written-${attempt.current_stage_index}`}
             driveAttemptId={attemptId}
             stageType={runner.type}
             onComplete={onStageComplete}

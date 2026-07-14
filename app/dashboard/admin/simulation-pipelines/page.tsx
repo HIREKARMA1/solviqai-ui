@@ -35,10 +35,16 @@ export default function AdminSimulationPipelinesPage() {
   const [activeTab, setActiveTab] = useState('pipelines');
   const [prepForm, setPrepForm] = useState({
     company: '',
-    job_role_slug: 'software_developer',
+    job_role_slug: '',
     card_title: '',
     card_description: '',
   });
+  const [newRole, setNewRole] = useState({
+    slug: '',
+    display_name: '',
+    category: 'IT',
+  });
+  const [creatingRole, setCreatingRole] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -72,12 +78,53 @@ export default function AdminSimulationPipelinesPage() {
     setSeeding(true);
     try {
       const result = await apiClient.adminSeedSimulationPipelines();
-      toast.success(`Seeded ${result.plan_count} plans (${result.created_pipelines} new)`);
-      load();
-    } catch {
-      toast.error('Seed failed — run DB migration first');
+      toast.success(
+        `Seeded ${result.plan_count} plans (${result.created_pipelines} new pipelines, ${result.created_roles || 0} roles)`,
+      );
+      await load();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(
+        typeof detail === 'string'
+          ? detail
+          : 'Seed failed — run DB migration (alembic upgrade head) then retry',
+      );
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const createRole = async () => {
+    if (!newRole.display_name.trim()) {
+      toast.error('Enter a role display name');
+      return;
+    }
+    const slug =
+      newRole.slug.trim() ||
+      newRole.display_name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '');
+    if (!slug) {
+      toast.error('Could not derive a role slug');
+      return;
+    }
+    setCreatingRole(true);
+    try {
+      await apiClient.adminCreateJobRoleCatalog({
+        slug,
+        display_name: newRole.display_name.trim(),
+        category: newRole.category.trim() || 'General',
+      });
+      toast.success('Job role added to catalog');
+      setNewRole({ slug: '', display_name: '', category: 'IT' });
+      await load();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Could not create job role');
+    } finally {
+      setCreatingRole(false);
     }
   };
 
@@ -125,6 +172,14 @@ export default function AdminSimulationPipelinesPage() {
   };
 
   const createPrepCard = async (publish: boolean) => {
+    if (!prepForm.company.trim()) {
+      toast.error('Enter a company name');
+      return;
+    }
+    if (!prepForm.job_role_slug) {
+      toast.error('Select a job role — seed or add roles in the Job role catalog first');
+      return;
+    }
     try {
       const title =
         prepForm.card_title.trim() ||
@@ -137,13 +192,14 @@ export default function AdminSimulationPipelinesPage() {
       toast.success(publish ? 'Prep card published' : 'Prep card saved');
       setPrepForm({
         company: '',
-        job_role_slug: roles[0]?.slug || 'software_developer',
+        job_role_slug: roles[0]?.slug || '',
         card_title: '',
         card_description: '',
       });
       load();
-    } catch {
-      toast.error('Failed to create prep card');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Failed to create prep card');
     }
   };
 
@@ -361,21 +417,47 @@ export default function AdminSimulationPipelinesPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Job role catalog</CardTitle>
                   <CardDescription>
-                    Roles linked to default simulation pipelines. Seeded from round plans or created via
-                    the pipeline wizard.
+                    Roles linked to default simulation pipelines. Seed from JSON or add roles manually
+                    so Create Pipeline / Prep Card dropdowns work.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border p-4 space-y-3 dark:border-gray-700">
+                    <p className="text-sm font-medium">Add job role</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <Input
+                        placeholder="Display name (e.g. Software Developer)"
+                        value={newRole.display_name}
+                        onChange={(e) => setNewRole({ ...newRole, display_name: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Slug (optional)"
+                        value={newRole.slug}
+                        onChange={(e) => setNewRole({ ...newRole, slug: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Category (e.g. IT)"
+                        value={newRole.category}
+                        onChange={(e) => setNewRole({ ...newRole, category: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={createRole} disabled={creatingRole}>
+                        {creatingRole ? 'Adding…' : 'Add role'}
+                      </Button>
+                      <Button variant="outline" onClick={seed} disabled={seeding}>
+                        {seeding ? 'Seeding…' : 'Seed roles from JSON'}
+                      </Button>
+                    </div>
+                  </div>
+
                   {roles.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-8 text-center dark:border-gray-700">
                       <Briefcase className="mx-auto h-10 w-10 text-gray-400 mb-3" />
                       <p className="font-medium">No roles in catalog</p>
                       <p className="mt-1 text-sm text-gray-500">
-                        Seed pipelines from JSON to populate the job role catalog.
+                        Seed pipelines from JSON or add a role above to unlock role dropdowns.
                       </p>
-                      <Button className="mt-4" variant="outline" onClick={seed} disabled={seeding}>
-                        {seeding ? 'Seeding…' : 'Seed from JSON'}
-                      </Button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -421,18 +503,20 @@ export default function AdminSimulationPipelinesPage() {
                         Job role
                       </label>
                       <Select
-                        value={prepForm.job_role_slug}
+                        value={prepForm.job_role_slug || undefined}
                         onValueChange={(value) => setPrepForm({ ...prepForm, job_role_slug: value })}
                         disabled={roles.length === 0}
                       >
                         <SelectTrigger>
                           <SelectValue
                             placeholder={
-                              roles.length === 0 ? 'Seed pipelines to load roles' : 'Select job role'
+                              roles.length === 0
+                                ? 'Add/seed roles in Job role catalog first'
+                                : 'Select job role'
                             }
                           />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10050]">
                           {roles.map((r) => (
                             <SelectItem key={r.slug} value={r.slug}>
                               {r.display_name}
@@ -440,6 +524,11 @@ export default function AdminSimulationPipelinesPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {roles.length === 0 && (
+                        <p className="mt-1 text-xs text-amber-600">
+                          Open the Job role catalog tab → Seed from JSON or Add role.
+                        </p>
+                      )}
                     </div>
                     <Input
                       placeholder="Card title (optional)"

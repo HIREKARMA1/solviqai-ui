@@ -36,6 +36,7 @@ export default function MockTestExamPage() {
   const currentQ = useRef<string | null>(null);
   const { isFullscreen, toggleFullscreen } = useExamFullscreen({
     autoEnter: phase === 'exam',
+    active: phase === 'exam',
   });
   const examCamera = useExamCamera();
 
