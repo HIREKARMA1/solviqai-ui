@@ -90,16 +90,17 @@ export function SimulationCodingRound({ runId, driveAttemptId, onComplete }: Pro
       <CodingRound
         assessmentId="simulation"
         roundData={roundData}
-        executeCodeFn={(p) => apiClient.executePracticeCode(p)}
+        executeCodeFn={async (p) => {
+          const res = await apiClient.executePracticeCode(p);
+          if (p.question_id) {
+            resultsRef.current[p.question_id] = res;
+          }
+          return res;
+        }}
         submitFn={async () => handleSubmit()}
         showSubmitButton
         onChange={(questionId, code, language) => {
           editorsRef.current[questionId] = { code, language };
-        }}
-        onSubmitted={(result) => {
-          if (result?.question_id) {
-            resultsRef.current[result.question_id] = result;
-          }
         }}
       />
       <Button onClick={handleSubmit} disabled={submitting} className="w-full sm:w-auto">
