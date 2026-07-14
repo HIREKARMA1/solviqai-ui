@@ -9,6 +9,7 @@ import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
 import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import { Button } from '@/components/ui/button';
 import { useExamCamera } from '@/hooks/useExamCamera';
+import { exitExamFullscreen } from '@/hooks/useExamFullscreen';
 import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { apiClient } from '@/lib/api';
 import { ArrowLeft, BarChart3, Camera, RotateCcw, Shield, Star } from 'lucide-react';
@@ -104,6 +105,12 @@ export default function StandaloneMockInterviewPage() {
     setPhase('report');
     examCamera.stopCamera();
   }, [examCamera]);
+
+  useEffect(() => {
+    if (phase === 'report') {
+      void exitExamFullscreen();
+    }
+  }, [phase]);
 
   if (phase === 'report' && report) {
     const score = report.overall_score ?? report.report?.overall_score ?? 0;

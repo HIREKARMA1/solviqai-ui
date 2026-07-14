@@ -1645,6 +1645,16 @@ class ApiClient {
     return response.data;
   }
 
+  async adminCreateJobRoleCatalog(data: {
+    slug: string;
+    display_name: string;
+    category?: string;
+    skills_tags?: string[];
+  }): Promise<any> {
+    const response: AxiosResponse = await this.client.post('/admin/cms/job-role-catalog', data);
+    return response.data;
+  }
+
   async adminListCompanyRolePreps(): Promise<any[]> {
     const response: AxiosResponse = await this.client.get('/admin/cms/company-role-preps');
     return response.data;

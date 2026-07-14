@@ -18,6 +18,7 @@ import { ExamFocusShell } from '@/components/exam/ExamFocusShell';
 import { useExamCamera } from '@/hooks/useExamCamera';
 import { useProctorSnapshots } from '@/hooks/useProctorSnapshots';
 import { isEmbeddedExamStage } from '@/lib/examStageTypes';
+import { exitExamFullscreen } from '@/hooks/useExamFullscreen';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -179,6 +180,12 @@ export default function SimulationRunPage() {
     setRun(updated);
   };
 
+  useEffect(() => {
+    if (run?.status === 'COMPLETED') {
+      void exitExamFullscreen();
+    }
+  }, [run?.status]);
+
   if (loading) {
     return (
       <DashboardLayout requiredUserType="student">
@@ -294,11 +301,16 @@ export default function SimulationRunPage() {
       )}
 
       {runner.type === 'coding' && runId && (
-        <SimulationCodingRound runId={runId} onComplete={onStageComplete} />
+        <SimulationCodingRound
+          key={`coding-${run.current_stage_index}`}
+          runId={runId}
+          onComplete={onStageComplete}
+        />
       )}
 
       {runner.type === 'mock_interview' && runId && (
         <MockInterviewRoom
+          key={`interview-${run.current_stage_index}`}
           persona={interviewPersona(runner)}
           targetRole={targetRole}
           company={run.company}
@@ -309,11 +321,16 @@ export default function SimulationRunPage() {
       )}
 
       {runner.type === 'playground' && runId && runner.playground_type === 'sales' && (
-        <SimulationSalesRoleplay runId={runId} onComplete={onStageComplete} />
+        <SimulationSalesRoleplay
+          key={`sales-${run.current_stage_index}`}
+          runId={runId}
+          onComplete={onStageComplete}
+        />
       )}
 
       {runner.type === 'playground' && runId && runner.playground_type !== 'sales' && (
         <SimulationGroupDiscussion
+          key={`gd-${run.current_stage_index}`}
           runId={runId}
           stageNum={stageNum}
           totalStages={run.total_stages}
@@ -323,7 +340,12 @@ export default function SimulationRunPage() {
 
       {['short_answer', 'essay', 'prompt_engineering', 'case_study', 'finance'].includes(runner.type) &&
         runId && (
-          <SimulationWrittenStage runId={runId} stageType={runner.type} onComplete={onStageComplete} />
+          <SimulationWrittenStage
+            key={`written-${run.current_stage_index}`}
+            runId={runId}
+            stageType={runner.type}
+            onComplete={onStageComplete}
+          />
         )}
 
       {runner.type === 'unsupported' && (

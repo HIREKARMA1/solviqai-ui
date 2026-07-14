@@ -46,6 +46,9 @@ export function SimulationGroupDiscussion({
   const [finishing, setFinishing] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string | null>(null);
   const [userTurnCount, setUserTurnCount] = useState(0);
+  const [openingAgentsPending, setOpeningAgentsPending] = useState<AgentMsg[] | null>(null);
+  const pendingOpeningRef = useRef<AgentMsg[] | null>(null);
+  const openingPlaybackIdRef = useRef(0);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const holdMicRef = useRef(false);
 
@@ -143,21 +146,30 @@ export function SimulationGroupDiscussion({
     };
   }, []);
 
-  const hydrateSession = useCallback(
-    async (data: any, playOpening: boolean) => {
-      setSession(data);
-      setOpeningAgents(data.opening_agents || []);
-      setTurns(data.turns || []);
-      setUserTurnCount(data.user_turn_count || (data.turns || []).length);
-      if (playOpening && (data.opening_agents || []).length > 0 && !(data.turns || []).length) {
-        await playAgentMessages(data.opening_agents);
-      }
-    },
-    [playAgentMessages]
-  );
+  const hydrateSession = useCallback((data: any, playOpening: boolean) => {
+    setSession(data);
+    setOpeningAgents(data.opening_agents || []);
+    setTurns(data.turns || []);
+    setUserTurnCount(data.user_turn_count || (data.turns || []).length);
+
+    const shouldPlayOpening =
+      playOpening &&
+      (data.opening_agents || []).length > 0 &&
+      !(data.turns || []).length;
+
+    if (shouldPlayOpening) {
+      pendingOpeningRef.current = data.opening_agents;
+      setOpeningAgentsPending(data.opening_agents);
+    } else {
+      pendingOpeningRef.current = null;
+      setOpeningAgentsPending(null);
+    }
+  }, []);
 
   useEffect(() => {
     if (!contextId) return;
+    openingPlaybackIdRef.current = 0;
+    pendingOpeningRef.current = null;
     const join = driveAttemptId
       ? apiClient.joinPlacementDriveGD(driveAttemptId)
       : apiClient.joinSimulationGD(runId!);
@@ -166,6 +178,30 @@ export function SimulationGroupDiscussion({
       .catch((e) => alert(e?.response?.data?.error || e?.response?.data?.detail || 'Could not start GD room'))
       .finally(() => setLoading(false));
   }, [contextId, driveAttemptId, runId, hydrateSession]);
+
+  // Show the room UI first, then play opening panelist audio after paint.
+  useEffect(() => {
+    if (loading) return;
+
+    const agents = pendingOpeningRef.current;
+    if (!agents?.length) return;
+
+    const playbackId = ++openingPlaybackIdRef.current;
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled || playbackId !== openingPlaybackIdRef.current) return;
+        pendingOpeningRef.current = null;
+        setOpeningAgentsPending(null);
+        void playAgentMessages(agents);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [loading, openingAgentsPending, playAgentMessages]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
