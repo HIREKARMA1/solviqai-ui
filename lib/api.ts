@@ -989,6 +989,38 @@ class ApiClient {
     return response.data;
   }
 
+  async getCareerGraph(): Promise<any> {
+    const response = await this.client.get("/career-guidance/graph");
+    return response.data;
+  }
+
+  async refreshCareerGraph(): Promise<any> {
+    const response = await this.client.post("/career-guidance/graph/refresh");
+    return response.data;
+  }
+
+  async getStudyPlanRoles(): Promise<any> {
+    const response = await this.client.get("/career-guidance/study-plan/roles");
+    return response.data;
+  }
+
+  async getStudyPlan(role: string): Promise<any> {
+    const response = await this.client.get("/career-guidance/study-plan", {
+      params: { role },
+    });
+    return response.data;
+  }
+
+  async generateStudyPlan(data: { role: string; start_date?: string; force?: boolean }): Promise<any> {
+    const response = await this.client.post("/career-guidance/study-plan", data);
+    return response.data;
+  }
+
+  async updateStudyPlanDay(data: { role: string; session_index: number; status: string }): Promise<any> {
+    const response = await this.client.patch("/career-guidance/study-plan/day", data);
+    return response.data;
+  }
+
   async getAICareerTwin(): Promise<any> {
     const response = await this.client.get("/career-guidance/twin");
     return response.data;
