@@ -5,12 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
+import {
     Play, 
-    ExternalLink, 
     Youtube, 
     Clock,
-    TrendingUp,
     Sparkles,
     AlertCircle,
     Calendar,
@@ -18,15 +16,17 @@ import {
     BookOpen,
     CheckCircle2,
     Loader2,
-    ArrowRight,
     GraduationCap,
     Video,
     PlayCircle
 } from 'lucide-react'
+import YouTubeEmbedModal, { type EmbeddableVideo } from './YouTubeEmbedModal'
 
 interface Video {
     title: string
     url: string
+    embed_url?: string
+    video_id?: string
     thumbnail?: string
     duration?: string
     channel?: string
@@ -51,6 +51,8 @@ export default function CareerPlaylistTab({ sessionId }: CareerPlaylistTabProps)
     const [error, setError] = useState<string | null>(null)
     const [activeStep, setActiveStep] = useState<number>(1)
     const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+    const [targetRole, setTargetRole] = useState<string | null>(null)
+    const [activeVideo, setActiveVideo] = useState<EmbeddableVideo | null>(null)
 
     useEffect(() => {
         loadPlaylist()
@@ -63,6 +65,7 @@ export default function CareerPlaylistTab({ sessionId }: CareerPlaylistTabProps)
             const { apiClient } = await import('@/lib/api')
             const data = await apiClient.getCareerGuidancePlaylist(sessionId)
             setPlaylist(data.playlist || [])
+            setTargetRole(data.target_role || null)
             
             // Auto-select first step
             if (data.playlist && data.playlist.length > 0) {
@@ -75,10 +78,9 @@ export default function CareerPlaylistTab({ sessionId }: CareerPlaylistTabProps)
         }
     }
 
-    const handleVideoClick = (video: Video, stepNumber: number) => {
-        window.open(video.url, '_blank', 'noopener,noreferrer')
-        // Mark step as completed if all videos are watched (simplified logic)
-        // In production, you'd track individual video completion
+    const handleVideoClick = (video: Video, _stepNumber: number) => {
+        // Play in-site via iframe modal — the student never leaves SolvIQ.
+        setActiveVideo(video as EmbeddableVideo)
     }
 
     if (loading) {
@@ -159,8 +161,17 @@ export default function CareerPlaylistTab({ sessionId }: CareerPlaylistTabProps)
 
     return (
         <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/20 overflow-hidden">
+            <YouTubeEmbedModal video={activeVideo} onClose={() => setActiveVideo(null)} />
             {/* Scrollable Content Area - Everything scrolls together */}
             <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {targetRole && (
+                <div className="px-4 lg:px-6 pt-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-[#1b52a4]">
+                        <Target className="h-3.5 w-3.5" />
+                        Learning path for {targetRole}
+                    </div>
+                </div>
+            )}
             {/* Professional Header with Stats */}
             <div className="p-4 lg:p-6 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 shadow-sm">
                 {/* Stats Grid */}
@@ -439,9 +450,8 @@ export default function CareerPlaylistTab({ sessionId }: CareerPlaylistTabProps)
                                                                 className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300 flex-1 h-9 text-sm"
                                                             >
                                                                 <div className="flex items-center justify-center gap-2">
-                                                                    <Play className="h-4 w-4" />
-                                                                    <span className="font-semibold">Watch on YouTube</span>
-                                                                    <ExternalLink className="h-3 w-3" />
+                                                                    <PlayCircle className="h-4 w-4" />
+                                                                    <span className="font-semibold">Watch here</span>
                                                                 </div>
                                                             </Button>
                                                         </div>

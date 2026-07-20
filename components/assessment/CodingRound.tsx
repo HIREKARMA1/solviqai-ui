@@ -10,6 +10,37 @@ import { apiClient } from '@/lib/api'
 // Load Monaco only on client
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false }) as any
 
+function looksLikeCompleteSolution(code: string): boolean {
+  if (!code?.trim()) return false
+  const lower = code.toLowerCase()
+  const hasTodo = lower.includes('# todo') || lower.includes('// todo')
+  if (code.length > 900 && !hasTodo) return true
+  const hasDef = /\b(def|function|class|public\s+static)\b/.test(lower)
+  const hasControl = /\b(if|for|while|return)\b/.test(lower)
+  const returns = (lower.match(/\breturn\b/g) || []).length
+  if (hasDef && hasControl && returns >= 1 && !hasTodo) return true
+  return false
+}
+
+const SAFE_STARTERS: Record<string, string> = {
+  python:
+    "import sys\n\n# Read all input from stdin\ndata = sys.stdin.read().strip()\n\n# TODO: Process `data` and solve the problem\n# print(answer)\n",
+  javascript:
+    "const fs = require('fs');\nconst data = fs.readFileSync(0, 'utf8').trim();\n\n// TODO: Process `data` and solve the problem\n// console.log(answer);\n",
+  typescript:
+    "const fs = require('fs');\nconst data: string = fs.readFileSync(0, 'utf8').trim();\n\n// TODO: Process `data` and solve the problem\n// console.log(answer);\n",
+  java:
+    "import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // TODO: Read input and print answer\n    }\n}\n",
+  cpp:
+    "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // TODO: Read input and print answer\n    return 0;\n}\n",
+}
+
+function resolveStarter(starter: Record<string, string> | undefined, lang: string): string {
+  const raw = starter?.[lang] || ''
+  if (raw && !looksLikeCompleteSolution(raw)) return raw
+  return SAFE_STARTERS[lang] || SAFE_STARTERS.python
+}
+
 export type CodingRoundProps = {
   assessmentId: string
   roundData: any
@@ -62,7 +93,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
     for (const q of (roundData?.questions || [])) {
       const meta = q.metadata || {}
       const starter = meta.starter_code || {}
-      m[q.id] = { language: 'python', code: starter['python'] || '' }
+      m[q.id] = { language: 'python', code: resolveStarter(starter, 'python') }
     }
     return m
   }, [roundData])
@@ -78,12 +109,19 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   const [editors, setEditors] = useState<Record<string, { language: string; code: string }>>(initial)
   const [activeTab, setActiveTab] = useState<Record<string, 'problem' | 'tests' | 'submissions'>>(initialTabs)
 
+  // Keep editors in sync when a new coding question set loads
+  useEffect(() => {
+    setEditors(initial)
+    setActiveTab(initialTabs)
+    setResults({})
+  }, [initial, initialTabs])
+
   const setLang = (qid: string, lang: string) => {
     setEditors(prev => {
       const next = { ...prev }
       const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
       const starter = (meta.starter_code || {}) as Record<string, string>
-      const newCode = starter[lang] || next[qid]?.code || ''
+      const newCode = resolveStarter(starter, lang)
       next[qid] = { language: lang, code: newCode }
       onChange?.(qid, newCode, lang)
       return next
@@ -187,11 +225,11 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
       })
 
       if (res.mode === 'tests') {
-        const passRate = Math.round((res.passed / res.total) * 100)
+        const passRate = Math.round((res.passed / Math.max(res.total, 1)) * 100)
         if (passRate === 100) {
           toast.success(`All ${res.total} tests passed`)
         } else {
-          toast.success(`Passed ${res.passed}/${res.total} tests (${passRate}%)`)
+          toast.error(`Passed ${res.passed}/${res.total} tests (${passRate}%)`)
         }
       } else if (res.subscription_error) {
         toast.error('Code execution service is currently unavailable. Please contact support.')
@@ -364,11 +402,11 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                                             <div className="bg-gray-50 p-4 rounded-lg text-sm border border-gray-200">
                                               <div className="mb-2">
                                                 <span className="text-gray-500 block mb-1">Input:</span>
-                                                <span className="font-mono text-gray-800">{inputEx || 'hello'}</span>
+                                                <span className="font-mono text-gray-800">{inputEx || '—'}</span>
                                               </div>
                                               <div>
                                                 <span className="text-gray-500 block mb-1">Output:</span>
-                                                <span className="font-mono text-gray-800">{outputEx || 'olleh'}</span>
+                                                <span className="font-mono text-gray-800">{outputEx || '—'}</span>
                                               </div>
                                             </div>
                                           )
@@ -428,36 +466,61 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                           <div className="space-y-4">
                             <div className="border border-blue-200 bg-blue-50 p-4 rounded-lg">
                               <h3 className="font-bold text-gray-900 text-base mb-2">Test Cases</h3>
-                              <p className="text-sm text-gray-600">Run your code to see results against these cases.</p>
+                              <p className="text-sm text-gray-600">
+                                Run your code to compare your output against the expected output for each case.
+                              </p>
+                              {typeof results[q.id]?.passed === 'number' && typeof results[q.id]?.total === 'number' && (
+                                <p className="mt-2 text-sm font-semibold text-gray-800">
+                                  Score: {results[q.id].passed}/{results[q.id].total} passed
+                                </p>
+                              )}
                             </div>
                             {results[q.id]?.results?.length > 0 ? (
                               results[q.id].results.map((r: any, i: number) => (
                                 <div key={i} className={`p-4 rounded-lg border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                  <div className="font-bold mb-1 text-sm">{r.passed ? 'Test Case Passed' : 'Test Case Failed'}</div>
-                                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                                  <div className="font-bold mb-2 text-sm">
+                                    {r.passed ? `Test Case ${i + 1} Passed` : `Test Case ${i + 1} Failed`}
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
                                     <div className="bg-white p-2 rounded border border-gray-200">
                                       <div className="text-gray-500 mb-1">Input</div>
-                                      <div>{String(r.input || '-')}</div>
+                                      <pre className="whitespace-pre-wrap break-words">{String(r.input ?? '—')}</pre>
                                     </div>
                                     <div className="bg-white p-2 rounded border border-gray-200">
                                       <div className="text-gray-500 mb-1">Expected</div>
-                                      <div>{String(r.expected || '-')}</div>
+                                      <pre className="whitespace-pre-wrap break-words">{String(r.expected ?? '—')}</pre>
+                                    </div>
+                                    <div className="bg-white p-2 rounded border border-gray-200">
+                                      <div className="text-gray-500 mb-1">Your Output</div>
+                                      <pre className="whitespace-pre-wrap break-words">{String(r.stdout ?? '—')}</pre>
                                     </div>
                                   </div>
+                                  {r.stderr && (
+                                    <div className="mt-2 rounded border border-red-200 bg-white p-2 text-xs font-mono text-red-700 whitespace-pre-wrap">
+                                      {String(r.stderr)}
+                                    </div>
+                                  )}
                                 </div>
                               ))
                             ) : (
                               <div className="space-y-3">
-                                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                                  <div className="font-bold text-gray-800 text-sm mb-1">Test Case 1</div>
-                                  <div className="text-xs text-gray-600">Input: [2, 7, 11, 15], target = 9</div>
-                                  <div className="text-xs text-gray-600">Expected: [0, 1]</div>
-                                </div>
-                                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                                  <div className="font-bold text-gray-800 text-sm mb-1">Test Case 2</div>
-                                  <div className="text-xs text-gray-600">Input: [3, 2, 4], target = 6</div>
-                                  <div className="text-xs text-gray-600">Expected: [1, 2]</div>
-                                </div>
+                                {(meta.tests || []).length > 0 ? (
+                                  (meta.tests as any[]).slice(0, 5).map((t: any, i: number) => (
+                                    <div key={i} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                      <div className="font-bold text-gray-800 text-sm mb-1">Sample Case {i + 1}</div>
+                                      <div className="text-xs text-gray-600 font-mono whitespace-pre-wrap">
+                                        Input: {String(t.input ?? t.stdin ?? '—')}
+                                      </div>
+                                      <div className="text-xs text-gray-600 font-mono whitespace-pre-wrap mt-1">
+                                        Expected: {String(t.output ?? t.expected ?? t.expected_output ?? '—')}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                                    No sample cases yet. Click <strong>Run Code</strong> to execute against hidden/generated tests.
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

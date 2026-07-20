@@ -30,6 +30,7 @@ export default function MockTestExamPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [phase, setPhase] = useState<ExamPhase>('camera_setup');
   const startTime = useRef(Date.now());
   const questionTimes = useRef<Record<string, number>>({});
@@ -39,6 +40,20 @@ export default function MockTestExamPage() {
     active: phase === 'exam',
   });
   const examCamera = useExamCamera();
+
+  const isDriveContext = Boolean(driveAttemptId);
+  const isSimulationContext = Boolean(simulationRunId);
+  const isEmbeddedContext = isDriveContext || isSimulationContext;
+
+  const continueAfterEmbeddedExam = useCallback(() => {
+    if (driveAttemptId) {
+      router.replace(`/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`);
+      return;
+    }
+    if (simulationRunId) {
+      router.replace(`/dashboard/student/simulations/run?run_id=${simulationRunId}`);
+    }
+  }, [driveAttemptId, simulationRunId, router]);
 
   const serverCapturedIndexes = useMemo(() => {
     const snaps = attempt?.proctoring_snapshots;
@@ -99,6 +114,11 @@ export default function MockTestExamPage() {
     const data = await apiClient.getMockTestAttempt(attemptId);
     setAttempt(data);
     if (data.status === 'COMPLETED') {
+      if (isEmbeddedContext) {
+        setRedirecting(true);
+        continueAfterEmbeddedExam();
+        return;
+      }
       setPhase('completed');
       return;
     }
@@ -106,7 +126,7 @@ export default function MockTestExamPage() {
       const ms = new Date(data.expires_at).getTime() - Date.now();
       setTimeLeft(Math.max(0, Math.floor(ms / 1000)));
     }
-  }, [attemptId]);
+  }, [attemptId, isEmbeddedContext, continueAfterEmbeddedExam]);
 
   useEffect(() => {
     if (!attemptId) {
@@ -134,10 +154,10 @@ export default function MockTestExamPage() {
         time_per_question: questionTimes.current,
         time_taken_seconds: Math.floor((Date.now() - startTime.current) / 1000),
       });
-      setAttempt(result);
-      setPhase('completed');
       examCamera.stopCamera();
+
       if (driveAttemptId && driveStageIndex != null) {
+        setRedirecting(true);
         const driveAlreadyAdvanced =
           result.drive_advanced || Boolean(result.drive_attempt);
         if (!driveAlreadyAdvanced) {
@@ -150,8 +170,12 @@ export default function MockTestExamPage() {
             },
           });
         }
-        router.push(`/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`);
-      } else if (simulationRunId && simulationStageIndex != null) {
+        continueAfterEmbeddedExam();
+        return;
+      }
+
+      if (simulationRunId && simulationStageIndex != null) {
+        setRedirecting(true);
         if (!result.simulation_advanced) {
           await apiClient.completeSimulationStage(simulationRunId, {
             stage_index: parseInt(simulationStageIndex, 10),
@@ -162,8 +186,12 @@ export default function MockTestExamPage() {
             engine_session_id: attemptId,
           });
         }
-        router.push(`/dashboard/student/simulations/run?run_id=${simulationRunId}`);
+        continueAfterEmbeddedExam();
+        return;
       }
+
+      setAttempt(result);
+      setPhase('completed');
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'Submit failed');
     } finally {
@@ -177,8 +205,8 @@ export default function MockTestExamPage() {
     driveStageIndex,
     simulationRunId,
     simulationStageIndex,
-    router,
     examCamera,
+    continueAfterEmbeddedExam,
   ]);
 
   useEffect(() => {
@@ -207,9 +235,9 @@ export default function MockTestExamPage() {
     setAnswers((prev) => ({ ...prev, [qid]: opt }));
   };
 
-  if (loading) {
+  if (loading || redirecting) {
     return (
-      <DashboardLayout requiredUserType="student" hideNavigation>
+      <DashboardLayout requiredUserType="student" hideNavigation={isEmbeddedContext}>
         <div className="flex h-[calc(100vh-5rem)] items-center justify-center">
           <Loader size="lg" />
         </div>
@@ -217,7 +245,7 @@ export default function MockTestExamPage() {
     );
   }
 
-  if (phase === 'completed' || attempt?.status === 'COMPLETED') {
+  if ((phase === 'completed' || attempt?.status === 'COMPLETED') && !isEmbeddedContext) {
     const backHref = driveAttemptId
       ? `/dashboard/student/placement-drives/run?attempt_id=${driveAttemptId}`
       : simulationRunId
