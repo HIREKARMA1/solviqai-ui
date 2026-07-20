@@ -79,33 +79,47 @@ export function getErrorMessage(error: any, defaultMessage: string = 'An error o
   // Check if error has a response with data
   if (error?.response?.data) {
     const data = error.response.data;
-    
-    // Check for detail field (FastAPI standard)
-    if (data.detail) {
-      return data.detail;
+
+    // Check for detail field (FastAPI standard). NOTE: on 422 validation errors
+    // `detail` is an ARRAY of objects like { type, loc, msg, input, ctx } — those
+    // must never be returned/rendered directly (causes "Objects are not valid as a
+    // React child"). Normalize everything down to a string.
+    const detail = data.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
     }
-    
+    if (Array.isArray(detail)) {
+      const msgs = detail
+        .map((d: any) => (typeof d === 'string' ? d : d?.msg))
+        .filter((m: any) => typeof m === 'string' && m.trim());
+      if (msgs.length) return msgs.join(', ');
+    }
+    if (detail && typeof detail === 'object') {
+      if (typeof detail.message === 'string') return detail.message;
+      if (typeof detail.msg === 'string') return detail.msg;
+    }
+
     // Check for message field
-    if (data.message) {
+    if (typeof data.message === 'string' && data.message.trim()) {
       return data.message;
     }
-    
+
     // Check for error field
-    if (data.error) {
+    if (typeof data.error === 'string' && data.error.trim()) {
       return data.error;
     }
-    
+
     // If data is a string, return it
     if (typeof data === 'string') {
       return data;
     }
   }
-  
+
   // Check if error has a message property
-  if (error?.message) {
+  if (typeof error?.message === 'string' && error.message.trim()) {
     return error.message;
   }
-  
+
   // Return default message
   return defaultMessage;
 }

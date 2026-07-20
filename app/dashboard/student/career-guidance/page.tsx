@@ -31,8 +31,8 @@ import SessionHistoryModal from '@/components/career-guidance/SessionHistoryModa
 import CareerModuleLocked from '@/components/career-guidance/CareerModuleLocked';
 import CareerCounselorChat from '@/components/career-guidance/CareerCounselorChat';
 import SubscriptionRequiredModal from '@/components/subscription/SubscriptionRequiredModal';
-import { AxiosError } from 'axios';
 import { useTheme } from 'next-themes';
+import { getErrorMessage } from '@/lib/utils';
 
 interface Message {
   role: 'ai' | 'user';
@@ -65,6 +65,12 @@ export default function CareerGuidancePage() {
   // Flowchart state
   const [nodes, setNodes] = useState<any[]>([]);
   const [edges, setEdges] = useState<any[]>([]);
+
+  // Career graph (structured, role-specific) state
+  const [graphNodes, setGraphNodes] = useState<any[]>([]);
+  const [graphEdges, setGraphEdges] = useState<any[]>([]);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [graphLoaded, setGraphLoaded] = useState(false);
 
   // SSE (Server-Sent Events)
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -154,7 +160,7 @@ export default function CareerGuidancePage() {
         setSessionId(id);
         return;
       }
-      const errorMessage = e.response?.data?.detail || 'Failed to load session';
+      const errorMessage = getErrorMessage(e, 'Failed to load session');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -200,7 +206,7 @@ export default function CareerGuidancePage() {
       setNeedsCounselorStart(progress.can_start_new_counselor);
     } catch (e: any) {
       console.error('Failed to load career guidance progress', e);
-      setError(e.response?.data?.detail || 'Failed to load career guidance');
+      setError(getErrorMessage(e, 'Failed to load career guidance'));
       setNeedsCounselorStart(true);
     } finally {
       setIsInitializing(false);
@@ -260,12 +266,11 @@ export default function CareerGuidancePage() {
     } catch (error: any) {
       clearInterval(initProgressInterval);
       setLoadingPercentage(0);
-      const axiosError = error as AxiosError<{ detail: string }>;
-      const errorMessage = axiosError.response?.data?.detail || 'Failed to start session. Please try again.';
+      const errorMessage = getErrorMessage(error, 'Failed to start session. Please try again.');
 
       // Check if it's a subscription error - be more specific with checks
       const isSubscriptionError =
-        axiosError.response?.status === 403 ||
+        error?.response?.status === 403 ||
         (errorMessage && (
           errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||
@@ -497,12 +502,11 @@ export default function CareerGuidancePage() {
       }
 
     } catch (error: any) {
-      const axiosError = error as AxiosError<{ detail: string }>;
-      const errorMessage = axiosError.response?.data?.detail || 'Failed to send message. Please try again.';
+      const errorMessage = getErrorMessage(error, 'Failed to send message. Please try again.');
 
       // Check if it's a subscription error - be more specific with checks
       const isSubscriptionError =
-        axiosError.response?.status === 403 ||
+        error?.response?.status === 403 ||
         (errorMessage && (
           errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||
@@ -591,6 +595,10 @@ export default function CareerGuidancePage() {
   const counselorComplete = careerProgress?.counselor_status === 'completed';
   const counselorSessionId = careerProgress?.counselor_session_id ?? sessionId;
 
+  // Prefer the structured, role-specific career graph; fall back to any legacy scraped nodes.
+  const treeNodes = graphNodes.length > 0 ? graphNodes : nodes;
+  const treeEdges = graphEdges.length > 0 ? graphEdges : edges;
+
   const handleRetry = () => {
     if (counselorComplete) {
       void hydrateFromProgress();
@@ -605,12 +613,32 @@ export default function CareerGuidancePage() {
 
   const isTabLocked = (tab: string) => tab !== 'counselor' && !moduleAccess[tab];
 
+  const loadCareerGraph = useCallback(async (force = false) => {
+    setGraphLoading(true);
+    try {
+      const { apiClient } = await import('@/lib/api');
+      const data = force ? await apiClient.refreshCareerGraph() : await apiClient.getCareerGraph();
+      setGraphNodes(data?.nodes || []);
+      setGraphEdges(data?.edges || []);
+      setGraphLoaded(true);
+    } catch (e) {
+      console.error('Failed to load career graph', e);
+      // Keep any previously scraped nodes/edges as a fallback; surface a soft toast only on refresh.
+      if (force) toast.error(getErrorMessage(e, 'Failed to refresh career graph'));
+    } finally {
+      setGraphLoading(false);
+    }
+  }, []);
+
   const handleTabChange = (tab: string) => {
     if (isTabLocked(tab)) {
       toast.error('Complete your counseling session first to unlock this module.');
       return;
     }
     setActiveTab(tab);
+    if (tab === 'flowchart' && !graphLoaded && !graphLoading) {
+      void loadCareerGraph(false);
+    }
   };
 
   const goToCounselor = () => setActiveTab('counselor');
@@ -944,20 +972,44 @@ export default function CareerGuidancePage() {
                       description="Your career journey map will appear here after counseling."
                       onGoToCounselor={goToCounselor}
                     />
-                  ) : nodes.length > 0 || edges.length > 0 ? (
+                  ) : graphLoading ? (
                     <div
-                      className="min-h-[560px] h-[70vh] w-full rounded-lg border overflow-auto dark:border-[#4F5764]"
+                      className="min-h-[560px] h-[70vh] w-full flex flex-col items-center justify-center gap-4 rounded-lg border dark:border-[#4F5764]"
                       style={{
                         backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
                         borderColor: isDark ? '#4F5764' : '#BDBDBD',
                         borderRadius: 8,
                       }}
                     >
-                      <CareerTreeVisualization nodes={nodes} edges={edges} />
+                      <Loader2 className="w-12 h-12 text-[#1b52a4] animate-spin" />
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Mapping your role-specific career graph…</p>
+                    </div>
+                  ) : treeNodes.length > 0 || treeEdges.length > 0 ? (
+                    <div
+                      className="min-h-[560px] h-[70vh] w-full rounded-lg border overflow-auto dark:border-[#4F5764] relative"
+                      style={{
+                        backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
+                        borderColor: isDark ? '#4F5764' : '#BDBDBD',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <div className="absolute top-3 right-3 z-20">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void loadCareerGraph(true)}
+                          disabled={graphLoading}
+                          className="bg-white/90 dark:bg-[#1E293B]/90 border-[#1b52a4]/40 text-[#1b52a4] dark:text-blue-300 hover:bg-white text-xs gap-1.5"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${graphLoading ? 'animate-spin' : ''}`} />
+                          Regenerate
+                        </Button>
+                      </div>
+                      <CareerTreeVisualization nodes={treeNodes} edges={treeEdges} />
                     </div>
                   ) : (
                     <div
-                      className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-2 sm:gap-[10px] dark:border-[#4F5764]"
+                      className="h-full w-full flex flex-col items-center justify-center rounded-lg border min-h-[280px] sm:min-h-[360px] lg:min-h-[400px] p-6 sm:p-8 lg:p-[50px] gap-3 sm:gap-[10px] dark:border-[#4F5764]"
                       style={{
                         backgroundColor: isDark ? '#1C2938' : '#FBFCFE',
                         borderColor: isDark ? '#4F5764' : '#BDBDBD',
@@ -970,7 +1022,14 @@ export default function CareerGuidancePage() {
                         </div>
                       </div>
                       <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white text-center">Career Tree Visualization</p>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md text-center">Your career journey map will appear here as you progress</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md text-center">Your role-specific career graph — target roles, companies, and key skills — will be generated from your profile.</p>
+                      <Button
+                        onClick={() => void loadCareerGraph(true)}
+                        className="bg-[#f58020] hover:bg-[#d66d12] text-white gap-2 mt-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Generate Career Graph
+                      </Button>
                     </div>
                   )}
                 </TabsContent>

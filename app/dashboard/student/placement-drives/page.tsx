@@ -221,7 +221,7 @@ export default function PlacementDriveLibraryPage() {
       <div
         ref={pageScrollRef}
         className={cn(
-          'relative -mx-6 -mt-20 min-h-[calc(100dvh-6.5rem)] w-auto bg-brand-hero p-4 pb-8 pt-24 dark:bg-brand-hero-dark sm:p-6 sm:pt-28',
+          'relative -mx-6 -mt-20 w-auto bg-brand-hero p-4 pb-6 pt-24 dark:bg-brand-hero-dark sm:p-6 sm:pt-28',
           'lg:-mt-24 lg:pt-24',
         )}
       >
@@ -278,7 +278,7 @@ export default function PlacementDriveLibraryPage() {
             data-drives-dock
             className={cn(
               'flex flex-col gap-4 sm:gap-5',
-              'lg:sticky lg:top-0 lg:z-20',
+              'lg:sticky lg:top-4 lg:z-20',
             )}
           >
             {showFilterColumn && (
@@ -295,7 +295,7 @@ export default function PlacementDriveLibraryPage() {
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
               {showFilterColumn && (
-                <div className="hidden shrink-0 lg:sticky lg:top-0 lg:block lg:w-[260px] xl:w-[280px]">
+                <div className="hidden shrink-0 lg:block lg:w-[260px] lg:self-start xl:w-[280px]">
                   <PlacementDriveFiltersSidebar
                     draft={draftFilters}
                     onDraftChange={setDraftFilters}
@@ -308,7 +308,7 @@ export default function PlacementDriveLibraryPage() {
 
               <div
                 ref={cardsScrollRef}
-                className="min-w-0 flex-1 space-y-4 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto scrollbar-hide"
+                className="min-w-0 flex-1 space-y-4 lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto lg:overscroll-y-contain scrollbar-hide"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
@@ -371,38 +371,38 @@ export default function PlacementDriveLibraryPage() {
                 )}
               </div>
             </div>
-
-            {/* Full-width footer — pinned under filter + cards when docked on desktop */}
-            <section className="w-full shrink-0 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-blue-50/90 p-5 shadow-sm dark:border-brand-blue/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 sm:p-6">
-              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/40">
-                    <Trophy className="h-6 w-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Stay Consistent, Get Hired!</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      Practice every round. Improve your skills. Crack your dream job.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  className={cn(
-                    'h-11 shrink-0 gap-2 rounded-xl border-brand-blue/40 bg-white px-6 font-semibold text-brand-blue',
-                    'hover:bg-blue-50 hover:text-brand-blue dark:border-brand-blue/50 dark:bg-gray-900 dark:hover:bg-gray-800',
-                  )}
-                >
-                  <Link href="/dashboard/student">
-                    <User className="h-4 w-4" />
-                    View My Progress
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </section>
           </div>
+
+          {/* Footer sits below the sticky dock so it scrolls naturally without extra page gap */}
+          <section className="w-full shrink-0 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-blue-50/90 p-5 shadow-sm dark:border-brand-blue/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 sm:p-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/40">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Stay Consistent, Get Hired!</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Practice every round. Improve your skills. Crack your dream job.
+                  </p>
+                </div>
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                className={cn(
+                  'h-11 shrink-0 gap-2 rounded-xl border-brand-blue/40 bg-white px-6 font-semibold text-brand-blue',
+                  'hover:bg-blue-50 hover:text-brand-blue dark:border-brand-blue/50 dark:bg-gray-900 dark:hover:bg-gray-800',
+                )}
+              >
+                <Link href="/dashboard/student">
+                  <User className="h-4 w-4" />
+                  View My Progress
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </section>
         </div>
       </div>
     </DashboardLayout>

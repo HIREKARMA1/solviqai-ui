@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { apiClient } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useTranscription } from '@/hooks/useTranscription';
 import { Mic, Square } from 'lucide-react';
 
@@ -313,12 +314,12 @@ export function SimulationGroupDiscussion({
       </p>
       <h2 className="text-2xl font-bold">Live Discussion Room</h2>
 
-      <div className="rounded-2xl border border-slate-700 bg-slate-900 text-slate-100 overflow-hidden shadow-xl">
-        <div className="border-b border-slate-700 px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Topic</p>
-          <p className="text-lg font-semibold leading-snug">{topic?.title || 'Discussion Topic'}</p>
+      <div className="rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+        <div className="border-b border-gray-200 px-5 py-4 dark:border-slate-700">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1 dark:text-slate-400">Topic</p>
+          <p className="text-lg font-semibold leading-snug text-gray-900 dark:text-slate-100">{topic?.title || 'Discussion Topic'}</p>
           {topic?.background && (
-            <p className="mt-2 text-sm text-slate-400 line-clamp-2">{topic.background}</p>
+            <p className="mt-2 text-sm text-gray-600 line-clamp-2 dark:text-slate-400">{topic.background}</p>
           )}
         </div>
 
@@ -344,7 +345,7 @@ export function SimulationGroupDiscussion({
 
         <div
           ref={transcriptRef}
-          className="mx-4 mb-4 max-h-52 overflow-y-auto rounded-lg bg-slate-950/60 p-3 space-y-2 text-sm"
+          className="mx-4 mb-4 max-h-52 overflow-y-auto rounded-lg bg-gray-50 p-3 space-y-2 text-sm dark:bg-slate-950/60"
         >
           {openingAgents.map((agent, i) => (
             <MessageBubble key={`open-${i}`} speaker={agent.name} text={agent.text} isBot />
@@ -358,14 +359,14 @@ export function SimulationGroupDiscussion({
             </div>
           ))}
           {turns.length === 0 && openingAgents.length === 0 && (
-            <p className="text-slate-500 text-center py-4">Panelists are joining…</p>
+            <p className="text-gray-400 text-center py-4 dark:text-slate-500">Panelists are joining…</p>
           )}
         </div>
 
-        <div className="border-t border-slate-700 p-4 flex flex-col sm:flex-row gap-2">
+        <div className="border-t border-gray-200 p-4 flex flex-col sm:flex-row gap-2 dark:border-slate-700">
           <input
             type="text"
-            className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
             placeholder="Type your point, or hold mic to speak…"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
@@ -380,11 +381,12 @@ export function SimulationGroupDiscussion({
           <div className="flex gap-2 shrink-0">
             <button
               type="button"
-              className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+              className={cn(
+                'flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
                 isListening
                   ? 'bg-red-600 text-white'
-                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-              }`}
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600',
+              )}
               onPointerDown={handleMicDown}
               onPointerUp={handleMicUp}
               onPointerLeave={handleMicUp}
@@ -435,25 +437,27 @@ function ParticipantTile({
   const isHuman = variant === 'human';
   return (
     <div
-      className={`rounded-xl border p-4 flex flex-col items-center text-center transition-all ${
+      className={cn(
+        'rounded-xl border p-4 flex flex-col items-center text-center transition-all',
         isHuman
           ? active
-            ? 'border-emerald-400 bg-emerald-950/40 ring-2 ring-emerald-500/60'
-            : 'border-emerald-700/50 bg-slate-800/80'
+            ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/40 dark:border-emerald-400 dark:bg-emerald-950/40 dark:ring-emerald-500/60'
+            : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-700/50 dark:bg-slate-800/80'
           : active
-            ? 'border-violet-400 bg-violet-950/40 ring-2 ring-violet-500/60'
-            : 'border-slate-700 bg-slate-800/60'
-      }`}
+            ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/40 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-500/60'
+            : 'border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-800/60',
+      )}
     >
       <div
-        className={`flex h-14 w-14 items-center justify-center rounded-full text-xs font-bold mb-2 ${
-          isHuman ? 'bg-emerald-600 text-white' : 'bg-violet-600 text-white'
-        }`}
+        className={cn(
+          'flex h-14 w-14 items-center justify-center rounded-full text-xs font-bold mb-2',
+          isHuman ? 'bg-emerald-600 text-white' : 'bg-violet-600 text-white',
+        )}
       >
         {initials}
       </div>
-      <p className="font-semibold text-sm">{label}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
+      <p className="font-semibold text-sm text-gray-900 dark:text-slate-100">{label}</p>
+      <p className="text-xs text-gray-500 mt-0.5 dark:text-slate-400">{sub}</p>
     </div>
   );
 }
@@ -469,11 +473,23 @@ function MessageBubble({
 }) {
   const name = parsePersonaName(speaker);
   return (
-    <div className={`rounded-lg px-3 py-2 ${isBot ? 'bg-slate-800 ml-2' : 'bg-emerald-900/40'}`}>
-      <span className={`font-medium text-xs ${isBot ? 'text-violet-300' : 'text-emerald-300'}`}>
+    <div
+      className={cn(
+        'rounded-lg px-3 py-2',
+        isBot
+          ? 'bg-gray-100 ml-2 dark:bg-slate-800'
+          : 'bg-emerald-50 dark:bg-emerald-900/40',
+      )}
+    >
+      <span
+        className={cn(
+          'font-medium text-xs',
+          isBot ? 'text-violet-700 dark:text-violet-300' : 'text-emerald-700 dark:text-emerald-300',
+        )}
+      >
         {name}:{' '}
       </span>
-      <span className="text-slate-200">{text}</span>
+      <span className="text-gray-800 dark:text-slate-200">{text}</span>
     </div>
   );
 }
