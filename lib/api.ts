@@ -579,16 +579,27 @@ class ApiClient {
   }
 
   /**
-   * Get ATS score for uploaded resume
-   * @param jobDescription - Optional job description for better matching
-   * @returns ATS score analysis with recommendations
+   * Delete the stored resume so the student can upload a different one.
+   * Always allowed — does not require a paid subscription.
    */
-  async getATSScore(jobDescription?: string): Promise<any> {
-    const params = jobDescription ? { job_description: jobDescription } : {};
+  async deleteResume(): Promise<any> {
+    const response: AxiosResponse = await this.client.delete("/students/resume");
+    return response.data;
+  }
+
+  /**
+   * Get ATS score for uploaded resume (role-aware analysis via Cohere).
+   * @param jobDescription - Optional job description for better matching
+   * @param forceRegenerate - Bypass cache and re-run analysis (use after prompt/engine fixes)
+   */
+  async getATSScore(jobDescription?: string, forceRegenerate: boolean = false): Promise<any> {
+    const params: Record<string, string | boolean> = {};
+    if (jobDescription) params.job_description = jobDescription;
+    if (forceRegenerate) params.force_regenerate = true;
     const response: AxiosResponse = await this.client.get(
       "/students/ats-score",
       { params },
-    ); // ✅ /students/
+    );
     return response.data;
   }
 

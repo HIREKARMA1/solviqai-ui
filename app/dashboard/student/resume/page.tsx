@@ -43,6 +43,7 @@ import {
   Lightbulb,
   Sparkle,
   SparkleIcon,
+  Trash2,
   WandSparklesIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,6 +73,7 @@ const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc"];
 
 interface ATSScore {
   ats_score: number;
+  analyzed_for_role?: string;
   overall_assessment: string;
   strengths: string[];
   weaknesses: string[];
@@ -86,6 +88,8 @@ interface ATSScore {
   keyword_score?: number;
   intelligence_report?: {
     ats_score: number;
+    analyzed_for_role?: string;
+    role_category?: string;
     overall_ats_compatibility: {
       score: number;
       status: string;
@@ -248,6 +252,12 @@ interface ATSScore {
       difficulty: string;
       estimated_time_required: string;
     }>;
+    improvement_roadmap?: Array<{
+      phase: string;
+      focus: string;
+      actions: string[];
+      expected_ats_gain: number;
+    }>;
     final_feedback: {
       excellent?: string;
       to_be_improved: string;
@@ -328,6 +338,7 @@ export default function ResumePage() {
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [showUploadSection, setShowUploadSection] = useState(false);
+  const [isDeletingResume, setIsDeletingResume] = useState(false);
 
   // Subscription modal state
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -390,6 +401,45 @@ export default function ResumePage() {
         .getElementById(id)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  };
+
+  const handleDeleteResume = async () => {
+    if (isDeletingResume) return;
+    const confirmed = window.confirm(
+      "Delete this resume? You can upload a different file afterward. Your current ATS analysis will be cleared.",
+    );
+    if (!confirmed) return;
+
+    setIsDeletingResume(true);
+    setError(null);
+    try {
+      await apiClient.deleteResume();
+      setResumeStatus({
+        has_resume: false,
+        resume_uploaded: false,
+        can_upload: true,
+        can_calculate_ats: false,
+      });
+      setAtsScore(null);
+      setUploadSuccess(false);
+      setFile(null);
+      setJobDescription("");
+      setShowJobDescriptionInput(false);
+      setCurrentStep(1);
+      setShowUploadSection(true);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await fetchResumeStatus();
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail: string }>;
+      const errorDetail =
+        axiosError.response?.data?.detail ||
+        axiosError.message ||
+        "Failed to delete resume";
+      // Delete must never open the subscription modal — surface the error inline.
+      setError(errorDetail);
+    } finally {
+      setIsDeletingResume(false);
+    }
   };
 
   // Fetch existing resume status
@@ -559,11 +609,14 @@ export default function ResumePage() {
       });
   };
 
-  const handleCalculateATS = async () => {
+  const handleCalculateATS = async (forceRegenerate = false) => {
     setIsCalculatingATS(true);
     setError(null);
 
-    const apiCall = apiClient.getATSScore(jobDescription || undefined);
+    // Force regenerate when re-analyzing so students get a fresh role-aware report
+    // (old contaminated caches are also invalidated by role-aware hash on the server).
+    const shouldForce = forceRegenerate || Boolean(atsScore);
+    const apiCall = apiClient.getATSScore(jobDescription || undefined, shouldForce);
     startProcessingSimulation(apiCall);
 
     try {
@@ -700,7 +753,7 @@ export default function ResumePage() {
           (matchedKeywordCount + recommendedKeywordCount)) *
         100,
       )
-      : 80;
+      : 0;
   const scoreGain = Math.max(0, estimatedFutureScore - currentAtsScore);
   const structureFlags = [
     report?.resume_structure?.has_contact_info,
@@ -710,7 +763,8 @@ export default function ResumePage() {
     report?.resume_structure?.has_skills,
     report?.resume_structure?.has_projects,
   ];
-  const sectionsPresent = structureFlags.filter((v) => v !== false).length;
+  // Only count sections explicitly marked present (true). Undefined ≠ OK.
+  const sectionsPresent = structureFlags.filter((v) => v === true).length;
 
   const breakdownItems: {
     name: string;
@@ -725,34 +779,31 @@ export default function ResumePage() {
   }[] = [
       {
         name: "Content",
-        val: report?.overall_ats_compatibility?.score || 80,
+        val: report?.overall_ats_compatibility?.score ?? currentAtsScore,
         targetId: "section-audits",
         tab: "content",
       },
       {
         name: "Format",
-        val: report?.resume_formatting?.score || 75,
+        val: report?.resume_formatting?.score ?? 0,
         targetId: "section-audits",
         tab: "format",
       },
       {
         name: "Optimization",
-        val: report?.professional_summary?.score || 60,
+        val: report?.professional_summary?.score ?? 0,
         targetId: "section-audits",
         tab: "optimization",
       },
       {
         name: "Best Practices",
-        val: report?.resume_structure?.score || 85,
+        val: report?.resume_structure?.score ?? 0,
         targetId: "section-audits",
         tab: "best_practices",
       },
       {
         name: "Grammar",
-        val:
-          report?.grammar_review?.score ||
-          report?.final_feedback?.confidence_score ||
-          90,
+        val: report?.grammar_review?.score ?? 0,
         targetId: "section-audits",
         tab: "application_ready",
       },
@@ -776,7 +827,7 @@ export default function ResumePage() {
     },
     {
       label: "Readable Formatting",
-      status: (report?.resume_formatting?.score ?? 75) >= 70 ? "ok" : "warn",
+      status: (report?.resume_formatting?.score ?? 0) >= 70 ? "ok" : "warn",
     },
     {
       label: "Keyword Strength",
@@ -889,13 +940,13 @@ export default function ResumePage() {
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500">
                           {resumeStatus?.has_resume || uploadSuccess
-                            ? "Upgrade to Premium to upload a different resume"
+                            ? "Delete this resume to upload a different file"
                             : "PDF & DOCX only. Max 2MB file size."}
                         </p>
                       </div>
 
                       {resumeStatus?.has_resume || uploadSuccess ? (
-                        <div className="flex items-center justify-between gap-3 p-3 bg-white/70 dark:bg-gray-900/50 border border-brand-green/30 dark:border-brand-green/40 rounded-xl shadow-sm text-left">
+                        <div className="relative flex items-center justify-between gap-3 p-3 bg-white/70 dark:bg-gray-900/50 border border-brand-green/30 dark:border-brand-green/40 rounded-xl shadow-sm text-left">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-9 h-9 bg-brand-green/10 dark:bg-brand-green/20 rounded-lg flex items-center justify-center text-brand-green flex-shrink-0">
                               <CheckCircle className="w-4 h-4" />
@@ -909,8 +960,27 @@ export default function ResumePage() {
                               </p>
                             </div>
                           </div>
-                          <div className="text-[10px] font-semibold text-brand-green px-2 py-0.5 bg-brand-green/10 border border-brand-green/20 rounded flex-shrink-0">
-                            Ready
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-[10px] font-semibold text-brand-green px-2 py-0.5 bg-brand-green/10 border border-brand-green/20 rounded">
+                              Ready
+                            </div>
+                            <button
+                              type="button"
+                              title="Delete resume"
+                              aria-label="Delete resume"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDeleteResume();
+                              }}
+                              disabled={isDeletingResume || isCalculatingATS}
+                              className="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-full bg-white dark:bg-gray-900 border border-rose-200 dark:border-rose-800 shadow-md flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 transition-colors disabled:opacity-50"
+                            >
+                              {isDeletingResume ? (
+                                <Loader size="sm" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       ) : (
@@ -992,7 +1062,9 @@ export default function ResumePage() {
                     {/* Free plan note */}
                     <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 px-1">
                       <Info className="w-3.5 h-3.5 mt-px flex-shrink-0 text-brand-blue dark:text-brand-cyan" />
-                      <span>Your free plan includes 1 resume upload. Upgrade to Premium to replace it or add more.</span>
+                      <span>
+                        Your plan stores one resume at a time. Use the delete icon on the resume card to remove it, then upload a new file for ATS analysis.
+                      </span>
                     </p>
 
                     {/* Job description checkbox */}
@@ -1039,8 +1111,8 @@ export default function ResumePage() {
                         </>
                       ) : (
                         <>
-                          {/* <TrendingUp className="w-4 h-4" /> */}
-                          <span>Analyze Resume With AI</span><WandSparklesIcon className="w-5 h-5 text-white" />
+                          <span>{atsScore ? "Re-analyze Resume With AI" : "Analyze Resume With AI"}</span>
+                          <WandSparklesIcon className="w-5 h-5 text-white" />
                         </>
                       )}
                     </Button>
@@ -1279,6 +1351,11 @@ export default function ResumePage() {
                     <CardTitle className="text-sm font-bold text-gray-700 dark:text-gray-300">
                       Your ATS Score
                     </CardTitle>
+                    {(atsScore.analyzed_for_role || report?.analyzed_for_role) && (
+                      <CardDescription className="text-[11px] text-brand-blue dark:text-blue-300 mt-1">
+                        Analyzed for: {atsScore.analyzed_for_role || report?.analyzed_for_role}
+                      </CardDescription>
+                    )}
                   </CardHeader>
                   <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 flex-1">
                     {/* Large Circular/Radial Gauge SVG */}
@@ -1915,64 +1992,99 @@ export default function ResumePage() {
                   </Card>
                 </div>
 
-                {/* Improvement Roadmap */}
+                {/* Improvement Roadmap — phased plan (distinct from Top Recommendations) */}
                 <Card id="section-roadmap" className="scroll-mt-24 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
                   <CardHeader className="pb-3 border-b border-gray-50 dark:border-gray-800">
                     <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
                       Improvement Roadmap
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Step-by-step roadmap to enhance resume profile quality
+                      Week-by-week plan tailored to{" "}
+                      {atsScore.analyzed_for_role || report?.analyzed_for_role || "your target role"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="bg-gray-50/50 dark:bg-gray-800/40 text-gray-400 uppercase text-[10px] font-bold border-b border-gray-100 dark:border-gray-800">
-                          <th className="p-4">Priority</th>
-                          <th className="p-4">Improvement Task</th>
-                          <th className="p-4 text-center">Est. ATS Gain</th>
-                          <th className="p-4">Time Required</th>
-                          <th className="p-4">Difficulty</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {report.recommendations?.map((rec, idx) => (
-                          <tr
-                            key={idx}
-                            className="hover:bg-gray-50/30 dark:hover:bg-gray-800/10 transition-colors"
-                          >
-                            <td className="p-4 font-semibold">
-                              <Badge
-                                className={`${rec.priority === "HIGH"
-                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                  : rec.priority === "MEDIUM"
-                                    ? "bg-amber-50 text-amber-600 border border-amber-100"
-                                    : "bg-gray-50 text-gray-600 border border-gray-100"
-                                  } text-[10px] uppercase font-bold`}
-                              >
-                                {rec.priority}
-                              </Badge>
-                            </td>
-                            <td className="p-4 font-medium text-gray-800 dark:text-gray-200 max-w-sm">
-                              <p className="font-semibold">{rec.title}</p>
-                              <p className="text-xs text-gray-400 font-normal mt-0.5 leading-relaxed">
-                                {rec.reason}
-                              </p>
-                            </td>
-                            <td className="p-4 text-center text-emerald-600 font-bold">
-                              +{rec.estimated_ats_gain}
-                            </td>
-                            <td className="p-4 text-gray-500">
-                              {rec.estimated_time_required}
-                            </td>
-                            <td className="p-4 text-gray-500 font-medium">
-                              {rec.difficulty}
-                            </td>
+                    {(report.improvement_roadmap && report.improvement_roadmap.length > 0) ? (
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="bg-gray-50/50 dark:bg-gray-800/40 text-gray-400 uppercase text-[10px] font-bold border-b border-gray-100 dark:border-gray-800">
+                            <th className="p-4">Phase</th>
+                            <th className="p-4">Focus</th>
+                            <th className="p-4">Actions</th>
+                            <th className="p-4 text-center">Est. ATS Gain</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {report.improvement_roadmap.map((phase, idx) => (
+                            <tr
+                              key={idx}
+                              className="hover:bg-gray-50/30 dark:hover:bg-gray-800/10 transition-colors"
+                            >
+                              <td className="p-4 font-semibold text-brand-blue whitespace-nowrap">
+                                {phase.phase}
+                              </td>
+                              <td className="p-4 font-medium text-gray-800 dark:text-gray-200 max-w-xs">
+                                {phase.focus}
+                              </td>
+                              <td className="p-4 text-gray-600 dark:text-gray-300">
+                                <ul className="list-disc pl-4 space-y-1">
+                                  {(phase.actions || []).map((action, aIdx) => (
+                                    <li key={aIdx}>{action}</li>
+                                  ))}
+                                </ul>
+                              </td>
+                              <td className="p-4 text-center text-emerald-600 font-bold">
+                                +{phase.expected_ats_gain}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="bg-gray-50/50 dark:bg-gray-800/40 text-gray-400 uppercase text-[10px] font-bold border-b border-gray-100 dark:border-gray-800">
+                            <th className="p-4">Priority</th>
+                            <th className="p-4">Improvement Task</th>
+                            <th className="p-4 text-center">Est. ATS Gain</th>
+                            <th className="p-4">Time Required</th>
+                            <th className="p-4">Difficulty</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {report.recommendations?.map((rec, idx) => (
+                            <tr
+                              key={idx}
+                              className="hover:bg-gray-50/30 dark:hover:bg-gray-800/10 transition-colors"
+                            >
+                              <td className="p-4 font-semibold">
+                                <Badge
+                                  className={`${rec.priority === "HIGH"
+                                    ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                    : rec.priority === "MEDIUM"
+                                      ? "bg-amber-50 text-amber-600 border border-amber-100"
+                                      : "bg-gray-50 text-gray-600 border border-gray-100"
+                                    } text-[10px] uppercase font-bold`}
+                                >
+                                  {rec.priority}
+                                </Badge>
+                              </td>
+                              <td className="p-4 font-medium text-gray-800 dark:text-gray-200 max-w-sm">
+                                <p className="font-semibold">{rec.title}</p>
+                                <p className="text-xs text-gray-400 font-normal mt-0.5 leading-relaxed">
+                                  {rec.reason}
+                                </p>
+                              </td>
+                              <td className="p-4 text-center text-emerald-600 font-bold">
+                                +{rec.estimated_ats_gain}
+                              </td>
+                              <td className="p-4 text-gray-500">{rec.estimated_time_required}</td>
+                              <td className="p-4 text-gray-500">{rec.difficulty}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1993,7 +2105,7 @@ export default function ResumePage() {
                         {
                           name: "Contact Information",
                           status:
-                            report.resume_structure?.has_contact_info !== false
+                            report.resume_structure?.has_contact_info === true
                               ? "OK"
                               : "MISSING",
                           type: "Required",
@@ -2001,7 +2113,7 @@ export default function ResumePage() {
                         {
                           name: "Professional Summary",
                           status:
-                            report.resume_structure?.has_summary !== false
+                            report.resume_structure?.has_summary === true
                               ? "OK"
                               : "MISSING",
                           type: "Required",
@@ -2009,7 +2121,7 @@ export default function ResumePage() {
                         {
                           name: "Work Experience",
                           status:
-                            report.resume_structure?.has_work_experience !== false
+                            report.resume_structure?.has_work_experience === true
                               ? "OK"
                               : "MISSING",
                           type: "Required",
@@ -2017,7 +2129,7 @@ export default function ResumePage() {
                         {
                           name: "Education History",
                           status:
-                            report.resume_structure?.has_education !== false
+                            report.resume_structure?.has_education === true
                               ? "OK"
                               : "MISSING",
                           type: "Required",
@@ -2025,7 +2137,7 @@ export default function ResumePage() {
                         {
                           name: "Skills Grid",
                           status:
-                            report.resume_structure?.has_skills !== false
+                            report.resume_structure?.has_skills === true
                               ? "OK"
                               : "MISSING",
                           type: "Required",
@@ -2033,10 +2145,10 @@ export default function ResumePage() {
                         {
                           name: "Projects Details",
                           status:
-                            report.resume_structure?.has_projects !== false
+                            report.resume_structure?.has_projects === true
                               ? "OK"
                               : "MISSING",
-                          type: "Required",
+                          type: "Recommended",
                         },
                       ].map((s, idx) => (
                         <div
@@ -2084,14 +2196,20 @@ export default function ResumePage() {
                         <div className="flex flex-wrap gap-2">
                           {toStringList(
                             report.keyword_analysis?.strong_keywords,
-                          ).map((kw, idx) => (
-                            <Badge
-                              key={idx}
-                              className="bg-emerald-50 text-emerald-700 border border-emerald-100/50 dark:bg-emerald-950/20 dark:text-emerald-400 font-medium py-1 px-2.5 rounded-md text-xs hover:bg-emerald-50"
-                            >
-                              ✓ {kw}
-                            </Badge>
-                          ))}
+                          ).length > 0 ? (
+                            toStringList(
+                              report.keyword_analysis?.strong_keywords,
+                            ).map((kw, idx) => (
+                              <Badge
+                                key={idx}
+                                className="bg-emerald-50 text-emerald-700 border border-emerald-100/50 dark:bg-emerald-950/20 dark:text-emerald-400 font-medium py-1 px-2.5 rounded-md text-xs hover:bg-emerald-50"
+                              >
+                                ✓ {kw}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">No matched keywords detected yet.</p>
+                          )}
                         </div>
                       </div>
 
@@ -2103,14 +2221,22 @@ export default function ResumePage() {
                         <div className="flex flex-wrap gap-2">
                           {toStringList(
                             report.keyword_analysis?.missing_keywords,
-                          ).map((kw, idx) => (
-                            <Badge
-                              key={idx}
-                              className="bg-amber-50 text-amber-700 border border-amber-100/50 dark:bg-amber-950/20 dark:text-amber-400 font-medium py-1 px-2.5 rounded-md text-xs hover:bg-amber-50"
-                            >
-                              + {kw}
-                            </Badge>
-                          ))}
+                          ).length > 0 ? (
+                            toStringList(
+                              report.keyword_analysis?.missing_keywords,
+                            ).map((kw, idx) => (
+                              <Badge
+                                key={idx}
+                                className="bg-amber-50 text-amber-700 border border-amber-100/50 dark:bg-amber-950/20 dark:text-amber-400 font-medium py-1 px-2.5 rounded-md text-xs hover:bg-amber-50"
+                              >
+                                + {kw}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">
+                              No gap keywords for this role — set your job role of interest in profile for richer suggestions.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </CardContent>
