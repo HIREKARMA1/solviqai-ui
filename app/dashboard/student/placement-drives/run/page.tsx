@@ -486,7 +486,7 @@ export default function PlacementDriveRunPage() {
 
         {stageBody}
 
-        {(attempt.stage_results || []).length > 0 && (
+        {attempt.status === 'COMPLETED' && (attempt.stage_results || []).length > 0 && (
           <div className="space-y-2">
             <h3 className="font-semibold text-sm flex items-center gap-2">
               <Layers className="h-4 w-4" /> Completed stages

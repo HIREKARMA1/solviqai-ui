@@ -236,9 +236,16 @@ export function SimulationWrittenStage({ runId, driveAttemptId, stageType, onCom
         </div>
       ))}
 
-      <Button onClick={handleSubmit} disabled={submitting} className="w-full sm:w-auto">
-        {submitting ? 'Evaluating…' : 'Submit round'}
-      </Button>
+      <motion.div className="flex justify-end pt-2">
+        <Button
+          onClick={handleSubmit}
+          disabled={submitting}
+          variant="mockPrimary"
+          className="h-11 min-w-[160px] rounded-xl px-6 font-semibold"
+        >
+          {submitting ? 'Evaluating…' : 'Submit Test'}
+        </Button>
+      </motion.div>
     </div>
   );
 }
