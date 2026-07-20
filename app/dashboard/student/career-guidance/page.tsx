@@ -270,7 +270,7 @@ export default function CareerGuidancePage() {
 
       // Check if it's a subscription error - be more specific with checks
       const isSubscriptionError =
-        axiosError.response?.status === 403 ||
+        error?.response?.status === 403 ||
         (errorMessage && (
           errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||
@@ -506,7 +506,7 @@ export default function CareerGuidancePage() {
 
       // Check if it's a subscription error - be more specific with checks
       const isSubscriptionError =
-        axiosError.response?.status === 403 ||
+        error?.response?.status === 403 ||
         (errorMessage && (
           errorMessage.toLowerCase().includes('contact hirekarma') ||
           errorMessage.toLowerCase().includes('subscription') ||

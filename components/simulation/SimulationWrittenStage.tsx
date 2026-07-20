@@ -236,7 +236,7 @@ export function SimulationWrittenStage({ runId, driveAttemptId, stageType, onCom
         </div>
       ))}
 
-      <motion.div className="flex justify-end pt-2">
+      <div className="flex justify-end pt-2">
         <Button
           onClick={handleSubmit}
           disabled={submitting}
@@ -245,7 +245,7 @@ export function SimulationWrittenStage({ runId, driveAttemptId, stageType, onCom
         >
           {submitting ? 'Evaluating…' : 'Submit Test'}
         </Button>
-      </motion.div>
+      </div>
     </div>
   );
 }

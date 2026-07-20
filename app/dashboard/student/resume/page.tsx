@@ -1100,7 +1100,7 @@ export default function ResumePage() {
 
                     {/* Analyze button */}
                     <Button
-                      onClick={handleCalculateATS}
+                      onClick={() => void handleCalculateATS()}
                       disabled={isCalculatingATS}
                       className="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-bold py-3.5 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-sm"
                     >
