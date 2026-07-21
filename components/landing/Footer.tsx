@@ -20,7 +20,7 @@ import toast from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 
 // Define which pages exist and which are coming soon
-const EXISTING_PAGES = ['/#faq', '/auth/login', '/release-notes', '/privacy', '/simulations'];
+const EXISTING_PAGES = ['/#faq', '/#contact', '/auth/login', '/release-notes', '/privacy', '/simulations'];
 
 export function Footer() {
   const { t } = useTranslation();
@@ -71,7 +71,7 @@ export function Footer() {
 
   const supportLinks = [
     { label: 'Help Center', href: '/help' },
-    { label: 'Contact Us', href: 'https://www.hirekarma.in/contact' },
+    { label: 'Contact Us', href: '/#contact' },
     { label: 'FAQ', href: '/#faq' },
     { label: 'Community', href: '/community' },
     { label: 'Tutorials', href: '/tutorials' },
@@ -148,16 +148,16 @@ export function Footer() {
               <div className="flex items-center gap-3 justify-center md:justify-start w-full">
                 <Phone className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 <a 
-                  href="tel:+919078683876" 
+                  href="tel:+919124364764" 
                   className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                 >
-                  +91 90786 83876
+                  +91 91243 64764
                 </a>
               </div>
               <div className="flex items-start gap-3 justify-center md:justify-start w-full text-left md:text-left">
                 <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed text-center md:text-left">
-                  Room No: 109, 1st Floor, Tower A, O-HUB, Bhubaneswar
+                  2nd Floor, SS Niwas, Hirekarma Private Limited, Raghunathpur, Bhubaneswar, Raghunathpurjali, Odisha 751024
                 </span>
               </div>
             </div>

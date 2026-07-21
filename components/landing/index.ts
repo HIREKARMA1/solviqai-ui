@@ -11,6 +11,7 @@ export { Pricing } from './Pricing';
 export { Testimonials } from './Testimonials';
 export { Partners } from './Partners';
 export { FAQ } from './FAQ';
+export { ContactSection } from './ContactSection';
 export { Footer } from './Footer';
 export { ReleaseNotes } from './ReleaseNotes';
 export { PrivacyPolicy } from './PrivacyPolicy';

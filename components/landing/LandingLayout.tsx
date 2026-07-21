@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Navbar } from '../Navbar';
-import { MobileTopNavbar } from './MobileTopNavbar';
 import { MobileSidebar } from './MobileSidebar';
 import { Footer } from './Footer';
-import { cn } from '@/lib/utils';
 import { LandingNavbar } from './LandingNavbar';
 
 interface LandingLayoutProps {
@@ -19,18 +16,8 @@ export function LandingLayout({ children, activeFeature, onFeatureChange }: Land
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Landing Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
-      <div className="hidden lg:block">
-        <LandingNavbar />
-      </div>
+      <LandingNavbar />
 
-      {/* Mobile Top Navbar - Only visible on small screens */}
-      <MobileTopNavbar
-        onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        isSidebarOpen={isMobileSidebarOpen}
-      />
-
-      {/* Mobile Sidebar - Slides from right on small screens */}
       <MobileSidebar
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}

@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { getSimulationsPathForUser, PUBLIC_SIMULATIONS_PATH } from '@/lib/dashboardNavigation';
+import { getSimulationsPathForUser } from '@/lib/dashboardNavigation';
 
 interface LandingNavbarProps {
   className?: string;
@@ -27,41 +28,81 @@ interface LandingNavbarProps {
   isMobileSidebarOpen?: boolean;
 }
 
+const primaryBtnClass = cn(
+  'inline-flex items-center justify-center rounded-lg px-6 py-2.5 text-sm font-semibold text-white',
+  'bg-brand-green shadow-[0_4px_14px_rgba(9,136,85,0.35)] transition-all duration-200',
+  'hover:bg-brand-green-dark hover:shadow-[0_6px_18px_rgba(9,136,85,0.42)]',
+);
+
+const ghostBtnClass = cn(
+  'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium',
+  'text-gray-700 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-white',
+);
+
+const iconBtnClass = cn(
+  'inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+  'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+  'dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white',
+);
+
 export function LandingNavbar({
   className,
-  onToggleSidebar,
-  isSidebarCollapsed,
-  onToggleMobileSidebar,
-  isMobileSidebarOpen
 }: LandingNavbarProps) {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState('');
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
   const { user, loading: authLoading, logout } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
+    const syncHash = () => setActiveHash(window.location.hash || '#hero');
+    syncHash();
 
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-
+    const handleScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('hashchange', syncHash);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('hashchange', syncHash);
+    };
   }, []);
 
   const navigationItems = [
-    { label: 'HOME', href: '/' },
-    { label: 'JOB PREPARE', href: PUBLIC_SIMULATIONS_PATH },
-    { label: 'FEATURES', href: '#features' },
-    { label: 'INTERNSHIPS', href: '#internships' },
-    { label: 'ABOUT', href: '#about' },
-    { label: 'CONTACT', href: '#contact' },
+    { label: 'Home', href: '/#hero', hash: '#hero' },
+    { label: 'Features', href: '/#features', hash: '#features' },
+    { label: 'FAQ', href: '/#faq', hash: '#faq' },
+    { label: 'Contact', href: '/#contact', hash: '#contact' },
   ];
 
   const simulationsHref = getSimulationsPathForUser(user?.user_type);
+
+  const isNavActive = (item: (typeof navigationItems)[number]) => {
+    if (pathname !== '/') return false;
+    if (item.hash === '#hero') {
+      return !activeHash || activeHash === '#hero' || activeHash === '';
+    }
+    return activeHash === item.hash;
+  };
+
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    item: (typeof navigationItems)[number],
+  ) => {
+    setMobileMenuOpen(false);
+    if (pathname !== '/') return;
+
+    e.preventDefault();
+    const target = document.querySelector(item.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.replaceState(null, '', item.hash);
+      setActiveHash(item.hash);
+    }
+  };
 
   if (!mounted) {
     return null;
@@ -69,371 +110,223 @@ export function LandingNavbar({
 
   return (
     <DropdownMenuProvider>
-      <motion.nav
+      {/* Desktop — reference-style full-width navbar */}
+      <motion.header
         className={cn(
-          'fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300',
-          'hidden lg:block',
-          className
+          'fixed top-0 left-0 right-0 z-50 hidden transition-all duration-300 lg:block',
+          scrolled
+            ? 'border-b border-gray-200/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-gray-800/80 dark:bg-gray-950/95'
+            : 'border-b border-transparent bg-white dark:bg-gray-950',
+          className,
         )}
-        style={{
-          width: '90%',
-          maxWidth: '1400px',
-        }}
       >
-        {/* Navbar Container with Gradient Border */}
-        <div
-          className={cn(
-            'relative rounded-[24px] h-[72px] px-8',
-            'transition-all duration-300',
-            scrolled && 'shadow-xl',
-            theme === 'dark'
-              ? 'bg-[#191818] border border-white/10'
-              : 'bg-white'
-          )}
-        >
-          {/* Gradient Border for Light Mode */}
-          {theme !== 'dark' && (
-            <div
-              className="absolute inset-0 rounded-[24px] pointer-events-none"
-              style={{
-                padding: '1px',
-                background: 'radial-gradient(95.16% 139.58% at 4.84% 0%, #112C96 0%, rgba(9, 23, 78, 0) 100%)',
-                mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                maskComposite: 'exclude',
-                WebkitMaskComposite: 'xor',
-              }}
-            />
-          )}
-
-          <div className="relative z-10 flex items-center justify-between h-full">
-            {/* Logo */}
-            <Link href="/" className="flex items-center group flex-shrink-0">
-              <div className="relative w-[100px] h-8 transition-transform group-hover:scale-105">
-                {theme === 'dark' ? (
-                  <Image
-                    src="/images/solviqdark.png"
-                    alt="SolviQ AI Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                ) : (
-                  <Image
-                    src="/images/solviqligt.png"
-                    alt="SolviQ AI Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                )}
-              </div>
-            </Link>
-
-            {/* Center Navigation - Desktop */}
-            <div className="flex items-center gap-1">
-              {navigationItems.map((item, index) => (
-                <React.Fragment key={item.label}>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'text-sm font-medium tracking-wide transition-colors px-5 py-2',
-                      'text-gray-700 dark:text-gray-300',
-                      'hover:text-orange-500 dark:hover:text-orange-400',
-                      'relative group'
-                    )}
-                  >
-                    {item.label}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 dark:bg-orange-400 transition-all group-hover:w-full" />
-                  </Link>
-
-                </React.Fragment>
-              ))}
+        <div className="mx-auto flex h-[76px] w-[92%] max-w-[1400px] items-center">
+          {/* Logo */}
+          <Link href="/" className="group flex shrink-0 items-center">
+            <div className="relative h-8 w-[108px] transition-transform group-hover:scale-[1.02]">
+              <Image
+                src={theme === 'dark' ? '/images/solviqdark.png' : '/images/solviqligt.png'}
+                alt="SolviQ AI Logo"
+                fill
+                className="object-contain object-left"
+                priority
+              />
             </div>
+          </Link>
 
-            {/* Right Section - Actions */}
-            <div className="flex items-center gap-3">
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  'hover:bg-gray-100 dark:hover:bg-gray-800',
-                  'text-gray-700 dark:text-gray-300'
-                )}
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-4 h-4" />
+          {/* Center navigation */}
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+            {navigationItems.map((item) => {
+              const active = isNavActive(item);
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={(e) => handleNavClick(e, item)}
+                  className={cn(
+                    'group relative px-4 py-2 text-[15px] font-medium transition-colors',
+                    active
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute -top-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-brand-blue transition-opacity dark:bg-brand-cyan',
+                      active ? 'opacity-100' : 'opacity-0 group-hover:opacity-40',
+                    )}
+                    aria-hidden
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right actions */}
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className={iconBtnClass}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </button>
+
+            {!authLoading && (
+              <>
+                {!user ? (
+                  <>
+                    <Link href="/auth/login" className={ghostBtnClass}>
+                      Sign in
+                    </Link>
+                    <Link href="/auth/register" className={primaryBtnClass}>
+                      Get Started
+                    </Link>
+                  </>
                 ) : (
-                  <Moon className="w-4 h-4" />
-                )}
-              </button>
-
-              {/* Auth Actions - Desktop */}
-              {!authLoading && (
-                <>
-                  {!user ? (
-                    <div className="flex items-center gap-2">
-                      <Link href="/auth/login">
-                        <button
-                          className={cn(
-                            'px-5 py-2 rounded-lg transition-colors text-sm font-medium',
-                            'text-gray-700 dark:text-gray-300',
-                            'hover:bg-gray-100 dark:hover:bg-gray-700'
-                          )}
-                        >
-                          Sign in
-                        </button>
-                      </Link>
-                      <Link href="/auth/register">
-                        <button
-                          className={cn(
-                            'px-5 py-2 rounded-lg transition-all text-sm font-medium',
-                            'bg-gradient-to-r from-orange-500 to-red-500',
-                            'hover:from-orange-600 hover:to-red-600',
-                            'text-white shadow-md hover:shadow-lg',
-                            'transform hover:scale-105'
-                          )}
-                        >
-                          Get Started
-                        </button>
-                      </Link>
-                    </div>
-                  ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className={cn(
-                            'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
-                            'bg-gradient-to-r from-orange-500 to-red-500',
-                            'hover:from-orange-600 hover:to-red-600',
-                            'text-white shadow-md hover:shadow-lg'
-                          )}
-                          aria-label="Profile menu"
-                        >
-                          <User className="w-4 h-4" />
-                          <span className="text-sm font-medium">Profile</span>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-48"
-                        sideOffset={8}
-                      >
-                        {(user.user_type === 'student' || user.user_type === 'admin') && (
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={simulationsHref}
-                              className="cursor-pointer flex items-center gap-2"
-                            >
-                              Job Prep Simulation
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className={cn(primaryBtnClass, 'gap-2')}>
+                        <User className="h-4 w-4" />
+                        Profile
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48" sideOffset={8}>
+                      {(user.user_type === 'student' || user.user_type === 'admin') && (
                         <DropdownMenuItem asChild>
-                          <Link
-                            href={`/dashboard/${user.user_type}/profile`}
-                            className="cursor-pointer flex items-center gap-2"
-                          >
-                            <User className="w-4 h-4" />
-                            {t('common.profile') || 'Profile'}
+                          <Link href={simulationsHref} className="flex cursor-pointer items-center gap-2">
+                            Job Prep Simulation
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={logout}
-                          className="cursor-pointer flex items-center gap-2 text-red-600 dark:text-red-400"
+                      )}
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/dashboard/${user.user_type}/profile`}
+                          className="flex cursor-pointer items-center gap-2"
                         >
-                          <LogOut className="w-4 h-4" />
-                          {t('common.logout') || 'Logout'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </>
-              )}
-            </div>
+                          <User className="h-4 w-4" />
+                          {t('common.profile') || 'Profile'}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={logout}
+                        className="flex cursor-pointer items-center gap-2 text-red-600 dark:text-red-400"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t('common.logout') || 'Logout'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </>
+            )}
           </div>
         </div>
-      </motion.nav>
+      </motion.header>
 
-      {/* Mobile Navbar - Full width for small screens */}
-      <motion.nav
+      {/* Mobile navbar */}
+      <motion.header
         className={cn(
-          'lg:hidden fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-          'h-16',
+          'fixed top-0 left-0 right-0 z-50 h-16 transition-all duration-300 lg:hidden',
           scrolled
-            ? 'bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200/50 dark:border-gray-800/50'
-            : 'bg-white dark:bg-gray-900 border-b border-gray-200/30 dark:border-gray-800/30'
+            ? 'border-b border-gray-200/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-gray-800/80 dark:bg-gray-950/95'
+            : 'border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-950',
         )}
       >
-        <div className="container mx-auto px-4 h-full">
-          <div className="flex items-center justify-between h-full">
-            {/* Logo */}
-            <Link href="/" className="flex items-center group flex-shrink-0">
-              <div className="relative w-[100px] h-8 transition-transform group-hover:scale-105">
-                {theme === 'dark' ? (
-                  <Image
-                    src="/images/solviqdark.png"
-                    alt="SolviQ AI Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                ) : (
-                  <Image
-                    src="/images/solviqligt.png"
-                    alt="SolviQ AI Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                )}
-              </div>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  'hover:bg-gray-100 dark:hover:bg-gray-800',
-                  'text-gray-700 dark:text-gray-300'
-                )}
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-              </button>
-
-              {/* Mobile Menu Toggle */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  'hover:bg-gray-100 dark:hover:bg-gray-800',
-                  'text-gray-700 dark:text-gray-300'
-                )}
-                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </button>
+        <div className="mx-auto flex h-full w-[92%] max-w-[1400px] items-center justify-between">
+          <Link href="/" className="group flex shrink-0 items-center">
+            <div className="relative h-7 w-[96px] transition-transform group-hover:scale-[1.02]">
+              <Image
+                src={theme === 'dark' ? '/images/solviqdark.png' : '/images/solviqligt.png'}
+                alt="SolviQ AI Logo"
+                fill
+                className="object-contain object-left"
+                priority
+              />
             </div>
+          </Link>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className={iconBtnClass}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={iconBtnClass}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={cn(
-              'lg:hidden absolute top-full left-0 right-0',
-              'bg-white dark:bg-gray-900',
-              'border-b border-gray-200/50 dark:border-gray-800/50',
-              'shadow-lg'
-            )}
+            className="absolute left-0 right-0 top-full border-b border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-950"
           >
-            <div className="container mx-auto px-4 py-4 space-y-3">
-              {/* Navigation Items */}
+            <div className="mx-auto w-[92%] max-w-[1400px] space-y-1 py-4">
               {navigationItems.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={(e) => handleNavClick(e, item)}
                   className={cn(
-                    'block px-4 py-2 rounded-lg text-sm font-medium',
-                    'text-gray-700 dark:text-gray-300',
-                    'hover:bg-gray-100 dark:hover:bg-gray-800',
-                    'transition-colors'
+                    'block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isNavActive(item)
+                      ? 'bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white'
+                      : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-900',
                   )}
                 >
                   {item.label}
                 </Link>
               ))}
 
-              {/* Auth Actions - Mobile */}
               {!authLoading && !user && (
-                <div className="pt-2 space-y-2 border-t border-gray-200 dark:border-gray-800">
-                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                    <button
-                      className={cn(
-                        'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium',
-                        'text-gray-700 dark:text-gray-300',
-                        'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Login
-                    </button>
+                <div className="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={cn(ghostBtnClass, 'w-full')}>
+                    Sign in
                   </Link>
-                  <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
-                    <button
-                      className={cn(
-                        'w-full px-4 py-2 rounded-lg transition-all text-sm font-medium',
-                        'bg-gradient-to-r from-orange-500 to-red-500',
-                        'hover:from-orange-600 hover:to-red-600',
-                        'text-white shadow-md'
-                      )}
-                    >
-                      Get Started
-                    </button>
+                  <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)} className={cn(primaryBtnClass, 'w-full')}>
+                    Get Started
                   </Link>
                 </div>
               )}
 
-              {/* Logged in user - Mobile */}
               {!authLoading && user && (
-                <div className="pt-2 space-y-2 border-t border-gray-200 dark:border-gray-800">
+                <div className="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-800">
                   {(user.user_type === 'student' || user.user_type === 'admin') && (
-                    <Link href={simulationsHref} onClick={() => setMobileMenuOpen(false)}>
-                      <button
-                        className={cn(
-                          'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium',
-                          'text-orange-600 dark:text-orange-400',
-                          'hover:bg-orange-50 dark:hover:bg-orange-950/20'
-                        )}
-                      >
-                        Job Prep Simulation
-                      </button>
+                    <Link href={simulationsHref} onClick={() => setMobileMenuOpen(false)} className={cn(ghostBtnClass, 'w-full')}>
+                      Job Prep Simulation
                     </Link>
                   )}
                   <Link
                     href={`/dashboard/${user.user_type}/profile`}
                     onClick={() => setMobileMenuOpen(false)}
+                    className={cn(ghostBtnClass, 'w-full gap-2')}
                   >
-                    <button
-                      className={cn(
-                        'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2',
-                        'text-gray-700 dark:text-gray-300',
-                        'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      <User className="w-4 h-4" />
-                      Profile
-                    </button>
+                    <User className="h-4 w-4" />
+                    Profile
                   </Link>
                   <button
+                    type="button"
                     onClick={() => {
                       logout();
                       setMobileMenuOpen(false);
                     }}
-                    className={cn(
-                      'w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2',
-                      'text-red-600 dark:text-red-400',
-                      'hover:bg-red-50 dark:hover:bg-red-900/20'
-                    )}
+                    className={cn(ghostBtnClass, 'w-full gap-2 text-red-600 dark:text-red-400')}
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="h-4 w-4" />
                     Logout
                   </button>
                 </div>
@@ -441,7 +334,7 @@ export function LandingNavbar({
             </div>
           </motion.div>
         )}
-      </motion.nav>
+      </motion.header>
     </DropdownMenuProvider>
   );
-}
+};

@@ -187,7 +187,7 @@ class ApiClient {
   }
 
   // Guest free readiness check (no auth)
-  async guestReadinessCatalog(): Promise<{ target_roles: string[]; branches: string[] }> {
+  async guestReadinessCatalog(): Promise<{ target_roles: string[]; branches: string[]; education_options: string[] }> {
     const response: AxiosResponse = await this.client.get("/guest-readiness/catalog");
     return response.data;
   }
@@ -197,11 +197,18 @@ class ApiClient {
     return response.data;
   }
 
-  async guestReadinessSetProfile(token: string, target_role: string, branch: string): Promise<any> {
-    const response: AxiosResponse = await this.client.put(`/guest-readiness/${token}/profile`, {
-      target_role,
-      branch,
-    });
+  async guestReadinessSetProfile(
+    token: string,
+    profile: {
+      full_name: string;
+      email: string;
+      mobile: string;
+      education: string;
+      graduation_year: number;
+      target_role: string;
+    },
+  ): Promise<any> {
+    const response: AxiosResponse = await this.client.put(`/guest-readiness/${token}/profile`, profile);
     return response.data;
   }
 
@@ -230,6 +237,16 @@ class ApiClient {
 
   async guestReadinessGetResults(token: string): Promise<any> {
     const response: AxiosResponse = await this.client.get(`/guest-readiness/${token}/results`);
+    return response.data;
+  }
+
+  async submitContact(payload: {
+    full_name: string;
+    email: string;
+    phone: string;
+    message: string;
+  }): Promise<{ success: boolean; message: string }> {
+    const response: AxiosResponse = await this.client.post("/contact", payload);
     return response.data;
   }
 
@@ -2200,6 +2217,29 @@ class ApiClient {
     allowed_plan_slugs?: string[];
   }): Promise<any> {
     const response: AxiosResponse = await this.client.post('/payments/admin/coupons', data);
+    return response.data;
+  }
+
+  async adminListGuestInquiries(params?: { limit?: number; offset?: number }): Promise<{
+    total: number;
+    inquiries: Array<{
+      id: string;
+      full_name: string;
+      email: string;
+      mobile: string;
+      education: string;
+      graduation_year: number;
+      target_role: string;
+      composite_score: number | null;
+      aptitude_score: number | null;
+      resume_strength_score: number | null;
+      status: string;
+      created_at: string | null;
+    }>;
+  }> {
+    const response: AxiosResponse = await this.client.get('/guest-readiness/admin/inquiries', {
+      params,
+    });
     return response.data;
   }
 

@@ -17,6 +17,7 @@ import {
   Layers,
   Target,
   CreditCard,
+  MessageSquare,
   Send,
   Mic,
 } from 'lucide-react';
@@ -196,6 +197,12 @@ export const adminSidebarFeatures: SidebarItem[] = [
     id: "coupons",
     icon: <CreditCard className="w-5 h-5" />,
     label: "Coupons",
+    onClick: undefined,
+  },
+  {
+    id: "guest-inquiries",
+    icon: <MessageSquare className="w-5 h-5" />,
+    label: "Guest Queries",
     onClick: undefined,
   },
   {

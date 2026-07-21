@@ -34,8 +34,18 @@ const FAQ = dynamic(() => import('@/components/landing/FAQ').then(mod => ({ defa
   ssr: true
 });
 
+const Testimonials = dynamic(() => import('@/components/landing/Testimonials').then(mod => ({ default: mod.Testimonials })), {
+  loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading testimonials...</div></div>,
+  ssr: true
+});
+
 const Partners = dynamic(() => import('@/components/landing/Partners').then(mod => ({ default: mod.Partners })), {
   loading: () => <div className="min-h-[200px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading partners...</div></div>,
+  ssr: true
+});
+
+const ContactSection = dynamic(() => import('@/components/landing/ContactSection').then(mod => ({ default: mod.ContactSection })), {
+  loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading contact...</div></div>,
   ssr: true
 });
 
@@ -128,9 +138,19 @@ export default function Home() {
             <FAQ />
           </Suspense>
 
+          {/* Testimonials Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[300px]" />}>
+            <Testimonials />
+          </Suspense>
+
           {/* Partners Section - Lazy loaded */}
           <Suspense fallback={<div className="min-h-[200px]" />}>
             <Partners />
+          </Suspense>
+
+          {/* Contact Section - Lazy loaded */}
+          <Suspense fallback={<div className="min-h-[300px]" />}>
+            <ContactSection />
           </Suspense>
         </>
       )}

@@ -58,6 +58,7 @@ export function getDashboardFeatureRoute(
       'simulation-pipelines-admin': `/dashboard/admin/simulation-pipelines`,
       enterprises: `/dashboard/admin/enterprises`,
       coupons: `/dashboard/admin/coupons`,
+      'guest-inquiries': `/dashboard/admin/guest-inquiries`,
       profile: `/dashboard/admin/profile`,
     };
     return routeMap[featureId] ?? null;
