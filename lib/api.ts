@@ -534,6 +534,83 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadStudentProfilePicture(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response: AxiosResponse = await this.client.post(
+      "/students/profile/picture",
+      formData,
+    );
+    return response.data;
+  }
+
+  async saveStudentSkill(data: any, skillId?: string): Promise<any> {
+    const response: AxiosResponse = skillId
+      ? await this.client.put(`/students/profile/skills/${skillId}`, data)
+      : await this.client.post("/students/profile/skills", data);
+    return response.data;
+  }
+
+  async deleteStudentSkill(skillId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/students/profile/skills/${skillId}`,
+    );
+    return response.data;
+  }
+
+  async saveStudentProject(data: any, projectId?: string): Promise<any> {
+    const response: AxiosResponse = projectId
+      ? await this.client.put(`/students/profile/projects/${projectId}`, data)
+      : await this.client.post("/students/profile/projects", data);
+    return response.data;
+  }
+
+  async deleteStudentProject(projectId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/students/profile/projects/${projectId}`,
+    );
+    return response.data;
+  }
+
+  async saveStudentCertification(data: any, certificationId?: string): Promise<any> {
+    const response: AxiosResponse = certificationId
+      ? await this.client.put(
+          `/students/profile/certifications/${certificationId}`,
+          data,
+        )
+      : await this.client.post("/students/profile/certifications", data);
+    return response.data;
+  }
+
+  async deleteStudentCertification(certificationId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/students/profile/certifications/${certificationId}`,
+    );
+    return response.data;
+  }
+
+  async saveStudentExperience(data: any, experienceId?: string): Promise<any> {
+    const response: AxiosResponse = experienceId
+      ? await this.client.put(`/students/profile/experience/${experienceId}`, data)
+      : await this.client.post("/students/profile/experience", data);
+    return response.data;
+  }
+
+  async deleteStudentExperience(experienceId: string): Promise<any> {
+    const response: AxiosResponse = await this.client.delete(
+      `/students/profile/experience/${experienceId}`,
+    );
+    return response.data;
+  }
+
+  async updateStudentCareerPreferences(data: any): Promise<any> {
+    const response: AxiosResponse = await this.client.put(
+      "/students/profile/career-preferences",
+      data,
+    );
+    return response.data;
+  }
+
   /**
    * Upload resume with progress tracking
    * @param file - Resume file (PDF/DOCX)

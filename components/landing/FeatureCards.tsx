@@ -173,12 +173,23 @@ export const FeatureCards = memo(function FeatureCards() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const getCardStep = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return 0;
+
+    const card = container.querySelector<HTMLElement>('[data-feature-card]');
+    if (!card) return 0;
+
+    const gap = parseFloat(getComputedStyle(container).columnGap || getComputedStyle(container).gap) || 24;
+    return card.getBoundingClientRect().width + gap;
+  }, []);
+
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
 
     const container = scrollContainerRef.current;
-    // Scroll amount for wider cards
-    const scrollAmount = 470; // 450px width + 20px gap
+    const scrollAmount = getCardStep();
+    if (!scrollAmount) return;
 
     if (direction === 'left') {
       container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
@@ -187,7 +198,7 @@ export const FeatureCards = memo(function FeatureCards() {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       setCurrentIndex(prev => Math.min(FEATURES.length - 1, prev + 1));
     }
-  }, []);
+  }, [getCardStep]);
 
   // Update current index based on scroll position
   useEffect(() => {
@@ -195,15 +206,15 @@ export const FeatureCards = memo(function FeatureCards() {
     if (!container) return;
 
     const handleScroll = () => {
-      const scrollLeft = container.scrollLeft;
-      const cardWidth = 470; // 450px + gap
-      const newIndex = Math.round(scrollLeft / cardWidth);
+      const step = getCardStep();
+      if (!step) return;
+      const newIndex = Math.round(container.scrollLeft / step);
       setCurrentIndex(Math.max(0, Math.min(FEATURES.length - 1, newIndex)));
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [getCardStep]);
 
   return (
     <section id="features" className="section-container bg-white dark:bg-[#2B354B] relative overflow-hidden py-20 sm:py-32 lg:py-32 min-h-[auto] sm:min-h-screen flex flex-col justify-center">
@@ -236,8 +247,7 @@ export const FeatureCards = memo(function FeatureCards() {
         {/* Cards Container */}
         <div
           ref={scrollContainerRef}
-          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-8 px-[5vw] sm:px-[10vw]"
-          style={{ scrollSnapType: 'x mandatory' }}
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-8 snap-x snap-mandatory"
         >
           {FEATURES.map((feature, index) => (
             <FeatureCard
@@ -293,8 +303,8 @@ function FeatureCard({ feature, index, t }: FeatureCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="flex-shrink-0 w-[270px] min-[375px]:w-[320px] sm:w-[340px] md:w-[450px]"
-      style={{ scrollSnapAlign: 'center' }}
+      data-feature-card
+      className="min-w-0 snap-start flex-[0_0_100%] sm:flex-[0_0_calc((100%-1.5rem)/2)] lg:flex-[0_0_calc((100%-3rem)/3)]"
     >
       <div className={cn(
         "relative rounded-2xl p-4 min-[375px]:p-8 h-full bg-gradient-to-b flex flex-col items-center justify-center min-h-[280px] min-[375px]:min-h-[350px]",
