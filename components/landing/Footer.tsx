@@ -7,7 +7,6 @@ import {
   Phone, 
   MapPin, 
   Facebook, 
-  Twitter, 
   Linkedin, 
   Instagram,
   Heart
@@ -92,9 +91,13 @@ export function Footer() {
       label: 'Facebook' 
     },
     { 
-      icon: <Twitter className="w-5 h-5" />, 
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.739L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ), 
       href: 'https://x.com/hirekarma', 
-      label: 'Twitter' 
+      label: 'X' 
     },
     { 
       icon: <Linkedin className="w-5 h-5" />, 
@@ -155,9 +158,17 @@ export function Footer() {
                 </a>
               </div>
               <div className="flex items-start gap-3 justify-center md:justify-start w-full text-left md:text-left">
-                <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                <a
+                  href="https://www.google.com/maps/place/HireKarma+Private+Limited/@20.383776,85.822939,16z/data=!4m6!3m5!1s0x3a19096e0259fc7f:0x7ad66a4df8112eda!8m2!3d20.3837763!4d85.8229393!16s%2Fg%2F11ks9k217p?hl=en&entry=ttu&g_ep=EgoyMDI2MDkwOC4wIKXMDSoASAFQAw%3D%3D"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                  aria-label="Open HireKarma location on Google Maps"
+                >
+                  <MapPin className="w-5 h-5 mt-0.5" />
+                </a>
                 <span className="leading-relaxed text-center md:text-left">
-                  Room No: 109, 1st Floor, Tower A, O-HUB, Bhubaneswar
+                  2nd Floor, SS Niwas, Hirekarma Private Limited, Raghunathpur, Bhubaneswar, Raghunathpurjali, Odisha 751024
                 </span>
               </div>
             </div>

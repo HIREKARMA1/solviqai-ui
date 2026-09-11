@@ -9,6 +9,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuProvider,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
     Menu,
     X,
     User,
@@ -79,6 +86,32 @@ export function Navbar({
         logout()
         setIsMobileMenuOpen(false)
     }
+
+    const profileMenu = (
+        <DropdownMenuProvider>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        className="w-[34px] h-[34px] bg-brand-blue rounded-lg flex items-center justify-center cursor-pointer hover:bg-brand-blue-dark transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan/50"
+                        aria-label="Account menu"
+                        title="Account"
+                    >
+                        <User className="h-5 w-5 text-white" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44" sideOffset={8}>
+                    <DropdownMenuItem
+                        onClick={handleLogout}
+                        className="cursor-pointer flex items-center gap-2 text-red-600 dark:text-red-400"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </DropdownMenuProvider>
+    )
 
     const getDashboardPath = () => {
         if (!user) return '/dashboard'
@@ -193,13 +226,7 @@ export function Navbar({
                         {/* Auth Buttons */}
                         {isAuthenticated && user ? (
                             <div className="flex items-center space-x-3">
-                                <button
-                                    className="w-[34px] h-[34px] bg-brand-blue rounded-lg flex items-center justify-center cursor-pointer hover:bg-brand-blue-dark transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan/50"
-                                    onClick={handleLogout}
-                                    title="Logout"
-                                >
-                                    <User className="h-5 w-5 text-white" />
-                                </button>
+                                {profileMenu}
                             </div>
                         ) : (
                             <div className="flex items-center space-x-3">
@@ -236,6 +263,7 @@ export function Navbar({
                     {isAuthenticated && (
                         <div className="xl:hidden flex items-center space-x-2">
                             <ThemeToggle />
+                            {profileMenu}
                         </div>
                     )}
                 </div>

@@ -122,6 +122,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     label: "Analytics",
     onClick: undefined,
   },
+  {
+    id: "profile",
+    icon: <User className="w-5 h-5" />,
+    label: "Profile",
+    onClick: undefined,
+  },
 ];
 
 // College sidebar features

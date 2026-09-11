@@ -18,6 +18,7 @@ import {
   Flame,
   Mountain,
 } from 'lucide-react'
+import { StudentProfileWidgets } from '@/components/dashboard/StudentProfileWidgets'
 import { useTheme } from 'next-themes'
 
 const ResponsiveContainer = dynamic(() => import('recharts').then((m) => m.ResponsiveContainer), { ssr: false })
@@ -208,6 +209,15 @@ export function StudentDashboardView({
           Track your progress and continue your placement journey
         </p>
       </div>
+
+      <StudentProfileWidgets
+        completion={stats?.profile_completion ?? 0}
+        strengthScore={stats?.profile_strength_score ?? 0}
+        strengthLevel={stats?.profile_strength_level || 'Weak'}
+        totalSkills={stats?.total_skills ?? 0}
+        totalProjects={stats?.total_projects ?? 0}
+        totalCertifications={stats?.total_certifications ?? 0}
+      />
 
       {/* Hero + score gaps */}
       <div className={`grid grid-cols-1 gap-4 sm:gap-5 ${stats?.readiness_gaps?.length ? 'lg:grid-cols-3' : ''}`}>
