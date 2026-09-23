@@ -21,9 +21,11 @@ export type TallyExcelRoundProps = {
     assessmentId: string;
     roundData: any;
     onSubmitted?: (result: any) => void;
+    onBeforeSubmit?: () => boolean | Promise<boolean>;
+    interactionLocked?: boolean;
 };
 
-export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyExcelRoundProps) {
+export function TallyExcelRound({ assessmentId, roundData, onSubmitted, onBeforeSubmit, interactionLocked = false }: TallyExcelRoundProps) {
     const [selectedQuestion, setSelectedQuestion] = useState(0);
     const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
     const [evaluations, setEvaluations] = useState<Record<string, any>>({});
@@ -34,12 +36,14 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
     const currentQuestion = questions[selectedQuestion];
 
     const handleFileSelect = (questionId: string, file: File | null) => {
+        if (interactionLocked || submitting) return
         if (file) {
             setUploadedFiles(prev => ({ ...prev, [questionId]: file }));
         }
     };
 
     const handleUploadAndEvaluate = async (questionId: string) => {
+        if (interactionLocked || submitting) return
         const file = uploadedFiles[questionId];
         if (!file) {
             toast.error('Please select an Excel file first');
@@ -78,6 +82,7 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
     };
 
     const handleDownloadTemplate = async (questionId: string) => {
+        if (interactionLocked || submitting) return
         try {
             toast.loading('Generating template...', { id: 'download' });
             
@@ -103,12 +108,18 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
     };
 
     const handleSubmitAllSolutions = async () => {
-        // Check if all questions have been attempted
+        if (submitting || interactionLocked) return
+
         const allAttempted = questions.every((q: any) => evaluations[q.id]);
         
         if (!allAttempted) {
             toast.error('Please complete all tasks before submitting');
             return;
+        }
+
+        if (onBeforeSubmit) {
+            const allowed = await onBeforeSubmit();
+            if (!allowed) return;
         }
 
         setSubmitting(true);
@@ -136,7 +147,7 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
     const getMetadata = (question: any) => question?.metadata || {};
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="h-full min-h-0 overflow-y-auto bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
             <div className="max-w-7xl mx-auto p-4 sm:p-6">
                 {/* Header */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
@@ -192,7 +203,8 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
                                     return (
                                         <button
                                             key={q.id}
-                                            onClick={() => setSelectedQuestion(idx)}
+                                            onClick={() => { if (interactionLocked || submitting) return; setSelectedQuestion(idx) }}
+                                            disabled={interactionLocked || submitting}
                                             className={`w-full p-4 rounded-xl text-left transition-all ${
                                                 selectedQuestion === idx
                                                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105'
@@ -257,7 +269,7 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
                             {Object.keys(evaluations).length === questions.length && (
                                 <Button
                                     onClick={handleSubmitAllSolutions}
-                                    disabled={submitting}
+                                    disabled={submitting || interactionLocked}
                                     className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                                     size="lg"
                                 >
@@ -442,15 +454,15 @@ export function TallyExcelRound({ assessmentId, roundData, onSubmitted }: TallyE
                                 {/* Navigation Buttons */}
                                 <div className="flex justify-between mt-6">
                                     <Button
-                                        onClick={() => setSelectedQuestion(Math.max(0, selectedQuestion - 1))}
-                                        disabled={selectedQuestion === 0}
+                                        onClick={() => { if (interactionLocked || submitting) return; setSelectedQuestion(Math.max(0, selectedQuestion - 1)) }}
+                                        disabled={selectedQuestion === 0 || interactionLocked || submitting}
                                         variant="outline"
                                     >
                                         ← Previous Task
                                     </Button>
                                     <Button
-                                        onClick={() => setSelectedQuestion(Math.min(questions.length - 1, selectedQuestion + 1))}
-                                        disabled={selectedQuestion === questions.length - 1}
+                                        onClick={() => { if (interactionLocked || submitting) return; setSelectedQuestion(Math.min(questions.length - 1, selectedQuestion + 1)) }}
+                                        disabled={selectedQuestion === questions.length - 1 || interactionLocked || submitting}
                                         variant="outline"
                                     >
                                         Next Task →

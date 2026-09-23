@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, type RefCallback } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react';
 import toast from 'react-hot-toast';
 
 export type ExamCameraStatus =
@@ -108,6 +108,21 @@ export function useExamCamera() {
     }, [status, attachStreamToVideo]);
 
     const getVideoElement = useCallback(() => videoElementRef.current, []);
+
+    useEffect(() => {
+        if (status !== 'active') return;
+
+        const checkTrack = () => {
+            const stream = streamRef.current;
+            const track = stream?.getVideoTracks()[0];
+            if (!stream?.active || !track || track.readyState === 'ended') {
+                setStatus('lost');
+            }
+        };
+
+        const interval = window.setInterval(checkTrack, 1500);
+        return () => window.clearInterval(interval);
+    }, [status]);
 
     return {
         videoRef,

@@ -1,6 +1,6 @@
 'use client';
 
-import { LandingNavbar } from '@/components/landing';
+import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { SimulationLibrary } from '@/components/simulation/SimulationLibrary';
 
 export default function PublicSimulationsPage() {

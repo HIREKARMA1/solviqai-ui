@@ -128,6 +128,7 @@ export function Footer() {
                   src={mounted && theme === 'dark' ? "/images/solviqdark.png" : "/images/solviqligt.png"}
                   alt="SolviQ AI Logo"
                   fill
+                  sizes="150px"
                   className="object-contain"
                 />
               </div>

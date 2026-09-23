@@ -517,7 +517,9 @@ export default function AssessmentReportPage() {
                         </h1>
                     </div>
                     <p className="text-base leading-6 text-gray-900 dark:text-gray-300 max-w-2xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500 }}>
-                        Track your progress, analyze performance, and unlock your potential with AI-powered insights
+                        {report?.job_skill_performance?.heading ||
+                          ([report?.job_role?.company, report?.job_role?.title].filter(Boolean).join(' – ') ||
+                            'Track your progress, analyze performance, and unlock your potential with AI-powered insights')}
                     </p>
                 </div>
 
@@ -587,6 +589,30 @@ export default function AssessmentReportPage() {
                         </div>
                     </motion.div>
                 </div>
+
+                {Array.isArray(report?.job_skill_performance?.skills) && report.job_skill_performance.skills.length > 0 && (
+                    <div className="rounded-[16px] border border-[#BEBEBE] dark:border-[#797979] bg-white dark:bg-[#1C2938] px-4 py-5">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {report.job_skill_performance.heading || 'Job skill performance'}
+                        </h2>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {report.job_skill_performance.skills.map((item: { skill: string; band: string }) => (
+                                <span
+                                    key={item.skill}
+                                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                >
+                                    {item.skill}: {item.band}
+                                </span>
+                            ))}
+                        </div>
+                        {Array.isArray(report.job_skill_performance.recommended_topics) &&
+                            report.job_skill_performance.recommended_topics.length > 0 && (
+                            <p className="mt-3 text-sm text-slate-500">
+                                Recommended preparation: {report.job_skill_performance.recommended_topics.join(', ')}
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Tabs – Sigma: active blue #1E7BFF, 8px radius, 24px gap, 44px height, no button borders */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-10">

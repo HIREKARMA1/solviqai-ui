@@ -3,7 +3,16 @@
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import dynamic from 'next/dynamic'
+import {
+  Area,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import {
   Target,
   TrendingUp,
@@ -20,15 +29,6 @@ import {
 } from 'lucide-react'
 import { StudentProfileWidgets } from '@/components/dashboard/StudentProfileWidgets'
 import { useTheme } from 'next-themes'
-
-const ResponsiveContainer = dynamic(() => import('recharts').then((m) => m.ResponsiveContainer), { ssr: false })
-const LineChart = dynamic(() => import('recharts').then((m) => m.LineChart), { ssr: false })
-const Line = dynamic(() => import('recharts').then((m) => m.Line), { ssr: false })
-const Area = dynamic(() => import('recharts').then((m) => m.Area), { ssr: false })
-const XAxis = dynamic(() => import('recharts').then((m) => m.XAxis), { ssr: false })
-const YAxis = dynamic(() => import('recharts').then((m) => m.YAxis), { ssr: false })
-const CartesianGrid = dynamic(() => import('recharts').then((m) => m.CartesianGrid), { ssr: false })
-const Tooltip = dynamic(() => import('recharts').then((m) => m.Tooltip), { ssr: false })
 
 function localDateKeyFromIso(iso: string): string | null {
   const d = new Date(iso)

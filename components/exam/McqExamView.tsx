@@ -1,8 +1,12 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { ChevronsLeft, ChevronsRight, User } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
+import {
+  AssessmentConfirmDialog,
+  unansweredSubmitMessage,
+} from '@/components/assessment/AssessmentConfirmDialog';
 
 export type McqExamQuestion = {
   id: string;
@@ -55,6 +59,9 @@ export function McqExamView({
   const [visitedQuestions, setVisitedQuestions] = useState<Set<number>>(new Set([0]));
   const [markedQuestions, setMarkedQuestions] = useState<Set<number>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showUnansweredDialog, setShowUnansweredDialog] = useState(false);
+  const [pendingUnansweredCount, setPendingUnansweredCount] = useState(0);
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const currentQ = questions[currentQuestion];
 
@@ -122,13 +129,18 @@ export function McqExamView({
   };
 
   const handleSubmitWithConfirmation = () => {
+    if (submitting) return;
     const unanswered = counts.notVisited + counts.notAnswered + counts.marked;
     if (unanswered > 0) {
-      const ok = window.confirm(
-        `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nSubmit anyway?`,
-      );
-      if (!ok) return;
+      setPendingUnansweredCount(unanswered);
+      setShowUnansweredDialog(true);
+      return;
     }
+    onSubmit();
+  };
+
+  const handleConfirmedSubmit = () => {
+    setShowUnansweredDialog(false);
     onSubmit();
   };
 
@@ -346,6 +358,7 @@ export function McqExamView({
 
           <div className="bg-[#E6F3FF] p-6">
             <button
+              ref={submitButtonRef}
               type="button"
               onClick={handleSubmitWithConfirmation}
               disabled={submitting}
@@ -363,6 +376,17 @@ export function McqExamView({
           </div>
         </div>
       </div>
+
+      <AssessmentConfirmDialog
+        open={showUnansweredDialog}
+        title="Submit Assessment?"
+        message={unansweredSubmitMessage(pendingUnansweredCount)}
+        confirmLabel="Submit Anyway"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmedSubmit}
+        onCancel={() => setShowUnansweredDialog(false)}
+        returnFocusRef={submitButtonRef}
+      />
     </div>
   );
 }

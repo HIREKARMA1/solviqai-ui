@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Navbar } from '../Navbar';
 import { MobileTopNavbar } from './MobileTopNavbar';
 import { MobileSidebar } from './MobileSidebar';
 import { Footer } from './Footer';
-import { cn } from '@/lib/utils';
 import { LandingNavbar } from './LandingNavbar';
 
 interface LandingLayoutProps {

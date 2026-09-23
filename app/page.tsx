@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
-// Critical above-the-fold components - load immediately
-import { LandingLayout } from '@/components/landing';
+import { LandingLayout } from '@/components/landing/LandingLayout';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { LandingNavbar } from '@/components/landing';
-// Lazy load below-the-fold components for better performance
+
 const FeatureCards = dynamic(() => import('@/components/landing/FeatureCards').then(mod => ({ default: mod.FeatureCards })), {
   loading: () => <div className="min-h-[400px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading features...</div></div>,
   ssr: true
@@ -24,11 +22,6 @@ const ProblemSolution = dynamic(() => import('@/components/landing/ProblemSoluti
   ssr: true
 });
 
-const Pricing = dynamic(() => import('@/components/landing/Pricing').then(mod => ({ default: mod.Pricing })), {
-  loading: () => <div className="min-h-[400px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading pricing...</div></div>,
-  ssr: true
-});
-
 const FAQ = dynamic(() => import('@/components/landing/FAQ').then(mod => ({ default: mod.FAQ })), {
   loading: () => <div className="min-h-[300px] flex items-center justify-center"><div className="animate-pulse text-gray-400">Loading FAQ...</div></div>,
   ssr: true
@@ -39,13 +32,13 @@ const Partners = dynamic(() => import('@/components/landing/Partners').then(mod 
   ssr: true
 });
 
-// Dynamically import feature pages (these will handle their own auth)
-const ResumePage = dynamic(() => import('@/app/dashboard/student/resume/page'), { ssr: false });
-const AssessmentPage = dynamic(() => import('@/app/dashboard/student/assessment/page'), { ssr: false });
-const JobsPage = dynamic(() => import('@/app/dashboard/student/jobs/page'), { ssr: false });
-const AutoApplyPage = dynamic(() => import('@/app/dashboard/student/auto-apply/page'), { ssr: false });
 const GuestReadinessFlow = dynamic(
   () => import('@/components/landing/GuestReadinessFlow').then((m) => ({ default: m.GuestReadinessFlow })),
+  { ssr: false }
+);
+
+const HomeFeatureHost = dynamic(
+  () => import('@/components/landing/HomeFeatureHost').then((m) => ({ default: m.HomeFeatureHost })),
   { ssr: false }
 );
 
@@ -69,21 +62,6 @@ export default function Home() {
     }
   }, []);
 
-  const renderFeature = useMemo(() => {
-    switch (activeFeature) {
-      case 'resume':
-        return <ResumePage />;
-      case 'assessment':
-        return <AssessmentPage />;
-      case 'jobs':
-        return <JobsPage />;
-      case 'auto-apply':
-        return <AutoApplyPage />;
-      default:
-        return null;
-    }
-  }, [activeFeature]);
-
   return (
     <LandingLayout
       activeFeature={activeFeature}
@@ -92,7 +70,7 @@ export default function Home() {
       {activeFeature ? (
         // Render selected feature page
         <div className="min-h-screen">
-          {renderFeature}
+          <HomeFeatureHost feature={activeFeature} />
         </div>
       ) : (
         // Render landing page sections with lazy loading
@@ -117,11 +95,6 @@ export default function Home() {
           <Suspense fallback={<div className="min-h-[300px]" />}>
             <ProblemSolution />
           </Suspense>
-
-          {/* Pricing Section - Lazy loaded */}
-          {/* <Suspense fallback={<div className="min-h-[400px]" />}>
-            <Pricing />
-          </Suspense> */}
 
           {/* FAQ Section - Lazy loaded */}
           <Suspense fallback={<div className="min-h-[300px]" />}>

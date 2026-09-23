@@ -18,7 +18,8 @@ import {
     Sparkles,
     AlertCircle
 } from 'lucide-react'
-import Image from 'next/image'
+import YouTubeEmbedModal, { type EmbeddableVideo } from '@/components/career-guidance/YouTubeEmbedModal'
+import { apiClient } from '@/lib/api'
 
 interface Video {
     id?: string
@@ -49,6 +50,7 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
     const [error, setError] = useState<string | null>(null)
     const [activeTopic, setActiveTopic] = useState<string | null>(null)
     const [platformFilter, setPlatformFilter] = useState<string>('all')
+    const [selectedVideo, setSelectedVideo] = useState<EmbeddableVideo | null>(null)
 
     // Fetch playlist on mount
     React.useEffect(() => {
@@ -59,7 +61,6 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
         setLoading(true)
         setError(null)
         try {
-            const { apiClient } = await import('@/lib/api')
             const data = await apiClient.getAssessmentPlaylist(assessmentId)
             setPlaylist(data.playlist || [])
             
@@ -150,8 +151,23 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
         )
     }
 
+    const openVideo = (video: Video) => {
+        setSelectedVideo({
+            title: video.title,
+            url: video.url,
+            video_id: video.id,
+            channel: video.channel,
+            duration: video.duration,
+            views: video.views,
+        })
+    }
+
     return (
         <div className="space-y-8">
+            <YouTubeEmbedModal
+                video={selectedVideo}
+                onClose={() => setSelectedVideo(null)}
+            />
             {/* Header Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Topics Card */}
@@ -275,7 +291,7 @@ export default function PlaylistTab({ assessmentId }: PlaylistTabProps) {
                                         >
                                             <div 
                                                 className="group cursor-pointer flex flex-col gap-3"
-                                                onClick={() => window.open(video.url, '_blank')}
+                                                onClick={() => openVideo(video)}
                                             >
                                                 {/* Thumbnail */}
                                                 <div className="relative aspect-video rounded-[12px] overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm group-hover:shadow-md transition-all">

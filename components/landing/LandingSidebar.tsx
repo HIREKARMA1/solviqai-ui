@@ -57,6 +57,12 @@ export const studentSidebarFeatures: SidebarItem[] = [
     onClick: undefined,
   },
   {
+    id: "agents",
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: "Assessment Agent",
+    onClick: undefined,
+  },
+  {
     id: "resume",
     icon: <FileText className="w-5 h-5" />,
     label: "Resume Analysis",

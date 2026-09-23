@@ -12,8 +12,16 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
+function isAuthRefreshUrl(url?: string): boolean {
+  return !!url && url.includes("/auth/refresh");
+}
+
 class ApiClient {
   public client: AxiosInstance;
+  private refreshInFlight: Promise<{
+    access_token: string;
+    refresh_token: string;
+  }> | null = null;
 
   constructor() {
     const shouldLog =
@@ -54,39 +62,34 @@ class ApiClient {
           delete config.headers["Content-Type"];
         }
 
-        // Add auth token
-        const token = localStorage.getItem("access_token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Add auth token (refresh uses the body refresh_token, not Bearer)
+        if (!isAuthRefreshUrl(config.url)) {
+          const token = localStorage.getItem("access_token");
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
 
         // Skip proactive refresh for refresh token endpoint itself to prevent infinite loop
-        if (config.url?.includes("/auth/refresh")) {
+        if (isAuthRefreshUrl(config.url)) {
           return config;
         }
 
         // Check if token is about to expire and refresh proactively
         const tokenExpiry = localStorage.getItem("token_expiry");
-        if (tokenExpiry && Date.now() > parseInt(tokenExpiry) - 60000) {
+        if (tokenExpiry && Date.now() > parseInt(tokenExpiry, 10) - 60000) {
           // Refresh 1 minute before expiry
-          const refreshToken = localStorage.getItem("refresh_token");
-          if (refreshToken) {
-            try {
-              const response = await this.refreshToken(refreshToken);
-              localStorage.setItem("access_token", response.access_token);
-              localStorage.setItem("refresh_token", response.refresh_token);
-              localStorage.setItem(
-                "token_expiry",
-                String(Date.now() + 30 * 60 * 1000),
-              ); // 30 minutes
-              config.headers.Authorization = `Bearer ${response.access_token}`;
-            } catch (error) {
-              console.warn(
-                "Proactive token refresh failed, continuing with existing token",
-                error
-              );
-              // If refresh fails, don't clear tokens - let the response interceptor handle it
+          try {
+            const tokens = await this.refreshAccessTokenOnce();
+            if (tokens?.access_token) {
+              config.headers.Authorization = `Bearer ${tokens.access_token}`;
             }
+          } catch (error) {
+            console.warn(
+              "Proactive token refresh failed, continuing with existing token",
+              error
+            );
+            // If refresh fails, don't clear tokens - let the response interceptor handle it
           }
         }
 
@@ -101,9 +104,15 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
-        const originalRequest: CustomAxiosRequestConfig = error.config;
+        const originalRequest: CustomAxiosRequestConfig | undefined = error.config;
+        const requestUrl = originalRequest?.url;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Never run the refresh-retry machinery on the refresh call itself.
+        if (isAuthRefreshUrl(requestUrl)) {
+          return Promise.reject(error);
+        }
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
 
           // Check if error message indicates session was invalidated (logged in on another device)
@@ -129,17 +138,10 @@ class ApiClient {
           }
 
           try {
-            const refreshToken = localStorage.getItem("refresh_token");
-            if (refreshToken) {
-              const response = await this.refreshToken(refreshToken);
-              localStorage.setItem("access_token", response.access_token);
-              localStorage.setItem("refresh_token", response.refresh_token);
-              localStorage.setItem(
-                "token_expiry",
-                String(Date.now() + 30 * 60 * 1000),
-              );
-
-              originalRequest.headers.Authorization = `Bearer ${response.access_token}`;
+            const tokens = await this.refreshAccessTokenOnce();
+            if (tokens?.access_token) {
+              originalRequest.headers = originalRequest.headers ?? {};
+              originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
               return this.client(originalRequest);
             }
           } catch (refreshError) {
@@ -149,6 +151,7 @@ class ApiClient {
             if (window.location.pathname !== "/auth/login") {
               window.location.href = "/auth/login";
             }
+            return Promise.reject(refreshError);
           }
         }
 
@@ -234,13 +237,7 @@ class ApiClient {
   }
 
   async login(data: any): Promise<any> {
-    console.log(
-      "📡 API login POST:",
-      this.client.defaults.baseURL + "/api/v1/auth/login",
-      data,
-    );
     const response: AxiosResponse = await this.client.post("/auth/login", data);
-    console.log("📥 Login response:", response.data);
     return response.data;
   }
 
@@ -249,6 +246,47 @@ class ApiClient {
       refresh_token: refreshToken,
     });
     return response.data;
+  }
+
+  /**
+   * Rotate access/refresh tokens at most once at a time.
+   * Refresh tokens are single-use — parallel refresh calls would invalidate each other
+   * and retry forever through the response interceptor.
+   */
+  private async refreshAccessTokenOnce(): Promise<{
+    access_token: string;
+    refresh_token: string;
+  } | null> {
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!refreshToken) {
+      return null;
+    }
+
+    this.refreshInFlight = this.refreshToken(refreshToken)
+      .then((response) => {
+        if (!response?.access_token || !response?.refresh_token) {
+          throw new Error("Token refresh returned an incomplete payload");
+        }
+        localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("refresh_token", response.refresh_token);
+        localStorage.setItem(
+          "token_expiry",
+          String(Date.now() + 30 * 60 * 1000),
+        );
+        return {
+          access_token: response.access_token as string,
+          refresh_token: response.refresh_token as string,
+        };
+      })
+      .finally(() => {
+        this.refreshInFlight = null;
+      });
+
+    return this.refreshInFlight;
   }
 
   async logout(): Promise<any> {
@@ -777,6 +815,78 @@ class ApiClient {
       {
         job_role_id: jobRoleId,
       },
+    );
+    return response.data;
+  }
+
+  async getAssessmentAgentProfile(): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.get(
+      "/assessment-agent/profile",
+    );
+    return response.data;
+  }
+
+  async upsertAssessmentAgentProfile(
+    data: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessment-agent/profile",
+      data,
+    );
+    return response.data;
+  }
+
+  async submitAssessmentAgentQuestions(payload: {
+    answers?: Record<string, unknown>;
+    questions?: Array<{
+      question_id: string;
+      answer: string | number | string[] | null;
+    }>;
+  }): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessment-agent/questions",
+      payload,
+    );
+    return response.data;
+  }
+
+  async matchAssessmentAgentJobs(
+    limit = 20,
+    includeRelated = false,
+  ): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessment-agent/jobs/match",
+      { limit, include_related: includeRelated },
+    );
+    return response.data;
+  }
+
+  async getAssessmentAgentReadiness(
+    jobRoleId?: string,
+  ): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.get(
+      "/assessment-agent/readiness",
+      { params: jobRoleId ? { job_role_id: jobRoleId } : undefined },
+    );
+    return response.data;
+  }
+
+  async createAssessmentAgentPlan(
+    jobRoleId: string,
+  ): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessment-agent/plan",
+      { job_role_id: jobRoleId },
+    );
+    return response.data;
+  }
+
+  async startAssessmentFromAgent(
+    jobRoleId: string,
+  ): Promise<Record<string, unknown>> {
+    const response: AxiosResponse = await this.client.post(
+      "/assessment-agent/start",
+      { job_role_id: jobRoleId },
     );
     return response.data;
   }
@@ -1628,8 +1738,19 @@ class ApiClient {
     target_role?: string;
     resume_version_id?: string;
     match_method?: 'keyword' | 'embedding';
+    current_ats_score?: number;
   }): Promise<any> {
     const response: AxiosResponse = await this.client.post('/students/resume-gaps/analyze', data);
+    return response.data;
+  }
+
+  async parseJdDocument(file: File): Promise<{ filename: string; text: string; characters: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response: AxiosResponse = await this.client.post(
+      '/students/resume-gaps/parse-document',
+      formData,
+    );
     return response.data;
   }
 
@@ -2398,6 +2519,18 @@ class ApiClient {
     const response: AxiosResponse = await this.client.post(`/enterprise/public/invites/${token}/submit`, data);
     return response.data;
   }
+
+  async queryRag(query: string): Promise<{
+    ok: boolean;
+    query: string;
+    answer: string;
+    sources: Array<{ id: number; title?: string | null; content_type?: string | null }>;
+    model?: string | null;
+    retrieved_count: number;
+  }> {
+    const response: AxiosResponse = await this.client.post("/ai/rag", { query });
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -2422,3 +2555,4 @@ export const getAdminSubscriptionOverview = () => apiClient.getAdminSubscription
 export const getAdminCollegeLicenses = () => apiClient.getAdminCollegeLicenses();
 export const getAdminSubscriptionTrends = () => apiClient.getAdminSubscriptionTrends();
 export const getAdminRevenueMetrics = () => apiClient.getAdminRevenueMetrics();
+export const queryRag = (query: string) => apiClient.queryRag(query);

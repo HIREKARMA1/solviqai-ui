@@ -40,6 +40,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import {
+  ASSESSMENT_AGENT_SOURCE,
+  getAssessmentRoundPath,
+} from "@/lib/assessmentAgent";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard/student", icon: Home },
@@ -134,6 +138,7 @@ export default function AssessmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const assessmentId = searchParams?.get("id");
+  const assessmentSource = searchParams?.get("source");
 
   const [assessment, setAssessment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -209,27 +214,14 @@ export default function AssessmentPage() {
     }
   };
 
-  const requestFullscreen = async () => {
-    try {
-      const elem: any = document.documentElement;
-      if (!document.fullscreenElement) {
-        if (elem.requestFullscreen) await elem.requestFullscreen();
-        else if (elem.webkitRequestFullscreen)
-          await elem.webkitRequestFullscreen();
-      }
-    } catch (e) {
-      // Ignore; some browsers block without gesture, but this is in the click handler
-    }
-  };
-
   const handleStartRound = async (round: any) => {
-    await requestFullscreen();
     const roundType = String(round.round_type || "").toLowerCase();
     if (roundType === "electrical_circuit") {
       const params = new URLSearchParams();
       if (assessmentId) params.set("assessment_id", assessmentId);
       if (round.round_id) params.set("round_id", round.round_id);
       params.set("round_number", String(round.round_number));
+      if (assessmentSource) params.set("source", assessmentSource);
       router.push(`/dashboard/student/electrical?${params.toString()}`);
       return;
     }
@@ -238,11 +230,16 @@ export default function AssessmentPage() {
       if (assessmentId) params.set("assessment_id", assessmentId);
       if (round.round_id) params.set("round_id", round.round_id);
       params.set("round_number", String(round.round_number));
+      if (assessmentSource) params.set("source", assessmentSource);
       router.push(`/dashboard/student/civil?${params.toString()}`);
       return;
     }
     router.push(
-      `/dashboard/student/assessment/round?assessment_id=${assessmentId}&round=${round.round_number}`,
+      getAssessmentRoundPath(
+        assessmentId!,
+        round.round_number,
+        assessmentSource,
+      ),
     );
   };
 
@@ -339,11 +336,24 @@ export default function AssessmentPage() {
         {/* Header - Updated to Mock Assessment Design */}
         <div className="bg-white dark:bg-gray-900">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Mock Assessment
+            {assessmentSource === ASSESSMENT_AGENT_SOURCE
+              ? "Assessment Agent"
+              : "Mock Assessment"}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">
-            Apply to multiple jobs automatically using AI-extracted skills
+            {assessment.job_role?.company
+              ? `${assessment.job_role.company} – ${assessment.job_role.title || "Selected job"}`
+              : assessment.job_role?.title
+                ? assessment.job_role.title
+                : assessmentSource === ASSESSMENT_AGENT_SOURCE
+                  ? "Complete each personalized round from your Assessment Agent plan."
+                  : "Apply to multiple jobs automatically using AI-extracted skills"}
           </p>
+          {assessment.job_role?.company && (
+            <p className="mt-1 text-xs font-medium text-violet-700">
+              Company-specific interview simulation
+            </p>
+          )}
         </div>
 
         {/* Assessment Stats */}
@@ -516,9 +526,17 @@ export default function AssessmentPage() {
         <div className="flex justify-between">
           <Button
             variant="outline"
-            onClick={() => router.push("/dashboard/student/jobs")}
+            onClick={() =>
+              router.push(
+                assessmentSource === ASSESSMENT_AGENT_SOURCE
+                  ? "/dashboard/student/agents/assessment?step=plan"
+                  : "/dashboard/student/jobs",
+              )
+            }
           >
-            Back to Job Recommendations
+            {assessmentSource === ASSESSMENT_AGENT_SOURCE
+              ? "Back to Assessment Agent"
+              : "Back to Job Recommendations"}
           </Button>
           {assessment.status === "completed" && (
             <Button

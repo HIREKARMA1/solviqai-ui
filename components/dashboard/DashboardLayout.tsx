@@ -20,9 +20,11 @@ interface DashboardLayoutProps {
     children: React.ReactNode
     requiredUserType?: 'student' | 'college' | 'admin' | 'enterprise'
     hideNavigation?: boolean  // Hide navbar and sidebar when true (e.g., in fullscreen mode)
+    /** Full-viewport exam lock: no chrome, no document scroll. */
+    lockViewport?: boolean
 }
 
-export function DashboardLayout({ children, requiredUserType, hideNavigation = false }: DashboardLayoutProps) {
+export function DashboardLayout({ children, requiredUserType, hideNavigation = false, lockViewport = false }: DashboardLayoutProps) {
     const { user, loading } = useAuth()
     const router = useRouter()
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
@@ -33,6 +35,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
     useEffect(() => {
         setMounted(true)
     }, [])
+    const hideNav = hideNavigation || lockViewport
     const [showEntitlementModal, setShowEntitlementModal] = useState(false)
     const [entitlementMessage, setEntitlementMessage] = useState<string | undefined>(undefined)
     const [entitlementTitle, setEntitlementTitle] = useState<string | undefined>(undefined)
@@ -91,9 +94,9 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
     }
 
     return (
-        <div className={cn("min-h-screen flex flex-col", hideNavigation && "fixed inset-0 w-full h-full")}>
+        <div className={cn("min-h-screen flex flex-col", hideNav && "fixed inset-0 w-full h-full overflow-hidden", lockViewport && "h-screen max-h-[100dvh]")}>
             {/* Minimal Header - Visible only when navigation is hidden (e.g. Exam Mode) */}
-            {hideNavigation && mounted && (
+            {hideNav && mounted && !lockViewport && (
                 <header className="px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center h-20 flex-shrink-0 z-50 relative">
                     <Link href="/" className="relative w-[120px] h-12 sm:w-[160px] sm:h-[64px] block">
                         {theme === 'dark' ? (
@@ -101,6 +104,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                                 src="/images/solviqdark.png"
                                 alt="SolviQ AI Logo"
                                 fill
+                                sizes="(max-width: 640px) 120px, 160px"
                                 className="object-contain"
                                 priority
                             />
@@ -109,6 +113,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
                                 src="/images/solviqligt.png"
                                 alt="SolviQ AI Logo"
                                 fill
+                                sizes="(max-width: 640px) 120px, 160px"
                                 className="object-contain"
                                 priority
                             />
@@ -118,7 +123,7 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             )}
 
             {/* Landing Page Navbar - Only visible on desktop (lg and above), completely removed on small screens */}
-            {!hideNavigation && (
+            {!hideNav && (
                 <div className="hidden lg:block">
                     <Navbar
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -131,8 +136,8 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
 
             {/* Mobile Top Navbar - Only visible on small screens and when not hidden */}
             <div
-                className={cn(hideNavigation && "hidden")}
-                style={hideNavigation ? { display: 'none' } : undefined}
+                className={cn(hideNav && "hidden")}
+                style={hideNav ? { display: 'none' } : undefined}
             >
                 <MobileTopNavbar
                     onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -142,8 +147,8 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
 
             {/* Mobile Sidebar - Slides from right on small screens */}
             <div
-                className={cn(hideNavigation && "hidden")}
-                style={hideNavigation ? { display: 'none' } : undefined}
+                className={cn(hideNav && "hidden")}
+                style={hideNav ? { display: 'none' } : undefined}
             >
                 <MobileSidebar
                     isOpen={isMobileSidebarOpen}
@@ -160,11 +165,11 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
             </div> */}
 
             {/* Main Content Area with Sidebar */}
-            <div className="flex flex-1 flex-col min-h-0">
+            <div className={cn("flex flex-1 flex-col min-h-0", lockViewport && "h-full overflow-hidden")}>
                 {/* Sidebar - Hidden on mobile and when hideNavigation is true */}
                 <div
-                    className={cn("hidden lg:block", hideNavigation && "hidden")}
-                    style={hideNavigation ? { display: 'none' } : undefined}
+                    className={cn("hidden lg:block", hideNav && "hidden")}
+                    style={hideNav ? { display: 'none' } : undefined}
                 >
                     <LandingSidebar
                         isCollapsed={isSidebarCollapsed}
@@ -173,11 +178,12 @@ export function DashboardLayout({ children, requiredUserType, hideNavigation = f
 
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 overflow-y-auto overflow-x-hidden min-h-0",
-                        hideNavigation
+                        "flex-1 transition-all duration-300 overflow-x-hidden min-h-0",
+                        lockViewport ? "overflow-hidden h-full p-0" : "overflow-y-auto",
+                        hideNav
                             ? "p-0" // No padding in fullscreen
                             : "p-6 pt-20 lg:pt-24", // Add top padding on mobile for mobile top navbar
-                        hideNavigation
+                        hideNav
                             ? "" // No margin in fullscreen
                             : isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[280px]"
                     )}

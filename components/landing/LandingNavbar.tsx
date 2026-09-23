@@ -115,6 +115,7 @@ export function LandingNavbar({
                     src="/images/solviqdark.png"
                     alt="SolviQ AI Logo"
                     fill
+                    sizes="100px"
                     className="object-contain"
                     priority
                   />
@@ -123,6 +124,7 @@ export function LandingNavbar({
                     src="/images/solviqligt.png"
                     alt="SolviQ AI Logo"
                     fill
+                    sizes="100px"
                     className="object-contain"
                     priority
                   />
@@ -278,6 +280,7 @@ export function LandingNavbar({
                     src="/images/solviqdark.png"
                     alt="SolviQ AI Logo"
                     fill
+                    sizes="100px"
                     className="object-contain"
                     priority
                   />
@@ -286,6 +289,7 @@ export function LandingNavbar({
                     src="/images/solviqligt.png"
                     alt="SolviQ AI Logo"
                     fill
+                    sizes="100px"
                     className="object-contain"
                     priority
                   />

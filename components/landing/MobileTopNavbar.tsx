@@ -62,6 +62,7 @@ export function MobileTopNavbar({ onToggleSidebar, isSidebarOpen, className }: M
                   src="/images/solviqdark.png"
                   alt="SolviQ AI Logo"
                   fill
+                  sizes="(max-width: 640px) 120px, 160px"
                   className="object-contain"
                   priority
                 />
@@ -70,6 +71,7 @@ export function MobileTopNavbar({ onToggleSidebar, isSidebarOpen, className }: M
                   src="/images/solviqligt.png"
                   alt="SolviQ AI Logo"
                   fill
+                  sizes="(max-width: 640px) 120px, 160px"
                   className="object-contain"
                   priority
                 />
