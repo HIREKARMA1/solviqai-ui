@@ -23,6 +23,10 @@ import { ExamCameraPanel } from '@/components/disha/ExamCameraPanel';
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import {
+    AssessmentConfirmDialog,
+    unansweredSubmitMessage,
+} from '@/components/assessment/AssessmentConfirmDialog';
+import {
     ArrowLeft, Maximize2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Shield, Wifi, MonitorX, Timer, MousePointerClick, AlertTriangle, MonitorPlay
 } from 'lucide-react';
@@ -340,6 +344,8 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [showTerminationModal, setShowTerminationModal] = useState(false);
     const [showCameraLostModal, setShowCameraLostModal] = useState(false);
+    const [showUnansweredDialog, setShowUnansweredDialog] = useState(false);
+    const [pendingUnansweredCount, setPendingUnansweredCount] = useState(0);
     const [attemptStartedAtIso, setAttemptStartedAtIso] = useState<string | null>(null);
     const [proctoringCapturedIndexes, setProctoringCapturedIndexes] = useState<number[]>([]);
     const examCamera = useExamCamera();
@@ -1005,18 +1011,21 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
 
     // Explicit submit handler for button click
     const handleSubmitWithConfirmation = () => {
+        if (isSubmitting) return;
         const stats = getQuestionCounts();
         const unansweredCount = stats.notVisited + stats.notAnswered + stats.marked;
 
         if (unansweredCount > 0) {
-            const message = `?? You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`;
-
-            if (window.confirm(message)) {
-                submitRound();
-            }
-        } else {
-            submitRound();
+            setPendingUnansweredCount(unansweredCount);
+            setShowUnansweredDialog(true);
+            return;
         }
+        submitRound();
+    };
+
+    const handleConfirmedSubmit = () => {
+        setShowUnansweredDialog(false);
+        submitRound();
     };
 
     const pollEvaluationStatus = async () => {
@@ -1542,6 +1551,19 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
             </div>
         );
 
+        const unansweredConfirmDialog = (
+            <AssessmentConfirmDialog
+                open={showUnansweredDialog}
+                title="Submit Assessment?"
+                message={unansweredSubmitMessage(pendingUnansweredCount)}
+                confirmLabel="Submit Anyway"
+                cancelLabel="Cancel"
+                onConfirm={handleConfirmedSubmit}
+                onCancel={() => setShowUnansweredDialog(false)}
+                loading={isSubmitting}
+            />
+        );
+
         // Special Round: Group Discussion
         console.log('━'.repeat(100));
         console.log('🔍 [GD DETECTION] Starting Group Discussion round check...');
@@ -1597,6 +1619,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         }}
                     />
                     {terminationModal}
+                    {unansweredConfirmDialog}
                 </div>
                 </>
             );
@@ -1793,6 +1816,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                         </div>
                     </div>
                     {terminationModal}
+                    {unansweredConfirmDialog}
                 </div>
                 </>
             );
@@ -2699,6 +2723,7 @@ export default function DishaAssessmentExam({ packageId, studentId, onComplete }
                     </div>
                 </div >
                 {terminationModal}
+                {unansweredConfirmDialog}
             </div >
             </>
         );

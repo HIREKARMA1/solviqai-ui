@@ -1,14 +1,18 @@
 "use client"
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
+import { AssessmentRoundSecurityShell } from '@/components/assessment/security/AssessmentRoundSecurityShell'
+import { ExamSubmissionOverlay } from '@/components/assessment/ExamSubmissionOverlay'
+import { snapshotAnswers, isExamInteractionLocked } from '@/lib/assessmentExam'
+import type { AssessmentSubmissionState } from '@/types/assessmentExam'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { apiClient } from '@/lib/api'
 import toast from 'react-hot-toast'
+import '@excalidraw/excalidraw/index.css'
 
 // Excalidraw is large; load client-side only
 const Excalidraw = dynamic(async () => (await import('@excalidraw/excalidraw')).Excalidraw, { ssr: false })
@@ -26,6 +30,10 @@ export default function ElectricalPracticePage() {
   const [roundSubmitted, setRoundSubmitted] = useState(false)
   const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
   const [isRestored, setIsRestored] = useState(false)
+  const [submissionState, setSubmissionState] = useState<AssessmentSubmissionState>('ready')
+  const submittingRef = useRef(false)
+  const payloadSnapshotRef = useRef<{ question: string; drawingData: any } | null>(null)
+  const examLocked = isExamInteractionLocked(submissionState)
 
   // Auto-save key for localStorage
   const storageKey = `electrical-circuit-${assessmentId || 'practice'}-${roundId || 'draft'}`
@@ -36,6 +44,7 @@ export default function ElectricalPracticePage() {
 
   // Auto-save to localStorage on scene changes
   const handleSceneChange = useCallback((elements: any, appState: any, files: any) => {
+    if (submittingRef.current) return
     // Auto-save to localStorage
     try {
       const saveData = {
@@ -78,44 +87,58 @@ export default function ElectricalPracticePage() {
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (security?: { validateForSubmit: () => { ok: boolean; message: string | null }; finishSession: () => Promise<void> }, options?: { retry?: boolean }) => {
     try {
-      if (!excalidrawAPI) {
-        toast.error('Canvas not ready')
+      if (submittingRef.current) return
+      if (assessmentId && roundId && security) {
+        const gate = security.validateForSubmit()
+        if (!gate.ok) {
+          toast.error(gate.message || 'Camera and fullscreen are required to submit this assessment.')
+          return
+        }
+      }
+      if (!options?.retry) {
+        if (!excalidrawAPI) {
+          toast.error('Canvas not ready')
+          return
+        }
+
+        const elements = excalidrawAPI.getSceneElements()
+
+        if (!elements || elements.length === 0) {
+          toast.error('Please draw your circuit before submitting')
+          return
+        }
+
+        const validElements = elements.filter((el: any) => !el.isDeleted)
+        if (validElements.length === 0) {
+          toast.error('Your canvas is empty. Please draw your circuit before submitting')
+          return
+        }
+
+        const appState = excalidrawAPI.getAppState()
+        const files = excalidrawAPI.getFiles()
+        payloadSnapshotRef.current = snapshotAnswers({
+          question,
+          drawingData: { elements, appState, files },
+        })
+      }
+
+      if (!payloadSnapshotRef.current) {
+        toast.error('Your drawing could not be captured. Please try again.')
         return
       }
-      
-      const elements = excalidrawAPI.getSceneElements()
-      
-      // Validate that canvas is not empty
-      if (!elements || elements.length === 0) {
-        toast.error('Please draw your circuit before submitting')
-        return
-      }
-      
-      // Filter out deleted elements and check if there are any valid elements
-      const validElements = elements.filter((el: any) => !el.isDeleted)
-      if (validElements.length === 0) {
-        toast.error('Your canvas is empty. Please draw your circuit before submitting')
-        return
-      }
-      
-      setBusy(true)
+
+      submittingRef.current = true
+      setSubmissionState('submitting')
       setEvaluation(null)
       setRoundSubmitError(null)
       const startedAt = Date.now()
-      const appState = excalidrawAPI.getAppState()
-      const files = excalidrawAPI.getFiles()
-
-      const drawingData = {
-        elements,
-        appState,
-        files,
-      }
+      setBusy(true)
 
       const payload = {
-        question,
-        drawing: drawingData,
+        question: payloadSnapshotRef.current.question,
+        drawing: payloadSnapshotRef.current.drawingData,
       }
       const res = await apiClient.evaluateElectricalDiagram(payload)
       setEvaluation(res)
@@ -129,17 +152,18 @@ export default function ElectricalPracticePage() {
             roundId,
             [{
               response_data: {
-                question,
+                question: payloadSnapshotRef.current.question,
                 evaluation: res,
-                drawing: drawingData,
+                drawing: payloadSnapshotRef.current.drawingData,
               },
               time_taken: timeTaken,
             }]
           )
           setRoundSubmitted(true)
+          setSubmissionState('completed')
           toast.success('Assessment round recorded successfully!')
-          
-          // Clear auto-save after successful submission
+          await security?.finishSession()
+
           try {
             localStorage.removeItem(storageKey)
           } catch (error) {
@@ -150,11 +174,17 @@ export default function ElectricalPracticePage() {
           const message = submitErr?.response?.data?.detail || submitErr?.message || 'Failed to record round'
           setRoundSubmitError(message)
           toast.error('Failed to record assessment round')
+          submittingRef.current = false
+          setSubmissionState('error')
         }
+      } else {
+        setSubmissionState('completed')
       }
     } catch (e) {
       console.error(e)
       toast.error('Failed to evaluate diagram')
+      submittingRef.current = false
+      setSubmissionState('error')
     } finally {
       setBusy(false)
     }
@@ -219,6 +249,7 @@ export default function ElectricalPracticePage() {
   }, [])
 
   const handleClearCanvas = () => {
+    if (examLocked) return
     if (excalidrawAPI) {
       excalidrawAPI.updateScene({ elements: [] })
       try {
@@ -231,8 +262,19 @@ export default function ElectricalPracticePage() {
   }
 
   return (
-    <DashboardLayout requiredUserType="student">
-      <div className="space-y-6">
+    <AssessmentRoundSecurityShell
+      enabled={Boolean(assessmentId && roundId)}
+      completed={roundSubmitted}
+      submitting={examLocked}
+      roundTitle="Electrical Circuit Design"
+    >
+      {(security) => (
+      <div className="relative min-h-full">
+      <ExamSubmissionOverlay
+        state={submissionState}
+        onRetry={() => void handleSubmit(security, { retry: true })}
+      />
+      <div className={`space-y-6 p-4 ${examLocked ? 'pointer-events-none' : ''}`}>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Electrical Practice</h1>
@@ -295,6 +337,7 @@ export default function ElectricalPracticePage() {
                   excalidrawAPI={onExcalidrawAPIMount}
                   onChange={handleSceneChange}
                   gridModeEnabled={true}
+                  viewModeEnabled={examLocked}
                   theme="light"
                 />
             </div>
@@ -302,12 +345,12 @@ export default function ElectricalPracticePage() {
               <Button 
                 variant="outline" 
                 onClick={handleClearCanvas}
-                disabled={busy}
+                disabled={busy || examLocked}
               >
                 Clear Canvas
               </Button>
-              <Button onClick={handleSubmit} disabled={busy || !question}>
-                {busy ? <Loader size="sm" /> : 'Submit for Evaluation'}
+              <Button type="button" onClick={() => void handleSubmit(security)} disabled={busy || !question || examLocked}>
+                {busy || submittingRef.current ? <Loader size="sm" /> : 'Submit for Evaluation'}
               </Button>
             </div>
           </CardContent>
@@ -341,6 +384,8 @@ export default function ElectricalPracticePage() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
+      </div>
+      )}
+    </AssessmentRoundSecurityShell>
   )
 }

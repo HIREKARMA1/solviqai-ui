@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
+import { AssessmentRoundSecurityShell } from '@/components/assessment/security/AssessmentRoundSecurityShell'
+import { ExamSubmissionOverlay } from '@/components/assessment/ExamSubmissionOverlay'
+import { snapshotAnswers, isExamInteractionLocked } from '@/lib/assessmentExam'
+import type { AssessmentSubmissionState } from '@/types/assessmentExam'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -64,9 +67,14 @@ export default function CivilPracticePage() {
   const [elapsedTime, setElapsedTime] = useState(0)
   const [roundSubmitted, setRoundSubmitted] = useState(false)
   const [roundSubmitError, setRoundSubmitError] = useState<string | null>(null)
+  const [submissionState, setSubmissionState] = useState<AssessmentSubmissionState>('ready')
+  const submittingRef = useRef(false)
+  const payloadSnapshotRef = useRef<{ problem: Problem; student_answers: Record<string, number>; elapsed: number } | null>(null)
+  const examLocked = isExamInteractionLocked(submissionState)
 
   // Scroll to top of page
   const scrollToTop = () => {
+    if (assessmentId) return
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -100,36 +108,52 @@ export default function CivilPracticePage() {
   }
 
   // Submit answers for evaluation
-  const submitAnswers = async () => {
-    if (!problem) return
-    
-    // Validate no negative values before submission
-    const negativeValues = Object.entries(answers).filter(([_, value]) => value < 0)
-    if (negativeValues.length > 0) {
-      const negativeList = negativeValues.map(([key, value]) => `${key}=${value}`).join(', ')
-      toast.error(`Physical quantities cannot be negative. Invalid values: ${negativeList}`)
-      return
+  const submitAnswers = async (security?: { validateForSubmit: () => { ok: boolean; message: string | null }; finishSession: () => Promise<void> }, options?: { retry?: boolean }) => {
+    if (submittingRef.current) return
+    if (!problem && !options?.retry) return
+
+    if (assessmentId && roundId && security) {
+      const gate = security.validateForSubmit()
+      if (!gate.ok) {
+        toast.error(gate.message || 'Camera and fullscreen are required to submit this assessment.')
+        return
+      }
     }
-    
-    // Calculate elapsed time
-    const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
-    setElapsedTime(elapsed)
-    
+
+    if (!options?.retry) {
+      const negativeValues = Object.entries(answers).filter(([_, value]) => value < 0)
+      if (negativeValues.length > 0) {
+        const negativeList = negativeValues.map(([key, value]) => `${key}=${value}`).join(', ')
+        toast.error(`Physical quantities cannot be negative. Invalid values: ${negativeList}`)
+        return
+      }
+
+      const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
+      setElapsedTime(elapsed)
+      payloadSnapshotRef.current = snapshotAnswers({
+        problem: problem!,
+        student_answers: answers,
+        elapsed,
+      })
+    }
+
+    if (!payloadSnapshotRef.current) return
+
+    submittingRef.current = true
+    setSubmissionState('submitting')
     setLoading(true)
     setRoundSubmitError(null)
-    
+
     try {
-      // Send complete problem object for AI evaluation
       const response = await apiClient.evaluateCivilQuantities({
-        problem: problem,  // Send the entire problem object
-        student_answers: answers
+        problem: payloadSnapshotRef.current.problem,
+        student_answers: payloadSnapshotRef.current.student_answers
       })
-      
+
       if (response.success && response.evaluation) {
         setEvaluation(response.evaluation)
         toast.success('Evaluation received')
-        
-        // If this is part of an assessment, submit the round
+
         if (assessmentId && roundId) {
           try {
             await apiClient.submitRoundResponses(
@@ -137,33 +161,41 @@ export default function CivilPracticePage() {
               roundId,
               [{
                 response_data: {
-                  problem,
-                  student_answers: answers,
+                  problem: payloadSnapshotRef.current.problem,
+                  student_answers: payloadSnapshotRef.current.student_answers,
                   evaluation: response.evaluation,
                 },
-                time_taken: elapsed,
+                time_taken: payloadSnapshotRef.current.elapsed,
               }]
             )
             setRoundSubmitted(true)
+            setSubmissionState('completed')
             toast.success('Assessment round recorded successfully!')
+            await security?.finishSession()
           } catch (submitErr: any) {
             console.error(submitErr)
             const message = submitErr?.response?.data?.detail || submitErr?.message || 'Failed to record round'
             setRoundSubmitError(message)
             toast.error('Failed to record assessment round')
+            submittingRef.current = false
+            setSubmissionState('error')
           }
+        } else {
+          setSubmissionState('completed')
         }
       }
     } catch (error) {
       console.error('Failed to evaluate answers:', error)
       toast.error('Failed to evaluate answers. Please try again.')
+      submittingRef.current = false
+      setSubmissionState('error')
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle input change
   const handleAnswerChange = (item: string, value: string) => {
+    if (submittingRef.current || examLocked) return
     const numValue = parseFloat(value) || 0
     
     // Prevent negative values - physical quantities cannot be negative
@@ -194,8 +226,19 @@ export default function CivilPracticePage() {
   }, [])
 
   return (
-    <DashboardLayout requiredUserType="student">
-      <div className="space-y-6 p-6">
+    <AssessmentRoundSecurityShell
+      enabled={Boolean(assessmentId && roundId)}
+      completed={roundSubmitted}
+      submitting={examLocked}
+      roundTitle="Civil Quantity Estimation"
+    >
+      {(security) => (
+      <div className="relative min-h-full">
+      <ExamSubmissionOverlay
+        state={submissionState}
+        onRetry={() => void submitAnswers(security, { retry: true })}
+      />
+      <div className={`space-y-6 p-6 ${examLocked ? 'pointer-events-none' : ''}`}>
         {/* Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Civil Engineering Practice</h1>
@@ -361,6 +404,8 @@ export default function CivilPracticePage() {
                         min="0"
                         placeholder="0.00"
                         value={answers[calc.item] || ''}
+                        disabled={examLocked}
+                        readOnly={examLocked}
                         onChange={(e) => handleAnswerChange(calc.item, e.target.value)}
                         className="text-lg h-12"
                       />
@@ -370,8 +415,8 @@ export default function CivilPracticePage() {
 
                 <div className="mt-8">
                   <Button 
-                    onClick={submitAnswers} 
-                    disabled={loading || Object.values(answers).every(v => v === 0)}
+                    onClick={() => void submitAnswers(security)} 
+                    disabled={loading || examLocked || Object.values(answers).every(v => v === 0)}
                     size="lg"
                     className="w-full"
                   >
@@ -633,6 +678,8 @@ export default function CivilPracticePage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+      </div>
+      )}
+    </AssessmentRoundSecurityShell>
   )
 }

@@ -86,6 +86,10 @@ interface GroupDiscussionRoundProps {
     roundId?: string;
     assessmentId?: string;  // Optional: will fallback to URL param
     onComplete?: (responses: AssessmentResponse[]) => void;
+    onBeforeSubmit?: () => boolean | Promise<boolean>;
+    interactionLocked?: boolean;
+    onSubmitError?: () => void;
+    retryNonce?: number;
     mode?: 'practice' | 'assessment';
     practiceJoinPayload?: any;
     isDisha?: boolean;
@@ -99,6 +103,10 @@ export function GroupDiscussionRound({
     roundId,
     assessmentId: propAssessmentId,
     onComplete,
+    onBeforeSubmit,
+    interactionLocked = false,
+    onSubmitError,
+    retryNonce = 0,
     mode = 'assessment',
     practiceJoinPayload,
     isDisha = false,
@@ -373,7 +381,7 @@ export function GroupDiscussionRound({
     const [evaluationInitiated, setEvaluationInitiated] = useState(false);
 
     const getFinalEvaluation = async () => {
-        if (loading) {
+        if (isSubmittingRef.current || loading) {
             return;
         }
 
@@ -384,6 +392,13 @@ export function GroupDiscussionRound({
                 onComplete([]);
             }
             return;
+        }
+
+        if (onBeforeSubmit) {
+            const allowed = await onBeforeSubmit();
+            if (!allowed) {
+                return;
+            }
         }
 
         try {
@@ -513,8 +528,18 @@ export function GroupDiscussionRound({
             console.error('Error submitting discussion:', error);
             toast.error('Failed to submit discussion. Please try again.', { id: 'submitting' });
             setLoading(false);
+            isSubmittingRef.current = false;
+            onSubmitError?.();
         }
     };
+
+    const getFinalEvaluationRef = useRef(getFinalEvaluation)
+    getFinalEvaluationRef.current = getFinalEvaluation
+    useEffect(() => {
+        if (retryNonce > 0) {
+            void getFinalEvaluationRef.current()
+        }
+    }, [retryNonce]);
 
 
 
@@ -1686,7 +1711,7 @@ export function GroupDiscussionRound({
                         </button>
                         <button
                             onClick={getFinalEvaluation}
-                            disabled={gdTurns.length === 0 || waitingForBots || isAISpeaking}
+                            disabled={gdTurns.length === 0 || waitingForBots || isAISpeaking || loading || interactionLocked}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
                         >
                             Submit Section

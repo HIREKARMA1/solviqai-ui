@@ -35,7 +35,14 @@ const nextConfig = {
   // Experimental features for better performance
   // Note: `optimizeCss` was removed because it required the `critters` module at build time,
   // which was not installed and caused Next.js prerender errors.
-  experimental: {},
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@hugeicons/react",
+      "hugeicons-react",
+      "framer-motion",
+    ],
+  },
   async rewrites() {
     // Get API configuration from environment variables directly (no localhost fallback)
     const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(

@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader } from '@/components/ui/loader'
 import { Badge } from '@/components/ui/badge'
 import { Clock, PlayCircle, ExternalLink } from 'lucide-react'
+import YouTubeEmbedModal, { type EmbeddableVideo } from '@/components/career-guidance/YouTubeEmbedModal'
 
 export default function Playlist({ assessmentId }: { assessmentId: string }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<EmbeddableVideo | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -37,6 +39,7 @@ export default function Playlist({ assessmentId }: { assessmentId: string }) {
 
   return (
     <div className="space-y-8">
+      <YouTubeEmbedModal video={selectedVideo} onClose={() => setSelectedVideo(null)} />
       {data.playlist.map((item: any, idx: number) => (
         <Card key={idx} className="overflow-hidden border border-[#ABABAB] rounded-[8px] shadow-none">
           <CardHeader className="bg-[#E3ECFE] border-b border-[#E3ECFE] py-4 px-6">
@@ -57,7 +60,20 @@ export default function Playlist({ assessmentId }: { assessmentId: string }) {
           <CardContent className="p-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {item.videos?.map((v: any, i: number) => (
-                <div key={i} className="group cursor-pointer">
+                <div
+                  key={i}
+                  className="group cursor-pointer"
+                  onClick={() =>
+                    setSelectedVideo({
+                      title: v.title || 'Watch Video',
+                      url: v.url,
+                      video_id: v.video_id || v.id,
+                      channel: v.channel,
+                      duration: v.duration,
+                      views: v.views,
+                    })
+                  }
+                >
                   <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3">
                     {v.url && v.url.includes('watch') ? (
                        <img 

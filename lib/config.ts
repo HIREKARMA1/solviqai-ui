@@ -36,11 +36,12 @@ export function validateEnvironment() {
     return true;
   }
 
-  const requiredVars = [
-    'NEXT_PUBLIC_API_BASE_URL',
-  ];
-
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  // Access NEXT_PUBLIC_* statically so Next.js inlines them in the browser bundle.
+  // process.env[dynamicKey] is always undefined on the client.
+  const missingVars: string[] = [];
+  if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+    missingVars.push('NEXT_PUBLIC_API_BASE_URL');
+  }
 
   if (missingVars.length > 0) {
     console.warn('Missing environment variables:', missingVars);

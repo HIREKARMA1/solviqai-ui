@@ -51,6 +51,8 @@ export type CodingRoundProps = {
   onChange?: (questionId: string, code: string, language: string) => void
   activeQuestionId?: string
   hideFooter?: boolean
+  interactionLocked?: boolean
+  onBeforeSubmit?: () => boolean | Promise<boolean>
 }
 
 const LANGS = [
@@ -80,7 +82,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Hard', color: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' },
 }
 
-export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange, activeQuestionId, hideFooter = false }: CodingRoundProps) {
+export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeFn, submitFn, showSubmitButton = true, onChange, activeQuestionId, hideFooter = false, interactionLocked = false, onBeforeSubmit }: CodingRoundProps) {
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, any>>({})
@@ -116,7 +118,10 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
     setResults({})
   }, [initial, initialTabs])
 
+  const frozen = interactionLocked || busy
+
   const setLang = (qid: string, lang: string) => {
+    if (frozen) return
     setEditors(prev => {
       const next = { ...prev }
       const meta = (roundData.questions.find((q: any) => q.id === qid)?.metadata) || {}
@@ -129,6 +134,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   }
 
   const setCode = (qid: string, code: string) => {
+    if (frozen) return
     setEditors(prev => {
       const current = prev[qid] || { language: 'python', code: '' }
       const next = { ...prev, [qid]: { ...current, code } }
@@ -138,10 +144,17 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   }
 
   const handleSubmit = async () => {
+    if (busy || interactionLocked) return
+    if (onBeforeSubmit) {
+      const result = onBeforeSubmit()
+      const allowed = result instanceof Promise ? await result : result
+      if (!allowed) return
+    }
+    const editorSnapshot = JSON.parse(JSON.stringify(editors)) as typeof editors
     try {
       setBusy(true)
       const responses = (roundData.questions || []).map((q: any) => {
-        const ed = editors[q.id] || { language: 'python', code: '' }
+        const ed = editorSnapshot[q.id] || { language: 'python', code: '' }
         const payload = { language: ed.language, code: ed.code }
         return {
           question_id: q.id,
@@ -174,6 +187,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
   }, [roundData?.round_id])
 
   const runTests = async (qid: string) => {
+    if (frozen) return
     const ed = editors[qid] || { language: 'python', code: '' }
     try {
       setRunning(prev => ({ ...prev, [qid]: true }))
@@ -316,7 +330,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                     </div>
                     <div className="flex justify-between items-start mb-2">
                       <h2 className="text-2xl font-bold text-gray-900">{meta.title || q.question_text.slice(0, 50)}</h2>
-                      <button onClick={() => setFullscreen(isFullscreen ? null : q.id)} className="text-gray-400 hover:text-gray-600">
+                      <button type="button" disabled={frozen} onClick={() => { if (frozen) return; setFullscreen(isFullscreen ? null : q.id) }} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
                       </button>
                     </div>
@@ -327,7 +341,8 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                       {['problem', 'tests', 'submissions'].map(tab => (
                         <button
                           key={tab}
-                          onClick={() => setActiveTab(prev => ({ ...prev, [q.id]: tab as any }))}
+                          disabled={frozen}
+                          onClick={() => { if (frozen) return; setActiveTab(prev => ({ ...prev, [q.id]: tab as any })) }}
                           className={`pb-3 text-sm font-semibold capitalize transition-all border-b-2 ${currentTab === tab
                             ? 'text-blue-600 border-blue-600'
                             : 'text-gray-500 border-transparent hover:text-gray-700'
@@ -548,8 +563,9 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                           <span className="text-gray-900 text-sm font-bold">Select Language:</span>
                           <select
                             value={editor.language}
+                            disabled={frozen}
                             onChange={(e) => setLang(q.id, e.target.value)}
-                            className="bg-white text-gray-900 border border-gray-300 text-sm rounded-md px-3 py-1 outline-none focus:border-blue-500 shadow-sm"
+                            className="bg-white text-gray-900 border border-gray-300 text-sm rounded-md px-3 py-1 outline-none focus:border-blue-500 shadow-sm disabled:opacity-60"
                           >
                             {LANGS.map(l => (
                               <option key={l.key} value={l.key}>{l.label}</option>
@@ -559,7 +575,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                         <div className="flex items-center gap-2">
                           <Button
                             onClick={() => runTests(q.id)}
-                            disabled={running[q.id]}
+                            disabled={running[q.id] || frozen}
                             className="bg-[#2979FF] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 h-auto rounded flex items-center gap-2 shadow-sm transition-all"
                           >
                             {running[q.id] ? <Loader size="sm" className="w-3 h-3 text-white" /> : (
@@ -583,6 +599,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                             onChange={(v: string) => setCode(q.id, v || '')}
                             theme="vs-dark"
                             options={{
+                              readOnly: frozen,
                               minimap: { enabled: false },
                               fontSize: 14,
                               padding: { top: 16 },
@@ -594,6 +611,7 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
                           <textarea
                             className="w-full h-full bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none"
                             value={editor.code}
+                            readOnly={frozen}
                             onChange={(e) => setCode(q.id, e.target.value)}
                           />
                         )}
@@ -613,10 +631,10 @@ export function CodingRound({ assessmentId, roundData, onSubmitted, executeCodeF
           <div className="shrink-0 bg-white border-t border-gray-200 p-4 px-6 flex items-center justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
             <Button
               onClick={handleSubmit}
-              disabled={busy}
+              disabled={busy || interactionLocked}
               className="bg-[#2979FF] hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg shadow-sm transition-all text-sm"
             >
-              {busy ? (
+              {busy || interactionLocked ? (
                 <span className="flex items-center gap-2"><Loader size="sm" /> Submitting...</span>
               ) : (
                 <span className="flex items-center gap-2">

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/lib/api'
 import { Zap, CheckCircle2, AlertCircle, Award, TrendingUp, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import '@excalidraw/excalidraw/index.css'
 
 // Excalidraw is large; load client-side only
 const Excalidraw = dynamic(

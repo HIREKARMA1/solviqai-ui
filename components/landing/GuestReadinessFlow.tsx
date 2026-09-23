@@ -60,18 +60,24 @@ export function GuestReadinessFlow({ onClose }: Props) {
         const cat = await apiClient.guestReadinessCatalog();
         setCatalog(cat);
         let t = getGuestSessionToken();
+        let isNewSession = false;
         if (!t) {
           const started = await apiClient.guestReadinessStart();
           t = started.session_token;
           setGuestSessionToken(t);
+          isNewSession = true;
         }
         setToken(t);
-        try {
-          const existing = await apiClient.guestReadinessGetResults(t);
-          setResults(existing);
-          setStep('results');
-        } catch {
-          // not completed yet
+        if (!isNewSession && t) {
+          try {
+            const existing = await apiClient.guestReadinessGetResults(t);
+            if (existing?.completed) {
+              setResults(existing);
+              setStep('results');
+            }
+          } catch {
+            // expired or missing session — stay on setup
+          }
         }
       } catch (e: any) {
         setError(e?.response?.data?.detail || 'Failed to start readiness check');

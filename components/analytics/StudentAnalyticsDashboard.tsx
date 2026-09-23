@@ -1,8 +1,24 @@
 "use client"
 
 import React, { useMemo } from 'react'
-import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import {
   Target,
   ShieldCheck,
@@ -17,22 +33,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-
-const ResponsiveContainer = dynamic(() => import('recharts').then((m) => m.ResponsiveContainer), { ssr: false })
-const RadarChart = dynamic(() => import('recharts').then((m) => m.RadarChart), { ssr: false })
-const PolarGrid = dynamic(() => import('recharts').then((m) => m.PolarGrid), { ssr: false })
-const PolarAngleAxis = dynamic(() => import('recharts').then((m) => m.PolarAngleAxis), { ssr: false })
-const PolarRadiusAxis = dynamic(() => import('recharts').then((m) => m.PolarRadiusAxis), { ssr: false })
-const Radar = dynamic(() => import('recharts').then((m) => m.Radar), { ssr: false })
-const BarChart = dynamic(() => import('recharts').then((m) => m.BarChart), { ssr: false })
-const Bar = dynamic(() => import('recharts').then((m) => m.Bar), { ssr: false })
-const XAxis = dynamic(() => import('recharts').then((m) => m.XAxis), { ssr: false })
-const YAxis = dynamic(() => import('recharts').then((m) => m.YAxis), { ssr: false })
-const CartesianGrid = dynamic(() => import('recharts').then((m) => m.CartesianGrid), { ssr: false })
-const Tooltip = dynamic(() => import('recharts').then((m) => m.Tooltip), { ssr: false })
-const Cell = dynamic(() => import('recharts').then((m) => m.Cell), { ssr: false })
-const LineChart = dynamic(() => import('recharts').then((m) => m.LineChart), { ssr: false })
-const Line = dynamic(() => import('recharts').then((m) => m.Line), { ssr: false })
 
 type StatusVariant = 'need-improvement' | 'developing' | 'good'
 

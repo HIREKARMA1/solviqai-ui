@@ -1,20 +1,35 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { apiClient } from '@/lib/api'
+import { getAssessmentOverviewPath, getPostRoundPath } from '@/lib/assessmentAgent'
 import {
-    Home, User, FileText, Briefcase, ClipboardList,
-    Mic, Square, Send, Clock, CheckCircle2, Volume2, Edit3, Zap, ChevronsRight, ChevronsLeft,
-    MicOff, Video, MoreVertical, PhoneOff, Maximize2, Trash2
+    User,
+    Mic, Clock, Volume2, Zap, ChevronsRight, ChevronsLeft,
+    Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { GroupDiscussionRound } from '@/components/assessment/GroupDiscussionRound'
 import CodingRound from '@/components/assessment/CodingRound'
 import { TallyExcelRound } from '@/components/assessment/TallyExcelRound'
+import { AssessmentSecurityGuard } from '@/components/assessment/security/AssessmentSecurityGuard'
+import { CameraStatusIndicator, FullscreenStatusIndicator } from '@/components/assessment/security/AssessmentFullscreenOverlay'
+import { ExamSubmissionOverlay } from '@/components/assessment/ExamSubmissionOverlay'
+import {
+    AssessmentConfirmDialog,
+    unansweredSubmitMessage,
+} from '@/components/assessment/AssessmentConfirmDialog'
+import { useAssessmentSecurity } from '@/hooks/useAssessmentSecurity'
+import {
+    isExamInteractionLocked,
+    isExamSubmitInFlight,
+    snapshotAnswers,
+} from '@/lib/assessmentExam'
+import type { AssessmentSubmissionState } from '@/types/assessmentExam'
 
 interface GDResponse {
     response_text: string;
@@ -84,12 +99,13 @@ export default function AssessmentRoundPage() {
     const [visitedQuestions, setVisitedQuestions] = useState<Set<number>>(new Set([0]))
     const [markedQuestions, setMarkedQuestions] = useState<Set<number>>(new Set())
     const [loading, setLoading] = useState(true)
-    const [submitting, setSubmitting] = useState(false)
+    const [submissionState, setSubmissionState] = useState<AssessmentSubmissionState>('ready')
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
-    const [isFullscreen, setIsFullscreen] = useState(false)
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-    const autoFullscreenAttemptedRef = useRef(false)
-    const hasEnteredFullscreenRef = useRef(false)
+    const [sessionStarted, setSessionStarted] = useState(false)
+    const [gdRetryNonce, setGdRetryNonce] = useState(0)
+    const [showUnansweredDialog, setShowUnansweredDialog] = useState(false)
+    const [pendingUnansweredCount, setPendingUnansweredCount] = useState(0)
 
     // Live Transcription States
     const [isLiveTranscribing, setIsLiveTranscribing] = useState(false)
@@ -97,11 +113,13 @@ export default function AssessmentRoundPage() {
     const [interimTranscript, setInterimTranscript] = useState("")
     const speechRecognitionRef = useRef<SpeechRecognition | null>(null)
     const chatEndRef = useRef<HTMLDivElement>(null)
+    const submitButtonRef = useRef<HTMLButtonElement | null>(null)
 
     const router = useRouter()
     const searchParams = useSearchParams()
     const assessmentId = searchParams?.get('assessment_id')
     const roundNumber = parseInt(searchParams?.get('round') || '1')
+    const assessmentSource = searchParams?.get('source')
 
     // Normalize options coming from different backend shapes
     const normalizeMcqOptions = (q: any): string[] => {
@@ -145,26 +163,39 @@ export default function AssessmentRoundPage() {
     const isCodingRound = roundType === 'coding'
     const isElectricalRound = roundType === 'electrical_circuit'
     const currentQ = roundData?.questions?.[currentQuestion]
+    const jobContext = roundData?.job_context || {}
+    const jobHeader = [jobContext.company, jobContext.job_title].filter(Boolean).join(' – ')
     const counts = roundData ? getCounts() : { answered: 0, notAnswered: 0, marked: 0, notVisited: 0 }
-    const canSubmit = roundData && !submitting
+    const examLocked = isExamInteractionLocked(submissionState)
+    const submitting = isExamSubmitInFlight(submissionState)
 
     const responsesRef = useRef(responses)
     const roundDataRef = useRef(roundData)
     const submittingRef = useRef(submitting)
+    const currentQuestionRef = useRef(0)
+    const answerSnapshotRef = useRef<any[] | null>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const hasAutoSubmitted = useRef(false)
+    const security = useAssessmentSecurity({
+        sessionActive: sessionStarted && submissionState !== 'completed',
+        preventLeave: sessionStarted && submissionState !== 'completed',
+    })
 
     // Update refs
     useEffect(() => { responsesRef.current = responses }, [responses])
     useEffect(() => { roundDataRef.current = roundData }, [roundData])
     useEffect(() => { submittingRef.current = submitting }, [submitting])
+    useEffect(() => { currentQuestionRef.current = currentQuestion }, [currentQuestion])
 
-    // Auto-scroll chat to bottom
+    // Keep live transcript in view inside the interview panel only (never scroll the page)
     useEffect(() => {
-        if (isVoiceRound) {
-            chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (!isVoiceRound) return
+        const node = chatEndRef.current
+        const panel = node?.parentElement
+        if (panel && typeof panel.scrollTop === 'number') {
+            panel.scrollTop = panel.scrollHeight
         }
-    }, [liveTranscript, interimTranscript, currentQuestion])
+    }, [liveTranscript, interimTranscript, currentQuestion, isVoiceRound])
 
     // Initialize Web Speech API
     useEffect(() => {
@@ -178,6 +209,7 @@ export default function AssessmentRoundPage() {
                 recognition.lang = 'en-US'
 
                 recognition.onresult = (event: any) => {
+                    if (submittingRef.current) return
                     let interim = ""
                     let final = ""
 
@@ -236,107 +268,31 @@ export default function AssessmentRoundPage() {
         }
     }, [isLiveTranscribing])
 
-    // Track fullscreen changes
-    useEffect(() => {
-        if (typeof document === 'undefined') return
-
-        // Initial check
-        const checkFullscreen = () => {
-            const fs = Boolean(
-                document.fullscreenElement ||
-                (document as any).webkitFullscreenElement ||
-                (document as any).mozFullScreenElement ||
-                (document as any).msFullscreenElement
-            )
-            setIsFullscreen(fs)
-        }
-
-        // Check immediately
-        checkFullscreen()
-
-        // Listen for changes
-        const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
-        events.forEach(event => {
-            document.addEventListener(event, checkFullscreen)
-        })
-
-        return () => {
-            events.forEach(event => {
-                document.removeEventListener(event, checkFullscreen)
-            })
-        }
-    }, [])
-
-    const toggleFullscreen = async () => {
-        try {
-            if (!isFullscreen) {
-                const elem: any = document.documentElement
-                if (elem.requestFullscreen) {
-                    await elem.requestFullscreen()
-                } else if (elem.webkitRequestFullscreen) {
-                    await elem.webkitRequestFullscreen()
-                } else if (elem.mozRequestFullScreen) {
-                    await elem.mozRequestFullScreen()
-                } else if (elem.msRequestFullscreen) {
-                    await elem.msRequestFullscreen()
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen()
-                } else if ((document as any).webkitExitFullscreen) {
-                    await (document as any).webkitExitFullscreen()
-                } else if ((document as any).mozCancelFullScreen) {
-                    await (document as any).mozCancelFullScreen()
-                } else if ((document as any).msExitFullscreen) {
-                    await (document as any).msExitFullscreen()
-                }
-            }
-            // Force state update after a brief delay to ensure browser has processed
-            setTimeout(() => {
-                const fs = Boolean(
-                    document.fullscreenElement ||
-                    (document as any).webkitFullscreenElement ||
-                    (document as any).mozFullScreenElement ||
-                    (document as any).msFullscreenElement
-                )
-                setIsFullscreen(fs)
-            }, 100)
-        } catch (e) {
-            console.error('Fullscreen toggle failed', e)
+    const handleBeginAssessment = async () => {
+        const ok = await security.beginAssessment()
+        if (ok) {
+            setSessionStarted(true)
+            setSubmissionState('active')
         }
     }
 
-    // Try to enter fullscreen automatically when page opens after Start click
     useEffect(() => {
-        if (autoFullscreenAttemptedRef.current) return
-        autoFullscreenAttemptedRef.current = true
-
-        const requestFs = async () => {
-            try {
-                const elem: any = document.documentElement
-                if (!document.fullscreenElement && (elem.requestFullscreen || elem.webkitRequestFullscreen)) {
-                    if (elem.requestFullscreen) await elem.requestFullscreen()
-                    else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen()
-                }
-            } catch (e) {
-                // Many browsers require a user gesture; fall back to first interaction
-            }
-        }
-
-        // Attempt quickly after navigation (still counts as gesture in many browsers)
-        const t = setTimeout(requestFs, 100)
-
-        // If blocked, request on first user interaction
-        const once = async () => {
-            document.removeEventListener('pointerdown', once)
-            document.removeEventListener('keydown', once)
-            await requestFs()
-        }
-        document.addEventListener('pointerdown', once, { once: true })
-        document.addEventListener('keydown', once, { once: true })
-
-        return () => clearTimeout(t)
-    }, [])
+        setResponses({})
+        setCurrentQuestion(0)
+        setVisitedQuestions(new Set([0]))
+        setMarkedQuestions(new Set())
+        setSubmissionState('ready')
+        setTimeLeft(null)
+        setSessionStarted(false)
+        setLiveTranscript("")
+        setInterimTranscript("")
+        answerSnapshotRef.current = null
+        hasAutoSubmitted.current = false
+        submittingRef.current = false
+        setGdRetryNonce(0)
+        setLoading(true)
+        setRoundData(null)
+    }, [assessmentId, roundNumber])
 
     // Cleanup effect
     useEffect(() => {
@@ -368,14 +324,15 @@ export default function AssessmentRoundPage() {
         loadRoundData()
     }, [assessmentId, roundNumber])
 
-    // Initialize timer
+    // Initialize timer only after the secure session has started
     useEffect(() => {
+        if (!sessionStarted) return
         if (roundData && roundData.time_limit && timeLeft === null) {
             const initialTime = roundData.time_limit * 60
             console.log(`⏰ Timer initialized: ${initialTime} seconds`)
             setTimeLeft(initialTime)
         }
-    }, [roundData, timeLeft])
+    }, [roundData, timeLeft, sessionStarted])
 
     // Timer countdown
     useEffect(() => {
@@ -394,6 +351,7 @@ export default function AssessmentRoundPage() {
         } else if (timeLeft === 0 && !hasAutoSubmitted.current) {
             console.log('⏰ Time expired - auto submitting')
             hasAutoSubmitted.current = true
+            security.pendingSubmitRef.current = true
             handleSubmitRound()
         }
 
@@ -420,7 +378,7 @@ export default function AssessmentRoundPage() {
                 if (!isGD && (!data.questions || data.questions.length === 0)) {
                     console.warn('⚠️ No questions in round data')
                     toast.error('No questions available for this round. Please contact support.')
-                    router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                    router.push(getAssessmentOverviewPath(assessmentId!, assessmentSource))
                     return
                 }
 
@@ -441,7 +399,7 @@ export default function AssessmentRoundPage() {
                     toast.error(`Failed to load assessment: ${errorMsg}`)
                 }
 
-                router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                router.push(getAssessmentOverviewPath(assessmentId!, assessmentSource))
             }
         } finally {
             if (isMounted) {
@@ -452,33 +410,70 @@ export default function AssessmentRoundPage() {
         return () => { isMounted = false }
     }
 
-    const handleSubmitRound = async () => {
-        if (submittingRef.current || submitting) {
+    const handleSubmitRound = async (options?: { retry?: boolean }) => {
+        const isRetry = Boolean(options?.retry)
+        if (submittingRef.current) {
             console.log('⚠️ Already submitting, skipping...')
             return
         }
+
+        if (isRetry && !answerSnapshotRef.current) {
+            toast.error('Submission could not be completed')
+            return
+        }
+
+        const gate = security.validateForSubmit()
+        if (!gate.ok) {
+            if (gate.message) toast.error(gate.message)
+            hasAutoSubmitted.current = false
+            return
+        }
+        security.pendingSubmitRef.current = false
+
+        if (!isRetry) {
+            const cloned = snapshotAnswers(responsesRef.current)
+            const currentRoundData = roundDataRef.current
+            const question = currentRoundData?.questions?.[currentQuestionRef.current]
+            if (question && isLiveTranscribing) {
+                const fullTranscript = (liveTranscript + " " + interimTranscript).trim()
+                if (fullTranscript) {
+                    cloned[question.id] = {
+                        ...cloned[question.id],
+                        response_text: fullTranscript,
+                        time_taken: cloned[question.id]?.time_taken || 0,
+                    }
+                }
+            }
+            answerSnapshotRef.current = Object.entries(cloned).map(([questionId, response]) => ({
+                question_id: questionId,
+                response_text: response?.response_text || '',
+                response_audio: null,
+                time_taken: response?.time_taken || 0
+            }))
+        }
+
+        if (!answerSnapshotRef.current) {
+            toast.error('Your answers could not be captured. Please try again.')
+            return
+        }
+
+        submittingRef.current = true
+        setSubmissionState('submitting')
 
         if (isLiveTranscribing) {
             stopLiveTranscription()
         }
 
         console.log('📤 Submitting round...')
-        setSubmitting(true)
 
         try {
-            const currentResponses = responsesRef.current
             const currentRoundData = roundDataRef.current
 
             if (!currentRoundData) {
                 throw new Error('Round data not available')
             }
 
-            const responseData = Object.entries(currentResponses).map(([questionId, response]) => ({
-                question_id: questionId,
-                response_text: response.response_text || '',
-                response_audio: null,
-                time_taken: response.time_taken || 0
-            }))
+            const responseData = answerSnapshotRef.current
 
             console.log(`Submitting ${responseData.length} responses`)
 
@@ -489,18 +484,17 @@ export default function AssessmentRoundPage() {
             )
 
             toast.success('Round submitted successfully!')
-            router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+            setSubmissionState('completed')
+            await security.finishSession()
+            router.push(getPostRoundPath(assessmentId!, roundNumber, assessmentSource))
         } catch (error: any) {
             console.error('Error submitting round:', error)
 
-            // Check if it's an authentication error
             if (error.response?.status === 401 || error.response?.status === 403) {
                 toast.error('Session expired. Please login again.')
-                // Clear invalid tokens
                 localStorage.removeItem('access_token')
                 localStorage.removeItem('refresh_token')
                 localStorage.removeItem('token_expiry')
-                // Redirect to login
                 setTimeout(() => {
                     router.push('/auth/login')
                 }, 2000)
@@ -508,12 +502,14 @@ export default function AssessmentRoundPage() {
                 toast.error(extractErrorMessage(error))
             }
 
-            setSubmitting(false)
+            submittingRef.current = false
+            setSubmissionState('error')
             hasAutoSubmitted.current = false
         }
     }
 
     const handleAnswerChange = (questionId: string, answer: any) => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         setResponses(prev => ({
             ...prev,
             [questionId]: {
@@ -525,48 +521,44 @@ export default function AssessmentRoundPage() {
     }
 
     const handleSubmitWithConfirmation = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
+
+        const gate = security.validateForSubmit()
+        if (!gate.ok) {
+            if (gate.message) toast.error(gate.message)
+            return
+        }
+
         const unansweredCount = counts.notVisited + counts.notAnswered + counts.marked
 
         if (unansweredCount > 0) {
-            const message = `⚠️ You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}.\n\nUnanswered questions will be scored as 0.\n\nDo you want to submit anyway?`
-
-            if (window.confirm(message)) {
-                handleSubmitRound()
-            }
-        } else {
-            // All questions answered, submit directly
-            handleSubmitRound()
+            setPendingUnansweredCount(unansweredCount)
+            setShowUnansweredDialog(true)
+            return
         }
+
+        void handleSubmitRound()
     }
 
+    const handleConfirmedSubmit = () => {
+        setShowUnansweredDialog(false)
+        void handleSubmitRound()
+    }
 
+    const handleCancelSubmitDialog = () => {
+        setShowUnansweredDialog(false)
+    }
 
-    // Monitor Fullscreen Exit for strict proctoring
     useEffect(() => {
-        if (isFullscreen) {
-            hasEnteredFullscreenRef.current = true
-        } else {
-            // If we were in fullscreen, and now we are not, and we are not submitting...
-            // We only terminate if the user explicitly exits fullscreen during an active round.
-            if (hasEnteredFullscreenRef.current && !submitting && !loading && !hasAutoSubmitted.current && roundData) {
-                console.warn('⚠️ User exited fullscreen - Terminating assessment')
-                toast.error('❌ Fullscreen exit detected! Terminating assessment...', {
-                    duration: 5000,
-                    style: {
-                        background: '#EF4444',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                    }
-                })
-
-                // Force submit
-                hasAutoSubmitted.current = true
-                handleSubmitRound()
-            }
+        if (!sessionStarted || security.isBlocked || submitting) return
+        if (security.pendingSubmitRef.current) {
+            security.pendingSubmitRef.current = false
+            void handleSubmitRound()
         }
-    }, [isFullscreen, submitting, loading, roundData])
+    }, [sessionStarted, security.isBlocked, submitting, security.cameraReady, security.fullscreenActive])
 
     const startLiveTranscription = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         if (!speechRecognitionRef.current) {
             toast.error('Speech recognition not available. Use Chrome or Edge browser.')
             return
@@ -597,7 +589,7 @@ export default function AssessmentRoundPage() {
 
             const fullTranscript = (liveTranscript + " " + interimTranscript).trim()
 
-            if (fullTranscript) {
+            if (fullTranscript && !submittingRef.current && !isExamInteractionLocked(submissionState)) {
                 const currentQ = roundData.questions[currentQuestion]
                 handleAnswerChange(currentQ.id, fullTranscript)
                 toast.success('✅ Response saved!')
@@ -714,7 +706,20 @@ export default function AssessmentRoundPage() {
     }
 
 
+    const handlePreviousQuestion = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
+        if (currentQuestion <= 0) return
+        if (isLiveTranscribing) {
+            stopLiveTranscription()
+        }
+        setCurrentQuestion(currentQuestion - 1)
+        setVisitedQuestions(prev => new Set([...Array.from(prev), currentQuestion - 1]))
+        setLiveTranscript("")
+        setInterimTranscript("")
+    }
+
     const handleNextQuestion = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         setMarkedQuestions(prev => {
             if (!prev.has(currentQuestion)) return prev
             const newMarked = new Set(prev)
@@ -730,6 +735,7 @@ export default function AssessmentRoundPage() {
     }
 
     const navigateToQuestion = (index: number) => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         if (isLiveTranscribing) {
             stopLiveTranscription()
         }
@@ -741,6 +747,7 @@ export default function AssessmentRoundPage() {
     }
 
     const handleMarkForReview = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         setMarkedQuestions(prev => {
             const newMarked = new Set(prev)
             if (newMarked.has(currentQuestion)) {
@@ -754,6 +761,7 @@ export default function AssessmentRoundPage() {
     }
 
     const handleClearResponse = () => {
+        if (submittingRef.current || isExamInteractionLocked(submissionState)) return
         const currentQ = roundData.questions[currentQuestion]
         setResponses(prev => {
             const newAnswers = { ...prev }
@@ -823,27 +831,51 @@ export default function AssessmentRoundPage() {
         return { answered, notAnswered, marked, notVisited }
     }
 
+    const guard = (children: ReactNode, opts?: { loading?: boolean; loadingMessage?: string }) => (
+        <AssessmentSecurityGuard
+            loading={opts?.loading}
+            sessionStarted={sessionStarted}
+            security={security}
+            onBegin={handleBeginAssessment}
+            loadingMessage={opts?.loadingMessage}
+            examLocked={examLocked}
+        >
+            <div className="relative h-full min-h-0 overflow-hidden">
+                {children}
+                <ExamSubmissionOverlay
+                    state={submissionState}
+                    onRetry={() => {
+                        if (isGroupDiscussionRound) {
+                            if (submittingRef.current) return
+                            const gate = security.validateForSubmit()
+                            if (!gate.ok) {
+                                if (gate.message) toast.error(gate.message)
+                                return
+                            }
+                            submittingRef.current = true
+                            setSubmissionState('submitting')
+                            setGdRetryNonce((value) => value + 1)
+                            return
+                        }
+                        void handleSubmitRound({ retry: true })
+                    }}
+                />
+                <AssessmentConfirmDialog
+                    open={showUnansweredDialog}
+                    title="Submit Assessment?"
+                    message={unansweredSubmitMessage(pendingUnansweredCount)}
+                    confirmLabel="Submit Anyway"
+                    cancelLabel="Cancel"
+                    onConfirm={handleConfirmedSubmit}
+                    onCancel={handleCancelSubmitDialog}
+                    returnFocusRef={submitButtonRef}
+                />
+            </div>
+        </AssessmentSecurityGuard>
+    )
+
     if (loading) {
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="flex justify-center items-center min-h-screen">
-                    <div className="text-center max-w-lg px-6">
-                        <Loader size="lg" />
-                        <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
-                            Preparing Your Assessment
-                        </h2>
-                        <p className="mt-3 text-gray-600 dark:text-gray-400">
-                            Our AI is generating personalized questions tailored to your profile and the job role...
-                        </p>
-                        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                            <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
-                                ⏰ This may take 20-60 seconds. Please wait and do not close this page.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </DashboardLayout>
-        )
+        return guard(null, { loading: true, loadingMessage: 'Preparing Your Assessment' })
     }
 
     // ========== TALLY/EXCEL PRACTICAL ROUND ==========
@@ -851,34 +883,32 @@ export default function AssessmentRoundPage() {
 
     if (isTallyExcelRound) {
         if (!roundData || (!roundData.round_id && !roundData.id)) {
-            return (
-                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                    <div className="flex justify-center items-center min-h-screen">
-                        <div className="text-center max-w-lg px-6">
-                            <Loader size="lg" />
-                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
-                                Loading Tally/Excel Assessment
-                            </h2>
-                            <p className="mt-3 text-gray-600 dark:text-gray-400">
-                                Preparing your practical tasks...
-                            </p>
-                        </div>
-                    </div>
-                </DashboardLayout>
-            )
+            return guard(null, { loading: true, loadingMessage: 'Loading Tally/Excel Assessment' })
         }
 
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <TallyExcelRound
-                    assessmentId={assessmentId!}
-                    roundData={roundData}
-                    onSubmitted={(result) => {
-                        toast.success('All solutions submitted successfully!');
-                        router.push(`/dashboard/student/assessment?id=${assessmentId}`);
-                    }}
-                />
-            </DashboardLayout>
+        return guard(
+            <TallyExcelRound
+                assessmentId={assessmentId!}
+                roundData={roundData}
+                interactionLocked={examLocked}
+                onBeforeSubmit={() => {
+                    if (submittingRef.current) return false
+                    const gate = security.validateForSubmit()
+                    if (!gate.ok) {
+                        if (gate.message) toast.error(gate.message)
+                        return false
+                    }
+                    submittingRef.current = true
+                    setSubmissionState('submitting')
+                    return true
+                }}
+                onSubmitted={async () => {
+                    toast.success('All solutions submitted successfully!');
+                    setSubmissionState('completed')
+                    await security.finishSession()
+                    router.push(getPostRoundPath(assessmentId!, roundNumber, assessmentSource));
+                }}
+            />
         )
     }
 
@@ -892,7 +922,7 @@ export default function AssessmentRoundPage() {
 
         return (
             <DashboardLayout requiredUserType="student">
-                <div className="max-w-3xl mx-auto space-y-6">
+                <div className="max-w-3xl mx-auto space-y-6 p-6">
                     <div className="flex items-center gap-3 text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-4">
                         <Zap className="h-5 w-5" />
                         <div>
@@ -910,10 +940,10 @@ export default function AssessmentRoundPage() {
                             <li>Submit your design for AI evaluation. Your feedback and score will be recorded automatically.</li>
                         </ol>
                         <div className="flex gap-3">
-                            <Button onClick={() => router.push(workspaceUrl)}>
+                            <Button type="button" onClick={() => router.push(workspaceUrl)}>
                                 Open Electrical Workspace
                             </Button>
-                            <Button variant="outline" onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                            <Button type="button" variant="outline" onClick={() => router.push(getAssessmentOverviewPath(assessmentId!, assessmentSource))}>
                                 Back to Assessment
                             </Button>
                         </div>
@@ -926,109 +956,119 @@ export default function AssessmentRoundPage() {
     if (isGroupDiscussionRound) {
         // Ensure we have valid roundData with round_id before rendering
         if (!roundData || (!roundData.round_id && !roundData.id)) {
-            return (
-                <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                    <div className="flex justify-center items-center min-h-screen">
-                        <div className="text-center max-w-lg px-6">
-                            <Loader size="lg" />
-                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
-                                Loading Group Discussion
-                            </h2>
-                            <p className="mt-3 text-gray-600 dark:text-gray-400">
-                                Preparing your discussion round...
-                            </p>
-                        </div>
-                    </div>
-                </DashboardLayout>
-            )
+            return guard(null, { loading: true, loadingMessage: 'Loading Group Discussion' })
         }
 
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
+        return guard(
+            <div className="h-full min-h-0 overflow-hidden">
                 <GroupDiscussionRound
                     roundId={roundData.round_id || roundData.id}
                     assessmentId={assessmentId!}
                     maxResponses={roundData.config?.number_of_rounds || 5}
-                    onComplete={async (responses) => {
-                        try {
-                            setSubmitting(true);
-                            await apiClient.submitRoundResponses(
-                                assessmentId!,
-                                roundData.round_id || roundData.id,
-                                responses.map(response => ({
-                                    response_text: response.response_text,
-                                    time_taken: response.time_taken || 0,
-                                    score: response.score || 0
-                                }))
-                            );
-                            toast.success('Discussion round completed successfully!');
-                            router.push(`/dashboard/student/assessment?id=${assessmentId}`);
-                        } catch (error: any) {
-                            console.error('Error submitting discussion responses:', error);
-
-                            // Check if it's an authentication error
-                            if (error.response?.status === 401 || error.response?.status === 403) {
-                                toast.error('Session expired. Please login again.')
-                                localStorage.removeItem('access_token')
-                                localStorage.removeItem('refresh_token')
-                                localStorage.removeItem('token_expiry')
-                                setTimeout(() => {
-                                    router.push('/auth/login')
-                                }, 2000)
-                            } else {
-                                toast.error('Failed to submit discussion responses');
-                            }
-
-                            setSubmitting(false);
+                    interactionLocked={examLocked}
+                    retryNonce={gdRetryNonce}
+                    onBeforeSubmit={() => {
+                        if (submittingRef.current) return false
+                        const gate = security.validateForSubmit()
+                        if (!gate.ok) {
+                            if (gate.message) toast.error(gate.message)
+                            return false
                         }
+                        submittingRef.current = true
+                        setSubmissionState('submitting')
+                        return true
+                    }}
+                    onComplete={async () => {
+                        toast.success('Discussion round completed successfully!');
+                        setSubmissionState('completed')
+                        await security.finishSession()
+                        router.push(getPostRoundPath(assessmentId!, roundNumber, assessmentSource));
+                    }}
+                    onSubmitError={() => {
+                        submittingRef.current = false
+                        setSubmissionState('error')
                     }}
                 />
-            </DashboardLayout>
+            </div>
         );
     }
 
     // Coding Round UI
     if (isCodingRound) {
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="h-screen flex flex-col bg-gray-50 overflow-hidden font-sans">
-                    {/* Header - Matching Screenshot */}
+        return guard(
+            <div className="h-full flex flex-col bg-gray-50 overflow-hidden font-sans">
                     <div className="bg-gradient-to-r from-[#2563EB] to-[#9333EA] text-white h-16 shrink-0 shadow-md flex items-center justify-between px-6 z-20">
-                        <h1 className="text-xl font-bold tracking-tight">Round {roundNumber}: Coding Challenge</h1>
-                        <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
-                            <Clock className="w-4 h-4" />
-                            <span>{timeLeft !== null ? `${Math.floor(timeLeft / 60)}m ${(timeLeft % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wide text-white/80">Assessment Agent</p>
+                            <h1 className="text-xl font-bold tracking-tight">Round {roundNumber}: Coding Challenge</h1>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <CameraStatusIndicator active={security.cameraReady} />
+                            <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
+                                <Clock className="w-4 h-4" />
+                                <span>{timeLeft !== null ? `${Math.floor(timeLeft / 60)}m ${(timeLeft % 60).toString().padStart(2, '0')}s` : '--:--'}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Full-height Coding Workspace */}
-                    <div className="flex-1 overflow-hidden relative">
+                    <div className="flex-1 overflow-hidden relative min-h-0">
                         <CodingRound
                             assessmentId={assessmentId!}
                             roundData={roundData}
-                            onSubmitted={() => {
-                                router.push(`/dashboard/student/assessment?id=${assessmentId}`)
+                            interactionLocked={examLocked}
+                            onBeforeSubmit={() => {
+                                if (submittingRef.current) return false
+                                const gate = security.validateForSubmit()
+                                if (!gate.ok) {
+                                    if (gate.message) toast.error(gate.message)
+                                    return false
+                                }
+                                submittingRef.current = true
+                                setSubmissionState('submitting')
+                                return true
+                            }}
+                            submitFn={async (responses) => {
+                                if (!answerSnapshotRef.current) {
+                                    answerSnapshotRef.current = snapshotAnswers(responses)
+                                }
+                                try {
+                                    const res = await apiClient.submitRoundResponses(
+                                        assessmentId!,
+                                        roundData.round_id,
+                                        answerSnapshotRef.current
+                                    )
+                                    toast.success('Solutions submitted successfully!')
+                                    return res
+                                } catch (error) {
+                                    submittingRef.current = false
+                                    setSubmissionState('error')
+                                    throw error
+                                }
+                            }}
+                            onSubmitted={async () => {
+                                setSubmissionState('completed')
+                                await security.finishSession()
+                                router.push(getPostRoundPath(assessmentId!, roundNumber, assessmentSource))
                             }}
                         />
                     </div>
-                </div>
-            </DashboardLayout>
+            </div>
         )
     }
 
     if (!roundData || (!isGroupDiscussionRound && !isTallyExcelRound && (!roundData.questions || roundData.questions.length === 0))) {
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="text-center py-12">
+        return guard(
+            <div className="flex h-full items-center justify-center text-center px-6">
+                <div>
                     <h2 className="text-2xl font-bold mb-4">No Questions Available</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                         This round doesn't have any questions yet.
                     </p>
-                    <Button onClick={() => router.push(`/dashboard/student/assessment?id=${assessmentId}`)}>
+                    <Button type="button" onClick={() => router.push(getAssessmentOverviewPath(assessmentId!, assessmentSource))}>
                         Back to Assessment
                     </Button>
                 </div>
-            </DashboardLayout>
+            </div>
         )
     }
 
@@ -1039,18 +1079,30 @@ export default function AssessmentRoundPage() {
         // Using distinct theme for reference, but layout is unified as per screenshots
         // Screenshots show a Blue/Purple gradient header.
 
-        return (
-            <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-                <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] font-sans bg-white overflow-hidden">
+        return guard(
+            <div className="flex flex-col h-full font-sans bg-white overflow-hidden">
                     {/* Header Bar - Matching Screenshot Blue/Purple Gradient */}
-                    <div className="h-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center px-6 shrink-0 z-20 shadow-md">
-                        <h1 className="text-xl font-bold tracking-wide">{headerTitle}</h1>
+                    <div className="h-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-between px-6 shrink-0 z-20 shadow-md">
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wide text-white/80">
+                                {jobHeader || 'Assessment Agent'}
+                            </p>
+                            <h1 className="text-xl font-bold tracking-wide">{headerTitle}</h1>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <CameraStatusIndicator active={security.cameraReady} />
+                            <FullscreenStatusIndicator active={security.fullscreenActive} />
+                            <div className="bg-white/20 px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                <span>{formatTime(timeLeft)}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex flex-1 overflow-hidden relative">
                         {/* Main Content Area (Left) */}
-                        <div className="flex-1 flex flex-col overflow-y-auto bg-white relative">
-                            <div className="p-6 pb-24"> {/* Added padding bottom for footer clearance if needed, though footer is outside */}
+                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white relative">
+                            <div className="p-6 pb-6 flex-1 overflow-y-auto min-h-0">
                                 {/* Top Section: Question and Video */}
                                 <div className="flex flex-col lg:flex-row gap-6 mb-8">
                                     {/* Question Column */}
@@ -1116,7 +1168,8 @@ export default function AssessmentRoundPage() {
                                         {!isLiveTranscribing ? (
                                             <button
                                                 onClick={startLiveTranscription}
-                                                className="bg-[#10B981] hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
+                                                disabled={examLocked}
+                                                className="bg-[#10B981] hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Mic size={20} />
                                                 <span>Start Recoding</span>
@@ -1124,7 +1177,8 @@ export default function AssessmentRoundPage() {
                                         ) : (
                                             <button
                                                 onClick={stopLiveTranscription}
-                                                className="bg-[#EF4444] hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-3 transition-all animate-pulse shadow-sm"
+                                                disabled={examLocked}
+                                                className="bg-[#EF4444] hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-3 transition-all animate-pulse shadow-sm disabled:opacity-50"
                                             >
                                                 <div className="w-3 h-3 bg-white rounded-full"></div>
                                                 <span>Start Recoding</span>
@@ -1150,6 +1204,8 @@ export default function AssessmentRoundPage() {
                                             className={`w-full min-h-[200px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${isLiveTranscribing ? 'rounded-t-none border-t-0' : 'border-gray-300'}`}
                                             placeholder="Type your answer here..."
                                             value={responses[currentQ?.id]?.response_text || ''}
+                                            readOnly={examLocked}
+                                            disabled={examLocked}
                                             onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
                                         />
                                     </div>
@@ -1174,8 +1230,10 @@ export default function AssessmentRoundPage() {
                                         return (
                                             <button
                                                 key={idx}
+                                                type="button"
+                                                disabled={examLocked}
                                                 onClick={() => navigateToQuestion(idx)}
-                                                className={`w-10 h-10 rounded-md flex items-center justify-center font-bold text-sm transition-colors ${bgClass}`}
+                                                className={`w-10 h-10 rounded-md flex items-center justify-center font-bold text-sm transition-colors disabled:cursor-not-allowed ${bgClass}`}
                                             >
                                                 {idx + 1}
                                             </button>
@@ -1207,21 +1265,30 @@ export default function AssessmentRoundPage() {
                         {/* Clear Button */}
                         <button
                             onClick={handleClearResponse}
-                            className="bg-white text-gray-800 hover:bg-gray-100 px-6 py-2.5 rounded-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
+                            disabled={examLocked}
+                            className="bg-white text-gray-800 hover:bg-gray-100 px-6 py-2.5 rounded-sm font-semibold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
                         >
                             <Trash2 size={18} className="text-gray-600" />
                             <span>Clear Respones</span>
                         </button>
 
                         <div className="flex items-center gap-4">
-                            {/* Next Button */}
                             <button
+                                type="button"
+                                onClick={handlePreviousQuestion}
+                                disabled={currentQuestion === 0 || examLocked}
+                                className="bg-[#E5E5E5] hover:bg-white text-gray-800 px-6 py-2.5 rounded-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => {
                                     if (currentQuestion < roundData.questions.length - 1) {
                                         navigateToQuestion(currentQuestion + 1)
                                     }
                                 }}
-                                disabled={currentQuestion >= roundData.questions.length - 1}
+                                disabled={currentQuestion >= roundData.questions.length - 1 || examLocked}
                                 className="bg-[#E5E5E5] hover:bg-white text-gray-800 px-6 py-2.5 rounded-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
                             >
                                 Next Question
@@ -1229,55 +1296,60 @@ export default function AssessmentRoundPage() {
 
                             {/* Submit Button */}
                             <button
+                                ref={submitButtonRef}
+                                type="button"
                                 onClick={handleSubmitWithConfirmation}
-                                disabled={submitting}
-                                className="bg-[#10B981] hover:bg-green-600 text-white px-8 py-2.5 rounded-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+                                disabled={examLocked || submitting}
+                                className="bg-[#10B981] hover:bg-green-600 text-white px-8 py-2.5 rounded-sm font-bold shadow-sm transition-colors flex items-center gap-2 disabled:opacity-70"
                             >
                                 {submitting && <Loader size="sm" color="white" />}
-                                Submit Section
+                                {submitting ? 'Submitting Test...' : 'Submit Test'}
                             </button>
                         </div>
                     </div>
                 </div>
-            </DashboardLayout>
         )
     }
 
 
     // ========== UPDATED MCQ INTERFACE WITH NEW QUESTION TYPES ==========
-    return (
-        <DashboardLayout requiredUserType="student" hideNavigation={isFullscreen}>
-            <div
-                className="h-screen overflow-hidden bg-gray-100 select-none flex flex-col font-sans"
-                onContextMenu={(e) => e.preventDefault()}
-            >
+    return guard(
+        <div
+            className="h-full overflow-hidden bg-gray-100 select-none flex flex-col font-sans"
+            onContextMenu={(e) => e.preventDefault()}
+        >
                 {/* Header */}
                 <div className="bg-[#2563EB] text-white h-16 shrink-0 flex items-center px-6 justify-between shadow-md z-20 relative">
-                    <h1 className="text-xl font-bold truncate">
-                        {(() => {
-                            const typeDisplayMap: Record<string, string> = {
-                                aptitude: 'Aptitude Test',
-                                soft_skills: 'Soft Skills Assessment',
-                                group_discussion: 'Group Discussion',
-                                technical_mcq: 'Technical MCQ',
-                                coding: 'Coding Challenge',
-                                electrical_circuit: 'Electrical Circuit Design',
-                                tally_excel_practical: 'Tally/Excel Practical',
-                                TALLY_EXCEL_PRACTICAL: 'Tally/Excel Practical',
-                                technical_interview: 'Technical Interview',
-                                hr_interview: 'HR Interview',
-                            }
-                            const title = typeDisplayMap[roundType] || roundNames[roundNumber as keyof typeof roundNames]
-                            return <>Round {roundNumber}: {title}</>
-                        })()}
-                    </h1>
+                    <div className="min-w-0">
+                        <p className="text-[11px] uppercase tracking-wide text-white/80">
+                            {jobHeader || 'Assessment Agent'}
+                        </p>
+                        <h1 className="text-xl font-bold truncate">
+                            {(() => {
+                                const typeDisplayMap: Record<string, string> = {
+                                    aptitude: 'Aptitude Test',
+                                    soft_skills: 'Soft Skills Assessment',
+                                    group_discussion: 'Group Discussion',
+                                    technical_mcq: 'Technical MCQ',
+                                    coding: 'Coding Challenge',
+                                    electrical_circuit: 'Electrical Circuit Design',
+                                    tally_excel_practical: 'Tally/Excel Practical',
+                                    TALLY_EXCEL_PRACTICAL: 'Tally/Excel Practical',
+                                    technical_interview: 'Technical Interview',
+                                    hr_interview: 'HR Interview',
+                                }
+                                const title = typeDisplayMap[roundType] || roundNames[roundNumber as keyof typeof roundNames]
+                                return <>Round {roundNumber}: {title}</>
+                            })()}
+                        </h1>
+                    </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={toggleFullscreen}
-                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                        >
-                            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                        </button>
+                        <CameraStatusIndicator active={security.cameraReady} />
+                        <FullscreenStatusIndicator active={security.fullscreenActive} />
+                        <div className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{formatTime(timeLeft)}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1288,8 +1360,10 @@ export default function AssessmentRoundPage() {
 
                         {/* Sidebar Toggle Button - Attached to the right edge */}
                         <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className={`absolute right-0 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-300 rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-gray-50 focus:outline-none transition-transform duration-300 ${isSidebarOpen ? 'translate-x-1/2' : '-translate-x-2'}`}
+                            type="button"
+                            disabled={examLocked}
+                            onClick={() => { if (examLocked) return; setIsSidebarOpen(!isSidebarOpen) }}
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-300 rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-gray-50 focus:outline-none transition-transform duration-300 disabled:opacity-50 ${isSidebarOpen ? 'translate-x-1/2' : '-translate-x-2'}`}
                             title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                         >
                             {isSidebarOpen ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
@@ -1325,7 +1399,9 @@ export default function AssessmentRoundPage() {
                                                     Click the button below to hear a sentence. Listen carefully and type exactly what you hear in the box.
                                                 </p>
                                                 <button
+                                                    disabled={examLocked}
                                                     onClick={() => {
+                                                        if (examLocked) return
                                                         const textToSpeak = currentQ.question_text || currentQ.correct_answer
                                                         playDictationAudio(textToSpeak)
                                                     }}
@@ -1353,7 +1429,7 @@ export default function AssessmentRoundPage() {
                                                     return (
                                                         <label
                                                             key={index}
-                                                            className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer transition-all border ${isSelected
+                                                            className={`flex items-start space-x-3 p-4 rounded-lg transition-all border ${examLocked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} ${isSelected
                                                                 ? 'bg-blue-50 border-blue-500 shadow-sm'
                                                                 : 'bg-white border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                                                                 }`}
@@ -1364,8 +1440,9 @@ export default function AssessmentRoundPage() {
                                                                     name={`question-${currentQ.id}`}
                                                                     value={optionLetter}
                                                                     checked={isSelected}
+                                                                    disabled={examLocked}
                                                                     onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                                                                    className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white"
+                                                                    className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-full checked:border-blue-600 checked:border-[6px] transition-all bg-white disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                             <div className="flex-1">
@@ -1386,6 +1463,8 @@ export default function AssessmentRoundPage() {
                                                     className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base"
                                                     placeholder="Type your answer here..."
                                                     value={responses[currentQ.id]?.response_text || ''}
+                                                    readOnly={examLocked}
+                                                    disabled={examLocked}
                                                     onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
                                                 />
                                                 <div className="text-right text-xs text-gray-500 mt-2">
@@ -1402,6 +1481,8 @@ export default function AssessmentRoundPage() {
                                                     className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-base"
                                                     placeholder="Type here..."
                                                     value={responses[currentQ.id]?.response_text || ''}
+                                                    readOnly={examLocked}
+                                                    disabled={examLocked}
                                                     onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
                                                 />
                                             </div>
@@ -1417,11 +1498,11 @@ export default function AssessmentRoundPage() {
                                                     This question requires voice interaction. Please use the controls above/below to record your answer.
                                                 </p>
                                                 {!isLiveTranscribing ? (
-                                                    <Button onClick={startLiveTranscription} className="bg-purple-600 hover:bg-purple-700">
+                                                    <Button onClick={startLiveTranscription} disabled={examLocked} className="bg-purple-600 hover:bg-purple-700">
                                                         Start Recording
                                                     </Button>
                                                 ) : (
-                                                    <Button onClick={stopLiveTranscription} variant="destructive">
+                                                    <Button onClick={stopLiveTranscription} disabled={examLocked} variant="destructive">
                                                         Stop Recording
                                                     </Button>
                                                 )}
@@ -1440,22 +1521,36 @@ export default function AssessmentRoundPage() {
                                 <div className="shrink-0 h-16 bg-white border-t border-gray-300 flex items-center justify-between px-6 z-20">
                                     <div className="flex items-center gap-3">
                                         <button
-                                            onClick={handleMarkForReview}
-                                            className="bg-[#DC2626] hover:bg-red-700 text-white px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                            type="button"
+                                            onClick={handlePreviousQuestion}
+                                            disabled={currentQuestion === 0 || examLocked}
+                                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-50"
                                         >
-                                            Mark for review & Next
+                                            Previous
                                         </button>
                                         <button
+                                            type="button"
+                                            onClick={handleMarkForReview}
+                                            disabled={examLocked}
+                                            className="bg-[#DC2626] hover:bg-red-700 text-white px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-50"
+                                        >
+                                            Mark for review
+                                        </button>
+                                        <button
+                                            type="button"
                                             onClick={handleClearResponse}
-                                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                            disabled={examLocked}
+                                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-50"
                                         >
                                             Clear Response
                                         </button>
                                     </div>
 
                                     <button
+                                        type="button"
                                         onClick={handleNextQuestion}
-                                        className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
+                                        disabled={examLocked}
+                                        className="bg-[#16A34A] hover:bg-green-700 text-white px-8 py-2 rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-50"
                                     >
                                         Save & Next
                                     </button>
@@ -1560,7 +1655,14 @@ export default function AssessmentRoundPage() {
                                     // Base styles
                                     let baseClasses = "w-9 h-9 flex items-center justify-center text-sm font-bold shadow-sm transition-all"
                                     let style = {}
-                                    let content = <span className={status === 'notAnswered' ? "-mt-1" : ""}>{index + 1}</span>
+                                    let content: ReactNode = <span className={status === 'notAnswered' ? "-mt-1" : ""}>{index + 1}</span>
+                                    if (isCurrent) {
+                                        content = <span title={`Question ${index + 1} current`}>●</span>
+                                    } else if (status === 'answered') {
+                                        content = <span title={`Question ${index + 1} answered`}>✓</span>
+                                    } else if (status === 'marked') {
+                                        content = <span title={`Question ${index + 1} marked`}>⚠</span>
+                                    }
 
                                     // Shape and Color Logic matching the legend
                                     if (status === 'answered') {
@@ -1588,8 +1690,10 @@ export default function AssessmentRoundPage() {
                                     return (
                                         <button
                                             key={index}
+                                            type="button"
+                                            disabled={examLocked}
                                             onClick={() => navigateToQuestion(index)}
-                                            className={baseClasses}
+                                            className={`${baseClasses} disabled:cursor-not-allowed`}
                                             style={style}
                                             title={`Q${index + 1}`}
                                         >
@@ -1603,17 +1707,19 @@ export default function AssessmentRoundPage() {
                         {/* Submit Section */}
                         <div className="p-6 bg-[#E6F3FF]">
                             <button
+                                ref={submitButtonRef}
+                                type="button"
                                 onClick={handleSubmitWithConfirmation}
-                                disabled={submitting}
-                                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded shadow-md transition-colors text-base"
+                                disabled={examLocked || submitting}
+                                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded shadow-md transition-colors text-base disabled:opacity-70"
                             >
                                 {submitting ? (
                                     <div className="flex items-center justify-center gap-2">
                                         <Loader size="sm" color="white" />
-                                        <span>Submitting...</span>
+                                        <span>Submitting Test...</span>
                                     </div>
                                 ) : (
-                                    'Submit Section'
+                                    'Submit Test'
                                 )}
                             </button>
                         </div>
@@ -1621,7 +1727,6 @@ export default function AssessmentRoundPage() {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
     )
 
 }

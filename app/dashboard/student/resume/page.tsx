@@ -50,6 +50,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { AxiosError } from "axios";
 import SubscriptionRequiredModal from "@/components/subscription/SubscriptionRequiredModal";
+import { ResumeATSWorkspace, type GapAnalysis } from "@/components/resume/ResumeATSWorkspace";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard/student", icon: Home },
@@ -258,6 +259,11 @@ interface ATSScore {
       actions: string[];
       expected_ats_gain: number;
     }>;
+    rewrite_suggestions?: Array<{
+      original: string;
+      improved: string;
+      reason: string;
+    }>;
     final_feedback: {
       excellent?: string;
       to_be_improved: string;
@@ -314,6 +320,11 @@ export default function ResumePage() {
   const [isCalculatingATS, setIsCalculatingATS] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
   const [showJobDescriptionInput, setShowJobDescriptionInput] = useState(false);
+  const [jdMatch, setJdMatch] = useState<GapAnalysis | null>(null);
+  const [jdLoading, setJdLoading] = useState(false);
+  const [jdParsing, setJdParsing] = useState(false);
+  const [jdError, setJdError] = useState<string | null>(null);
+  const jdFileInputRef = useRef<HTMLInputElement>(null);
 
   // UI step tracking
   // 1 = Upload, 2 = Processing, 3 = Analysis, 4 = Results
@@ -332,7 +343,7 @@ export default function ResumePage() {
   const [expandedAuditIdx, setExpandedAuditIdx] = useState<number | null>(null);
 
   // Active section for the sticky summary navigation (results page)
-  const [activeSection, setActiveSection] = useState<string>("section-audits");
+  const [activeSection, setActiveSection] = useState<string>("section-ats-workspace");
 
   // Resume status
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
@@ -356,6 +367,7 @@ export default function ResumePage() {
   useEffect(() => {
     if (currentStep !== 4) return;
     const sectionIds = [
+      "section-ats-workspace",
       "section-audits",
       "section-recommendations",
       "section-roadmap",
@@ -609,6 +621,48 @@ export default function ResumePage() {
       });
   };
 
+  const runJdComparison = async (jdText: string, ats?: number) => {
+    if (jdText.trim().length < 20) {
+      setJdError("Paste or upload a job description (at least 20 characters).");
+      return;
+    }
+    setJdLoading(true);
+    setJdError(null);
+    try {
+      const data = await apiClient.analyzeResumeGaps({
+        job_description: jdText,
+        current_ats_score: ats ?? atsScore?.ats_score,
+      });
+      setJdMatch(data);
+    } catch (e: unknown) {
+      const axiosError = e as AxiosError<{ detail: string }>;
+      setJdError(
+        axiosError.response?.data?.detail ||
+          "JD comparison failed. Try again with a fuller job description.",
+      );
+    } finally {
+      setJdLoading(false);
+    }
+  };
+
+  const handleJdFileUpload = async (file: File) => {
+    setJdParsing(true);
+    setJdError(null);
+    try {
+      const parsed = await apiClient.parseJdDocument(file);
+      setJobDescription(parsed.text);
+      setShowJobDescriptionInput(true);
+    } catch (e: unknown) {
+      const axiosError = e as AxiosError<{ detail: string }>;
+      setJdError(
+        axiosError.response?.data?.detail ||
+          "Could not read that JD file. Try PDF, DOCX, or paste the text.",
+      );
+    } finally {
+      setJdParsing(false);
+    }
+  };
+
   const handleCalculateATS = async (forceRegenerate = false) => {
     setIsCalculatingATS(true);
     setError(null);
@@ -616,7 +670,21 @@ export default function ResumePage() {
     // Force regenerate when re-analyzing so students get a fresh role-aware report
     // (old contaminated caches are also invalidated by role-aware hash on the server).
     const shouldForce = forceRegenerate || Boolean(atsScore);
-    const apiCall = apiClient.getATSScore(jobDescription || undefined, shouldForce);
+    const jdText = jobDescription;
+    const apiCall = apiClient.getATSScore(jdText || undefined, shouldForce).then(async (result) => {
+      if (jdText.trim().length >= 20) {
+        try {
+          const gap = await apiClient.analyzeResumeGaps({
+            job_description: jdText,
+            current_ats_score: result?.ats_score,
+          });
+          setJdMatch(gap);
+        } catch {
+          /* JD match is optional; ATS results still show */
+        }
+      }
+      return result;
+    });
     startProcessingSimulation(apiCall);
 
     try {
@@ -650,6 +718,8 @@ export default function ResumePage() {
     setError(null);
     setAtsScore(null);
     setJobDescription("");
+    setJdMatch(null);
+    setJdError(null);
     setCurrentStep(1);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -777,6 +847,16 @@ export default function ResumePage() {
     | "best_practices"
     | "application_ready";
   }[] = [
+      {
+        name: "ATS Overview",
+        val: currentAtsScore,
+        targetId: "section-ats-workspace",
+      },
+      {
+        name: "JD Match",
+        val: jdMatch?.overall_match_score ?? 0,
+        targetId: "section-ats-workspace",
+      },
       {
         name: "Content",
         val: report?.overall_ats_compatibility?.score ?? currentAtsScore,
@@ -1087,6 +1167,33 @@ export default function ResumePage() {
                     {/* Job Description input textarea */}
                     {showJobDescriptionInput && (
                       <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                            Paste or upload JD
+                          </span>
+                          <div>
+                            <input
+                              ref={jdFileInputRef}
+                              type="file"
+                              accept=".pdf,.docx,.doc,.txt"
+                              className="hidden"
+                              onChange={(e) => {
+                                const picked = e.target.files?.[0];
+                                if (picked) void handleJdFileUpload(picked);
+                                e.target.value = "";
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 text-xs"
+                              disabled={jdParsing || isCalculatingATS}
+                              onClick={() => jdFileInputRef.current?.click()}
+                            >
+                              {jdParsing ? "Reading JD..." : "Upload JD file"}
+                            </Button>
+                          </div>
+                        </div>
                         <Textarea
                           placeholder="Paste target job description details here..."
                           value={jobDescription}
@@ -1095,6 +1202,9 @@ export default function ResumePage() {
                           disabled={isCalculatingATS}
                           className="border-gray-200 dark:border-gray-800 rounded-xl resize-none text-xs sm:text-sm focus:border-brand-blue focus:ring-brand-blue/20"
                         />
+                        {jdError && (
+                          <p className="text-xs text-rose-600">{jdError}</p>
+                        )}
                       </div>
                     )}
 
@@ -1595,6 +1705,25 @@ export default function ResumePage() {
 
               {/* RIGHT: independent full-height scroll pane */}
               <div className="space-y-6 min-w-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+
+                <div id="section-ats-workspace" className="scroll-mt-24">
+                  <ResumeATSWorkspace
+                    currentAtsScore={currentAtsScore}
+                    estimatedFutureScore={estimatedFutureScore}
+                    jobDescription={jobDescription}
+                    onJobDescriptionChange={setJobDescription}
+                    onAnalyzeJd={() => void runJdComparison(jobDescription, currentAtsScore)}
+                    onUploadJdFile={(f) => void handleJdFileUpload(f)}
+                    jdMatch={jdMatch}
+                    jdLoading={jdLoading}
+                    jdParsing={jdParsing}
+                    jdError={jdError}
+                    recommendations={report?.recommendations || []}
+                    intelligenceRewrites={report?.rewrite_suggestions || []}
+                    formattingSuggestions={toStringList(report?.resume_formatting?.suggestions)}
+                    skillSuggestions={toStringList(report?.keyword_analysis?.suggestions)}
+                  />
+                </div>
 
                 {/* Audits & suggestions tabbed interface */}
                 <div className="space-y-6">

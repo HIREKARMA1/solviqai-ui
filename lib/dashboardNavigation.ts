@@ -12,6 +12,7 @@ export function getDashboardFeatureRoute(
     const routeMap: Record<string, string> = {
       dashboard: baseRoute,
       'career-guidance': `${baseRoute}/career-guidance`,
+      agents: `${baseRoute}/agents`,
       resume: `${baseRoute}/resume`,
       assessment: `${baseRoute}/assessment`,
       'mock-tests': `${baseRoute}/mock-tests`,
