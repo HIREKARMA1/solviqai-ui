@@ -31,15 +31,44 @@ export function validateEmail(email: string): boolean {
 }
 
 export function validatePassword(password: string): boolean {
-  // At least 8 characters with uppercase, lowercase, digit, and special character
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return passwordRegex.test(password);
+  // Matches the API rule in solviqai-server/app/core/security.py:
+  // at least 8 characters with uppercase, lowercase, digit, and special character.
+  if (password.length < 8) return false;
+
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return hasUpper && hasLower && hasDigit && hasSpecial;
+}
+
+/**
+ * Keep characters the API phone format allows.
+ * Backend `validate_phone` counts digits after stripping non-digits and accepts 10–15 digits.
+ * Letters and other symbols are dropped so they cannot be stored.
+ */
+export function sanitizePhoneInput(value: string): string {
+  let result = '';
+
+  for (const char of value) {
+    if ((char >= '0' && char <= '9') || char === ' ' || char === '(' || char === ')' || char === '-') {
+      result += char;
+    } else if (char === '+' && result.length === 0) {
+      result += char;
+    }
+  }
+
+  return result;
 }
 
 export function validatePhone(phone: string): boolean {
-  // Basic phone validation - can be customized based on requirements
-  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-  return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+  const trimmed = phone.trim();
+  if (!trimmed) return false;
+  if (sanitizePhoneInput(trimmed) !== trimmed) return false;
+
+  const digits = trimmed.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15;
 }
 
 export function getInitials(name: string): string {

@@ -6,14 +6,37 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { FieldMessage, RequiredMark } from '@/components/ui/field-message';
 import { Loader } from '@/components/ui/loader';
 import { Navbar } from '@/components/Navbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, sanitizePhoneInput, validatePhone } from '@/lib/utils';
+import {
+  AUTH_MESSAGES,
+  classifyAuthServerError,
+  getRegisterErrors,
+  hasDisallowedNameChars,
+  publicAuthError,
+  type AuthField,
+} from '@/lib/authValidation';
 import { getGuestSessionToken, clearGuestSessionToken } from '@/lib/guestReadiness';
 import { User, Mail, Lock, Phone, ArrowRight, Check, X } from 'lucide-react';
+
+const inputClassName =
+  'h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500';
+
+const FIELD_ORDER: AuthField[] = [
+  'name',
+  'lastName',
+  'email',
+  'phone',
+  'password',
+  'confirmPassword',
+  'terms',
+];
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -28,6 +51,10 @@ export default function RegisterPage() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Partial<Record<AuthField, boolean>>>({});
+  const [serverErrors, setServerErrors] = useState<Partial<Record<AuthField, string>>>({});
+  const [phoneRejected, setPhoneRejected] = useState(false);
   const { register, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
@@ -39,40 +66,89 @@ export default function RegisterPage() {
     }
   }, [user, authLoading, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  const clientErrors = getRegisterErrors({ ...formData, agreedToTerms });
+
+  const shownError = (field: AuthField): string => {
+    if (serverErrors[field]) return serverErrors[field] || '';
+    if (field === 'phone' && phoneRejected) {
+      return AUTH_MESSAGES.phoneInvalid;
+    }
+
+    const message = clientErrors[field];
+    if (!message) return '';
+    if (submitted || touched[field]) return message;
+    if ((field === 'name' || field === 'lastName') && hasDisallowedNameChars(formData[field])) {
+      return message;
+    }
+    if (field === 'phone' && formData.phone.replace(/\D/g, '').length > 15) return message;
+    if (field === 'password' && formData.password.length >= 8) return message;
+    if (
+      field === 'confirmPassword' &&
+      formData.confirmPassword.length > 0 &&
+      formData.confirmPassword.length >= formData.password.length
+    ) {
+      return message;
+    }
+    return '';
+  };
+
+  const clearServerError = (field: AuthField) => {
+    setServerErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
     });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const field = name as AuthField;
+    const next = { ...formData, [name]: value };
+
+    if (name === 'phone') {
+      const sanitized = sanitizePhoneInput(value);
+      const rejectedChars = sanitized !== value;
+      next.phone = sanitized;
+
+      setPhoneRejected(rejectedChars && !validatePhone(sanitized));
+    }
+
+    setFormData(next);
     setError('');
+    clearServerError(field);
+    if (field === 'password') clearServerError('confirmPassword');
+  };
+
+  const handleBlur = (field: AuthField) => {
+    setTouched((current) => ({ ...current, [field]: true }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSubmitted(true);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    const errors = getRegisterErrors({ ...formData, agreedToTerms });
+    const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
+    if (firstInvalid) {
+      document.getElementById(firstInvalid)?.focus();
       return;
     }
 
-    if (!agreedToTerms) {
-      setError('Please agree to the Terms & Conditions');
-      return;
-    }
-
+    setPhoneRejected(false);
     setLoading(true);
 
     try {
-      const fullName = formData.lastName
-        ? `${formData.name} ${formData.lastName}`
-        : formData.name;
+      const fullName = formData.lastName.trim()
+        ? `${formData.name.trim()} ${formData.lastName.trim()}`
+        : formData.name.trim();
 
       await register({
         name: fullName,
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
-        phone: formData.phone,
+        phone: formData.phone.trim() || undefined,
         guest_session_token: getGuestSessionToken() || undefined,
       });
 
@@ -80,9 +156,16 @@ export default function RegisterPage() {
 
       router.push('/dashboard/student');
     } catch (err: any) {
-      // Extract proper error message
-      const errorMessage = getErrorMessage(err, 'Registration failed. Please try again.');
-      setError(errorMessage);
+      const rawMessage = getErrorMessage(err, 'Registration failed. Please try again.');
+      const message = publicAuthError(rawMessage, 'Registration failed. Please try again.');
+      const field = classifyAuthServerError(message);
+
+      if (field === 'form') {
+        setError(message);
+      } else {
+        setServerErrors({ [field]: message });
+        document.getElementById(field)?.focus();
+      }
     } finally {
       setLoading(false);
     }
@@ -135,7 +218,7 @@ export default function RegisterPage() {
             )}
 
             {/* Register Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-[20px]">
+            <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-[20px]">
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -144,19 +227,30 @@ export default function RegisterPage() {
                     className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                   >
                     <User className="w-4 h-4" />
-                    {t('auth.register.firstName')}
+                    <span>
+                      {t('auth.register.firstName')}
+                      <RequiredMark />
+                    </span>
                   </label>
                   <Input
                     id="name"
                     name="name"
                     type="text"
                     placeholder="John"
+                    autoComplete="given-name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
-                    className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                    onBlur={() => handleBlur('name')}
+                    onPaste={() => handleBlur('name')}
+                    aria-required="true"
+                    aria-invalid={Boolean(shownError('name'))}
+                    aria-describedby={shownError('name') ? 'name-error' : undefined}
+                    error={Boolean(shownError('name'))}
+                    maxLength={255}
+                    className={inputClassName}
                     disabled={loading}
                   />
+                  <FieldMessage id="name-error" message={shownError('name')} />
                 </div>
                 <div className="space-y-2">
                   <label
@@ -170,11 +264,19 @@ export default function RegisterPage() {
                     name="lastName"
                     type="text"
                     placeholder="Doe"
+                    autoComplete="family-name"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                    onBlur={() => handleBlur('lastName')}
+                    onPaste={() => handleBlur('lastName')}
+                    aria-invalid={Boolean(shownError('lastName'))}
+                    aria-describedby={shownError('lastName') ? 'lastName-error' : undefined}
+                    error={Boolean(shownError('lastName'))}
+                    maxLength={255}
+                    className={inputClassName}
                     disabled={loading}
                   />
+                  <FieldMessage id="lastName-error" message={shownError('lastName')} />
                 </div>
               </div>
 
@@ -185,19 +287,29 @@ export default function RegisterPage() {
                   className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
-                  {t('auth.register.email')}
+                  <span>
+                    {t('auth.register.email')}
+                    <RequiredMark />
+                  </span>
                 </label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   placeholder="your@email.com"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onBlur={() => handleBlur('email')}
+                  onPaste={() => handleBlur('email')}
+                  aria-required="true"
+                  aria-invalid={Boolean(shownError('email'))}
+                  aria-describedby={shownError('email') ? 'email-error' : undefined}
+                  error={Boolean(shownError('email'))}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="email-error" message={shownError('email')} />
               </div>
 
               {/* Phone Field */}
@@ -213,12 +325,21 @@ export default function RegisterPage() {
                   id="phone"
                   name="phone"
                   type="tel"
+                  inputMode="tel"
                   placeholder="+91 9876543210"
+                  autoComplete="tel"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onBlur={() => handleBlur('phone')}
+                  onPaste={() => handleBlur('phone')}
+                  aria-invalid={Boolean(shownError('phone'))}
+                  aria-describedby={shownError('phone') ? 'phone-error' : undefined}
+                  error={Boolean(shownError('phone'))}
+                  maxLength={20}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="phone-error" message={shownError('phone')} />
               </div>
 
               {/* Password Field */}
@@ -228,19 +349,28 @@ export default function RegisterPage() {
                   className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  {t('auth.register.password')}
+                  <span>
+                    {t('auth.register.password')}
+                    <RequiredMark />
+                  </span>
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   placeholder="Enter your password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
-                  required
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onBlur={() => handleBlur('password')}
+                  onPaste={() => handleBlur('password')}
+                  aria-required="true"
+                  aria-invalid={Boolean(shownError('password'))}
+                  aria-describedby={shownError('password') ? 'password-error' : undefined}
+                  error={Boolean(shownError('password'))}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="password-error" message={shownError('password')} />
               </div>
 
               {/* Confirm Password Field */}
@@ -250,48 +380,65 @@ export default function RegisterPage() {
                   className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  {t('auth.register.confirmPassword')}
+                  <span>
+                    {t('auth.register.confirmPassword')}
+                    <RequiredMark />
+                  </span>
                 </label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
                   placeholder="Confirm your password"
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  required
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onBlur={() => handleBlur('confirmPassword')}
+                  onPaste={() => handleBlur('confirmPassword')}
+                  aria-required="true"
+                  aria-invalid={Boolean(shownError('confirmPassword'))}
+                  aria-describedby={shownError('confirmPassword') ? 'confirmPassword-error' : undefined}
+                  error={Boolean(shownError('confirmPassword'))}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="confirmPassword-error" message={shownError('confirmPassword')} />
               </div>
 
               {/* Terms & Conditions */}
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={agreedToTerms}
-                  onChange={() => setShowTermsModal(true)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  disabled={loading}
-                />
-                <label
-                  htmlFor="terms"
-                  className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
-                  onClick={() => setShowTermsModal(true)}
-                >
-                  {t('auth.register.agreeTerms')}{' '}
-                  <span className="text-blue-600 dark:text-blue-400 hover:underline">
-                    Terms & Conditions
-                  </span>
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={agreedToTerms}
+                    onChange={() => setShowTermsModal(true)}
+                    onBlur={() => handleBlur('terms')}
+                    aria-required="true"
+                    aria-invalid={Boolean(shownError('terms'))}
+                    aria-describedby={shownError('terms') ? 'terms-error' : undefined}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    disabled={loading}
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
+                    onClick={() => setShowTermsModal(true)}
+                  >
+                    {t('auth.register.agreeTerms')}{' '}
+                    <span className="text-blue-600 dark:text-blue-400 hover:underline">
+                      Terms & Conditions
+                    </span>
+                    <RequiredMark />
+                  </label>
+                </div>
+                <FieldMessage id="terms-error" message={shownError('terms')} />
               </div>
 
               {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full h-[50px] text-base font-medium bg-[#00BAE8] hover:bg-[#009bc2] text-white rounded-[8px] transition-all duration-200"
-                disabled={loading || !agreedToTerms}
+                disabled={loading}
               >
                 {loading ? (
                   <Loader size="sm" />
