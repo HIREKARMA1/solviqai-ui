@@ -6,19 +6,32 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { FieldMessage, RequiredMark } from '@/components/ui/field-message';
 import { Loader } from '@/components/ui/loader';
 import { Navbar } from '@/components/Navbar';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { getErrorMessage } from '@/lib/utils';
+import {
+  classifyAuthServerError,
+  getLoginErrors,
+  publicAuthError,
+} from '@/lib/authValidation';
 import { Mail, Lock, ArrowRight, MailIcon } from 'lucide-react';
+
+const inputClassName =
+  'h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [serverFieldErrors, setServerFieldErrors] = useState({ email: '', password: '' });
   const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
@@ -30,12 +43,37 @@ export default function LoginPage() {
     }
   }, [user, authLoading, router]);
 
+  const clientErrors = getLoginErrors(email, password);
+
+  const shownError = (field: 'email' | 'password'): string => {
+    if (serverFieldErrors[field]) return serverFieldErrors[field];
+    if (!clientErrors[field]) return '';
+    if (submitted || touched[field]) return clientErrors[field];
+    return '';
+  };
+
+  const updateField = (field: 'email' | 'password', value: string) => {
+    if (field === 'email') setEmail(value);
+    else setPassword(value);
+    setError('');
+    setServerFieldErrors((current) => ({ ...current, [field]: '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setServerFieldErrors({ email: '', password: '' });
+    setSubmitted(true);
+
+    const fieldErrors = getLoginErrors(email, password);
+    if (fieldErrors.email || fieldErrors.password) {
+      document.getElementById(fieldErrors.email ? 'email' : 'password')?.focus();
+      return;
+    }
+
     setLoading(true);
 
-    const errors: string[] = [];
+    const apiErrors: string[] = [];
 
     try {
       // Try student login first (default)
@@ -44,7 +82,7 @@ export default function LoginPage() {
       return;
     } catch (err: any) {
       const errorMsg = getErrorMessage(err, '');
-      if (errorMsg) errors.push(errorMsg);
+      if (errorMsg) apiErrors.push(errorMsg);
 
       // If student login fails, try other user types
       try {
@@ -53,14 +91,14 @@ export default function LoginPage() {
         return;
       } catch (err2: any) {
         const errorMsg2 = getErrorMessage(err2, '');
-        if (errorMsg2) errors.push(errorMsg2);
+        if (errorMsg2) apiErrors.push(errorMsg2);
         try {
           await login(email, password, 'admin');
           router.push('/dashboard/admin');
           return;
         } catch (err3: any) {
           const errorMsg3 = getErrorMessage(err3, '');
-          if (errorMsg3) errors.push(errorMsg3);
+          if (errorMsg3) apiErrors.push(errorMsg3);
 
           try {
             await login(email, password, 'enterprise');
@@ -68,7 +106,7 @@ export default function LoginPage() {
             return;
           } catch (err4: any) {
             const errorMsg4 = getErrorMessage(err4, '');
-            if (errorMsg4) errors.push(errorMsg4);
+            if (errorMsg4) apiErrors.push(errorMsg4);
           }
         }
       }
@@ -78,32 +116,38 @@ export default function LoginPage() {
 
     // Determine the most relevant error message
     // Prioritize password errors over "user not found" errors
-    const passwordError = errors.find(err =>
+    const passwordError = apiErrors.find(err =>
       err.toLowerCase().includes('password') ||
       err.toLowerCase().includes('incorrect password') ||
       err.toLowerCase().includes('invalid password')
     );
 
-    const alreadyLoggedInError = errors.find(err =>
+    const alreadyLoggedInError = apiErrors.find(err =>
       err.toLowerCase().includes('already logged in')
     );
 
-    const inactiveError = errors.find(err =>
+    const inactiveError = apiErrors.find(err =>
       err.toLowerCase().includes('inactive')
     );
 
     // Show the most relevant error
-    if (alreadyLoggedInError) {
-      setError(alreadyLoggedInError);
-    } else if (inactiveError) {
-      setError(inactiveError);
-    } else if (passwordError) {
-      setError(passwordError);
-    } else if (errors.length > 0) {
-      // Use the first error (most likely to be the correct user type)
-      setError(errors[0]);
+    const fallback = 'Invalid credentials. Please try again.';
+    const selected = alreadyLoggedInError
+      || inactiveError
+      || passwordError
+      || apiErrors[0]
+      || fallback;
+    const message = publicAuthError(selected, fallback);
+    const field = classifyAuthServerError(message);
+
+    if (field === 'email' || field === 'password') {
+      setServerFieldErrors({
+        email: field === 'email' ? message : '',
+        password: field === 'password' ? message : '',
+      });
+      document.getElementById(field)?.focus();
     } else {
-      setError('Invalid credentials. Please try again.');
+      setError(message);
     }
   };
 
@@ -154,7 +198,7 @@ export default function LoginPage() {
             )}
 
             {/* Login Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-[24px]">
+            <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-[24px]">
               {/* Email Field */}
               <div className="space-y-2">
                 <label
@@ -162,18 +206,27 @@ export default function LoginPage() {
                   className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
-                  Email
+                  <span>
+                    Email
+                    <RequiredMark />
+                  </span>
                 </label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="your@email.com"
+                  autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onChange={(e) => updateField('email', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+                  aria-required="true"
+                  aria-invalid={Boolean(shownError('email'))}
+                  aria-describedby={shownError('email') ? 'email-error' : undefined}
+                  error={Boolean(shownError('email'))}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="email-error" message={shownError('email')} />
               </div>
 
               {/* Password Field */}
@@ -183,18 +236,26 @@ export default function LoginPage() {
                   className="text-sm font-medium text-black dark:text-white flex items-center gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  Password
+                  <span>
+                    Password
+                    <RequiredMark />
+                  </span>
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-[50px] bg-white dark:bg-[#1C2938] border-[#AEAEAE] dark:border-[#757575] rounded-[8px] focus:ring-1 focus:ring-primary-500"
+                  onChange={(e) => updateField('password', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+                  aria-required="true"
+                  aria-invalid={Boolean(shownError('password'))}
+                  aria-describedby={shownError('password') ? 'password-error' : undefined}
+                  error={Boolean(shownError('password'))}
+                  className={inputClassName}
                   disabled={loading}
                 />
+                <FieldMessage id="password-error" message={shownError('password')} />
               </div>
 
               {/* Forgot Password */}
