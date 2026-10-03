@@ -2394,6 +2394,41 @@ class ApiClient {
     return response.data;
   }
 
+  async startRealtimeMockInterview(data: {
+    focus_prompt: string;
+    language_code?: string;
+    max_turns?: number;
+    session_timeout_seconds?: number;
+    silence_timeout_seconds?: number;
+    reconnect_grace_seconds?: number;
+  }): Promise<import('@/types/mockInterview').MockInterviewRealtimeConnectionResponse> {
+    const response: AxiosResponse = await this.client.post('/mock-interviews/realtime/start', data);
+    return response.data;
+  }
+
+  async reconnectRealtimeMockInterview(
+    sessionId: string,
+    resumeFromSequence = 0,
+  ): Promise<import('@/types/mockInterview').MockInterviewRealtimeConnectionResponse> {
+    const response: AxiosResponse = await this.client.post(
+      `/mock-interviews/realtime/${sessionId}/reconnect`,
+      undefined,
+      { params: { resume_from_sequence: resumeFromSequence } },
+    );
+    return response.data;
+  }
+
+  async endRealtimeMockInterview(
+    sessionId: string,
+    reason = 'student_ended',
+  ): Promise<import('@/types/mockInterview').MockInterviewRealtimeEndResponse> {
+    const response: AxiosResponse = await this.client.post(
+      `/mock-interviews/realtime/${sessionId}/end`,
+      { reason },
+    );
+    return response.data;
+  }
+
   async getPaymentPlans(): Promise<{ plans: any[]; monetization_active: boolean }> {
     const response: AxiosResponse = await this.client.get('/payments/plans');
     return response.data;
