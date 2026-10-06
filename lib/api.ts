@@ -2409,9 +2409,27 @@ class ApiClient {
   async reconnectRealtimeMockInterview(
     sessionId: string,
     resumeFromSequence = 0,
+    options?: { redispatchAgent?: boolean },
   ): Promise<import('@/types/mockInterview').MockInterviewRealtimeConnectionResponse> {
     const response: AxiosResponse = await this.client.post(
       `/mock-interviews/realtime/${sessionId}/reconnect`,
+      undefined,
+      {
+        params: {
+          resume_from_sequence: resumeFromSequence,
+          redispatch_agent: options?.redispatchAgent === true,
+        },
+      },
+    );
+    return response.data;
+  }
+
+  async refreshRealtimeMockInterviewToken(
+    sessionId: string,
+    resumeFromSequence = 0,
+  ): Promise<import('@/types/mockInterview').MockInterviewRealtimeConnectionResponse> {
+    const response: AxiosResponse = await this.client.post(
+      `/mock-interviews/realtime/${sessionId}/token`,
       undefined,
       { params: { resume_from_sequence: resumeFromSequence } },
     );

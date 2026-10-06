@@ -224,6 +224,7 @@ export function RealtimeMockInterviewPage() {
   const [connection, setConnection] = useState<MockInterviewRealtimeConnectionResponse | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [roomStatus, setRoomStatus] = useState<RoomStatus>('connecting');
+  const [subtitleStatus, setSubtitleStatus] = useState<'connected' | 'reconnecting'>('connected');
   const [micEnabled, setMicEnabled] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
@@ -236,16 +237,25 @@ export function RealtimeMockInterviewPage() {
   const [isEnding, setIsEnding] = useState(false);
   const [report, setReport] = useState<MockInterviewRealtimeEndResponse['report']>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [agentState, setAgentState] = useState<string | null>(null);
+  const [agentJoined, setAgentJoined] = useState(false);
 
   const roomRef = useRef<Room | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiAudioRef = useRef<HTMLAudioElement | null>(null);
+  const conversationScrollRef = useRef<HTMLDivElement | null>(null);
   const sequenceRef = useRef(0);
-  const startedAtRef = useRef<number | null>(null);
   const endingRef = useRef(false);
   const socketRetryRef = useRef<number | null>(null);
+  const agentWatchRef = useRef<number | null>(null);
+  const sessionErrorSeenRef = useRef(false);
+  const eventStreamTokenRef = useRef<string | null>(null);
+  const eventStreamUrlRef = useRef<string | null>(null);
+  const mediaReconnectInFlightRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
   const showRoom = phase === 'connecting' || phase === 'active';
   const timeoutSeconds = connection?.initial_state.session_timeout_seconds ?? 20 * 60;
@@ -282,6 +292,46 @@ export function RealtimeMockInterviewPage() {
       throw new Error('The realtime voice provider is not configured yet.');
     }
 
+    const markAgentJoined = () => {
+      setAgentJoined(true);
+      setProviderError((current) =>
+        current && current.includes('AI interviewer did not join') ? null : current,
+      );
+      if (agentWatchRef.current) {
+        window.clearTimeout(agentWatchRef.current);
+        agentWatchRef.current = null;
+      }
+    };
+
+    const recoverLiveKitMedia = async () => {
+      const activeSessionId = sessionIdRef.current;
+      if (endingRef.current || mediaReconnectInFlightRef.current || !activeSessionId) return;
+      mediaReconnectInFlightRef.current = true;
+      setRoomStatus('reconnecting');
+      try {
+        const refreshed = await apiClient.reconnectRealtimeMockInterview(
+          activeSessionId,
+          sequenceRef.current,
+          { redispatchAgent: true },
+        );
+        eventStreamTokenRef.current = refreshed.event_stream_token;
+        eventStreamUrlRef.current = refreshed.event_stream_url;
+        setConnection(refreshed);
+        const room = roomRef.current;
+        if (room && refreshed.livekit_url && refreshed.livekit_token) {
+          if (room.state !== ConnectionState.Disconnected) {
+            await room.disconnect();
+          }
+          await room.connect(refreshed.livekit_url, refreshed.livekit_token, { autoSubscribe: true });
+          setRoomStatus('connected');
+        }
+      } catch (error) {
+        setProviderError(getErrorMessage(error, 'Could not recover the LiveKit media connection.'));
+      } finally {
+        mediaReconnectInFlightRef.current = false;
+      }
+    };
+
     const room = new Room({ adaptiveStream: true, dynacast: true });
     roomRef.current = room;
     room.on(RoomEvent.Connected, () => setRoomStatus('connected'));
@@ -295,10 +345,20 @@ export function RealtimeMockInterviewPage() {
         setRoomStatus('connected');
       }
     });
-    room.on(RoomEvent.TrackSubscribed, attachRemoteTrack);
+    room.on(RoomEvent.ParticipantConnected, () => {
+      markAgentJoined();
+    });
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      attachRemoteTrack(track);
+      if (track.kind === Track.Kind.Audio || track.kind === Track.Kind.Video) {
+        markAgentJoined();
+      }
+    });
     room.on(RoomEvent.LocalTrackPublished, attachLocalPublication);
     room.on(RoomEvent.Disconnected, () => {
-      if (!endingRef.current) setRoomStatus('reconnecting');
+      if (endingRef.current || mediaReconnectInFlightRef.current) return;
+      setRoomStatus('reconnecting');
+      void recoverLiveKitMedia();
     });
 
     await room.connect(nextConnection.livekit_url, nextConnection.livekit_token, {
@@ -306,6 +366,27 @@ export function RealtimeMockInterviewPage() {
     });
     setPhase('active');
     setRoomStatus('connected');
+
+    if (room.remoteParticipants.size > 0) {
+      markAgentJoined();
+    } else {
+      agentWatchRef.current = window.setTimeout(() => {
+        const current = roomRef.current;
+        if (!current || endingRef.current) return;
+        if (current.remoteParticipants.size > 0) {
+          markAgentJoined();
+          return;
+        }
+        // Prefer a real session.error from the worker over this generic timeout.
+        if (sessionErrorSeenRef.current) return;
+        setProviderError((currentError) => {
+          if (currentError && !currentError.includes('AI interviewer did not join')) {
+            return currentError;
+          }
+          return 'AI interviewer did not join — ensure the agent worker is running (`python -m app.workers.mock_interview_agent start`).';
+        });
+      }, 20000);
+    }
 
     try {
       await room.localParticipant.setCameraEnabled(true);
@@ -330,6 +411,7 @@ export function RealtimeMockInterviewPage() {
     const data = event.data || {};
 
     if (event.type === 'ai.transcript.delta') {
+      setAgentJoined(true);
       setAiDraft((current) => (data.replace === true ? text : `${current}${text}`));
       return;
     }
@@ -338,6 +420,7 @@ export function RealtimeMockInterviewPage() {
       return;
     }
     if (event.type === 'ai.transcript.final') {
+      setAgentJoined(true);
       setAiDraft('');
       appendMessage('ai', text);
       setIsAnalyzing(false);
@@ -358,15 +441,41 @@ export function RealtimeMockInterviewPage() {
       return;
     }
     if (event.type === 'session.state') {
-      const nextStatus = data.realtime_status;
-      if (nextStatus === 'RECONNECTING') setRoomStatus('reconnecting');
-      if (nextStatus === 'IN_PROGRESS') setRoomStatus('connected');
+      const nextStatus = data.realtime_status ?? data.status;
+      // Agent RECONNECTING is media/session status — do not latch the subtitle banner.
+      if (nextStatus === 'IN_PROGRESS') {
+        setSubtitleStatus('connected');
+        setAgentJoined(true);
+        setProviderError((current) =>
+          current && current.includes('AI interviewer did not join') ? null : current,
+        );
+      }
       if (nextStatus === 'COMPLETED') setRoomStatus('completed');
+      const nextAgentState = data.agent_state;
+      if (typeof nextAgentState === 'string') {
+        setAgentState(nextAgentState);
+        setAgentJoined(true);
+        if (nextAgentState === 'speaking') setAudioState('playing');
+        if (nextAgentState === 'listening' || nextAgentState === 'thinking') {
+          setAudioState((current) => (current === 'playing' ? 'ended' : current));
+        }
+        if (nextAgentState === 'thinking') setIsAnalyzing(true);
+        if (nextAgentState === 'speaking' || nextAgentState === 'listening') setIsAnalyzing(false);
+      }
       return;
     }
     if (event.type === 'session.error') {
+      sessionErrorSeenRef.current = true;
+      if (agentWatchRef.current) {
+        window.clearTimeout(agentWatchRef.current);
+        agentWatchRef.current = null;
+      }
       const message = data.message;
-      setProviderError(typeof message === 'string' ? message : 'The realtime interviewer encountered a provider error.');
+      setProviderError(
+        typeof message === 'string' && message.trim()
+          ? message
+          : 'The realtime interviewer encountered a provider error.',
+      );
       return;
     }
     if (event.type === 'session.completed') {
@@ -376,48 +485,94 @@ export function RealtimeMockInterviewPage() {
 
   useEffect(() => {
     if (!connection || !sessionId || !showRoom) return;
-    let cancelled = false;
+    eventStreamTokenRef.current = connection.event_stream_token;
+    eventStreamUrlRef.current = connection.event_stream_url;
+  }, [connection, sessionId, showRoom]);
 
-    const openSocket = () => {
-      const url = buildWebSocketUrl(
-        connection.event_stream_url,
-        connection.event_stream_token,
-        sequenceRef.current,
-      );
+  useEffect(() => {
+    if (!sessionId || !showRoom) return;
+    const streamUrl = eventStreamUrlRef.current || connection?.event_stream_url;
+    const streamToken = eventStreamTokenRef.current || connection?.event_stream_token;
+    if (!streamUrl || !streamToken) return;
+
+    let cancelled = false;
+    let pingTimer: number | null = null;
+
+    const clearPing = () => {
+      if (pingTimer != null) {
+        window.clearInterval(pingTimer);
+        pingTimer = null;
+      }
+    };
+
+    const openSocket = (urlPath: string, token: string) => {
+      clearPing();
+      const url = buildWebSocketUrl(urlPath, token, sequenceRef.current);
       const socket = new WebSocket(url);
       socketRef.current = socket;
       socket.onopen = () => {
-        setProviderError(null);
-        if (!cancelled) setRoomStatus((current) => (current === 'reconnecting' ? 'connected' : current));
+        if (cancelled) return;
+        setSubtitleStatus('connected');
+        setProviderError((current) =>
+          current && current.includes('Could not recover the subtitle connection') ? null : current,
+        );
+        pingTimer = window.setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send('ping');
+          }
+        }, 15000);
       };
       socket.onmessage = (message) => {
         try {
-          handleStreamEvent(JSON.parse(message.data) as MockInterviewStreamEvent);
+          const payload = JSON.parse(message.data) as MockInterviewStreamEvent & { type?: string };
+          if (payload?.type === 'pong') return;
+          handleStreamEvent(payload as MockInterviewStreamEvent);
         } catch {
           setProviderError('The subtitle stream returned an unreadable event.');
         }
       };
       socket.onerror = () => {
-        if (!cancelled) setRoomStatus('reconnecting');
+        if (!cancelled) setSubtitleStatus('reconnecting');
       };
       socket.onclose = () => {
+        clearPing();
         if (cancelled || endingRef.current) return;
-        setRoomStatus('reconnecting');
+        setSubtitleStatus('reconnecting');
         if (socketRetryRef.current) window.clearTimeout(socketRetryRef.current);
         socketRetryRef.current = window.setTimeout(async () => {
           try {
-            const refreshed = await apiClient.reconnectRealtimeMockInterview(sessionId, sequenceRef.current);
-            if (!cancelled) setConnection(refreshed);
+            const refreshed = await apiClient.refreshRealtimeMockInterviewToken(
+              sessionId,
+              sequenceRef.current,
+            );
+            if (cancelled || endingRef.current) return;
+            eventStreamTokenRef.current = refreshed.event_stream_token;
+            eventStreamUrlRef.current = refreshed.event_stream_url;
+            // Refresh tokens without replacing the whole connection object (avoids WS effect churn).
+            setConnection((current) =>
+              current
+                ? {
+                    ...current,
+                    event_stream_token: refreshed.event_stream_token,
+                    event_stream_url: refreshed.event_stream_url,
+                    livekit_token: refreshed.livekit_token,
+                  }
+                : refreshed,
+            );
+            openSocket(refreshed.event_stream_url, refreshed.event_stream_token);
           } catch (error) {
-            if (!cancelled) setProviderError(getErrorMessage(error, 'Could not recover the subtitle connection.'));
+            if (!cancelled) {
+              setProviderError(getErrorMessage(error, 'Could not recover the subtitle connection.'));
+            }
           }
-        }, 1200);
+        }, 1800);
       };
     };
 
-    openSocket();
+    openSocket(streamUrl, streamToken);
     return () => {
       cancelled = true;
+      clearPing();
       if (socketRetryRef.current) window.clearTimeout(socketRetryRef.current);
       socketRetryRef.current = null;
       if (socketRef.current) {
@@ -425,7 +580,9 @@ export function RealtimeMockInterviewPage() {
         socketRef.current = null;
       }
     };
-  }, [connection, handleStreamEvent, phase, sessionId, showRoom]);
+    // Intentionally omit `connection` and `phase` to avoid teardown on token refresh / connecting→active.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleStreamEvent, sessionId, showRoom]);
 
   useEffect(() => {
     const room = roomRef.current;
@@ -440,16 +597,25 @@ export function RealtimeMockInterviewPage() {
   }, [attachLocalPublication, attachRemoteTrack, showRoom]);
 
   useEffect(() => {
-    if (!showRoom || !startedAtRef.current) return;
-    const timer = window.setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - (startedAtRef.current || Date.now())) / 1000));
-    }, 1000);
+    if (!showRoom || sessionStartedAt == null) return;
+    const tick = () => {
+      setElapsedSeconds(Math.floor((Date.now() - sessionStartedAt) / 1000));
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [showRoom]);
+  }, [sessionStartedAt, showRoom]);
+
+  useEffect(() => {
+    const node = conversationScrollRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [messages, aiDraft, studentDraft]);
 
   useEffect(() => {
     return () => {
       endingRef.current = true;
+      if (agentWatchRef.current) window.clearTimeout(agentWatchRef.current);
       socketRef.current?.close();
       roomRef.current?.disconnect();
     };
@@ -484,26 +650,41 @@ export function RealtimeMockInterviewPage() {
     const trimmedTopic = topic.trim();
     if (trimmedTopic.length < 2) return;
     endingRef.current = false;
+    sessionErrorSeenRef.current = false;
     setProviderError(null);
     setPermissionError(null);
+    setAgentJoined(false);
+    setAgentState(null);
+    setAudioState('ended');
     setPhase('connecting');
     setRoomStatus('connecting');
+    setSubtitleStatus('connected');
     setMessages([]);
     setAiDraft('');
     setStudentDraft('');
     setElapsedSeconds(0);
+    setSessionStartedAt(null);
+    if (agentWatchRef.current) {
+      window.clearTimeout(agentWatchRef.current);
+      agentWatchRef.current = null;
+    }
     try {
       const nextConnection = await apiClient.startRealtimeMockInterview({
         focus_prompt: trimmedTopic,
       });
+      sessionIdRef.current = nextConnection.session_id;
+      eventStreamTokenRef.current = nextConnection.event_stream_token;
+      eventStreamUrlRef.current = nextConnection.event_stream_url;
       setConnection(nextConnection);
       setSessionId(nextConnection.session_id);
-      startedAtRef.current = Date.now();
+      setSessionStartedAt(Date.now());
       await connectRoom(nextConnection);
     } catch (error) {
       setProviderError(getErrorMessage(error, 'Could not start the realtime interview.'));
       setPhase('setup');
       setRoomStatus('connecting');
+      setSessionStartedAt(null);
+      sessionIdRef.current = null;
       roomRef.current?.disconnect();
       roomRef.current = null;
     }
@@ -530,11 +711,18 @@ export function RealtimeMockInterviewPage() {
 
   const reset = () => {
     endingRef.current = true;
+    if (agentWatchRef.current) {
+      window.clearTimeout(agentWatchRef.current);
+      agentWatchRef.current = null;
+    }
     socketRef.current?.close();
     roomRef.current?.disconnect();
     roomRef.current = null;
     setConnection(null);
     setSessionId(null);
+    sessionIdRef.current = null;
+    eventStreamTokenRef.current = null;
+    eventStreamUrlRef.current = null;
     setReport(null);
     setProviderError(null);
     setPermissionError(null);
@@ -543,19 +731,45 @@ export function RealtimeMockInterviewPage() {
     setStudentDraft('');
     setPhase('setup');
     setRoomStatus('connecting');
+    setSubtitleStatus('connected');
     setMicEnabled(false);
     setCameraEnabled(false);
     setElapsedSeconds(0);
-    startedAtRef.current = null;
+    setSessionStartedAt(null);
+    setAgentJoined(false);
+    setAgentState(null);
+    setAudioState('ended');
+    sessionErrorSeenRef.current = false;
     endingRef.current = false;
   };
 
   const statusLabel = useMemo(() => {
-    if (roomStatus === 'reconnecting') return 'Reconnecting';
+    if (roomStatus === 'reconnecting') return 'Reconnecting media';
+    if (subtitleStatus === 'reconnecting') return 'Reconnecting subtitles';
     if (roomStatus === 'connecting') return 'Connecting';
     if (roomStatus === 'completed') return 'Completed';
     return 'Interview in progress';
-  }, [roomStatus]);
+  }, [roomStatus, subtitleStatus]);
+
+  const showReconnectBanner = roomStatus === 'reconnecting' || subtitleStatus === 'reconnecting';
+  const reconnectBannerLabel =
+    roomStatus === 'reconnecting'
+      ? 'Reconnecting your media session...'
+      : 'Reconnecting subtitle stream...';
+
+  const interviewerStatusLabel = useMemo(() => {
+    if (audioState === 'playing' || agentState === 'speaking') return 'Speaking';
+    if (isAnalyzing || agentState === 'thinking') return 'Thinking';
+    if (!agentJoined && roomStatus !== 'completed') return 'Joining';
+    return 'Listening';
+  }, [agentJoined, agentState, audioState, isAnalyzing, roomStatus]);
+
+  const footerStatusLabel = useMemo(() => {
+    if (isAnalyzing || agentState === 'thinking') return 'Analyzing your answer...';
+    if (audioState === 'playing' || agentState === 'speaking') return 'AI is speaking...';
+    if (!agentJoined) return 'Waiting for the AI interviewer to join...';
+    return 'Speak naturally when you are ready.';
+  }, [agentJoined, agentState, audioState, isAnalyzing]);
 
   if (phase === 'setup') {
     return (
@@ -628,8 +842,8 @@ export function RealtimeMockInterviewPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-            <div className={`hidden items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold sm:flex ${roomStatus === 'reconnecting' ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'}`}>
-              {roomStatus === 'reconnecting' ? <WifiOff className="h-4 w-4" /> : <Radio className="h-4 w-4" />}
+            <div className={`hidden items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold sm:flex ${showReconnectBanner ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'}`}>
+              {showReconnectBanner ? <WifiOff className="h-4 w-4" /> : <Radio className="h-4 w-4" />}
               {statusLabel}
             </div>
             <div className="flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold text-[#285bd7] dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
@@ -638,9 +852,9 @@ export function RealtimeMockInterviewPage() {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6">
-          <div className="mx-auto grid max-w-[1500px] gap-5 lg:grid-cols-[minmax(360px,0.92fr)_minmax(520px,1.08fr)]">
-            <section className="space-y-4">
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-5 lg:p-6">
+          <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] gap-5 lg:grid-cols-[minmax(360px,0.92fr)_minmax(520px,1.08fr)] lg:overflow-hidden">
+            <section className="min-h-0 space-y-4 overflow-y-auto lg:pr-1">
               <div className="relative aspect-video overflow-hidden rounded-[10px] bg-[#13264b] shadow-[0_16px_40px_rgba(19,38,75,0.18)]">
                 <video ref={aiVideoRef} autoPlay playsInline className="relative z-10 h-full w-full object-cover" />
                 <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#13264b]">
@@ -650,7 +864,7 @@ export function RealtimeMockInterviewPage() {
                   </div>
                 </div>
                 <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-[#13264b]/85 px-3 py-2 text-xs font-semibold text-white backdrop-blur"><Bot className="h-4 w-4" /> AI Interviewer</div>
-                <div className="absolute bottom-4 right-4 rounded-full bg-black/35 px-3 py-1.5 text-xs text-white">{audioState === 'playing' ? 'Speaking' : isAnalyzing ? 'Thinking' : 'Listening'}</div>
+                <div className="absolute bottom-4 right-4 rounded-full bg-black/35 px-3 py-1.5 text-xs text-white">{interviewerStatusLabel}</div>
               </div>
 
               <div className="relative aspect-video overflow-hidden rounded-[10px] bg-slate-900 shadow-[0_16px_40px_rgba(19,38,75,0.14)]">
@@ -673,28 +887,28 @@ export function RealtimeMockInterviewPage() {
               </div>
             </section>
 
-            <section className="flex min-h-[560px] flex-col overflow-hidden rounded-[10px] border border-blue-100 bg-white shadow-[0_16px_50px_rgba(24,55,105,0.08)] dark:border-slate-700 dark:bg-[#111d31] lg:min-h-0">
+            <section className="flex max-h-[min(70dvh,720px)] min-h-[320px] flex-col overflow-hidden rounded-[10px] border border-blue-100 bg-white shadow-[0_16px_50px_rgba(24,55,105,0.08)] dark:border-slate-700 dark:bg-[#111d31] lg:max-h-none lg:h-full lg:min-h-0">
               <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-7">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#285bd7]">Live subtitles</p>
                   <h2 className="mt-1 text-lg font-semibold">Conversation</h2>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><Wifi className="h-4 w-4 text-emerald-500" />{roomStatus === 'reconnecting' ? 'Recovering connection' : 'Streaming'}</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><Wifi className="h-4 w-4 text-emerald-500" />{subtitleStatus === 'reconnecting' ? 'Recovering subtitles' : 'Streaming'}</div>
               </div>
 
               {permissionError && (
-                <div className="mx-5 mt-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 sm:mx-7"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{permissionError}</span></div>
+                <div className="mx-5 mt-4 flex shrink-0 gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 sm:mx-7"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{permissionError}</span></div>
               )}
               {providerError && (
-                <div className="mx-5 mt-4 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 sm:mx-7"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{providerError}</span></div>
+                <div className="mx-5 mt-4 flex shrink-0 gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 sm:mx-7"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{providerError}</span></div>
               )}
-              {roomStatus === 'reconnecting' && (
-                <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 sm:mx-7"><LoaderCircle className="h-4 w-4 animate-spin" /> Reconnecting your session...</div>
+              {showReconnectBanner && (
+                <div className="mx-5 mt-4 flex shrink-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 sm:mx-7"><LoaderCircle className="h-4 w-4 animate-spin" /> {reconnectBannerLabel}</div>
               )}
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+              <div ref={conversationScrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
                 {messages.length === 0 && !aiDraft && !studentDraft && (
-                  <div className="flex h-full min-h-[340px] flex-col items-center justify-center text-center text-slate-400"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#285bd7] dark:bg-blue-950/40 dark:text-blue-300"><Sparkles className="h-6 w-6" /></div><p className="mt-4 text-sm font-medium">The interviewer is joining the room.</p><p className="mt-1 text-xs">Your subtitles will appear here in real time.</p></div>
+                  <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center text-slate-400"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#285bd7] dark:bg-blue-950/40 dark:text-blue-300"><Sparkles className="h-6 w-6" /></div><p className="mt-4 text-sm font-medium">The interviewer is joining the room.</p><p className="mt-1 text-xs">Your subtitles will appear here in real time.</p></div>
                 )}
                 {messages.map((message) => (
                   <div key={message.id} className={`flex gap-3 ${message.speaker === 'student' ? 'flex-row-reverse' : ''}`}>
@@ -708,7 +922,7 @@ export function RealtimeMockInterviewPage() {
                 {aiDraft && <div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#285bd7] text-white"><Bot className="h-5 w-5" /></div><div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-blue-50 px-4 py-3 text-[#163a80] dark:bg-blue-950/35 dark:text-blue-100"><div className="flex items-center gap-2 text-xs font-semibold"><span>AI Interviewer</span><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#285bd7]" /></div><p className="mt-2 whitespace-pre-wrap text-[15px] leading-7">{aiDraft}</p></div></div>}
                 {studentDraft && <div className="flex flex-row-reverse gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><UserRound className="h-5 w-5" /></div><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-emerald-50 px-4 py-3 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"><div className="text-right text-xs font-semibold">You <span className="ml-2 font-normal opacity-60">Speaking</span></div><p className="mt-2 whitespace-pre-wrap text-[15px] leading-7">{studentDraft}</p></div></div>}
               </div>
-              <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:px-7"><span>{isAnalyzing ? 'Analyzing your answer...' : audioState === 'playing' ? 'AI is speaking...' : 'Speak naturally when you are ready.'}</span><span>{topic}</span></div>
+              <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:px-7"><span>{footerStatusLabel}</span><span>{topic}</span></div>
             </section>
           </div>
         </main>
